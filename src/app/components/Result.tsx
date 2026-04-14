@@ -391,19 +391,34 @@ export function Result({ analysis }: ResultProps) {
         el.style.display = 'none';
       });
 
-      // 1. Savings badge (💰 rosa) — force block layout + padding inline so
-      //    the pill shape survives even if Tailwind classes drop.
+      // 1. Savings badge (💰 rosa) — pink pill with generous padding. Force
+      //    white on EVERY descendant (p, span, strong) so text reads clearly.
       clone.querySelectorAll<HTMLElement>('[data-pdf-savings-badge]').forEach((el) => {
         el.style.backgroundColor = '#D4537E';
         el.style.backgroundImage = 'none';
         el.style.color = '#ffffff';
         el.style.display = 'inline-block';
-        el.style.padding = '10px 18px';
+        el.style.padding = '12px 18px';
         el.style.borderRadius = '14px';
-        el.querySelectorAll<HTMLElement>('*').forEach((c) => { c.style.color = '#ffffff'; });
+        el.style.lineHeight = '1.4';
+        el.querySelectorAll<HTMLElement>('*').forEach((c) => {
+          c.style.color = '#ffffff';
+          c.style.margin = '0';
+        });
       });
 
-      // 2. Goal progress track + fill. Motion leaves width:0 inline if the
+      // 2. Goal card: more generous padding + vertical breathing room
+      //    between the name, meta line, progress bar, badge and insight.
+      clone.querySelectorAll<HTMLElement>('[data-pdf-goal-card]').forEach((el) => {
+        el.style.padding = '24px';
+        el.style.borderRadius = '20px';
+        // Space every direct child block so elements don't stack tightly.
+        Array.from(el.children).forEach((c) => {
+          if (c instanceof HTMLElement) c.style.marginBottom = '14px';
+        });
+      });
+
+      // 2b. Goal progress track + fill. Motion leaves width:0 inline if the
       //    animation hadn't completed when the user clicked Download, so we
       //    force the target width from the data attribute.
       clone.querySelectorAll<HTMLElement>('[data-pdf-goal-track]').forEach((el) => {
@@ -428,11 +443,14 @@ export function Result({ analysis }: ResultProps) {
         el.style.backgroundImage = 'none';
       });
 
-      // 4. Action plan container + step circles
+      // 4. Action plan container + step circles. Force generous padding so
+      //    the title has room to breathe inside the green box.
       clone.querySelectorAll<HTMLElement>('[data-pdf-action-plan]').forEach((el) => {
         el.style.backgroundColor = '#3B6D11';
         el.style.backgroundImage = 'none';
         el.style.color = '#ffffff';
+        el.style.padding = '28px 24px';
+        el.style.borderRadius = '24px';
         el.querySelectorAll<HTMLElement>('*').forEach((c) => {
           // Preserve the step circle's semi-transparent white; otherwise force white text.
           if (!c.hasAttribute('data-pdf-action-step-circle')) c.style.color = '#ffffff';
@@ -1002,6 +1020,7 @@ export function Result({ analysis }: ResultProps) {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 + index * 0.1 }}
+                  data-pdf-goal-card
                   className="bg-white rounded-3xl p-6 shadow-md border-2 border-gray-100"
                 >
                   {/* Header del objetivo */}
