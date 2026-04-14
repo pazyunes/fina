@@ -6,8 +6,7 @@ import { g } from '../utils/gender';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Download, Flame, TrendingUp, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import jsPDF from 'jspdf';
-// @ts-expect-error — no bundled types, dom-to-image-more supports modern CSS (oklch, gradients)
-import domtoimage from 'dom-to-image-more';
+import html2canvas from 'html2canvas';
 import './PDFStyles.css';
 
 // Investment definitions
@@ -176,45 +175,82 @@ export function Result({ analysis }: ResultProps) {
 
       let currentY = pageContentTop;
 
-      const loadImage = (src: string): Promise<HTMLImageElement> =>
-        new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = src;
-        });
-
       const captureSection = async (element: HTMLElement): Promise<HTMLCanvasElement> => {
-        // dom-to-image-more renders via SVG foreignObject — the browser itself
-        // rasterizes, so all modern CSS (oklch, gradients, Tailwind v4) works.
-        const scale = 2;
-        const rect = element.getBoundingClientRect();
-        const width = Math.ceil(rect.width);
-        const height = Math.ceil(rect.height);
+        return html2canvas(element, {
+          scale: 3,
+          useCORS: true,
+          allowTaint: false,
+          imageTimeout: 0,
+          backgroundColor: '#ffffff',
+          logging: false,
+          windowWidth: 900,
+          onclone: (clonedDoc) => {
+            const link = clonedDoc.createElement('link');
+            link.rel = 'stylesheet';
+            link.href =
+              'https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap';
+            clonedDoc.head.appendChild(link);
 
-        const dataUrl: string = await domtoimage.toPng(element, {
-          width: width * scale,
-          height: height * scale,
-          style: {
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-            width: `${width}px`,
-            height: `${height}px`,
-            background: '#ffffff',
+            const style = clonedDoc.createElement('style');
+            style.textContent = `
+              * { animation: none !important; transition: none !important; }
+              /* Kill stray decoration that html2canvas can render as ghost outlines. */
+              *, *::before, *::after { outline: 0 !important; }
+            `;
+            clonedDoc.head.appendChild(style);
+
+            // Tailwind v4 uses oklch() for its palette; html2canvas can't parse
+            // it. Resolve every color-bearing computed style to rgb using the
+            // canvas 2D fillStyle conversion, then write back as inline style.
+            const probe = document.createElement('canvas').getContext('2d')!;
+            const resolveColor = (val: string): string => {
+              if (!val || val === 'none' || val === 'transparent') return val;
+              if (!/okl|\blab\(|\blch\(|color\(/.test(val)) return val;
+              try {
+                probe.fillStyle = '#000';
+                probe.fillStyle = val;
+                return probe.fillStyle as string;
+              } catch {
+                return val;
+              }
+            };
+            const colorFnRe = /(oklch|oklab|lab|lch|color)\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g;
+            const replaceInString = (val: string): string => {
+              if (!val || !/okl|\blab\(|\blch\(|color\(/.test(val)) return val;
+              return val.replace(colorFnRe, (m) => resolveColor(m));
+            };
+            const colorProps: [string, string][] = [
+              ['color', 'color'],
+              ['backgroundColor', 'background-color'],
+              ['borderTopColor', 'border-top-color'],
+              ['borderRightColor', 'border-right-color'],
+              ['borderBottomColor', 'border-bottom-color'],
+              ['borderLeftColor', 'border-left-color'],
+              ['outlineColor', 'outline-color'],
+              ['textDecorationColor', 'text-decoration-color'],
+              ['fill', 'fill'],
+              ['stroke', 'stroke'],
+            ];
+            clonedDoc.querySelectorAll<HTMLElement>('*').forEach((el) => {
+              const cs = getComputedStyle(el);
+              colorProps.forEach(([js, css]) => {
+                const v = cs.getPropertyValue(css);
+                const r = resolveColor(v);
+                if (r && r !== v) (el.style as any)[js] = r;
+              });
+              const bgi = cs.backgroundImage;
+              if (bgi && bgi !== 'none') {
+                const r = replaceInString(bgi);
+                if (r !== bgi) el.style.backgroundImage = r;
+              }
+              const bxs = cs.boxShadow;
+              if (bxs && bxs !== 'none') {
+                const r = replaceInString(bxs);
+                if (r !== bxs) el.style.boxShadow = r;
+              }
+            });
           },
-          bgcolor: '#ffffff',
-          cacheBust: true,
         });
-
-        const img = await loadImage(dataUrl);
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth || width * scale;
-        canvas.height = img.naturalHeight || height * scale;
-        const ctx = canvas.getContext('2d')!;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-        return canvas;
       };
 
       const addCanvasToPDF = (canvas: HTMLCanvasElement) => {
@@ -313,11 +349,6 @@ export function Result({ analysis }: ResultProps) {
           display: block !important;
         }
         .fina-pdf-root { font-size: 14px; }
-        .fina-pdf-root .recharts-responsive-container {
-          width: 600px !important;
-          height: 320px !important;
-          margin: 0 auto !important;
-        }
       `;
       offscreen.appendChild(overrides);
       offscreen.appendChild(clone);
@@ -327,25 +358,6 @@ export function Result({ analysis }: ResultProps) {
       clone.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
         if (el.style.opacity && el.style.opacity !== '1') el.style.opacity = '1';
         if (el.style.transform && el.style.transform !== 'none') el.style.transform = 'none';
-      });
-
-      // Upscale any Recharts/static SVGs captured at mobile size. SVGs with
-      // explicit width/height but no viewBox would just stay small when the
-      // container grows, so add a viewBox and bump width to at least 600px.
-      clone.querySelectorAll('svg').forEach((svg) => {
-        const wAttr = parseFloat(svg.getAttribute('width') || '0');
-        const hAttr = parseFloat(svg.getAttribute('height') || '0');
-        if (wAttr > 0 && hAttr > 0) {
-          if (!svg.getAttribute('viewBox')) {
-            svg.setAttribute('viewBox', `0 0 ${wAttr} ${hAttr}`);
-          }
-          if (wAttr < 600) {
-            const target = 600;
-            const ratio = target / wAttr;
-            svg.setAttribute('width', String(target));
-            svg.setAttribute('height', String(Math.round(hAttr * ratio)));
-          }
-        }
       });
 
       // Let the browser lay out the clone at the new width before capture.
