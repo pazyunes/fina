@@ -385,11 +385,21 @@ export function Result({ analysis }: ResultProps) {
       // oklch or gradients, so html2canvas captures the intended look even if
       // a modern color function fails to rasterize.
 
-      // 1. Savings badge (💰 rosa)
+      // 0. Force-hide interactive-only elements (JS is more reliable than
+      //    a CSS selector chain across ancestor-scoped stylesheets).
+      clone.querySelectorAll<HTMLElement>('[data-pdf-hide]').forEach((el) => {
+        el.style.display = 'none';
+      });
+
+      // 1. Savings badge (💰 rosa) — force block layout + padding inline so
+      //    the pill shape survives even if Tailwind classes drop.
       clone.querySelectorAll<HTMLElement>('[data-pdf-savings-badge]').forEach((el) => {
         el.style.backgroundColor = '#D4537E';
-        el.style.color = '#ffffff';
         el.style.backgroundImage = 'none';
+        el.style.color = '#ffffff';
+        el.style.display = 'inline-block';
+        el.style.padding = '10px 18px';
+        el.style.borderRadius = '14px';
         el.querySelectorAll<HTMLElement>('*').forEach((c) => { c.style.color = '#ffffff'; });
       });
 
@@ -464,58 +474,74 @@ export function Result({ analysis }: ResultProps) {
         el.style.marginBottom = '12px';
       });
 
-      // 6. Replace Recharts pie with a static SVG — off-screen capture was
-      //    producing compressed/mis-sized pies. Data lives on the wrapper.
-      const buildPieSvg = (reduciblePct: number): string => {
-        const fijoPct = Math.max(0, Math.min(100, 100 - reduciblePct));
+      // 6. Replace Recharts pie with a canvas-rasterized PNG embedded as
+      //    <img>. Raw <svg> inserted via innerHTML sometimes fails to render
+      //    in html2canvas; a PNG data URL inside an <img> always rasterizes.
+      const drawPiePng = (reduciblePct: number): string => {
         const red = Math.max(0, Math.min(100, reduciblePct));
-        const cx = 100;
-        const cy = 100;
-        const r = 80;
-        const slices = [
-          { pct: red, color: '#D85A30', label: 'Reducible' },
-          { pct: fijoPct, color: '#3B6D11', label: 'Fijo' },
-        ];
-        let angle = -Math.PI / 2;
-        const paths: string[] = [];
-        for (const s of slices) {
-          if (s.pct <= 0) continue;
-          if (s.pct >= 99.999) {
-            paths.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${s.color}"/>`);
-            continue;
+        const fijo = Math.max(0, Math.min(100, 100 - red));
+        const size = 200;
+        const dpr = 2;
+        const cv = document.createElement('canvas');
+        cv.width = size * dpr;
+        cv.height = size * dpr;
+        const ctx = cv.getContext('2d');
+        if (!ctx) return '';
+        ctx.scale(dpr, dpr);
+        const cx = size / 2;
+        const cy = size / 2;
+        const r = (size / 2) - 8;
+        const start = -Math.PI / 2;
+        const redAngle = (red / 100) * Math.PI * 2;
+        // Reducible slice
+        if (red > 0) {
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.fillStyle = '#D85A30';
+          if (red >= 99.999) {
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          } else {
+            ctx.arc(cx, cy, r, start, start + redAngle);
           }
-          const sweep = (s.pct / 100) * Math.PI * 2;
-          const x1 = cx + r * Math.cos(angle);
-          const y1 = cy + r * Math.sin(angle);
-          const x2 = cx + r * Math.cos(angle + sweep);
-          const y2 = cy + r * Math.sin(angle + sweep);
-          const large = sweep > Math.PI ? 1 : 0;
-          paths.push(
-            `<path d="M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z" fill="${s.color}"/>`
-          );
-          angle += sweep;
+          ctx.closePath();
+          ctx.fill();
         }
+        // Fijo slice
+        if (fijo > 0) {
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.fillStyle = '#3B6D11';
+          if (fijo >= 99.999) {
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          } else {
+            ctx.arc(cx, cy, r, start + redAngle, start + Math.PI * 2);
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+        return cv.toDataURL('image/png');
+      };
+      const buildPieHtml = (reduciblePct: number): string => {
+        const red = Math.max(0, Math.min(100, reduciblePct));
+        const fijo = Math.max(0, Math.min(100, 100 - red));
+        const src = drawPiePng(red);
         const legendItem = (color: string, text: string) => `
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="display:inline-block;width:12px;height:12px;background:${color};border-radius:2px;"></span>
             <span>${text}</span>
           </div>`;
         return `
-          <div style="text-align:center;padding:8px 0;">
-            <svg width="200" height="200" viewBox="0 0 200 200" style="display:block;margin:0 auto;">
-              ${paths.join('')}
-            </svg>
-            <div style="display:flex;gap:24px;justify-content:center;margin-top:12px;font-family:'DM Sans',Arial,sans-serif;font-size:14px;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0;">
+            <img src="${src}" width="200" height="200" style="display:block;width:200px;height:200px;" />
+            <div style="display:flex;gap:24px;justify-content:center;font-family:'DM Sans',Arial,sans-serif;font-size:14px;">
               ${legendItem('#D85A30', `Reducible ${red.toFixed(0)}%`)}
-              ${legendItem('#3B6D11', `Fijo ${fijoPct.toFixed(0)}%`)}
+              ${legendItem('#3B6D11', `Fijo ${fijo.toFixed(0)}%`)}
             </div>
           </div>`;
       };
       clone.querySelectorAll<HTMLElement>('[data-pdf-pie]').forEach((el) => {
         const reducible = Number(el.getAttribute('data-pdf-pie-reducible') || '0');
-        el.innerHTML = buildPieSvg(reducible);
-        // Kill any residual height/max-width coming from Recharts' wrappers
-        // so the wrapper collapses tightly around the static SVG + legend.
+        el.innerHTML = buildPieHtml(reducible);
         el.style.height = 'auto';
         el.style.minHeight = '0';
         el.style.width = '100%';
