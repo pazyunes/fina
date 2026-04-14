@@ -421,7 +421,8 @@ export function Result({ analysis }: ResultProps) {
       pdf.save(fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Hubo un error al generar el PDF. Por favor, intentá de nuevo.');
+      const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      alert(`Hubo un error al generar el PDF.\n\nDetalle: ${msg}`);
     } finally {
       setIsGeneratingPDF(false);
     }
