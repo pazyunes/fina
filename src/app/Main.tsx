@@ -14,6 +14,7 @@ import { Result } from './components/Result';
 import { UserData, FinancialAnalysis } from './types';
 import { analyzeFinances } from './utils/financialAnalyzer';
 import { DEBUG_MODE } from './config';
+import { saveReport } from './lib/reports';
 
 export function Main() {
   const location = useLocation();
@@ -178,6 +179,10 @@ export function Main() {
     // Generate analysis
     const financialAnalysis = analyzeFinances(completeData);
     setAnalysis(financialAnalysis);
+
+    // Silently persist the finished flow to Supabase for internal history.
+    // Fire-and-forget — UI never blocks and never surfaces failures.
+    void saveReport(completeData, financialAnalysis);
   };
 
   // Render appropriate component based on route
