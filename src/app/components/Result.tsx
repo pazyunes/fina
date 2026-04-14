@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
 import { FinancialAnalysis } from '../types';
@@ -95,6 +96,7 @@ interface ResultProps {
 }
 
 export function Result({ analysis }: ResultProps) {
+  const navigate = useNavigate();
   const reportRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [expandedInvestments, setExpandedInvestments] = useState<Set<number>>(new Set());
@@ -464,14 +466,22 @@ export function Result({ analysis }: ResultProps) {
           >
             FINA
           </h1>
-          <Button
-            onClick={generatePDF}
-            disabled={isGeneratingPDF}
-            className="bg-[#D4537E] hover:bg-[#C14870] text-white gap-2 disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" />
-            {isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/historial')}
+            >
+              Historial
+            </Button>
+            <Button
+              onClick={generatePDF}
+              disabled={isGeneratingPDF}
+              className="bg-[#D4537E] hover:bg-[#C14870] text-white gap-2 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              {isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}
+            </Button>
+          </div>
         </div>
       </div>
 
