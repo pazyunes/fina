@@ -6,7 +6,8 @@ import { g } from '../utils/gender';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Download, Flame, TrendingUp, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+// @ts-expect-error — no bundled types, dom-to-image-more supports modern CSS (oklch, gradients)
+import domtoimage from 'dom-to-image-more';
 import './PDFStyles.css';
 
 // Investment definitions
@@ -175,80 +176,45 @@ export function Result({ analysis }: ResultProps) {
 
       let currentY = pageContentTop;
 
-      const captureSection = async (element: HTMLElement): Promise<HTMLCanvasElement> => {
-        return html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: false,
-          imageTimeout: 0,
-          backgroundColor: '#ffffff',
-          logging: false,
-          windowWidth: 820,
-          onclone: (clonedDoc) => {
-            const link = clonedDoc.createElement('link');
-            link.rel = 'stylesheet';
-            link.href =
-              'https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap';
-            clonedDoc.head.appendChild(link);
-
-            const style = clonedDoc.createElement('style');
-            style.textContent = `
-              * { animation: none !important; transition: none !important; }
-            `;
-            clonedDoc.head.appendChild(style);
-
-            // Tailwind v4 emits oklch() colors which html2canvas can't parse.
-            // Resolve every color-bearing computed style to rgb via the canvas
-            // 2D fillStyle trick, and write it back as inline style on the clone.
-            const probe = document.createElement('canvas').getContext('2d')!;
-            const resolve = (val: string): string => {
-              if (!val || val === 'none') return val;
-              if (!/okl|\blab\(|\blch\(|color\(/.test(val)) return val;
-              try {
-                probe.fillStyle = '#000';
-                probe.fillStyle = val;
-                return probe.fillStyle as string;
-              } catch {
-                return val;
-              }
-            };
-            const replaceFns = (val: string): string => {
-              if (!val || !/okl|\blab\(|\blch\(|color\(/.test(val)) return val;
-              return val.replace(/(oklch|oklab|lab|lch|color)\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g, (m) => resolve(m));
-            };
-            const colorProps = [
-              'color', 'backgroundColor',
-              'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
-              'outlineColor', 'textDecorationColor', 'caretColor', 'columnRuleColor',
-              'fill', 'stroke',
-            ];
-            clonedDoc.querySelectorAll<HTMLElement>('*').forEach((el) => {
-              const cs = getComputedStyle(el);
-              colorProps.forEach((p) => {
-                const v = cs.getPropertyValue(p.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase()));
-                const r = resolve(v);
-                if (r && r !== v) (el.style as any)[p] = r;
-              });
-              const bgi = cs.backgroundImage;
-              if (bgi && bgi !== 'none') {
-                const r = replaceFns(bgi);
-                if (r !== bgi) el.style.backgroundImage = r;
-              }
-              const bxs = cs.boxShadow;
-              if (bxs && bxs !== 'none') {
-                const r = replaceFns(bxs);
-                if (r !== bxs) el.style.boxShadow = r;
-              }
-            });
-
-            // Force motion.div final state — neutralize any in-flight inline
-            // opacity/transform from framer-motion so capture shows complete UI.
-            clonedDoc.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
-              if (el.style.opacity && el.style.opacity !== '1') el.style.opacity = '1';
-              if (el.style.transform && el.style.transform !== 'none') el.style.transform = 'none';
-            });
-          },
+      const loadImage = (src: string): Promise<HTMLImageElement> =>
+        new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
         });
+
+      const captureSection = async (element: HTMLElement): Promise<HTMLCanvasElement> => {
+        // dom-to-image-more renders via SVG foreignObject — the browser itself
+        // rasterizes, so all modern CSS (oklch, gradients, Tailwind v4) works.
+        const scale = 2;
+        const rect = element.getBoundingClientRect();
+        const width = Math.ceil(rect.width);
+        const height = Math.ceil(rect.height);
+
+        const dataUrl: string = await domtoimage.toPng(element, {
+          width: width * scale,
+          height: height * scale,
+          style: {
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            width: `${width}px`,
+            height: `${height}px`,
+            background: '#ffffff',
+          },
+          bgcolor: '#ffffff',
+          cacheBust: true,
+        });
+
+        const img = await loadImage(dataUrl);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || width * scale;
+        canvas.height = img.naturalHeight || height * scale;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        return canvas;
       };
 
       const addCanvasToPDF = (canvas: HTMLCanvasElement) => {
