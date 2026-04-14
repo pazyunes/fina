@@ -197,6 +197,50 @@ export function Result({ analysis }: ResultProps) {
             `;
             clonedDoc.head.appendChild(style);
 
+            // Tailwind v4 emits oklch() colors which html2canvas can't parse.
+            // Resolve every color-bearing computed style to rgb via the canvas
+            // 2D fillStyle trick, and write it back as inline style on the clone.
+            const probe = document.createElement('canvas').getContext('2d')!;
+            const resolve = (val: string): string => {
+              if (!val || val === 'none') return val;
+              if (!/okl|\blab\(|\blch\(|color\(/.test(val)) return val;
+              try {
+                probe.fillStyle = '#000';
+                probe.fillStyle = val;
+                return probe.fillStyle as string;
+              } catch {
+                return val;
+              }
+            };
+            const replaceFns = (val: string): string => {
+              if (!val || !/okl|\blab\(|\blch\(|color\(/.test(val)) return val;
+              return val.replace(/(oklch|oklab|lab|lch|color)\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g, (m) => resolve(m));
+            };
+            const colorProps = [
+              'color', 'backgroundColor',
+              'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
+              'outlineColor', 'textDecorationColor', 'caretColor', 'columnRuleColor',
+              'fill', 'stroke',
+            ];
+            clonedDoc.querySelectorAll<HTMLElement>('*').forEach((el) => {
+              const cs = getComputedStyle(el);
+              colorProps.forEach((p) => {
+                const v = cs.getPropertyValue(p.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase()));
+                const r = resolve(v);
+                if (r && r !== v) (el.style as any)[p] = r;
+              });
+              const bgi = cs.backgroundImage;
+              if (bgi && bgi !== 'none') {
+                const r = replaceFns(bgi);
+                if (r !== bgi) el.style.backgroundImage = r;
+              }
+              const bxs = cs.boxShadow;
+              if (bxs && bxs !== 'none') {
+                const r = replaceFns(bxs);
+                if (r !== bxs) el.style.boxShadow = r;
+              }
+            });
+
             // Force motion.div final state — neutralize any in-flight inline
             // opacity/transform from framer-motion so capture shows complete UI.
             clonedDoc.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
