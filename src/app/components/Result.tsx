@@ -94,7 +94,6 @@ interface ResultProps {
 
 export function Result({ analysis }: ResultProps) {
   const reportRef = useRef<HTMLDivElement>(null);
-  const pdfContentRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [expandedInvestments, setExpandedInvestments] = useState<Set<number>>(new Set());
 
@@ -149,14 +148,11 @@ export function Result({ analysis }: ResultProps) {
   const deficit = Math.abs(analysis.available);
 
   const generatePDF = async () => {
-    if (!pdfContentRef.current) return;
+    if (!reportRef.current) return;
 
     setIsGeneratingPDF(true);
 
     try {
-      // Force-load the DM fonts in all the weights/styles we use in the PDF,
-      // then wait for document.fonts.ready. Without this, html2canvas can
-      // capture the page before Google Fonts finish loading and fall back to Arial.
       await Promise.all([
         (document as any).fonts.load('400 14px "DM Sans"'),
         (document as any).fonts.load('700 14px "DM Sans"'),
@@ -164,38 +160,31 @@ export function Result({ analysis }: ResultProps) {
       ]).catch(() => { /* ignore — fallback will apply */ });
       await document.fonts.ready;
 
-      // PDF configuration
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-      const pageWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
+      const pageWidth = 210;
+      const pageHeight = 297;
       const margin = 12;
-      const contentWidth = pageWidth - (margin * 2); // 186mm
-      const maxContentHeight = pageHeight - (margin * 2) - 20; // Reserve for header/footer
-      const sectionSpacing = 6; // 6mm between sections
+      const headerSpace = 10;
+      const footerSpace = 10;
+      const contentWidth = pageWidth - margin * 2;
+      const pageContentTop = margin + headerSpace;
+      const pageContentBottom = pageHeight - margin - footerSpace;
+      const pageContentHeight = pageContentBottom - pageContentTop;
+      const sectionSpacing = 4;
 
-      let currentY = margin + 10; // Start below header space
-      let currentPage = 1;
+      let currentY = pageContentTop;
 
-      // Helper function to capture a section
-      const captureSection = async (element: HTMLElement) => {
-        const canvas = await html2canvas(element, {
-          scale: 2.5,
+      const captureSection = async (element: HTMLElement): Promise<HTMLCanvasElement> => {
+        return html2canvas(element, {
+          scale: 2,
           useCORS: true,
           allowTaint: false,
           imageTimeout: 0,
           backgroundColor: '#ffffff',
           logging: false,
-          windowWidth: 1200,
-          windowHeight: 1754,
+          windowWidth: 820,
           onclone: (clonedDoc) => {
-            // Ensure Google Fonts are present in the cloned document used by
-            // html2canvas for rendering, and force DM Sans as the default
-            // font for every element inside the captured section.
             const link = clonedDoc.createElement('link');
             link.rel = 'stylesheet';
             link.href =
@@ -204,92 +193,74 @@ export function Result({ analysis }: ResultProps) {
 
             const style = clonedDoc.createElement('style');
             style.textContent = `
-              [data-pdf-section], [data-pdf-section] * {
-                font-family: 'DM Sans', sans-serif !important;
-              }
-              [data-pdf-section] h1,
-              [data-pdf-section] h2,
-              [data-pdf-section] h3 {
-                font-family: 'DM Serif Display', serif !important;
-              }
-
-              /* ---- Vertical-alignment normalization for html2canvas ----
-                 DM Sans has larger ascender/descender metrics than Arial, so
-                 html2canvas offsets text inside flex rows. Forcing line-height
-                 to 1 on flex children that are expected to sit on the baseline
-                 (icons, numbered circles, emoji) aligns them with their labels. */
-
-              /* Any flex row with alignItems center: normalize child line-height */
-              [data-pdf-section] [style*="align-items: center"] > *,
-              [data-pdf-section] [style*="align-items:center"] > * {
-                line-height: 1.15 !important;
-              }
-
-              /* Circular badges (numbered 1/2/3/4, level emoji wrappers) */
-              [data-pdf-section] [style*="border-radius: 50%"],
-              [data-pdf-section] [style*="border-radius:50%"] {
-                line-height: 1 !important;
-                display: inline-flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                text-align: center !important;
-              }
-
-              /* Pill/rounded badges (Alcanzable, Requiere ajustes, etc.) */
-              [data-pdf-section] span[style*="border-radius: 12px"],
-              [data-pdf-section] span[style*="border-radius:12px"] {
-                display: inline-flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                line-height: 1 !important;
-              }
-
-              /* Legend color squares next to label text — align to text middle */
-              [data-pdf-section] [style*="border-radius: 4px"] + span,
-              [data-pdf-section] [style*="border-radius:4px"] + span {
-                line-height: 1 !important;
-              }
-
-              /* Emoji characters in headings sit above the baseline; bump them
-                 down slightly so they visually center with the title text. */
-              [data-pdf-section] h1, [data-pdf-section] h2, [data-pdf-section] h3,
-              [data-pdf-section] h4 {
-                line-height: 1.2 !important;
-              }
+              * { animation: none !important; transition: none !important; }
             `;
             clonedDoc.head.appendChild(style);
+
+            // Force motion.div final state — neutralize any in-flight inline
+            // opacity/transform from framer-motion so capture shows complete UI.
+            clonedDoc.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
+              if (el.style.opacity && el.style.opacity !== '1') el.style.opacity = '1';
+              if (el.style.transform && el.style.transform !== 'none') el.style.transform = 'none';
+            });
           },
         });
-
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = contentWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        return { imgData, imgWidth, imgHeight };
       };
 
-      // Helper function to add image to PDF
-      const addImageToPDF = (imgData: string, imgWidth: number, imgHeight: number) => {
-        // Check if image fits on current page
-        if (currentY + imgHeight > pageHeight - margin - 10) {
-          // Need new page
-          pdf.addPage();
-          currentPage++;
-          currentY = margin + 10;
+      const addCanvasToPDF = (canvas: HTMLCanvasElement) => {
+        const imgWidth = contentWidth;
+        const pxPerMm = canvas.width / imgWidth;
+        const totalHeightMm = canvas.height / pxPerMm;
+        const remaining = pageContentBottom - currentY;
+
+        // Case 1: fits in remaining space on current page.
+        if (totalHeightMm <= remaining) {
+          pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, currentY, imgWidth, totalHeightMm, undefined, 'FAST');
+          currentY += totalHeightMm + sectionSpacing;
+          return;
         }
 
-        // Add image
-        pdf.addImage(imgData, 'PNG', margin, currentY, imgWidth, imgHeight, undefined, 'FAST');
-        currentY += imgHeight + sectionSpacing;
+        // Case 2: fits in a fresh page — push to new page intact.
+        if (totalHeightMm <= pageContentHeight) {
+          pdf.addPage();
+          currentY = pageContentTop;
+          pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, currentY, imgWidth, totalHeightMm, undefined, 'FAST');
+          currentY += totalHeightMm + sectionSpacing;
+          return;
+        }
+
+        // Case 3: section taller than one page — slice across pages.
+        if (currentY !== pageContentTop) {
+          pdf.addPage();
+          currentY = pageContentTop;
+        }
+        const sliceHeightPx = Math.floor(pageContentHeight * pxPerMm);
+        let offsetPx = 0;
+        while (offsetPx < canvas.height) {
+          const thisSlicePx = Math.min(sliceHeightPx, canvas.height - offsetPx);
+          const slice = document.createElement('canvas');
+          slice.width = canvas.width;
+          slice.height = thisSlicePx;
+          const ctx = slice.getContext('2d')!;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, slice.width, slice.height);
+          ctx.drawImage(canvas, 0, offsetPx, canvas.width, thisSlicePx, 0, 0, canvas.width, thisSlicePx);
+          const sliceHeightMm = thisSlicePx / pxPerMm;
+          pdf.addImage(slice.toDataURL('image/png'), 'PNG', margin, pageContentTop, imgWidth, sliceHeightMm, undefined, 'FAST');
+          offsetPx += thisSlicePx;
+          if (offsetPx < canvas.height) {
+            pdf.addPage();
+            currentY = pageContentTop;
+          } else {
+            currentY = pageContentTop + sliceHeightMm + sectionSpacing;
+          }
+        }
       };
 
-      // Get all sections
-      const sections = pdfContentRef.current.querySelectorAll('[data-pdf-section]');
-
-      // Capture and add each section
-      for (const section of Array.from(sections)) {
-        const { imgData, imgWidth, imgHeight } = await captureSection(section as HTMLElement);
-        addImageToPDF(imgData, imgWidth, imgHeight);
+      const sections = Array.from(reportRef.current.children) as HTMLElement[];
+      for (const section of sections) {
+        const canvas = await captureSection(section);
+        addCanvasToPDF(canvas);
       }
 
       // Add headers and footers to all pages
@@ -900,380 +871,6 @@ export function Result({ analysis }: ResultProps) {
         </motion.div>
       </div>
 
-      {/* Hidden PDF Content - Purpose-built for PDF export */}
-      <div
-        ref={pdfContentRef}
-        style={{
-          position: 'fixed',
-          top: '-99999px',
-          left: '0',
-          width: '900px',
-          maxWidth: '900px',
-          backgroundColor: 'rgb(255, 255, 255)',
-          overflow: 'visible',
-          fontFamily: "'DM Sans', sans-serif",
-          color: 'rgb(0, 0, 0)',
-          zIndex: -1,
-        }}
-      >
-        {/* Section 1: Header */}
-        <div data-pdf-section style={{ padding: '20px', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-          <h1 style={{ fontSize: '24px', color: '#D4537E', marginBottom: '8px', overflow: 'visible', wordWrap: 'break-word' }}>
-            Hola, {analysis.userData.name}.
-          </h1>
-          <p style={{ fontSize: '16px', color: '#4a5568', overflow: 'visible' }}>
-            Esto es lo que encontramos.
-          </p>
-        </div>
-
-        {/* Section 2: Nivel financiero */}
-        <div data-pdf-section style={{ padding: '20px', backgroundColor: '#FBEAF0', margin: '0 20px', borderRadius: '12px', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', overflow: 'visible' }}>
-            <div style={{ fontSize: '24px' }}>📈</div>
-            <h2 style={{ fontSize: '18px', color: '#D4537E', margin: 0, overflow: 'visible' }}>
-              Tu nivel financiero
-            </h2>
-          </div>
-          <p style={{ fontSize: '16px', color: '#2d3748', margin: 0, overflow: 'visible', wordWrap: 'break-word' }}>
-            {analysis.financialLevel}
-          </p>
-        </div>
-
-        {/* Section 3: Métricas principales */}
-        <div data-pdf-section style={{ display: 'flex', gap: '12px', padding: '0 20px', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-          <div style={{ flex: 1, padding: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxSizing: 'border-box', overflow: 'visible' }}>
-            <p style={{ fontSize: '11px', color: '#718096', marginBottom: '6px', overflow: 'visible' }}>Ingresos</p>
-            <p style={{ fontSize: '18px', color: '#3B6D11', margin: 0, fontWeight: 'bold', overflow: 'visible', wordWrap: 'break-word' }}>
-              ${formatNumber(analysis.totalIncome)}
-            </p>
-          </div>
-          <div style={{ flex: 1, padding: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxSizing: 'border-box', overflow: 'visible' }}>
-            <p style={{ fontSize: '11px', color: '#718096', marginBottom: '6px', overflow: 'visible' }}>Egresos</p>
-            <p style={{ fontSize: '18px', color: '#D85A30', margin: 0, fontWeight: 'bold', overflow: 'visible', wordWrap: 'break-word' }}>
-              ${formatNumber(analysis.totalExpenses)}
-            </p>
-          </div>
-          <div style={{ flex: 1, padding: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxSizing: 'border-box', overflow: 'visible' }}>
-            <p style={{ fontSize: '11px', color: '#718096', marginBottom: '6px', overflow: 'visible' }}>Disponible</p>
-            <p style={{ fontSize: '18px', color: analysis.available >= 0 ? '#3B6D11' : '#D4537E', margin: 0, fontWeight: 'bold', overflow: 'visible', wordWrap: 'break-word' }}>
-              ${formatNumber(analysis.available)}
-            </p>
-          </div>
-        </div>
-
-        {/* Section 4: Deficit Warning (if applicable) */}
-        {hasDeficit && (
-          <div data-pdf-section style={{ padding: '24px', backgroundColor: '#C0392B', margin: '0 20px', borderRadius: '12px', color: '#ffffff', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-            <h3 style={{ fontSize: '18px', marginBottom: '12px', overflow: 'visible', wordWrap: 'break-word' }}>
-              ⚠️ Tus gastos superan tus ingresos
-            </h3>
-            <p style={{ fontSize: '16px', marginBottom: '12px', overflow: 'visible', wordWrap: 'break-word' }}>
-              Estás gastando <strong>${formatNumber(deficit)}/mes</strong> más de lo que ingresa.
-            </p>
-            <p style={{ fontSize: '14px', opacity: 0.95, lineHeight: '1.5', margin: 0, overflow: 'visible', wordWrap: 'break-word' }}>
-              Antes de hablar de ahorro, hay que resolver este déficit. Te mostramos por dónde empezar. Revisá tus gastos variables: delivery, suscripciones, entretenimiento y salidas.
-            </p>
-          </div>
-        )}
-
-        {/* Section 5: Desglose de gastos */}
-        <div data-pdf-section style={{ padding: '24px', backgroundColor: '#ffffff', margin: '0 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-          <h3 style={{ fontSize: '18px', color: '#D4537E', marginBottom: '16px', overflow: 'visible' }}>
-            Desglose de gastos
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflow: 'visible' }}>
-            {expenseData.map((expense, index) => {
-              const percentageOfIncome = analysis.totalIncome > 0 ? (expense.value / analysis.totalIncome) * 100 : 0;
-              return (
-                <div key={index} style={{ overflow: 'visible' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px', overflow: 'visible', wordWrap: 'break-word' }}>
-                    <span style={{ color: '#4a5568', overflow: 'visible' }}>{expense.name}</span>
-                    <span style={{ fontWeight: '500', overflow: 'visible', whiteSpace: 'nowrap' }}>${formatNumber(expense.value)} ({percentageOfIncome.toFixed(1)}%)</span>
-                  </div>
-                  <div style={{ width: '100%', height: '10px', backgroundColor: '#f7fafc', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${Math.min(percentageOfIncome, 100)}%`,
-                      height: '100%',
-                      backgroundColor: expense.color,
-                      borderRadius: '4px'
-                    }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Section 6: Esto duele ver */}
-        {analysis.reducibleExpenses.length > 0 && (
-          <div data-pdf-section style={{ padding: '0 20px', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', overflow: 'visible' }}>
-              <div style={{ fontSize: '24px' }}>🔥</div>
-              <h3 style={{ fontSize: '18px', color: '#D4537E', overflow: 'visible' }}>
-                Esto duele ver, pero más duele no verlo
-              </h3>
-            </div>
-
-            {analysis.reducibleExpenses.map((expense, index) => (
-              <div key={index} style={{
-                backgroundColor: '#FFF8F0',
-                padding: '20px',
-                borderRadius: '12px',
-                marginBottom: '12px',
-                border: '1px solid #f7fafc',
-                boxSizing: 'border-box',
-                overflow: 'visible'
-              }}>
-                <div style={{ display: 'flex', gap: '16px', overflow: 'visible' }}>
-                  <div style={{ fontSize: '36px', flexShrink: 0 }}>
-                    {expense.emoji}
-                  </div>
-                  <div style={{ flex: 1, overflow: 'visible' }}>
-                    <h4 style={{ fontSize: '16px', color: '#2d3748', marginBottom: '8px', overflow: 'visible', wordWrap: 'break-word' }}>
-                      {expense.category} — <span style={{ fontWeight: 600 }}>${formatNumber(expense.currentAmount)}/mes estimado</span>
-                    </h4>
-                    <p style={{ fontSize: '13px', color: '#4a5568', lineHeight: '1.5', marginBottom: '12px', overflow: 'visible', wordWrap: 'break-word' }}>
-                      {expense.description.replace(/\*\*/g, '')}
-                    </p>
-                    <div style={{ backgroundColor: '#D4537E', color: '#ffffff', padding: '10px 16px', borderRadius: '8px', display: 'inline-block' }}>
-                      <p style={{ fontSize: '12px', margin: 0, overflow: 'visible', wordWrap: 'break-word' }}>
-                        💰 {expense.savingsMessage}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {analysis.totalSavingsPotential > 0 && (
-              <div style={{
-                background: '#D4537E',
-                padding: '24px',
-                borderRadius: '12px',
-                color: '#ffffff',
-                marginTop: '12px',
-                boxSizing: 'border-box',
-                overflow: 'visible'
-              }}>
-                <h4 style={{ fontSize: '16px', marginBottom: '8px', overflow: 'visible', wordWrap: 'break-word' }}>
-                  Si aplicás las {analysis.reducibleExpenses.length} reducciones juntas
-                </h4>
-                <p style={{ fontSize: '28px', marginBottom: '8px', fontWeight: 'bold', overflow: 'visible', wordWrap: 'break-word' }}>
-                  ${formatNumber(analysis.totalSavingsPotential)}/mes
-                </p>
-                <p style={{ fontSize: '14px', opacity: 0.9, margin: 0, overflow: 'visible', wordWrap: 'break-word' }}>
-                  Nuevo disponible: ${formatNumber(analysis.available + analysis.totalSavingsPotential)}/mes
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Section 7: Potencial de ahorro */}
-        <div data-pdf-section style={{ padding: '24px', backgroundColor: '#ffffff', margin: '0 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-          <h3 style={{ fontSize: '18px', color: '#D4537E', marginBottom: '16px', overflow: 'visible' }}>
-            Potencial de ahorro
-          </h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', overflow: 'visible' }}>
-            {/* Static SVG pie chart — renders reliably in html2canvas */}
-            {(() => {
-              const pct = Math.max(0, Math.min(100, analysis.reduciblePercentage));
-              const r = 70;
-              const cx = 80;
-              const cy = 80;
-              const angle = (pct / 100) * 2 * Math.PI;
-              const x = cx + r * Math.sin(angle);
-              const y = cy - r * Math.cos(angle);
-              const largeArc = pct > 50 ? 1 : 0;
-              const reduciblePath =
-                pct >= 100
-                  ? `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.01} ${cy - r} Z`
-                  : pct <= 0
-                  ? ''
-                  : `M ${cx} ${cy} L ${cx} ${cy - r} A ${r} ${r} 0 ${largeArc} 1 ${x} ${y} Z`;
-              return (
-                <svg width="160" height="160" viewBox="0 0 160 160" style={{ flexShrink: 0 }}>
-                  <circle cx={cx} cy={cy} r={r} fill="#3B6D11" />
-                  {reduciblePath && <path d={reduciblePath} fill="#D85A30" />}
-                </svg>
-              );
-            })()}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, overflow: 'visible' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'visible' }}>
-                <div style={{ width: '20px', height: '20px', backgroundColor: '#D85A30', borderRadius: '4px' }}></div>
-                <span style={{ fontSize: '14px', color: '#4a5568', overflow: 'visible' }}>Reducible: {analysis.reduciblePercentage}%</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'visible' }}>
-                <div style={{ width: '20px', height: '20px', backgroundColor: '#3B6D11', borderRadius: '4px' }}></div>
-                <span style={{ fontSize: '14px', color: '#4a5568', overflow: 'visible' }}>Fijo: {100 - analysis.reduciblePercentage}%</span>
-              </div>
-            </div>
-          </div>
-          <p style={{ fontSize: '13px', color: '#4a5568', textAlign: 'center', marginTop: '16px', lineHeight: '1.5', overflow: 'visible', wordWrap: 'break-word' }}>
-            Aproximadamente el <span style={{ fontWeight: 'bold', color: '#D85A30' }}>{analysis.reduciblePercentage}%</span> de tus gastos son reducibles con pequeños cambios de hábitos.
-          </p>
-        </div>
-
-        {/* Section 8a: Goals Blocked Message (if deficit) */}
-        {hasDeficit && analysis.goalsAnalysis.length > 0 && (
-          <div data-pdf-section style={{ padding: '24px', backgroundColor: '#ffffff', margin: '0 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', overflow: 'visible' }}>
-              <div style={{ fontSize: '24px', filter: 'grayscale(1)' }}>🎯</div>
-              <h3 style={{ fontSize: '18px', color: '#4a5568', overflow: 'visible' }}>
-                Tus objetivos están en pausa
-              </h3>
-            </div>
-            <p style={{ fontSize: '13px', color: '#718096', lineHeight: '1.5', margin: 0, overflow: 'visible', wordWrap: 'break-word' }}>
-              Primero equilibremos tus finanzas reduciendo el déficit. Una vez que tus ingresos cubran tus gastos, podremos trabajar en alcanzar tus objetivos: {analysis.goalsAnalysis.map(g => g.title).join(', ')}.
-            </p>
-          </div>
-        )}
-
-        {/* Section 8b: Goals */}
-        {!hasDeficit && analysis.goalsAnalysis.length > 0 && (
-          <div data-pdf-section style={{ padding: '0 20px', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', overflow: 'visible' }}>
-              <div style={{ fontSize: '24px' }}>🎯</div>
-              <h3 style={{ fontSize: '18px', color: '#D4537E', overflow: 'visible' }}>
-                {analysis.goalsAnalysis.length === 1 ? 'Tu objetivo' : 'Tus objetivos'}
-              </h3>
-            </div>
-
-            {analysis.goalsAnalysis.map((goal, index) => (
-              <div key={index} style={{
-                backgroundColor: '#ffffff',
-                padding: '20px',
-                borderRadius: '12px',
-                marginBottom: '16px',
-                border: '2px solid #e2e8f0',
-                boxSizing: 'border-box',
-                overflow: 'visible'
-              }}>
-                <h4 style={{ fontSize: '16px', color: '#D4537E', marginBottom: '8px', overflow: 'visible', wordWrap: 'break-word' }}>
-                  {goal.title}
-                </h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#718096', marginBottom: '12px', overflow: 'visible', wordWrap: 'break-word' }}>
-                  <span style={{ overflow: 'visible' }}>Meta: ${formatNumber(goal.amount)}</span>
-                  <span style={{ overflow: 'visible' }}>Plazo: {goal.timeframe} meses</span>
-                </div>
-                <div style={{ width: '100%', height: '12px', backgroundColor: '#f7fafc', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px' }}>
-                  <div style={{
-                    width: `${goal.progress}%`,
-                    height: '100%',
-                    background: '#3B6D11',
-                    borderRadius: '6px'
-                  }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', overflow: 'visible', flexWrap: 'wrap' }}>
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '6px 12px',
-                    borderRadius: '12px',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    lineHeight: 1,
-                    backgroundColor: goal.status === 'possible' ? '#3B6D11' : '#D85A30',
-                    color: '#ffffff',
-                    overflow: 'visible'
-                  }}>
-                    {goal.status === 'possible' ? '✅ Alcanzable' : '⚠️ Requiere ajustes'}
-                  </span>
-                  <span style={{ fontSize: '11px', color: '#718096', overflow: 'visible' }}>
-                    ${formatNumber(goal.monthlyRequired)}/mes necesarios
-                  </span>
-                </div>
-                <div style={{ backgroundColor: '#FBEAF0', padding: '12px', borderRadius: '8px', overflow: 'visible' }}>
-                  <p style={{ fontSize: '12px', color: '#4a5568', lineHeight: '1.5', margin: 0, overflow: 'visible', wordWrap: 'break-word' }}>
-                    {goal.insight}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Section 9: Inversiones recomendadas */}
-        <div data-pdf-section style={{ padding: '24px', backgroundColor: '#ffffff', margin: '0 20px', borderRadius: '12px', border: '1px solid #e2e8f0', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-          <h3 style={{ fontSize: '18px', color: '#D4537E', marginBottom: '16px', overflow: 'visible' }}>
-            Inversiones recomendadas
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflow: 'visible' }}>
-            {analysis.recommendedInvestments.map((investment, index) => {
-              const definition = getInvestmentDefinition(investment);
-              return (
-                <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', backgroundColor: '#FBEAF0', borderRadius: '8px', overflow: 'visible' }}>
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '50%',
-                    backgroundColor: '#D4537E',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#ffffff',
-                    fontSize: '11px',
-                    flexShrink: 0,
-                    fontWeight: 'bold'
-                  }}>
-                    {index + 1}
-                  </div>
-                  <div style={{ flex: 1, overflow: 'visible' }}>
-                    <p style={{ fontSize: '13px', color: '#4a5568', margin: 0, fontWeight: '500', overflow: 'visible', wordWrap: 'break-word' }}>{investment}</p>
-                    {definition && (
-                      <p style={{ fontSize: '11px', color: '#718096', margin: '4px 0 0 0', lineHeight: '1.4', overflow: 'visible', wordWrap: 'break-word' }}>
-                        {definition.oneLiner}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Section 10: Plan de acción */}
-        <div data-pdf-section style={{ padding: '24px', backgroundColor: '#3B6D11', margin: '0 20px', borderRadius: '12px', color: '#ffffff', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-          <h3 style={{ fontSize: '18px', marginBottom: '16px', overflow: 'visible' }}>
-            Tu plan de acción
-          </h3>
-          <p style={{ fontSize: '14px', marginBottom: '16px', opacity: 0.9, overflow: 'visible' }}>
-            Pequeños cambios, grandes resultados. Empezá por acá:
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflow: 'visible' }}>
-            {analysis.actionPlan.map((step, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', overflow: 'visible' }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  fontSize: '16px',
-                  fontWeight: 'bold'
-                }}>
-                  {index + 1}
-                </div>
-                <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, paddingTop: '6px', overflow: 'visible', wordWrap: 'break-word', flex: 1 }}>{step}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Section 11: Footer motivacional */}
-        <div data-pdf-section style={{ padding: '32px 20px', textAlign: 'center', boxSizing: 'border-box', pageBreakInside: 'avoid', overflow: 'visible' }}>
-          <p style={{ fontSize: '16px', color: '#718096', marginBottom: '8px', overflow: 'visible' }}>
-            No estás {g(analysis.userData.gender, 'sola', 'solo')} en esto 💛
-          </p>
-          <p style={{ fontSize: '13px', color: '#a0aec0', margin: 0, overflow: 'visible' }}>
-            FINA - Finanzas personales con empatía
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
