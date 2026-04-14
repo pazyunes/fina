@@ -351,6 +351,24 @@ export function Result({ analysis }: ResultProps) {
           display: block !important;
         }
         .fina-pdf-root { font-size: 14px; }
+
+        /* Hierarchy: make titles distinctly larger than body. */
+        .fina-pdf-root h2 { font-size: 30px !important; line-height: 1.2 !important; }
+        .fina-pdf-root h3 { font-size: 22px !important; line-height: 1.25 !important; }
+        .fina-pdf-root h4 { font-size: 18px !important; line-height: 1.3 !important; }
+
+        /* Separation between stacked sections (direct motion.div children). */
+        .fina-pdf-root > div { margin-bottom: 24px !important; }
+
+        /* Ensure card shadows/edges show in capture. */
+        .fina-pdf-root .shadow-md,
+        .fina-pdf-root .shadow-lg,
+        .fina-pdf-root .shadow-sm {
+          box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+        }
+
+        /* Hide interactive-only elements in the PDF. */
+        .fina-pdf-root [data-pdf-hide] { display: none !important; }
       `;
       offscreen.appendChild(overrides);
       offscreen.appendChild(clone);
@@ -375,13 +393,21 @@ export function Result({ analysis }: ResultProps) {
         el.querySelectorAll<HTMLElement>('*').forEach((c) => { c.style.color = '#ffffff'; });
       });
 
-      // 2. Goal progress track + fill
+      // 2. Goal progress track + fill. Motion leaves width:0 inline if the
+      //    animation hadn't completed when the user clicked Download, so we
+      //    force the target width from the data attribute.
       clone.querySelectorAll<HTMLElement>('[data-pdf-goal-track]').forEach((el) => {
         el.style.backgroundColor = '#e5e7eb';
+        el.style.height = '16px';
+        el.style.borderRadius = '8px';
+        el.style.overflow = 'hidden';
       });
       clone.querySelectorAll<HTMLElement>('[data-pdf-goal-progress]').forEach((el) => {
         el.style.backgroundColor = '#3B6D11';
         el.style.backgroundImage = 'none';
+        el.style.height = '100%';
+        const pct = Number(el.getAttribute('data-pdf-goal-percentage') || '0');
+        el.style.width = `${Math.max(0, Math.min(100, pct))}%`;
       });
 
       // 3. Goal status badge
@@ -407,10 +433,35 @@ export function Result({ analysis }: ResultProps) {
         el.style.color = '#ffffff';
       });
 
-      // 5. Investment items
+      // 5. Investment items + numbered circles
       clone.querySelectorAll<HTMLElement>('[data-pdf-investment-item]').forEach((el) => {
         el.style.backgroundColor = '#FBEAF0';
         el.style.backgroundImage = 'none';
+        el.style.padding = '14px';
+        el.style.borderRadius = '12px';
+        el.style.marginBottom = '10px';
+      });
+      clone.querySelectorAll<HTMLElement>('[data-pdf-investment-circle]').forEach((el) => {
+        el.style.backgroundColor = '#D4537E';
+        el.style.color = '#ffffff';
+        el.style.width = '24px';
+        el.style.height = '24px';
+        el.style.borderRadius = '50%';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        el.style.flexShrink = '0';
+        el.style.fontWeight = 'bold';
+      });
+
+      // 5b. Reducible expense cards (cream box containing emoji + text + badge).
+      clone.querySelectorAll<HTMLElement>('[data-pdf-reducible-expense]').forEach((el) => {
+        el.style.backgroundColor = '#FFF8F0';
+        el.style.backgroundImage = 'none';
+        el.style.padding = '20px';
+        el.style.borderRadius = '16px';
+        el.style.border = '1px solid #f0e6d6';
+        el.style.marginBottom = '12px';
       });
 
       // 6. Replace Recharts pie with a static SVG — off-screen capture was
@@ -463,6 +514,13 @@ export function Result({ analysis }: ResultProps) {
       clone.querySelectorAll<HTMLElement>('[data-pdf-pie]').forEach((el) => {
         const reducible = Number(el.getAttribute('data-pdf-pie-reducible') || '0');
         el.innerHTML = buildPieSvg(reducible);
+        // Kill any residual height/max-width coming from Recharts' wrappers
+        // so the wrapper collapses tightly around the static SVG + legend.
+        el.style.height = 'auto';
+        el.style.minHeight = '0';
+        el.style.width = '100%';
+        el.style.maxWidth = 'none';
+        el.style.display = 'block';
       });
 
       // 7. Resolve CSS font variables to concrete families. html2canvas can
@@ -761,6 +819,7 @@ export function Result({ analysis }: ResultProps) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 + index * 0.1 }}
+                  data-pdf-reducible-expense
                   className="bg-[#FFF8F0] rounded-3xl p-6 shadow-sm border border-gray-100"
                 >
                   <div className="flex items-start gap-4 flex-col sm:flex-row">
@@ -941,6 +1000,7 @@ export function Result({ analysis }: ResultProps) {
                         animate={{ width: `${goal.progress}%` }}
                         transition={{ duration: 1, delay: 0.8 + index * 0.1 }}
                         data-pdf-goal-progress
+                        data-pdf-goal-percentage={goal.progress}
                         className="h-full bg-gradient-to-r from-[#3B6D11] to-[#4a8a15] rounded-full"
                       />
                     </div>
@@ -1002,7 +1062,7 @@ export function Result({ analysis }: ResultProps) {
               return (
                 <div key={index} data-pdf-investment-item className="p-4 bg-[#FBEAF0] rounded-xl">
                   <div className="flex items-start gap-3" style={{ flexDirection: window.innerWidth < 380 ? 'column' : 'row' }}>
-                    <div className="w-6 h-6 rounded-full bg-[#D4537E] flex items-center justify-center text-white text-sm flex-shrink-0">
+                    <div data-pdf-investment-circle className="w-6 h-6 rounded-full bg-[#D4537E] flex items-center justify-center text-white text-sm flex-shrink-0">
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1016,6 +1076,7 @@ export function Result({ analysis }: ResultProps) {
 
                           <button
                             onClick={() => toggleInvestmentExpanded(index)}
+                            data-pdf-hide
                             className="flex items-center gap-1 text-xs text-[#D4537E] mt-1.5 hover:text-[#C14870] transition-colors"
                           >
                             ¿Qué significa esto?
