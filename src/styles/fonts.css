@@ -1,1 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+/* Mona Sans — local (variable font, weights 100–900) */
+@font-face {
+  font-family: 'Mona Sans';
+  src: url('/fonts/Mona-Sans.woff2') format('woff2'),
+       url('/fonts/Mona-Sans.woff') format('woff');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Epilogue — Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600&display=swap');

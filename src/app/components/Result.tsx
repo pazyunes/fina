@@ -156,9 +156,9 @@ export function Result({ analysis }: ResultProps) {
 
     try {
       await Promise.all([
-        (document as any).fonts.load('400 14px "DM Sans"'),
-        (document as any).fonts.load('700 14px "DM Sans"'),
-        (document as any).fonts.load('400 18px "DM Serif Display"'),
+        (document as any).fonts.load('400 14px "Epilogue"'),
+        (document as any).fonts.load('600 14px "Epilogue"'),
+        (document as any).fonts.load('600 18px "Mona Sans"'),
       ]).catch(() => { /* ignore — fallback will apply */ });
       await document.fonts.ready;
 
@@ -563,7 +563,7 @@ export function Result({ analysis }: ResultProps) {
         return `
           <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0;">
             <img src="${src}" width="200" height="200" style="display:block;width:200px;height:200px;" />
-            <div style="display:flex;gap:24px;justify-content:center;font-family:'DM Sans',Arial,sans-serif;font-size:14px;">
+            <div style="display:flex;gap:24px;justify-content:center;font-family:'Epilogue',Arial,sans-serif;font-size:14px;">
               ${legendItem('#D85A30', `Reducible ${red.toFixed(0)}%`)}
               ${legendItem('#3B6D11', `Fijo ${fijo.toFixed(0)}%`)}
             </div>
@@ -584,10 +584,10 @@ export function Result({ analysis }: ResultProps) {
       clone.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
         const s = el.getAttribute('style') || '';
         if (s.includes('var(--font-serif)')) {
-          el.style.fontFamily = "'DM Serif Display', Georgia, serif";
+          el.style.fontFamily = "'Mona Sans', sans-serif";
         }
         if (s.includes('var(--font-sans)')) {
-          el.style.fontFamily = "'DM Sans', Arial, sans-serif";
+          el.style.fontFamily = "'Epilogue', Arial, sans-serif";
         }
       });
 
