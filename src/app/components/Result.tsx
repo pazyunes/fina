@@ -407,6 +407,18 @@ export function Result({ analysis }: ResultProps) {
         });
       });
 
+      // 1b. Deficit warning card — the from/to gradient sometimes vanishes
+      //     in capture, leaving only the ⚠️ emoji on a blank background.
+      //     Force a solid red background and white text on every descendant.
+      clone.querySelectorAll<HTMLElement>('[data-pdf-deficit-card]').forEach((el) => {
+        el.style.backgroundColor = '#C0392B';
+        el.style.backgroundImage = 'none';
+        el.style.color = '#ffffff';
+        el.style.padding = '28px 24px';
+        el.style.borderRadius = '24px';
+        el.querySelectorAll<HTMLElement>('*').forEach((c) => { c.style.color = '#ffffff'; });
+      });
+
       // 2. Goal card: more generous padding + vertical breathing room
       //    between the name, meta line, progress bar, badge and insight.
       clone.querySelectorAll<HTMLElement>('[data-pdf-goal-card]').forEach((el) => {
@@ -784,6 +796,7 @@ export function Result({ analysis }: ResultProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
+            data-pdf-deficit-card
             className="bg-gradient-to-br from-[#D85A30] to-[#D4537E] rounded-3xl p-8 shadow-lg text-white"
           >
             <h3
