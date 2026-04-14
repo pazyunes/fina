@@ -267,10 +267,100 @@ export function Result({ analysis }: ResultProps) {
         }
       };
 
-      const sections = Array.from(reportRef.current.children) as HTMLElement[];
-      for (const section of sections) {
-        const canvas = await captureSection(section);
-        addCanvasToPDF(canvas);
+      // Build an offscreen desktop-width clone so the PDF renders identically
+      // regardless of the device that triggered the download. Capturing the
+      // live DOM on mobile produced compressed layout, truncated text and
+      // tiny charts — this container forces a fixed 900px desktop layout.
+      const PDF_WIDTH = 900;
+      const offscreen = document.createElement('div');
+      offscreen.id = 'fina-pdf-offscreen';
+      offscreen.style.cssText = [
+        'position: fixed',
+        'left: -10000px',
+        'top: 0',
+        `width: ${PDF_WIDTH}px`,
+        'background: #ffffff',
+        'z-index: -1',
+        'pointer-events: none',
+      ].join(';');
+
+      const clone = reportRef.current.cloneNode(true) as HTMLElement;
+      clone.classList.add('fina-pdf-root');
+      // Kill the Tailwind max-w-3xl / mx-auto so the clone fully fills 900px.
+      clone.style.cssText = [
+        'width: 100%',
+        'max-width: 100%',
+        'margin: 0',
+        'padding: 24px',
+        'box-sizing: border-box',
+        'background: transparent',
+      ].join(';');
+
+      const overrides = document.createElement('style');
+      overrides.textContent = `
+        .fina-pdf-root, .fina-pdf-root * {
+          overflow: visible !important;
+          text-overflow: clip !important;
+          max-height: none !important;
+          animation: none !important;
+          transition: none !important;
+        }
+        .fina-pdf-root .truncate,
+        .fina-pdf-root [class*="line-clamp-"],
+        .fina-pdf-root .whitespace-nowrap {
+          white-space: normal !important;
+          -webkit-line-clamp: unset !important;
+          display: block !important;
+        }
+        .fina-pdf-root { font-size: 14px; }
+        .fina-pdf-root .recharts-responsive-container {
+          width: 600px !important;
+          height: 320px !important;
+          margin: 0 auto !important;
+        }
+      `;
+      offscreen.appendChild(overrides);
+      offscreen.appendChild(clone);
+      document.body.appendChild(offscreen);
+
+      // Neutralize in-flight motion inline styles on the clone.
+      clone.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
+        if (el.style.opacity && el.style.opacity !== '1') el.style.opacity = '1';
+        if (el.style.transform && el.style.transform !== 'none') el.style.transform = 'none';
+      });
+
+      // Upscale any Recharts/static SVGs captured at mobile size. SVGs with
+      // explicit width/height but no viewBox would just stay small when the
+      // container grows, so add a viewBox and bump width to at least 600px.
+      clone.querySelectorAll('svg').forEach((svg) => {
+        const wAttr = parseFloat(svg.getAttribute('width') || '0');
+        const hAttr = parseFloat(svg.getAttribute('height') || '0');
+        if (wAttr > 0 && hAttr > 0) {
+          if (!svg.getAttribute('viewBox')) {
+            svg.setAttribute('viewBox', `0 0 ${wAttr} ${hAttr}`);
+          }
+          if (wAttr < 600) {
+            const target = 600;
+            const ratio = target / wAttr;
+            svg.setAttribute('width', String(target));
+            svg.setAttribute('height', String(Math.round(hAttr * ratio)));
+          }
+        }
+      });
+
+      // Let the browser lay out the clone at the new width before capture.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      try {
+        const sections = Array.from(clone.children).filter(
+          (el) => el instanceof HTMLElement && el.tagName !== 'STYLE'
+        ) as HTMLElement[];
+        for (const section of sections) {
+          const canvas = await captureSection(section);
+          addCanvasToPDF(canvas);
+        }
+      } finally {
+        document.body.removeChild(offscreen);
       }
 
       // Add headers and footers to all pages
