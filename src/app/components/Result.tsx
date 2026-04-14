@@ -6,7 +6,9 @@ import { g } from '../utils/gender';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Download, Flame, TrendingUp, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+// html2canvas-pro is a drop-in fork that parses oklch/lab/lch/color-mix
+// natively — required for Tailwind v4's default color palette.
+import html2canvas from 'html2canvas-pro';
 import './PDFStyles.css';
 
 // Investment definitions
