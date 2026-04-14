@@ -362,6 +362,121 @@ export function Result({ analysis }: ResultProps) {
         if (el.style.transform && el.style.transform !== 'none') el.style.transform = 'none';
       });
 
+      // --- Targeted capture overrides ---
+      // Force inline backgrounds/colors on elements that Tailwind paints with
+      // oklch or gradients, so html2canvas captures the intended look even if
+      // a modern color function fails to rasterize.
+
+      // 1. Savings badge (💰 rosa)
+      clone.querySelectorAll<HTMLElement>('[data-pdf-savings-badge]').forEach((el) => {
+        el.style.backgroundColor = '#D4537E';
+        el.style.color = '#ffffff';
+        el.style.backgroundImage = 'none';
+        el.querySelectorAll<HTMLElement>('*').forEach((c) => { c.style.color = '#ffffff'; });
+      });
+
+      // 2. Goal progress track + fill
+      clone.querySelectorAll<HTMLElement>('[data-pdf-goal-track]').forEach((el) => {
+        el.style.backgroundColor = '#e5e7eb';
+      });
+      clone.querySelectorAll<HTMLElement>('[data-pdf-goal-progress]').forEach((el) => {
+        el.style.backgroundColor = '#3B6D11';
+        el.style.backgroundImage = 'none';
+      });
+
+      // 3. Goal status badge
+      clone.querySelectorAll<HTMLElement>('[data-pdf-goal-status]').forEach((el) => {
+        const status = el.getAttribute('data-pdf-goal-status');
+        el.style.backgroundColor = status === 'possible' ? '#3B6D11' : '#D85A30';
+        el.style.color = '#ffffff';
+        el.style.backgroundImage = 'none';
+      });
+
+      // 4. Action plan container + step circles
+      clone.querySelectorAll<HTMLElement>('[data-pdf-action-plan]').forEach((el) => {
+        el.style.backgroundColor = '#3B6D11';
+        el.style.backgroundImage = 'none';
+        el.style.color = '#ffffff';
+        el.querySelectorAll<HTMLElement>('*').forEach((c) => {
+          // Preserve the step circle's semi-transparent white; otherwise force white text.
+          if (!c.hasAttribute('data-pdf-action-step-circle')) c.style.color = '#ffffff';
+        });
+      });
+      clone.querySelectorAll<HTMLElement>('[data-pdf-action-step-circle]').forEach((el) => {
+        el.style.backgroundColor = 'rgba(255,255,255,0.25)';
+        el.style.color = '#ffffff';
+      });
+
+      // 5. Investment items
+      clone.querySelectorAll<HTMLElement>('[data-pdf-investment-item]').forEach((el) => {
+        el.style.backgroundColor = '#FBEAF0';
+        el.style.backgroundImage = 'none';
+      });
+
+      // 6. Replace Recharts pie with a static SVG — off-screen capture was
+      //    producing compressed/mis-sized pies. Data lives on the wrapper.
+      const buildPieSvg = (reduciblePct: number): string => {
+        const fijoPct = Math.max(0, Math.min(100, 100 - reduciblePct));
+        const red = Math.max(0, Math.min(100, reduciblePct));
+        const cx = 100;
+        const cy = 100;
+        const r = 80;
+        const slices = [
+          { pct: red, color: '#D85A30', label: 'Reducible' },
+          { pct: fijoPct, color: '#3B6D11', label: 'Fijo' },
+        ];
+        let angle = -Math.PI / 2;
+        const paths: string[] = [];
+        for (const s of slices) {
+          if (s.pct <= 0) continue;
+          if (s.pct >= 99.999) {
+            paths.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${s.color}"/>`);
+            continue;
+          }
+          const sweep = (s.pct / 100) * Math.PI * 2;
+          const x1 = cx + r * Math.cos(angle);
+          const y1 = cy + r * Math.sin(angle);
+          const x2 = cx + r * Math.cos(angle + sweep);
+          const y2 = cy + r * Math.sin(angle + sweep);
+          const large = sweep > Math.PI ? 1 : 0;
+          paths.push(
+            `<path d="M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z" fill="${s.color}"/>`
+          );
+          angle += sweep;
+        }
+        const legendItem = (color: string, text: string) => `
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="display:inline-block;width:12px;height:12px;background:${color};border-radius:2px;"></span>
+            <span>${text}</span>
+          </div>`;
+        return `
+          <div style="text-align:center;padding:8px 0;">
+            <svg width="200" height="200" viewBox="0 0 200 200" style="display:block;margin:0 auto;">
+              ${paths.join('')}
+            </svg>
+            <div style="display:flex;gap:24px;justify-content:center;margin-top:12px;font-family:'DM Sans',Arial,sans-serif;font-size:14px;">
+              ${legendItem('#D85A30', `Reducible ${red.toFixed(0)}%`)}
+              ${legendItem('#3B6D11', `Fijo ${fijoPct.toFixed(0)}%`)}
+            </div>
+          </div>`;
+      };
+      clone.querySelectorAll<HTMLElement>('[data-pdf-pie]').forEach((el) => {
+        const reducible = Number(el.getAttribute('data-pdf-pie-reducible') || '0');
+        el.innerHTML = buildPieSvg(reducible);
+      });
+
+      // 7. Resolve CSS font variables to concrete families. html2canvas can
+      //    fail to resolve `var(--font-*)` in inline styles on cloned nodes.
+      clone.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
+        const s = el.getAttribute('style') || '';
+        if (s.includes('var(--font-serif)')) {
+          el.style.fontFamily = "'DM Serif Display', Georgia, serif";
+        }
+        if (s.includes('var(--font-sans)')) {
+          el.style.fontFamily = "'DM Sans', Arial, sans-serif";
+        }
+      });
+
       // Let the browser lay out the clone at the new width before capture.
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
@@ -671,7 +786,7 @@ export function Result({ analysis }: ResultProps) {
                       />
 
                       {/* Badge final con fondo rosa */}
-                      <div className="bg-[#D4537E] text-white rounded-2xl px-5 py-3 inline-block">
+                      <div data-pdf-savings-badge className="bg-[#D4537E] text-white rounded-2xl px-5 py-3 inline-block">
                         <p className="text-sm break-words" style={{ fontFamily: 'var(--font-sans)' }}>
                           💰 {expense.savingsMessage}
                         </p>
@@ -718,7 +833,11 @@ export function Result({ analysis }: ResultProps) {
             Potencial de ahorro
           </h3>
           <div className="flex flex-col items-center">
-            <div className="w-full max-w-[320px] sm:max-w-none">
+            <div
+              className="w-full max-w-[320px] sm:max-w-none"
+              data-pdf-pie
+              data-pdf-pie-reducible={analysis.reduciblePercentage}
+            >
               <ResponsiveContainer width="100%" height={window.innerWidth < 480 ? 240 : 300}>
                 <PieChart>
                   <Pie
@@ -816,11 +935,12 @@ export function Result({ analysis }: ResultProps) {
 
                   {/* Barra de progreso (SIEMPRE visible) */}
                   <div className="mb-4">
-                    <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden mb-2">
+                    <div data-pdf-goal-track className="w-full bg-gray-100 rounded-full h-4 overflow-hidden mb-2">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${goal.progress}%` }}
                         transition={{ duration: 1, delay: 0.8 + index * 0.1 }}
+                        data-pdf-goal-progress
                         className="h-full bg-gradient-to-r from-[#3B6D11] to-[#4a8a15] rounded-full"
                       />
                     </div>
@@ -833,6 +953,7 @@ export function Result({ analysis }: ResultProps) {
                   {/* Estado visual */}
                   <div className="flex items-center gap-2 mb-3">
                     <span
+                      data-pdf-goal-status={goal.status}
                       className={`px-3 py-1 rounded-full text-sm font-medium ${
                         goal.status === 'possible'
                           ? 'bg-[#3B6D11] text-white'
@@ -879,7 +1000,7 @@ export function Result({ analysis }: ResultProps) {
               const isExpanded = expandedInvestments.has(index);
 
               return (
-                <div key={index} className="p-4 bg-[#FBEAF0] rounded-xl">
+                <div key={index} data-pdf-investment-item className="p-4 bg-[#FBEAF0] rounded-xl">
                   <div className="flex items-start gap-3" style={{ flexDirection: window.innerWidth < 380 ? 'column' : 'row' }}>
                     <div className="w-6 h-6 rounded-full bg-[#D4537E] flex items-center justify-center text-white text-sm flex-shrink-0">
                       {index + 1}
@@ -947,6 +1068,7 @@ export function Result({ analysis }: ResultProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
+          data-pdf-action-plan
           className="bg-gradient-to-br from-[#3B6D11] to-[#2d5a0d] rounded-3xl p-8 shadow-lg text-white mb-8"
         >
           <h3 
@@ -960,8 +1082,8 @@ export function Result({ analysis }: ResultProps) {
           </p>
           <div className="space-y-4">
             {analysis.actionPlan.map((step, index) => (
-              <div key={index} className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
+              <div key={index} data-pdf-action-step className="flex items-start gap-4">
+                <div data-pdf-action-step-circle className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
                   <span className="text-xl font-bold">{index + 1}</span>
                 </div>
                 <p className="text-lg leading-relaxed pt-2 min-w-0 break-words">{step}</p>
