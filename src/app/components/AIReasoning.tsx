@@ -4,7 +4,6 @@ import { motion } from 'motion/react';
 import { Button } from './ui/button';
 import { FinancialAnalysis } from '../types';
 import { Brain, TrendingUp, Calculator, Target, Lightbulb, AlertCircle, History, User } from 'lucide-react';
-import { listReports, AIReasoningSnapshot } from '../lib/reports';
 
 interface AIReasoningProps {
   analysis: FinancialAnalysis | null;
@@ -13,7 +12,38 @@ interface AIReasoningProps {
 interface HistoryEntry {
   timestamp: string;
   profile: { name: string; age: string; email: string; gender: string };
-  snapshot: AIReasoningSnapshot;
+  snapshot: {
+    totalIncome: number;
+    totalExpenses: number;
+    available: number;
+    financialLevel: string;
+    reduciblePercentage: number;
+    insights: string[];
+    recommendedInvestments: string[];
+    actionPlan: string[];
+  };
+}
+
+const HISTORY_KEY = 'fina_ai_reasoning_history_v1';
+
+function loadHistory(): Record<string, HistoryEntry[]> {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveHistoryEntry(email: string, entry: HistoryEntry) {
+  const all = loadHistory();
+  const key = email.trim().toLowerCase() || 'anonymous';
+  all[key] = [entry, ...(all[key] || [])].slice(0, 20);
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(all));
+  } catch {
+    /* quota exceeded — ignore */
+  }
 }
 
 export function AIReasoning({ analysis }: AIReasoningProps) {
@@ -22,23 +52,29 @@ export function AIReasoning({ analysis }: AIReasoningProps) {
 
   useEffect(() => {
     if (!analysis) return;
-    // Report persistence happens in Main.handleGoals; here we just load the
-    // history for display from Supabase.
-    listReports().then(({ rows }) => {
-      const entries: HistoryEntry[] = rows
-        .filter((r) => r.ai_reasoning)
-        .map((r) => ({
-          timestamp: r.created_at,
-          profile: {
-            name: r.user_data.name,
-            age: r.user_data.age,
-            email: r.user_data.email,
-            gender: r.user_data.gender || 'prefiero_no_decir',
-          },
-          snapshot: r.ai_reasoning as AIReasoningSnapshot,
-        }));
-      setHistory(entries);
-    });
+    const entry: HistoryEntry = {
+      timestamp: new Date().toISOString(),
+      profile: {
+        name: analysis.userData.name,
+        age: analysis.userData.age,
+        email: analysis.userData.email,
+        gender: analysis.userData.gender || 'prefiero_no_decir',
+      },
+      snapshot: {
+        totalIncome: analysis.totalIncome,
+        totalExpenses: analysis.totalExpenses,
+        available: analysis.available,
+        financialLevel: analysis.financialLevel,
+        reduciblePercentage: analysis.reduciblePercentage,
+        insights: analysis.insights,
+        recommendedInvestments: analysis.recommendedInvestments,
+        actionPlan: analysis.actionPlan,
+      },
+    };
+    saveHistoryEntry(analysis.userData.email, entry);
+    const all = loadHistory();
+    const key = (analysis.userData.email || '').trim().toLowerCase() || 'anonymous';
+    setHistory(all[key] || []);
   }, [analysis]);
 
   if (!analysis) {

@@ -14,13 +14,10 @@ import { Result } from './components/Result';
 import { UserData, FinancialAnalysis } from './types';
 import { analyzeFinances } from './utils/financialAnalyzer';
 import { DEBUG_MODE } from './config';
-import { useAuth } from './hooks/useAuth';
-import { buildReasoningSnapshot, saveReport } from './lib/reports';
 
 export function Main() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { session, loading: authLoading } = useAuth();
 
   const [userData, setUserData] = useState<Partial<UserData>>({
     name: '',
@@ -71,17 +68,11 @@ export function Main() {
   const [analysis, setAnalysis] = useState<FinancialAnalysis | null>(null);
 
   useEffect(() => {
-    // Gate every Main route behind a valid session. Users land on /login
-    // until magic-link verification completes.
-    if (authLoading) return;
-    if (!session) {
-      navigate('/login', { replace: true });
-      return;
-    }
+    // Redirect to splash on initial load
     if (location.pathname === '/') {
       navigate('/splash');
     }
-  }, [authLoading, session, location.pathname]);
+  }, []);
 
   // Scroll to top whenever the route (section) changes
   useEffect(() => {
@@ -187,16 +178,6 @@ export function Main() {
     // Generate analysis
     const financialAnalysis = analyzeFinances(completeData);
     setAnalysis(financialAnalysis);
-
-    // Persist a new report row for this run (history + progress tracking).
-    // Fire-and-forget: UI shouldn't block on network.
-    saveReport({
-      userData: completeData,
-      analysis: financialAnalysis,
-      aiReasoning: buildReasoningSnapshot(financialAnalysis),
-    }).then(({ error }) => {
-      if (error) console.error('[fina] saveReport failed:', error);
-    });
   };
 
   // Render appropriate component based on route
