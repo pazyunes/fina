@@ -272,6 +272,21 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                 </div>
               </div>
 
+              <div className="flex items-center gap-2 mb-4">
+                <Switch
+                  checked={noEntertainment}
+                  onCheckedChange={(checked) => {
+                    setNoEntertainment(checked);
+                    if (checked) {
+                      setEntertainmentFrequency('0');
+                      setEntertainmentAmount('0');
+                    }
+                  }}
+                  className="data-[state=checked]:bg-[#D4537E]"
+                />
+                <span className="text-sm text-gray-500">No consumo</span>
+              </div>
+
               {noEntertainment && (
                 <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
                   <span className="text-xs text-gray-600">No aplica</span>
@@ -322,21 +337,6 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                   />
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                <Switch
-                  checked={noEntertainment}
-                  onCheckedChange={(checked) => {
-                    setNoEntertainment(checked);
-                    if (checked) {
-                      setEntertainmentFrequency('0');
-                      setEntertainmentAmount('0');
-                    }
-                  }}
-                  className="data-[state=checked]:bg-[#D4537E]"
-                />
-                <span className="text-sm text-gray-500">No consumo</span>
-              </div>
             </div>
 
             {/* Delivery Section */}
@@ -350,6 +350,21 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     Delivery / comida por app
                   </h3>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 mb-4">
+                <Switch
+                  checked={noDelivery}
+                  onCheckedChange={(checked) => {
+                    setNoDelivery(checked);
+                    if (checked) {
+                      setDeliveryFrequency('0');
+                      setDeliveryAmount('0');
+                    }
+                  }}
+                  className="data-[state=checked]:bg-[#D4537E]"
+                />
+                <span className="text-sm text-gray-500">No consumo</span>
               </div>
 
               {noDelivery && (
@@ -402,21 +417,6 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                   />
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                <Switch
-                  checked={noDelivery}
-                  onCheckedChange={(checked) => {
-                    setNoDelivery(checked);
-                    if (checked) {
-                      setDeliveryFrequency('0');
-                      setDeliveryAmount('0');
-                    }
-                  }}
-                  className="data-[state=checked]:bg-[#D4537E]"
-                />
-                <span className="text-sm text-gray-500">No consumo</span>
-              </div>
             </div>
 
             {/* Supermarket Section */}
@@ -430,6 +430,21 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     Supermercado
                   </h3>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 mb-4">
+                <Switch
+                  checked={noSupermarket}
+                  onCheckedChange={(checked) => {
+                    setNoSupermarket(checked);
+                    if (checked) {
+                      setSupermarketFrequency('0');
+                      setSupermarketAmount('0');
+                    }
+                  }}
+                  className="data-[state=checked]:bg-[#D4537E]"
+                />
+                <span className="text-sm text-gray-500">No aplica</span>
               </div>
 
               {noSupermarket && (
@@ -481,21 +496,6 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     style={{ backgroundColor: noSupermarket ? '#f3f3f5' : 'white' }}
                   />
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                <Switch
-                  checked={noSupermarket}
-                  onCheckedChange={(checked) => {
-                    setNoSupermarket(checked);
-                    if (checked) {
-                      setSupermarketFrequency('0');
-                      setSupermarketAmount('0');
-                    }
-                  }}
-                  className="data-[state=checked]:bg-[#D4537E]"
-                />
-                <span className="text-sm text-gray-500">No aplica</span>
               </div>
             </div>
           </div>

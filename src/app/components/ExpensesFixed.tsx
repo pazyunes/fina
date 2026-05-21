@@ -177,6 +177,20 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
                     </div>
                   </div>
 
+                  <div className="flex items-center gap-2 mb-4">
+                    <Switch
+                      checked={isNotPaying}
+                      onCheckedChange={(checked) => {
+                        setNotPaying(prev => ({ ...prev, [category.key]: checked }));
+                        if (checked) {
+                          setExpenses(prev => ({ ...prev, [category.key]: 0 }));
+                        }
+                      }}
+                      className="data-[state=checked]:bg-[#D4537E]"
+                    />
+                    <span className="text-sm text-gray-500">No lo pago yo</span>
+                  </div>
+
                   {isNotPaying && (
                     <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
                       <span className="text-xs text-gray-600">Cubierto por otro</span>
@@ -217,20 +231,6 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
                   <div className="flex justify-between text-xs text-gray-400 mt-2">
                     <span>$0</span>
                     <span>{formatCurrency(maxAmount)}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                    <Switch
-                      checked={isNotPaying}
-                      onCheckedChange={(checked) => {
-                        setNotPaying(prev => ({ ...prev, [category.key]: checked }));
-                        if (checked) {
-                          setExpenses(prev => ({ ...prev, [category.key]: 0 }));
-                        }
-                      }}
-                      className="data-[state=checked]:bg-[#D4537E]"
-                    />
-                    <span className="text-sm text-gray-500">No lo pago yo</span>
                   </div>
                 </div>
               );
