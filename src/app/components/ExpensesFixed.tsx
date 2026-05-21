@@ -85,6 +85,12 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
     return `$${value.toLocaleString('es-AR').replace(/,/g, '.')}`;
   };
 
+  // Formatea una cadena de dígitos con separador de miles (ej: "10000" -> "10.000")
+  const formatThousands = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
   useEffect(() => {
     if (showConfirmation) {
       const timer = setTimeout(() => {
@@ -169,19 +175,6 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
                       </div>
                       <p className="text-gray-700">{category.label}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">No lo pago yo</span>
-                      <Switch
-                        checked={isNotPaying}
-                        onCheckedChange={(checked) => {
-                          setNotPaying(prev => ({ ...prev, [category.key]: checked }));
-                          if (checked) {
-                            setExpenses(prev => ({ ...prev, [category.key]: 0 }));
-                          }
-                        }}
-                        className="data-[state=checked]:bg-[#D4537E]"
-                      />
-                    </div>
                   </div>
 
                   {isNotPaying && (
@@ -224,6 +217,20 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
                   <div className="flex justify-between text-xs text-gray-400 mt-2">
                     <span>$0</span>
                     <span>{formatCurrency(maxAmount)}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                    <Switch
+                      checked={isNotPaying}
+                      onCheckedChange={(checked) => {
+                        setNotPaying(prev => ({ ...prev, [category.key]: checked }));
+                        if (checked) {
+                          setExpenses(prev => ({ ...prev, [category.key]: 0 }));
+                        }
+                      }}
+                      className="data-[state=checked]:bg-[#D4537E]"
+                    />
+                    <span className="text-sm text-gray-500">No lo pago yo</span>
                   </div>
                 </div>
               );
@@ -289,7 +296,7 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
                           <div className="flex-1">
                             <p className="font-medium text-[#D4537E] mb-1">{inst.name}</p>
                             <p className="text-sm text-gray-600">
-                              ${inst.monthlyAmount}/mes × {inst.remainingInstallments} cuotas restantes
+                              ${formatThousands(inst.monthlyAmount)}/mes × {inst.remainingInstallments} cuotas restantes
                             </p>
                           </div>
                           <button
@@ -344,8 +351,8 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
                         type="text"
                         inputMode="numeric"
                         pattern="[0-9]*"
-                        value={currentInstallment.monthlyAmount}
-                        onChange={(e) => setCurrentInstallment({ ...currentInstallment, monthlyAmount: e.target.value })}
+                        value={currentInstallment.monthlyAmount ? `$${formatThousands(currentInstallment.monthlyAmount)}` : ''}
+                        onChange={(e) => setCurrentInstallment({ ...currentInstallment, monthlyAmount: e.target.value.replace(/\D/g, '') })}
                         placeholder="$0"
                         className="w-full"
                       />

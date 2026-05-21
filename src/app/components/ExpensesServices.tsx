@@ -213,8 +213,8 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                           type="text"
                           inputMode="numeric"
                           pattern="[0-9]*"
-                          value={sub.cost}
-                          onChange={(e) => updateCustomSubscription(index, 'cost', e.target.value)}
+                          value={formatCurrency(sub.cost)}
+                          onChange={(e) => updateCustomSubscription(index, 'cost', e.target.value.replace(/\D/g, ''))}
                           placeholder="¿Cuánto cuesta?"
                           className="w-full"
                         />
@@ -270,20 +270,6 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     Entretenimiento / ocio / salidas
                   </h3>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">No consumo</span>
-                  <Switch
-                    checked={noEntertainment}
-                    onCheckedChange={(checked) => {
-                      setNoEntertainment(checked);
-                      if (checked) {
-                        setEntertainmentFrequency('0');
-                        setEntertainmentAmount('0');
-                      }
-                    }}
-                    className="data-[state=checked]:bg-[#D4537E]"
-                  />
-                </div>
               </div>
 
               {noEntertainment && (
@@ -324,7 +310,7 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    value={entertainmentAmount}
+                    value={formatCurrency(entertainmentAmount)}
                     onChange={(e) => {
                       const numbers = e.target.value.replace(/\D/g, '');
                       setEntertainmentAmount(numbers);
@@ -335,6 +321,21 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     style={{ backgroundColor: noEntertainment ? '#f3f3f5' : 'white' }}
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                <Switch
+                  checked={noEntertainment}
+                  onCheckedChange={(checked) => {
+                    setNoEntertainment(checked);
+                    if (checked) {
+                      setEntertainmentFrequency('0');
+                      setEntertainmentAmount('0');
+                    }
+                  }}
+                  className="data-[state=checked]:bg-[#D4537E]"
+                />
+                <span className="text-sm text-gray-500">No consumo</span>
               </div>
             </div>
 
@@ -348,20 +349,6 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                   <h3 className="text-lg text-[#D4537E]" style={{ fontFamily: 'var(--font-sans)' }}>
                     Delivery / comida por app
                   </h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">No consumo</span>
-                  <Switch
-                    checked={noDelivery}
-                    onCheckedChange={(checked) => {
-                      setNoDelivery(checked);
-                      if (checked) {
-                        setDeliveryFrequency('0');
-                        setDeliveryAmount('0');
-                      }
-                    }}
-                    className="data-[state=checked]:bg-[#D4537E]"
-                  />
                 </div>
               </div>
 
@@ -403,7 +390,7 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    value={deliveryAmount}
+                    value={formatCurrency(deliveryAmount)}
                     onChange={(e) => {
                       const numbers = e.target.value.replace(/\D/g, '');
                       setDeliveryAmount(numbers);
@@ -414,6 +401,21 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     style={{ backgroundColor: noDelivery ? '#f3f3f5' : 'white' }}
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                <Switch
+                  checked={noDelivery}
+                  onCheckedChange={(checked) => {
+                    setNoDelivery(checked);
+                    if (checked) {
+                      setDeliveryFrequency('0');
+                      setDeliveryAmount('0');
+                    }
+                  }}
+                  className="data-[state=checked]:bg-[#D4537E]"
+                />
+                <span className="text-sm text-gray-500">No consumo</span>
               </div>
             </div>
 
@@ -427,20 +429,6 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                   <h3 className="text-lg text-[#D4537E]" style={{ fontFamily: 'var(--font-sans)' }}>
                     Supermercado
                   </h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">No aplica</span>
-                  <Switch
-                    checked={noSupermarket}
-                    onCheckedChange={(checked) => {
-                      setNoSupermarket(checked);
-                      if (checked) {
-                        setSupermarketFrequency('0');
-                        setSupermarketAmount('0');
-                      }
-                    }}
-                    className="data-[state=checked]:bg-[#D4537E]"
-                  />
                 </div>
               </div>
 
@@ -482,7 +470,7 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    value={supermarketAmount}
+                    value={formatCurrency(supermarketAmount)}
                     onChange={(e) => {
                       const numbers = e.target.value.replace(/\D/g, '');
                       setSupermarketAmount(numbers);
@@ -493,6 +481,21 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     style={{ backgroundColor: noSupermarket ? '#f3f3f5' : 'white' }}
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                <Switch
+                  checked={noSupermarket}
+                  onCheckedChange={(checked) => {
+                    setNoSupermarket(checked);
+                    if (checked) {
+                      setSupermarketFrequency('0');
+                      setSupermarketAmount('0');
+                    }
+                  }}
+                  className="data-[state=checked]:bg-[#D4537E]"
+                />
+                <span className="text-sm text-gray-500">No aplica</span>
               </div>
             </div>
           </div>

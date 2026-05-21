@@ -86,22 +86,7 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                 className="space-y-3 ml-11"
               >
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm text-gray-600">Seguro ($/mes)</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">No lo pago yo</span>
-                      <Switch
-                        checked={value.insuranceNotPaying}
-                        onCheckedChange={(checked) => {
-                          updateData({
-                            insuranceNotPaying: checked,
-                            insurance: checked ? 0 : value.insurance
-                          });
-                        }}
-                        className="data-[state=checked]:bg-[#D4537E]"
-                      />
-                    </div>
-                  </div>
+                  <Label className="text-sm text-gray-600 mb-2 block">Seguro ($/mes)</Label>
                   {value.insuranceNotPaying && (
                     <div className="mb-2 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
                       <span className="text-xs text-gray-600">Cubierto por otro</span>
@@ -124,24 +109,22 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                   {showValidation && !value.insuranceNotPaying && value.insurance === 0 && (
                     <p className="text-red-500 text-sm mt-1">Completá este campo para continuar.</p>
                   )}
+                  <div className="flex items-center gap-2 mt-3">
+                    <Switch
+                      checked={value.insuranceNotPaying}
+                      onCheckedChange={(checked) => {
+                        updateData({
+                          insuranceNotPaying: checked,
+                          insurance: checked ? 0 : value.insurance
+                        });
+                      }}
+                      className="data-[state=checked]:bg-[#D4537E]"
+                    />
+                    <span className="text-sm text-gray-500">No lo pago yo</span>
+                  </div>
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm text-gray-600">Nafta ($/mes)</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">No lo pago yo</span>
-                      <Switch
-                        checked={value.fuelNotPaying}
-                        onCheckedChange={(checked) => {
-                          updateData({
-                            fuelNotPaying: checked,
-                            fuel: checked ? 0 : value.fuel
-                          });
-                        }}
-                        className="data-[state=checked]:bg-[#D4537E]"
-                      />
-                    </div>
-                  </div>
+                  <Label className="text-sm text-gray-600 mb-2 block">Nafta ($/mes)</Label>
                   {value.fuelNotPaying && (
                     <div className="mb-2 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
                       <span className="text-xs text-gray-600">Cubierto por otro</span>
@@ -164,6 +147,19 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                   {showValidation && !value.fuelNotPaying && value.fuel === 0 && (
                     <p className="text-red-500 text-sm mt-1">Completá este campo para continuar.</p>
                   )}
+                  <div className="flex items-center gap-2 mt-3">
+                    <Switch
+                      checked={value.fuelNotPaying}
+                      onCheckedChange={(checked) => {
+                        updateData({
+                          fuelNotPaying: checked,
+                          fuel: checked ? 0 : value.fuel
+                        });
+                      }}
+                      className="data-[state=checked]:bg-[#D4537E]"
+                    />
+                    <span className="text-sm text-gray-500">No lo pago yo</span>
+                  </div>
                 </div>
               </motion.div>
             )}
