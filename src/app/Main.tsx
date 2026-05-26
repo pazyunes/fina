@@ -89,7 +89,7 @@ export function Main() {
     setUserData(prev => ({ ...prev, ...data }));
   };
 
-  const handleActivity = (data: { worksOrStudies: 'works' | 'studies' | 'both' | 'neither'; monthlyIncome: number }) => {
+  const handleActivity = (data: { worksOrStudies: 'works' | 'studies' | 'both' | 'neither'; monthlyIncome: number; incomeRange?: string }) => {
     setUserData(prev => ({ ...prev, ...data }));
   };
 

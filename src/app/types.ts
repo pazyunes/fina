@@ -24,7 +24,8 @@ export interface UserData {
 
   // Activity
   worksOrStudies: 'works' | 'studies' | 'both' | 'neither';
-  monthlyIncome: number;
+  monthlyIncome: number; // Valor usado en cálculos (monto exacto, o punto medio del rango)
+  incomeRange?: string; // Etiqueta del rango elegido, o 'Monto exacto' si cargó un valor preciso
 
   // Bank
   banks: string[];
