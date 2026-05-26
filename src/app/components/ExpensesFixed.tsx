@@ -1,19 +1,29 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';
-import { Home, Heart, Plus, X, Check } from 'lucide-react';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
+import { Home, Heart, Sparkles, Brain, Dumbbell, Plus, X, Check } from 'lucide-react';
 import { TransportSelector, isTransportDataValid } from './TransportSelector';
-import { TransportData } from '../types';
+import { BackButton } from './BackButton';
+import { OnboardingProgress } from './OnboardingProgress';
+import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
+import { TransportData, UserData } from '../types';
+
+type FixedKey = 'housing' | 'health' | 'beauty' | 'therapy' | 'gym';
 
 interface ExpensesFixedProps {
+  initial?: Partial<UserData>;
   monthlyIncome: number;
   onComplete: (data: {
     housing: number;
     health: number;
+    beauty: number;
+    therapy: number;
+    gym: number;
     transportDetails: TransportData;
     installments: Array<{
       name: string;
@@ -24,45 +34,69 @@ interface ExpensesFixedProps {
 }
 
 interface ExpenseCategory {
-  key: 'housing' | 'health';
+  key: FixedKey;
   label: string;
   icon: any;
   color: string;
+  helper?: string;
 }
 
 const CATEGORIES: ExpenseCategory[] = [
-  { key: 'housing', label: 'Alquiler', icon: Home, color: '#D4537E' },
-  { key: 'health', label: 'Salud', icon: Heart, color: '#D85A30' },
+  { key: 'housing', label: 'Alquiler', icon: Home, color: '#D4537E', helper: 'Poné solo tu parte, no el total' },
+  { key: 'health', label: 'Salud', icon: Heart, color: '#D85A30', helper: 'Nos referimos a la prepaga' },
+  { key: 'beauty', label: 'Belleza y cuidado personal', icon: Sparkles, color: '#9C7AA5', helper: 'Peluquería, manicura, cosmética y similares' },
+  { key: 'therapy', label: 'Psicóloga / terapia', icon: Brain, color: '#3B6D11', helper: 'Lo que pagás por mes en sesiones' },
+  { key: 'gym', label: 'Gimnasio', icon: Dumbbell, color: '#D85A30', helper: 'La cuota del gym o tu actividad física' },
 ];
 
-export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps) {
+const DEFAULT_TRANSPORT: TransportData = {
+  hasCar: false,
+  insurance: 0,
+  fuel: 0,
+  insuranceNotPaying: false,
+  fuelNotPaying: false,
+  hasPublicTransport: false,
+  publicTransportTrips: 0,
+  publicTransportCostPerTrip: 400,
+  hasRideApps: false,
+  rideAppTrips: 0,
+  rideAppCostPerTrip: 4000,
+};
+
+export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFixedProps) {
   const navigate = useNavigate();
-  const [expenses, setExpenses] = useState({
-    housing: 0,
-    health: 0,
+  const { pathname } = useLocation();
+
+  const [expenses, setExpenses] = useState<Record<FixedKey, number>>({
+    housing: initial?.expenses?.housing ?? 0,
+    health: initial?.expenses?.health ?? 0,
+    beauty: initial?.expenses?.beauty ?? 0,
+    therapy: initial?.expenses?.therapy ?? 0,
+    gym: initial?.expenses?.gym ?? 0,
   });
 
-  const [notPaying, setNotPaying] = useState({
+  const [notPaying, setNotPaying] = useState<Record<FixedKey, boolean>>({
     housing: false,
     health: false,
+    beauty: false,
+    therapy: false,
+    gym: false,
   });
 
-  const [transportData, setTransportData] = useState<TransportData>({
-    hasCar: false,
-    insurance: 0,
-    fuel: 0,
-    insuranceNotPaying: false,
-    fuelNotPaying: false,
-    hasPublicTransport: false,
-    publicTransportTrips: 0,
-    publicTransportCostPerTrip: 400,
-    hasRideApps: false,
-    rideAppTrips: 0,
-    rideAppCostPerTrip: 4000,
-  });
+  const [transportData, setTransportData] = useState<TransportData>(
+    initial?.transportDetails ?? DEFAULT_TRANSPORT
+  );
 
-  const [hasInstallments, setHasInstallments] = useState<boolean | null>(null);
-  const [installments, setInstallments] = useState<Array<{ name: string; monthlyAmount: string; remainingInstallments: string }>>([]);
+  const [installments, setInstallments] = useState<Array<{ name: string; monthlyAmount: string; remainingInstallments: string }>>(
+    (initial?.installments ?? []).map((inst) => ({
+      name: inst.name,
+      monthlyAmount: String(inst.monthlyAmount),
+      remainingInstallments: String(inst.remainingInstallments),
+    }))
+  );
+  const [hasInstallments, setHasInstallments] = useState<boolean | null>(
+    (initial?.installments?.length ?? 0) > 0 ? true : null
+  );
   const [currentInstallment, setCurrentInstallment] = useState({ name: '', monthlyAmount: '', remainingInstallments: '' });
   const [showInstallmentForm, setShowInstallmentForm] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -70,11 +104,11 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
 
   const maxAmount = monthlyIncome * 1.5; // Allow up to 150% of income
 
-  const updateExpense = (key: ExpenseCategory['key'], value: number[]) => {
+  const updateExpense = (key: FixedKey, value: number[]) => {
     setExpenses(prev => ({ ...prev, [key]: value[0] }));
   };
 
-  const updateExpenseInput = (key: ExpenseCategory['key'], value: string) => {
+  const updateExpenseInput = (key: FixedKey, value: string) => {
     const numValue = parseInt(value.replace(/\D/g, '')) || 0;
     // Ensure value is never negative
     const validValue = Math.max(0, numValue);
@@ -147,95 +181,114 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
           animate={{ opacity: 1, y: 0 }}
           className="w-full pb-24"
         >
-          <div className="mb-8 sticky top-0 bg-gradient-to-br from-white to-[#FBEAF0] pb-4 z-10">
-            <h2 
+          <BackButton currentPath={pathname} />
+
+          <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#FBEAF0] pb-3 z-10">
+            <h2
               className="text-3xl mb-2 text-[#D4537E]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
-              Gastos fijos
+              Gastos que se repiten todos los meses
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Estimá tus gastos mensuales fijos
+              Lo que pagás casi igual mes a mes. Tocá cada categoría para completarla
             </p>
           </div>
 
-          <div className="space-y-6">
+          {/* Categorías de monto fijo, cada una colapsable (la primera abierta) */}
+          <Accordion type="multiple" defaultValue={['housing']} className="space-y-3">
             {CATEGORIES.map(category => {
               const Icon = category.icon;
               const isNotPaying = notPaying[category.key];
+              const value = expenses[category.key];
               return (
-                <div key={category.key} className="bg-white p-6 rounded-2xl shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
+                <AccordionItem
+                  key={category.key}
+                  value={category.key}
+                  className="bg-white rounded-2xl shadow-sm border-0 px-5"
+                >
+                  <AccordionTrigger className="hover:no-underline py-4">
+                    <div className="flex items-center gap-3 flex-1">
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center"
+                        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
                         style={{ backgroundColor: `${category.color}20` }}
                       >
                         <Icon className="w-5 h-5" style={{ color: category.color }} />
                       </div>
-                      <p className="text-gray-700">{category.label}</p>
+                      <span className="text-gray-700 text-left">{category.label}</span>
+                      {value > 0 && !isNotPaying && (
+                        <span className="ml-auto text-sm" style={{ color: category.color }}>
+                          {formatCurrency(value)}
+                        </span>
+                      )}
                     </div>
-                  </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-0 pb-5">
+                    {category.helper && (
+                      <p className="text-sm text-gray-500 mb-3">{category.helper}</p>
+                    )}
 
-                  <div className="flex items-center gap-2 mb-4">
-                    <Switch
-                      checked={isNotPaying}
-                      onCheckedChange={(checked) => {
-                        setNotPaying(prev => ({ ...prev, [category.key]: checked }));
-                        if (checked) {
-                          setExpenses(prev => ({ ...prev, [category.key]: 0 }));
-                        }
-                      }}
-                      className="data-[state=checked]:bg-[#D4537E]"
-                    />
-                    <span className="text-sm text-gray-500">No lo pago yo</span>
-                  </div>
-
-                  {isNotPaying && (
-                    <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
-                      <span className="text-xs text-gray-600">Cubierto por otro</span>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Switch
+                        checked={isNotPaying}
+                        onCheckedChange={(checked) => {
+                          setNotPaying(prev => ({ ...prev, [category.key]: checked }));
+                          if (checked) {
+                            setExpenses(prev => ({ ...prev, [category.key]: 0 }));
+                          }
+                        }}
+                        className="data-[state=checked]:bg-[#D4537E]"
+                      />
+                      <span className="text-sm text-gray-500">No lo pago yo</span>
                     </div>
-                  )}
 
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex-1" />
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={expenses[category.key] > 0 ? formatCurrency(expenses[category.key]) : ''}
-                      onChange={(e) => updateExpenseInput(category.key, e.target.value)}
-                      placeholder="$0"
-                      className="w-32 text-right"
-                      style={{
-                        color: category.color,
-                        fontFamily: 'var(--font-sans)',
-                        opacity: isNotPaying ? 0.4 : 1,
-                        pointerEvents: isNotPaying ? 'none' : 'auto',
-                        backgroundColor: isNotPaying ? '#f3f3f5' : 'white'
-                      }}
+                    {isNotPaying && (
+                      <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
+                        <span className="text-xs text-gray-600">Cubierto por otro</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-end gap-3 mb-3">
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={value > 0 ? formatCurrency(value) : ''}
+                        onChange={(e) => updateExpenseInput(category.key, e.target.value)}
+                        placeholder="$0"
+                        className={`w-36 text-right rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                        style={{
+                          color: category.color,
+                          fontFamily: 'var(--font-sans)',
+                          opacity: isNotPaying ? 0.4 : 1,
+                          pointerEvents: isNotPaying ? 'none' : 'auto',
+                          backgroundColor: isNotPaying ? '#f3f3f5' : undefined,
+                        }}
+                        disabled={isNotPaying}
+                      />
+                    </div>
+
+                    <Slider
+                      value={[value]}
+                      onValueChange={(val) => updateExpense(category.key, val)}
+                      max={maxAmount}
+                      step={1000}
+                      className="mt-2"
                       disabled={isNotPaying}
+                      style={{ opacity: isNotPaying ? 0.4 : 1, pointerEvents: isNotPaying ? 'none' : 'auto' }}
                     />
-                  </div>
 
-                  <Slider
-                    value={[expenses[category.key]]}
-                    onValueChange={(value) => updateExpense(category.key, value)}
-                    max={maxAmount}
-                    step={1000}
-                    className="mt-2"
-                    disabled={isNotPaying}
-                    style={{ opacity: isNotPaying ? 0.4 : 1, pointerEvents: isNotPaying ? 'none' : 'auto' }}
-                  />
-
-                  <div className="flex justify-between text-xs text-gray-400 mt-2">
-                    <span>$0</span>
-                    <span>{formatCurrency(maxAmount)}</span>
-                  </div>
-                </div>
+                    <div className="flex justify-between text-xs text-gray-400 mt-2">
+                      <span>$0</span>
+                      <span>{formatCurrency(maxAmount)}</span>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
               );
             })}
+          </Accordion>
 
+          <div className="space-y-4 mt-4">
             {/* Transport Selector */}
             <TransportSelector
               value={transportData}
@@ -244,9 +297,9 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
             />
 
             {/* Installments section */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm mt-8">
+            <div className="bg-white p-6 rounded-2xl shadow-sm">
               <h3 className="text-lg mb-4 text-[#D4537E]" style={{ fontFamily: 'var(--font-sans)' }}>
-                ¿Estás pagando cuotas actualmente?
+                ¿Estás pagando algo en cuotas?
               </h3>
 
               <div className="flex gap-3 mb-4">
@@ -354,7 +407,7 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
                         value={currentInstallment.monthlyAmount ? `$${formatThousands(currentInstallment.monthlyAmount)}` : ''}
                         onChange={(e) => setCurrentInstallment({ ...currentInstallment, monthlyAmount: e.target.value.replace(/\D/g, '') })}
                         placeholder="$0"
-                        className="w-full"
+                        className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       />
                     </div>
 
@@ -415,19 +468,13 @@ export function ExpensesFixed({ monthlyIncome, onComplete }: ExpensesFixedProps)
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-6 rounded-full text-lg disabled:opacity-50"
+            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
             Continuar
           </Button>
-          
-          <div className="flex justify-center gap-2 mt-4">
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-            <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+
+          <div className="mt-4">
+            <OnboardingProgress currentPath={pathname} />
           </div>
         </div>
       </div>
