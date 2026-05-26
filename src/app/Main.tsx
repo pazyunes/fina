@@ -123,6 +123,8 @@ export function Main() {
       name: string;
       monthlyAmount: number;
       remainingInstallments: number;
+      currency: 'ARS' | 'USD';
+      originalAmount: number;
     }>;
   }) => {
     // Calculate total transport cost from transportDetails

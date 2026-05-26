@@ -33,6 +33,8 @@ interface ExpensesFixedProps {
       name: string;
       monthlyAmount: number;
       remainingInstallments: number;
+      currency: Currency;
+      originalAmount: number;
     }>;
   }) => void;
 }
@@ -119,17 +121,20 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
     initial?.transportDetails ?? DEFAULT_TRANSPORT
   );
 
-  const [installments, setInstallments] = useState<Array<{ name: string; monthlyAmount: string; remainingInstallments: string }>>(
+  const [installments, setInstallments] = useState<Array<{ name: string; monthlyAmount: string; remainingInstallments: string; currency: Currency; originalAmount: number }>>(
     (initial?.installments ?? []).map((inst) => ({
       name: inst.name,
       monthlyAmount: String(inst.monthlyAmount),
       remainingInstallments: String(inst.remainingInstallments),
+      currency: inst.currency ?? 'ARS',
+      originalAmount: inst.originalAmount ?? inst.monthlyAmount,
     }))
   );
   const [hasInstallments, setHasInstallments] = useState<boolean | null>(
     (initial?.installments?.length ?? 0) > 0 ? true : null
   );
   const [currentInstallment, setCurrentInstallment] = useState({ name: '', monthlyAmount: '', remainingInstallments: '' });
+  const [currentInstallmentCurrency, setCurrentInstallmentCurrency] = useState<Currency>('ARS');
   const [showInstallmentForm, setShowInstallmentForm] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showTransportValidation, setShowTransportValidation] = useState(false);
@@ -168,8 +173,17 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
 
   const addInstallment = () => {
     if (currentInstallment.name && currentInstallment.monthlyAmount && currentInstallment.remainingInstallments) {
-      setInstallments([...installments, { ...currentInstallment }]);
+      const typed = parseInt(currentInstallment.monthlyAmount.replace(/\D/g, '')) || 0;
+      const arsAmount = currentInstallmentCurrency === 'USD' && usdRate ? arsFromUsd(typed, usdRate) : typed;
+      setInstallments([...installments, {
+        name: currentInstallment.name,
+        monthlyAmount: String(arsAmount),
+        remainingInstallments: currentInstallment.remainingInstallments,
+        currency: currentInstallmentCurrency,
+        originalAmount: typed,
+      }]);
       setCurrentInstallment({ name: '', monthlyAmount: '', remainingInstallments: '' });
+      setCurrentInstallmentCurrency('ARS');
       setShowConfirmation(true);
     }
   };
@@ -191,6 +205,8 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
         name: inst.name,
         monthlyAmount: parseInt(inst.monthlyAmount.replace(/\D/g, '')) || 0,
         remainingInstallments: parseInt(inst.remainingInstallments) || 0,
+        currency: inst.currency,
+        originalAmount: inst.originalAmount,
       }));
 
     const housingOriginalAmount = housingCurrency === 'USD'
@@ -441,6 +457,11 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
                             <p className="text-sm text-gray-600">
                               ${formatThousands(inst.monthlyAmount)}/mes × {inst.remainingInstallments} cuotas restantes
                             </p>
+                            {inst.currency === 'USD' && (
+                              <p className="text-xs text-gray-400">
+                                Cargada en USD {inst.originalAmount.toLocaleString('es-AR').replace(/,/g, '.')}
+                              </p>
+                            )}
                           </div>
                           <button
                             onClick={() => removeInstallment(index)}
@@ -487,18 +508,30 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
                     </div>
 
                     <div>
-                      <label className="block text-sm text-gray-600 mb-2">
-                        Monto mensual de esta cuota
-                      </label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm text-gray-600">
+                          Monto mensual de esta cuota
+                        </label>
+                        <CurrencyToggle
+                          value={currentInstallmentCurrency}
+                          usdEnabled={!!usdRate}
+                          onChange={setCurrentInstallmentCurrency}
+                        />
+                      </div>
                       <Input
                         type="text"
                         inputMode="numeric"
                         pattern="[0-9]*"
-                        value={currentInstallment.monthlyAmount ? `$${formatThousands(currentInstallment.monthlyAmount)}` : ''}
+                        value={currentInstallment.monthlyAmount ? `${currentInstallmentCurrency === 'USD' ? 'USD ' : '$'}${formatThousands(currentInstallment.monthlyAmount)}` : ''}
                         onChange={(e) => setCurrentInstallment({ ...currentInstallment, monthlyAmount: e.target.value.replace(/\D/g, '') })}
-                        placeholder="$0"
+                        placeholder={currentInstallmentCurrency === 'USD' ? 'USD 0' : '$0'}
                         className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       />
+                      {currentInstallmentCurrency === 'USD' && currentInstallment.monthlyAmount && usdRate && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          ≈ {formatArs(arsFromUsd(parseInt(currentInstallment.monthlyAmount.replace(/\D/g, '')) || 0, usdRate))} al cambio del día
+                        </p>
+                      )}
                     </div>
 
                     <div>

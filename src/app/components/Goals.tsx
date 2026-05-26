@@ -9,13 +9,16 @@ import { X, Plus, Check } from 'lucide-react';
 import { DEBUG_MODE } from '../config';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
+import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
-import { UserData } from '../types';
+import { arsFromUsd, formatArs } from '../lib/currency';
+import { UserData, Currency } from '../types';
 
 interface GoalItem {
   title: string;
   amount: string;
   timeframe: string;
+  currency: Currency;
 }
 
 interface GoalsProps {
@@ -26,6 +29,8 @@ interface GoalsProps {
       title: string;
       amount: number;
       timeframe: number;
+      currency: Currency;
+      originalAmount: number;
     }>;
   }) => void;
 }
@@ -50,18 +55,21 @@ const GOAL_OPTIONS = [
 export function Goals({ initial, onComplete }: GoalsProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const usdRate = initial?.exchangeRate?.rate ?? null;
   const [selectedGoals, setSelectedGoals] = useState<string[]>(initial?.goals ?? []);
   const [specificGoals, setSpecificGoals] = useState<GoalItem[]>(
     (initial?.specificGoals ?? []).map((goal) => ({
       title: goal.title,
-      amount: formatGoalAmount(String(goal.amount)),
+      amount: formatGoalAmount(String(goal.currency === 'USD' ? (goal.originalAmount ?? 0) : goal.amount)),
       timeframe: String(goal.timeframe),
+      currency: goal.currency ?? 'ARS',
     }))
   );
   const [currentGoal, setCurrentGoal] = useState<GoalItem>({
     title: '',
     amount: '',
     timeframe: '',
+    currency: 'ARS',
   });
 
   const [showSavingsGoal, setShowSavingsGoal] = useState(initial?.goals?.includes('No tengo') ?? false);
@@ -97,7 +105,7 @@ export function Goals({ initial, onComplete }: GoalsProps) {
   const addGoal = () => {
     if (currentGoal.title && currentGoal.amount && currentGoal.timeframe) {
       setSpecificGoals([...specificGoals, { ...currentGoal }]);
-      setCurrentGoal({ title: '', amount: '', timeframe: '' });
+      setCurrentGoal({ title: '', amount: '', timeframe: '', currency: 'ARS' });
       setShowConfirmation(true);
     }
   };
@@ -116,11 +124,17 @@ export function Goals({ initial, onComplete }: GoalsProps) {
   };
 
   const handleSubmit = () => {
-    const parsedGoals = specificGoals.map(goal => ({
-      title: goal.title,
-      amount: parseFloat(goal.amount.replace(/\./g, '')),
-      timeframe: parseInt(goal.timeframe),
-    }));
+    const parsedGoals = specificGoals.map(goal => {
+      const typed = parseFloat(goal.amount.replace(/\./g, '')) || 0;
+      const amountArs = goal.currency === 'USD' && usdRate ? arsFromUsd(typed, usdRate) : typed;
+      return {
+        title: goal.title,
+        amount: amountArs,
+        timeframe: parseInt(goal.timeframe),
+        currency: goal.currency,
+        originalAmount: typed,
+      };
+    });
 
     onComplete({
       goals: selectedGoals,
@@ -192,12 +206,19 @@ export function Goals({ initial, onComplete }: GoalsProps) {
                 Perfecto! Igual es bueno ahorrar. ¿Cuánto querés juntar?
               </p>
               <div>
-                <Label htmlFor="savings-amount" className="text-gray-700">
-                  Monto que querés ahorrar
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="savings-amount" className="text-gray-700">
+                    Monto que querés ahorrar
+                  </Label>
+                  <CurrencyToggle
+                    value={currentGoal.currency}
+                    usdEnabled={!!usdRate}
+                    onChange={(c) => setCurrentGoal({ ...currentGoal, currency: c, title: 'Ahorro general' })}
+                  />
+                </div>
                 <div className="relative mt-2">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                    $
+                    {currentGoal.currency === 'USD' ? 'USD' : '$'}
                   </span>
                   <Input
                     id="savings-amount"
@@ -207,9 +228,14 @@ export function Goals({ initial, onComplete }: GoalsProps) {
                     value={currentGoal.amount}
                     onChange={(e) => setCurrentGoal({ ...currentGoal, amount: formatCurrency(e.target.value), title: 'Ahorro general' })}
                     placeholder="0"
-                    className={`pl-8 rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                    className={`${currentGoal.currency === 'USD' ? 'pl-14' : 'pl-8'} rounded-xl ${AMOUNT_FIELD_CLASS}`}
                   />
                 </div>
+                {currentGoal.currency === 'USD' && currentGoal.amount && usdRate && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ≈ {formatArs(arsFromUsd(parseInt(currentGoal.amount.replace(/\D/g, '')) || 0, usdRate))} al cambio del día
+                  </p>
+                )}
               </div>
 
               <div>
@@ -272,7 +298,7 @@ export function Goals({ initial, onComplete }: GoalsProps) {
                       <div className="flex-1">
                         <p className="font-medium text-[#D4537E] mb-1">{goal.title}</p>
                         <p className="text-sm text-gray-600">
-                          ${formatCurrency(goal.amount)} en {goal.timeframe} meses
+                          {goal.currency === 'USD' ? `USD ${goal.amount}` : `$${formatCurrency(goal.amount)}`} en {goal.timeframe} meses
                         </p>
                       </div>
                       <button
@@ -310,12 +336,19 @@ export function Goals({ initial, onComplete }: GoalsProps) {
                 </div>
 
                 <div>
-                  <Label htmlFor="goal-amount" className="text-gray-700">
-                    Monto total objetivo
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="goal-amount" className="text-gray-700">
+                      Monto total objetivo
+                    </Label>
+                    <CurrencyToggle
+                      value={currentGoal.currency}
+                      usdEnabled={!!usdRate}
+                      onChange={(c) => setCurrentGoal({ ...currentGoal, currency: c })}
+                    />
+                  </div>
                   <div className="relative mt-2">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-                      $
+                      {currentGoal.currency === 'USD' ? 'USD' : '$'}
                     </span>
                     <Input
                       id="goal-amount"
@@ -325,9 +358,14 @@ export function Goals({ initial, onComplete }: GoalsProps) {
                       value={currentGoal.amount}
                       onChange={(e) => setCurrentGoal({ ...currentGoal, amount: formatCurrency(e.target.value) })}
                       placeholder="0"
-                      className={`pl-8 rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                      className={`${currentGoal.currency === 'USD' ? 'pl-14' : 'pl-8'} rounded-xl ${AMOUNT_FIELD_CLASS}`}
                     />
                   </div>
+                  {currentGoal.currency === 'USD' && currentGoal.amount && usdRate && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      ≈ {formatArs(arsFromUsd(parseInt(currentGoal.amount.replace(/\D/g, '')) || 0, usdRate))} al cambio del día
+                    </p>
+                  )}
                 </div>
 
                 <div>

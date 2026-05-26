@@ -62,15 +62,19 @@ export interface UserData {
   // Fixed expenses details - Installments (múltiples cuotas)
   installments: Array<{
     name: string; // Nombre / descripción de la cuota
-    monthlyAmount: number; // Monto mensual de esta cuota
+    monthlyAmount: number; // Monto mensual de esta cuota (ARS, ya convertido)
     remainingInstallments: number; // Cantidad de cuotas restantes
+    currency?: Currency;
+    originalAmount?: number; // monto cargado por el usuario si fue en USD
   }>;
 
   // Services/Subscriptions
   subscriptions: Array<{
     name: string;
-    cost: number;
+    cost: number; // ARS, ya convertido
     isCustom: boolean;
+    currency?: Currency;
+    originalCost?: number;
   }>;
 
   // Consumption habits
@@ -98,8 +102,10 @@ export interface UserData {
   goals: string[];
   specificGoals: Array<{
     title: string;
-    amount: number;
+    amount: number; // ARS, ya convertido
     timeframe: number; // months
+    currency?: Currency;
+    originalAmount?: number;
   }>;
 }
 

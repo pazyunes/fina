@@ -9,8 +9,10 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './
 import { Zap, UtensilsCrossed, Sparkles, Plus, X, Check, ShoppingCart } from 'lucide-react';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
+import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
-import { UserData } from '../types';
+import { arsFromUsd, formatArs } from '../lib/currency';
+import { UserData, Currency } from '../types';
 
 interface ExpensesServicesProps {
   initial?: Partial<UserData>;
@@ -19,6 +21,8 @@ interface ExpensesServicesProps {
       name: string;
       cost: number;
       isCustom: boolean;
+      currency?: Currency;
+      originalCost?: number;
     }>;
     entertainmentFrequency: number;
     entertainmentAmount: number;
@@ -43,6 +47,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
 
   // Vive acompañado → recordatorio de cargar solo su parte en gastos compartibles
   const livesAccompanied = initial?.livesAlone === false;
+  const usdRate = initial?.exchangeRate?.rate ?? null;
 
   const initialSubs = initial?.subscriptions ?? [];
 
@@ -50,8 +55,13 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   const [selectedSubscriptions, setSelectedSubscriptions] = useState<Set<string>>(
     new Set(initialSubs.filter((s) => !s.isCustom).map((s) => s.name))
   );
-  const [customSubscriptions, setCustomSubscriptions] = useState<Array<{ name: string; cost: string; confirmed: boolean }>>(
-    initialSubs.filter((s) => s.isCustom).map((s) => ({ name: s.name, cost: String(s.cost), confirmed: true }))
+  const [customSubscriptions, setCustomSubscriptions] = useState<Array<{ name: string; cost: string; confirmed: boolean; currency: Currency }>>(
+    initialSubs.filter((s) => s.isCustom).map((s) => ({
+      name: s.name,
+      cost: String(s.currency === 'USD' ? (s.originalCost ?? '') : s.cost),
+      confirmed: true,
+      currency: s.currency ?? 'ARS',
+    }))
   );
 
   // Entertainment
@@ -85,7 +95,15 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   };
 
   const addCustomSubscription = () => {
-    setCustomSubscriptions(prev => [...prev, { name: '', cost: '', confirmed: false }]);
+    setCustomSubscriptions(prev => [...prev, { name: '', cost: '', confirmed: false, currency: 'ARS' }]);
+  };
+
+  const setCustomSubCurrency = (index: number, currency: Currency) => {
+    setCustomSubscriptions(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], currency };
+      return updated;
+    });
   };
 
   const updateCustomSubscription = (index: number, field: 'name' | 'cost', value: string) => {
@@ -117,7 +135,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
 
   const handleSubmit = () => {
     // Build subscriptions array
-    const subscriptions: Array<{ name: string; cost: number; isCustom: boolean }> = [];
+    const subscriptions: Array<{ name: string; cost: number; isCustom: boolean; currency?: Currency; originalCost?: number }> = [];
 
     // Add selected preset subscriptions with their predefined prices
     selectedSubscriptions.forEach(name => {
@@ -130,9 +148,10 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
     // Add custom subscriptions
     customSubscriptions.forEach(sub => {
       if (sub.name && sub.cost) {
-        const cost = parseInt(sub.cost.replace(/\D/g, '') || '0');
-        if (cost > 0) {
-          subscriptions.push({ name: sub.name, cost, isCustom: true });
+        const typed = parseInt(sub.cost.replace(/\D/g, '') || '0');
+        if (typed > 0) {
+          const cost = sub.currency === 'USD' && usdRate ? arsFromUsd(typed, usdRate) : typed;
+          subscriptions.push({ name: sub.name, cost, isCustom: true, currency: sub.currency, originalCost: typed });
         }
       }
     });
@@ -268,15 +287,28 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                             placeholder="Nombre del servicio"
                             className="w-full"
                           />
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs text-gray-500">Costo</span>
+                            <CurrencyToggle
+                              value={sub.currency}
+                              usdEnabled={!!usdRate}
+                              onChange={(c) => setCustomSubCurrency(index, c)}
+                            />
+                          </div>
                           <Input
                             type="text"
                             inputMode="numeric"
                             pattern="[0-9]*"
-                            value={formatCurrency(sub.cost)}
+                            value={sub.cost ? `${sub.currency === 'USD' ? 'USD ' : '$'}${parseInt(sub.cost).toLocaleString('es-AR').replace(/,/g, '.')}` : ''}
                             onChange={(e) => updateCustomSubscription(index, 'cost', e.target.value.replace(/\D/g, ''))}
-                            placeholder="¿Cuánto cuesta?"
+                            placeholder={sub.currency === 'USD' ? 'USD 0' : '¿Cuánto cuesta?'}
                             className={`w-full ${AMOUNT_FIELD_CLASS}`}
                           />
+                          {sub.currency === 'USD' && sub.cost && usdRate && (
+                            <p className="text-xs text-gray-500">
+                              ≈ {formatArs(arsFromUsd(parseInt(sub.cost) || 0, usdRate))} al cambio del día
+                            </p>
+                          )}
                         </div>
                         <div className="flex flex-col gap-1">
                           <Button
