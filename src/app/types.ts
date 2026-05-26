@@ -1,3 +1,5 @@
+export type Currency = 'ARS' | 'USD';
+
 // Snapshot de cotización con el que se generó el informe. Se persiste para
 // "anclar" los montos en USD al cambio del día (2.3d/e).
 export interface ExchangeRate {
@@ -42,7 +44,7 @@ export interface UserData {
 
   // Expenses
   expenses: {
-    housing: number; // Alquiler
+    housing: number; // Alquiler (siempre en ARS, ya convertido si se cargó en USD)
     health: number; // Salud
     beauty: number; // Belleza y cuidado personal (peluquería, manicura, etc.)
     therapy: number; // Psicóloga / terapia
@@ -86,6 +88,11 @@ export interface UserData {
 
   // Exchange rate snapshot used for any USD amounts in this flow
   exchangeRate?: ExchangeRate | null;
+
+  // Alquiler cargado en USD (2.3): se guarda la moneda y el monto original;
+  // expenses.housing queda en ARS para los cálculos.
+  housingCurrency?: Currency;
+  housingOriginalAmount?: number;
 
   // Goals
   goals: string[];
