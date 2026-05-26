@@ -675,14 +675,19 @@ export function Result({ analysis }: ResultProps) {
       ? formatUsd(analysis.userData.housingOriginalAmount)
       : undefined;
 
-  const expenseData: { name: string; value: number; color: string; note?: string }[] = [
+  // Para los rubros agregados (suscripciones, cuotas) no podemos mostrar el
+  // detalle por ítem en la barra; señalamos que el total incluye montos en USD.
+  const anySubUsd = analysis.userData.subscriptions.some(s => s.currency === 'USD');
+  const anyInstallmentUsd = analysis.userData.installments.some(i => i.currency === 'USD');
+
+  const expenseData: { name: string; value: number; color: string; note?: string; hint?: string }[] = [
     { name: 'Vivienda', value: analysis.userData.expenses.housing, color: '#D4537E', note: housingNote },
     { name: 'Salud', value: analysis.userData.expenses.health, color: '#D85A30' },
     { name: 'Transporte / movilidad', value: analysis.userData.expenses.transport, color: '#9C7AA5' },
-    { name: 'Suscripciones', value: subscriptionsCost, color: '#3B6D11' },
+    { name: 'Suscripciones', value: subscriptionsCost, color: '#3B6D11', hint: anySubUsd ? 'incluye montos cargados en USD' : undefined },
     { name: 'Ocio', value: Math.round(monthlyEntertainment), color: '#E89AC7' },
     { name: 'Delivery', value: Math.round(monthlyDelivery), color: '#C14870' },
-    { name: 'Cuotas', value: installmentsCost, color: '#8B5CF6' },
+    { name: 'Cuotas', value: installmentsCost, color: '#8B5CF6', hint: anyInstallmentUsd ? 'incluye montos cargados en USD' : undefined },
   ].filter(item => item.value > 0);
 
   const pieData = [
@@ -848,6 +853,9 @@ export function Result({ analysis }: ResultProps) {
                       {expense.note ? ' al cambio del día)' : ''} ({percentageOfIncome.toFixed(1)}%)
                     </span>
                   </div>
+                  {expense.hint && (
+                    <div className="text-xs text-gray-400 mb-1 -mt-1">{expense.hint}</div>
+                  )}
                   <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden" style={{ boxSizing: 'border-box' }}>
                     <motion.div
                       initial={{ width: 0 }}
@@ -1057,7 +1065,12 @@ export function Result({ analysis }: ResultProps) {
                       {goal.title}
                     </h4>
                     <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>Meta: ${goal.amount.toLocaleString('es-AR').replace(/,/g, '.')}</span>
+                      <span>
+                        Meta:{' '}
+                        {analysis.userData.specificGoals[index]?.currency === 'USD' && analysis.userData.specificGoals[index]?.originalAmount
+                          ? `${formatUsd(analysis.userData.specificGoals[index].originalAmount!)} (≈ $${goal.amount.toLocaleString('es-AR').replace(/,/g, '.')})`
+                          : `$${goal.amount.toLocaleString('es-AR').replace(/,/g, '.')}`}
+                      </span>
                       <span>Plazo: {goal.timeframe} meses</span>
                     </div>
                   </div>
