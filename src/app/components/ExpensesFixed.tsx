@@ -86,7 +86,23 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
   // Controlled accordion so a category collapses once completed but can be
   // reopened. Alquiler (housing) starts open.
   const [openItems, setOpenItems] = useState<string[]>(['housing']);
-  const closeItem = (key: string) => setOpenItems(prev => prev.filter(k => k !== key));
+  const FIXED_ORDER = CATEGORIES.map(c => c.key);
+  // Collapse the finished category and open the next one that's still empty.
+  // Only called once the category is complete (amount entered or "no lo pago yo").
+  const advanceFrom = (key: FixedKey) => {
+    setOpenItems(prev => {
+      const without = prev.filter(k => k !== key);
+      const startIdx = FIXED_ORDER.indexOf(key);
+      for (let i = startIdx + 1; i < FIXED_ORDER.length; i++) {
+        const next = FIXED_ORDER[i];
+        if (!(expenses[next] > 0 || notPaying[next])) {
+          if (!without.includes(next)) without.push(next);
+          break;
+        }
+      }
+      return without;
+    });
+  };
 
   const [transportData, setTransportData] = useState<TransportData>(
     initial?.transportDetails ?? DEFAULT_TRANSPORT
@@ -240,7 +256,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
                           setNotPaying(prev => ({ ...prev, [category.key]: checked }));
                           if (checked) {
                             setExpenses(prev => ({ ...prev, [category.key]: 0 }));
-                            closeItem(category.key);
+                            advanceFrom(category.key);
                           }
                         }}
                         className="data-[state=checked]:bg-[#D4537E]"
@@ -261,7 +277,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
                         pattern="[0-9]*"
                         value={value > 0 ? formatCurrency(value) : ''}
                         onChange={(e) => updateExpenseInput(category.key, e.target.value)}
-                        onBlur={() => { if (expenses[category.key] > 0) closeItem(category.key); }}
+                        onBlur={() => { if (expenses[category.key] > 0) advanceFrom(category.key); }}
                         placeholder="$0"
                         className={`w-36 text-right rounded-xl ${AMOUNT_FIELD_CLASS}`}
                         style={{

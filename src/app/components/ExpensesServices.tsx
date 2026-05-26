@@ -69,7 +69,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   // Controlled accordion so completed sections collapse automatically while
   // staying reopenable. Suscripciones starts open.
   const [openItems, setOpenItems] = useState<string[]>(['subs']);
-  const closeItem = (key: string) => setOpenItems(prev => prev.filter(k => k !== key));
+  const SECTION_ORDER = ['subs', 'entertainment', 'delivery', 'super'];
 
   const toggleSubscription = (name: string) => {
     const newSelected = new Set(selectedSubscriptions);
@@ -152,6 +152,29 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   const deliveryComplete = noDelivery || (deliveryFrequency !== '' && deliveryAmount !== '');
   const supermarketComplete = noSupermarket || (supermarketFrequency !== '' && supermarketAmount !== '');
   const subsCount = selectedSubscriptions.size + customSubscriptions.filter(s => s.confirmed).length;
+
+  // Collapse a finished section and open the next one that's still incomplete.
+  // Only called when the section itself is already complete (all its fields).
+  const advanceFrom = (key: string) => {
+    const sectionComplete: Record<string, boolean> = {
+      subs: subsCount > 0,
+      entertainment: entertainmentComplete,
+      delivery: deliveryComplete,
+      super: supermarketComplete,
+    };
+    setOpenItems(prev => {
+      const without = prev.filter(k => k !== key);
+      const startIdx = SECTION_ORDER.indexOf(key);
+      for (let i = startIdx + 1; i < SECTION_ORDER.length; i++) {
+        const next = SECTION_ORDER[i];
+        if (!sectionComplete[next]) {
+          if (!without.includes(next)) without.push(next);
+          break;
+        }
+      }
+      return without;
+    });
+  };
 
   const isValid =
     entertainmentComplete &&
@@ -304,7 +327,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                       if (checked) {
                         setEntertainmentFrequency('0');
                         setEntertainmentAmount('0');
-                        closeItem('entertainment');
+                        advanceFrom('entertainment');
                       }
                     }}
                     className="data-[state=checked]:bg-[#D4537E]"
@@ -334,12 +357,12 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                           setEntertainmentFrequency(e.target.value);
                         }
                       }}
-                      onBlur={() => { if (entertainmentComplete) closeItem('entertainment'); }}
+                      onBlur={() => { if (entertainmentComplete) advanceFrom('entertainment'); }}
                       placeholder="Ej: 2"
                       min="0"
-                      className="w-full"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noEntertainment}
-                      style={{ backgroundColor: noEntertainment ? '#f3f3f5' : 'white' }}
+                      style={{ backgroundColor: noEntertainment ? '#f3f3f5' : undefined }}
                     />
                   </div>
 
@@ -356,7 +379,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                         const numbers = e.target.value.replace(/\D/g, '');
                         setEntertainmentAmount(numbers);
                       }}
-                      onBlur={() => { if (entertainmentComplete) closeItem('entertainment'); }}
+                      onBlur={() => { if (entertainmentComplete) advanceFrom('entertainment'); }}
                       placeholder="$0"
                       className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noEntertainment}
@@ -381,7 +404,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                       if (checked) {
                         setDeliveryFrequency('0');
                         setDeliveryAmount('0');
-                        closeItem('delivery');
+                        advanceFrom('delivery');
                       }
                     }}
                     className="data-[state=checked]:bg-[#D4537E]"
@@ -411,12 +434,12 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                           setDeliveryFrequency(e.target.value);
                         }
                       }}
-                      onBlur={() => { if (deliveryComplete) closeItem('delivery'); }}
+                      onBlur={() => { if (deliveryComplete) advanceFrom('delivery'); }}
                       placeholder="Ej: 3"
                       min="0"
-                      className="w-full"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noDelivery}
-                      style={{ backgroundColor: noDelivery ? '#f3f3f5' : 'white' }}
+                      style={{ backgroundColor: noDelivery ? '#f3f3f5' : undefined }}
                     />
                   </div>
 
@@ -433,7 +456,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                         const numbers = e.target.value.replace(/\D/g, '');
                         setDeliveryAmount(numbers);
                       }}
-                      onBlur={() => { if (deliveryComplete) closeItem('delivery'); }}
+                      onBlur={() => { if (deliveryComplete) advanceFrom('delivery'); }}
                       placeholder="$0"
                       className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noDelivery}
@@ -458,7 +481,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                       if (checked) {
                         setSupermarketFrequency('0');
                         setSupermarketAmount('0');
-                        closeItem('super');
+                        advanceFrom('super');
                       }
                     }}
                     className="data-[state=checked]:bg-[#D4537E]"
@@ -488,12 +511,12 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                           setSupermarketFrequency(e.target.value);
                         }
                       }}
-                      onBlur={() => { if (supermarketComplete) closeItem('super'); }}
+                      onBlur={() => { if (supermarketComplete) advanceFrom('super'); }}
                       placeholder="Ej: 1"
                       min="0"
-                      className="w-full"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noSupermarket}
-                      style={{ backgroundColor: noSupermarket ? '#f3f3f5' : 'white' }}
+                      style={{ backgroundColor: noSupermarket ? '#f3f3f5' : undefined }}
                     />
                   </div>
 
@@ -510,7 +533,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                         const numbers = e.target.value.replace(/\D/g, '');
                         setSupermarketAmount(numbers);
                       }}
-                      onBlur={() => { if (supermarketComplete) closeItem('super'); }}
+                      onBlur={() => { if (supermarketComplete) advanceFrom('super'); }}
                       placeholder="$0"
                       className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noSupermarket}
