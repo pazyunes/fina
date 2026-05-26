@@ -1,3 +1,13 @@
+// Snapshot de cotización con el que se generó el informe. Se persiste para
+// "anclar" los montos en USD al cambio del día (2.3d/e).
+export interface ExchangeRate {
+  id: string | null;       // FK a exchange_rates (null si no se pudo guardar)
+  currency: string;        // 'USD_BLUE'
+  rate: number;            // ARS por 1 USD (venta del blue)
+  fetchedAt: string;       // ISO timestamp
+  stale: boolean;          // true si dolarapi falló y se devolvió una vencida
+}
+
 export interface TransportData {
   hasCar: boolean;
   insurance: number;
@@ -73,6 +83,9 @@ export interface UserData {
   knowsLastMonthExpenses: boolean;
   saves: boolean;
   invests: boolean;
+
+  // Exchange rate snapshot used for any USD amounts in this flow
+  exchangeRate?: ExchangeRate | null;
 
   // Goals
   goals: string[];

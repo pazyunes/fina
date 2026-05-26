@@ -15,6 +15,7 @@ import { UserData, FinancialAnalysis, TransportData } from './types';
 import { analyzeFinances } from './utils/financialAnalyzer';
 import { DEBUG_MODE } from './config';
 import { saveReport } from './lib/reports';
+import { fetchExchangeRate } from './lib/exchangeRate';
 
 export function Main() {
   const location = useLocation();
@@ -70,6 +71,18 @@ export function Main() {
     if (location.pathname === '/') {
       navigate('/splash');
     }
+  }, []);
+
+  // Fetch the USD blue rate once and snapshot it into userData, so every USD
+  // amount in this flow uses the same rate and the report stays anchored to it.
+  useEffect(() => {
+    let active = true;
+    fetchExchangeRate().then((rate) => {
+      if (active && rate) {
+        setUserData(prev => ({ ...prev, exchangeRate: rate }));
+      }
+    });
+    return () => { active = false; };
   }, []);
 
   // Scroll to top whenever the route (section) changes
