@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
 import { FinancialAnalysis } from '../types';
 import { g } from '../utils/gender';
+import { formatUsd } from '../lib/currency';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Download, Flame, TrendingUp, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -667,8 +668,15 @@ export function Result({ analysis }: ResultProps) {
   const subscriptionsCost = analysis.userData.subscriptions.reduce((sum, sub) => sum + sub.cost, 0);
   const installmentsCost = analysis.userData.installments.reduce((sum, inst) => sum + inst.monthlyAmount, 0);
 
-  const expenseData = [
-    { name: 'Vivienda', value: analysis.userData.expenses.housing, color: '#D4537E' },
+  // Nota de origen en USD (2.3e): si el alquiler se cargó en dólares, mostramos
+  // el monto original junto al equivalente en ARS usado para los cálculos.
+  const housingNote =
+    analysis.userData.housingCurrency === 'USD' && analysis.userData.housingOriginalAmount
+      ? formatUsd(analysis.userData.housingOriginalAmount)
+      : undefined;
+
+  const expenseData: { name: string; value: number; color: string; note?: string }[] = [
+    { name: 'Vivienda', value: analysis.userData.expenses.housing, color: '#D4537E', note: housingNote },
     { name: 'Salud', value: analysis.userData.expenses.health, color: '#D85A30' },
     { name: 'Transporte / movilidad', value: analysis.userData.expenses.transport, color: '#9C7AA5' },
     { name: 'Suscripciones', value: subscriptionsCost, color: '#3B6D11' },
@@ -834,7 +842,11 @@ export function Result({ analysis }: ResultProps) {
                 <div key={index}>
                   <div className="flex justify-between flex-wrap gap-1 mb-2">
                     <span className="text-gray-700 text-sm sm:text-base min-w-0">{expense.name}</span>
-                    <span className="font-medium text-sm sm:text-base">${expense.value.toLocaleString('es-AR').replace(/,/g, '.')} ({percentageOfIncome.toFixed(1)}%)</span>
+                    <span className="font-medium text-sm sm:text-base">
+                      {expense.note ? `${expense.note} (≈ ` : ''}
+                      ${expense.value.toLocaleString('es-AR').replace(/,/g, '.')}
+                      {expense.note ? ' al cambio del día)' : ''} ({percentageOfIncome.toFixed(1)}%)
+                    </span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden" style={{ boxSizing: 'border-box' }}>
                     <motion.div

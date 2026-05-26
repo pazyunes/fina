@@ -10,8 +10,10 @@ import { Home, Heart, Sparkles, Brain, Dumbbell, Plus, X, Check } from 'lucide-r
 import { TransportSelector, isTransportDataValid } from './TransportSelector';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
+import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
-import { TransportData, UserData } from '../types';
+import { arsFromUsd, formatArs } from '../lib/currency';
+import { TransportData, UserData, Currency } from '../types';
 
 type FixedKey = 'housing' | 'health' | 'beauty' | 'therapy' | 'gym';
 
@@ -24,6 +26,8 @@ interface ExpensesFixedProps {
     beauty: number;
     therapy: number;
     gym: number;
+    housingCurrency: Currency;
+    housingOriginalAmount: number;
     transportDetails: TransportData;
     installments: Array<{
       name: string;
@@ -82,6 +86,13 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
     therapy: false,
     gym: false,
   });
+
+  // Alquiler en ARS o USD. expenses.housing siempre queda en ARS (convertido).
+  const usdRate = initial?.exchangeRate?.rate ?? null;
+  const [housingCurrency, setHousingCurrency] = useState<Currency>(initial?.housingCurrency ?? 'ARS');
+  const [housingUsd, setHousingUsd] = useState<string>(
+    initial?.housingCurrency === 'USD' && initial?.housingOriginalAmount ? String(initial.housingOriginalAmount) : ''
+  );
 
   // Controlled accordion so a category collapses once completed but can be
   // reopened. Alquiler (housing) starts open.
@@ -182,8 +193,14 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
         remainingInstallments: parseInt(inst.remainingInstallments) || 0,
       }));
 
+    const housingOriginalAmount = housingCurrency === 'USD'
+      ? (parseInt(housingUsd.replace(/\D/g, '')) || 0)
+      : expenses.housing;
+
     onComplete({
       ...expenses,
+      housingCurrency,
+      housingOriginalAmount,
       transportDetails: transportData,
       installments: validInstallments,
     });
@@ -249,6 +266,25 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
                       <p className="text-sm text-gray-500 mb-3">{category.helper}</p>
                     )}
 
+                    {category.key === 'housing' && (
+                      <div className="mb-3 flex items-center gap-2">
+                        <CurrencyToggle
+                          value={housingCurrency}
+                          usdEnabled={!!usdRate}
+                          onChange={(c) => {
+                            setHousingCurrency(c);
+                            if (c === 'USD') {
+                              const usd = parseInt(housingUsd.replace(/\D/g, '')) || 0;
+                              setExpenses(prev => ({ ...prev, housing: usdRate ? arsFromUsd(usd, usdRate) : 0 }));
+                            }
+                          }}
+                        />
+                        {!usdRate && (
+                          <span className="text-xs text-gray-400">USD no disponible ahora</span>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2 mb-3">
                       <Switch
                         checked={isNotPaying}
@@ -270,41 +306,72 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
                       </div>
                     )}
 
-                    <div className="flex items-center justify-end gap-3 mb-3">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={value > 0 ? formatCurrency(value) : ''}
-                        onChange={(e) => updateExpenseInput(category.key, e.target.value)}
-                        onBlur={() => { if (expenses[category.key] > 0) advanceFrom(category.key); }}
-                        placeholder="$0"
-                        className={`w-36 text-right rounded-xl ${AMOUNT_FIELD_CLASS}`}
-                        style={{
-                          color: category.color,
-                          fontFamily: 'var(--font-sans)',
-                          opacity: isNotPaying ? 0.4 : 1,
-                          pointerEvents: isNotPaying ? 'none' : 'auto',
-                          backgroundColor: isNotPaying ? '#f3f3f5' : undefined,
-                        }}
-                        disabled={isNotPaying}
-                      />
-                    </div>
+                    {category.key === 'housing' && housingCurrency === 'USD' ? (
+                      <div style={{ opacity: isNotPaying ? 0.4 : 1, pointerEvents: isNotPaying ? 'none' : 'auto' }}>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm z-10">USD</span>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={housingUsd ? Number(housingUsd).toLocaleString('es-AR').replace(/,/g, '.') : ''}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, '');
+                              setHousingUsd(digits);
+                              const usd = parseInt(digits) || 0;
+                              setExpenses(prev => ({ ...prev, housing: usdRate ? arsFromUsd(usd, usdRate) : 0 }));
+                            }}
+                            onBlur={() => { if (expenses.housing > 0) advanceFrom('housing'); }}
+                            placeholder="0"
+                            className={`pl-12 rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                            disabled={isNotPaying}
+                          />
+                        </div>
+                        {housingUsd && usdRate && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            ≈ {formatArs(expenses.housing)} al cambio del día (USD blue {formatArs(usdRate)})
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-end gap-3 mb-3">
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={value > 0 ? formatCurrency(value) : ''}
+                            onChange={(e) => updateExpenseInput(category.key, e.target.value)}
+                            onBlur={() => { if (expenses[category.key] > 0) advanceFrom(category.key); }}
+                            placeholder="$0"
+                            className={`w-36 text-right rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                            style={{
+                              color: category.color,
+                              fontFamily: 'var(--font-sans)',
+                              opacity: isNotPaying ? 0.4 : 1,
+                              pointerEvents: isNotPaying ? 'none' : 'auto',
+                              backgroundColor: isNotPaying ? '#f3f3f5' : undefined,
+                            }}
+                            disabled={isNotPaying}
+                          />
+                        </div>
 
-                    <Slider
-                      value={[value]}
-                      onValueChange={(val) => updateExpense(category.key, val)}
-                      max={maxAmount}
-                      step={1000}
-                      className="mt-2"
-                      disabled={isNotPaying}
-                      style={{ opacity: isNotPaying ? 0.4 : 1, pointerEvents: isNotPaying ? 'none' : 'auto' }}
-                    />
+                        <Slider
+                          value={[value]}
+                          onValueChange={(val) => updateExpense(category.key, val)}
+                          max={maxAmount}
+                          step={1000}
+                          className="mt-2"
+                          disabled={isNotPaying}
+                          style={{ opacity: isNotPaying ? 0.4 : 1, pointerEvents: isNotPaying ? 'none' : 'auto' }}
+                        />
 
-                    <div className="flex justify-between text-xs text-gray-400 mt-2">
-                      <span>$0</span>
-                      <span>{formatCurrency(maxAmount)}</span>
-                    </div>
+                        <div className="flex justify-between text-xs text-gray-400 mt-2">
+                          <span>$0</span>
+                          <span>{formatCurrency(maxAmount)}</span>
+                        </div>
+                      </>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               );

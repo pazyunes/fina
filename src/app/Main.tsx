@@ -116,6 +116,8 @@ export function Main() {
     beauty: number;
     therapy: number;
     gym: number;
+    housingCurrency: 'ARS' | 'USD';
+    housingOriginalAmount: number;
     transportDetails: TransportData;
     installments: Array<{
       name: string;
@@ -152,6 +154,8 @@ export function Main() {
         gym: data.gym,
         transport: totalTransportCost,
       },
+      housingCurrency: data.housingCurrency,
+      housingOriginalAmount: data.housingOriginalAmount,
       transportDetails: data.transportDetails,
       installments: data.installments,
     }));
