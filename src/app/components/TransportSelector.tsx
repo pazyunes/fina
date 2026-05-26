@@ -4,6 +4,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { Car, Bus, Smartphone } from 'lucide-react';
+import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { TransportData } from '../types';
 
 interface TransportSelectorProps {
@@ -112,11 +113,11 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                     value={formatCurrency(value.insurance)}
                     onChange={(e) => updateData({ insurance: parseCurrency(e.target.value) })}
                     placeholder="$0"
-                    className={`mt-1 ${showValidation && !value.insuranceNotPaying && value.insurance === 0 ? 'border-red-500' : ''}`}
+                    className={`mt-1 ${AMOUNT_FIELD_CLASS} ${showValidation && !value.insuranceNotPaying && value.insurance === 0 ? 'border-red-500' : ''}`}
                     disabled={value.insuranceNotPaying}
                     style={{
                       opacity: value.insuranceNotPaying ? 0.4 : 1,
-                      backgroundColor: value.insuranceNotPaying ? '#f3f3f5' : 'white'
+                      backgroundColor: value.insuranceNotPaying ? '#f3f3f5' : undefined
                     }}
                   />
                   {showValidation && !value.insuranceNotPaying && value.insurance === 0 && (
@@ -150,11 +151,11 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                     value={formatCurrency(value.fuel)}
                     onChange={(e) => updateData({ fuel: parseCurrency(e.target.value) })}
                     placeholder="$0"
-                    className={`mt-1 ${showValidation && !value.fuelNotPaying && value.fuel === 0 ? 'border-red-500' : ''}`}
+                    className={`mt-1 ${AMOUNT_FIELD_CLASS} ${showValidation && !value.fuelNotPaying && value.fuel === 0 ? 'border-red-500' : ''}`}
                     disabled={value.fuelNotPaying}
                     style={{
                       opacity: value.fuelNotPaying ? 0.4 : 1,
-                      backgroundColor: value.fuelNotPaying ? '#f3f3f5' : 'white'
+                      backgroundColor: value.fuelNotPaying ? '#f3f3f5' : undefined
                     }}
                   />
                   {showValidation && !value.fuelNotPaying && value.fuel === 0 && (
@@ -231,7 +232,7 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                       updateData({ publicTransportCostPerTrip: num });
                     }}
                     placeholder="$400"
-                    className="mt-1"
+                    className={`mt-1 ${AMOUNT_FIELD_CLASS}`}
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Valor de referencia. Editalo según tu tarifa real.
@@ -321,7 +322,7 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                       updateData({ rideAppCostPerTrip: num });
                     }}
                     placeholder="$4.000"
-                    className="mt-1"
+                    className={`mt-1 ${AMOUNT_FIELD_CLASS}`}
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Valor de referencia. Editalo según tu tarifa real.
