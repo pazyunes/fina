@@ -33,6 +33,9 @@ export interface UserData {
   expenses: {
     housing: number; // Alquiler
     health: number; // Salud
+    beauty: number; // Belleza y cuidado personal (peluquería, manicura, etc.)
+    therapy: number; // Psicóloga / terapia
+    gym: number; // Gimnasio
     transport: number; // Transporte / movilidad (calculated from transportDetails)
     services: number; // Deprecated - ahora se usa subscriptions
     food: number; // Deprecated - ahora se calcula desde delivery

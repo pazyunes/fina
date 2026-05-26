@@ -11,7 +11,7 @@ import { Habits } from './components/Habits';
 import { Goals } from './components/Goals';
 import { AIReasoning } from './components/AIReasoning';
 import { Result } from './components/Result';
-import { UserData, FinancialAnalysis } from './types';
+import { UserData, FinancialAnalysis, TransportData } from './types';
 import { analyzeFinances } from './utils/financialAnalyzer';
 import { DEBUG_MODE } from './config';
 import { saveReport } from './lib/reports';
@@ -24,13 +24,14 @@ export function Main() {
     name: '',
     age: '',
     email: '',
-    livesAlone: false,
-    worksOrStudies: 'works',
     monthlyIncome: 0,
     banks: [],
     expenses: {
       housing: 0,
       health: 0,
+      beauty: 0,
+      therapy: 0,
+      gym: 0,
       transport: 0,
       services: 0,
       food: 0,
@@ -58,10 +59,6 @@ export function Main() {
     deliveryAmount: 0,
     supermarketFrequency: 0,
     supermarketAmount: 0,
-    gender: 'prefiero_no_decir',
-    knowsLastMonthExpenses: false,
-    saves: false,
-    invests: false,
     goals: [],
     specificGoals: [],
   });
@@ -103,18 +100,10 @@ export function Main() {
   const handleExpensesFixed = (data: {
     housing: number;
     health: number;
-    transportDetails: {
-      hasCar: boolean;
-      insurance: number;
-      fuel: number;
-      insuranceNotPaying: boolean;
-      hasPublicTransport: boolean;
-      publicTransportTrips: number;
-      publicTransportCostPerTrip: number;
-      hasRideApps: boolean;
-      rideAppTrips: number;
-      rideAppCostPerTrip: number;
-    };
+    beauty: number;
+    therapy: number;
+    gym: number;
+    transportDetails: TransportData;
     installments: Array<{
       name: string;
       monthlyAmount: number;
@@ -145,6 +134,9 @@ export function Main() {
         ...prev.expenses!,
         housing: data.housing,
         health: data.health,
+        beauty: data.beauty,
+        therapy: data.therapy,
+        gym: data.gym,
         transport: totalTransportCost,
       },
       transportDetails: data.transportDetails,
@@ -190,21 +182,21 @@ export function Main() {
     case '/splash':
       return <Splash />;
     case '/personal-data':
-      return <PersonalData onComplete={handlePersonalData} />;
+      return <PersonalData initial={userData} onComplete={handlePersonalData} />;
     case '/context':
-      return <Context gender={userData.gender} onComplete={handleContext} />;
+      return <Context initial={userData} gender={userData.gender} onComplete={handleContext} />;
     case '/activity':
-      return <Activity onComplete={handleActivity} />;
+      return <Activity initial={userData} onComplete={handleActivity} />;
     case '/bank':
-      return <Bank onComplete={handleBank} />;
+      return <Bank initial={userData} onComplete={handleBank} />;
     case '/expenses-fixed':
-      return <ExpensesFixed monthlyIncome={userData.monthlyIncome || 0} onComplete={handleExpensesFixed} />;
+      return <ExpensesFixed initial={userData} monthlyIncome={userData.monthlyIncome || 0} onComplete={handleExpensesFixed} />;
     case '/expenses-services':
-      return <ExpensesServices onComplete={handleExpensesServices} />;
+      return <ExpensesServices initial={userData} onComplete={handleExpensesServices} />;
     case '/habits':
-      return <Habits onComplete={handleHabits} />;
+      return <Habits initial={userData} onComplete={handleHabits} />;
     case '/goals':
-      return <Goals onComplete={handleGoals} />;
+      return <Goals initial={userData} onComplete={handleGoals} />;
     case '/ai-reasoning':
       return analysis ? <AIReasoning analysis={analysis} /> : <Splash />;
     case '/result':

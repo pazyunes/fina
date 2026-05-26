@@ -18,6 +18,9 @@ export interface FullReasoning {
     expensesByCategory: {
       housing: number;
       health: number;
+      beauty: number;
+      therapy: number;
+      gym: number;
       transport: number;
       subscriptionsTotal: number;
       subscriptionsCount: number;
@@ -82,7 +85,12 @@ export function buildFullReasoning(userData: UserData, analysis: FinancialAnalys
   const installmentsPercentage = pct(monthlyInstallments);
   const savingsRate = pct(available);
   const fixedExpensesPercentage = pct(
-    userData.expenses.housing + userData.expenses.health + userData.expenses.transport
+    userData.expenses.housing +
+      userData.expenses.health +
+      userData.expenses.beauty +
+      userData.expenses.therapy +
+      userData.expenses.gym +
+      userData.expenses.transport
   );
 
   const patterns: FullReasoning['patterns'] = [];
@@ -133,6 +141,9 @@ export function buildFullReasoning(userData: UserData, analysis: FinancialAnalys
       expensesByCategory: {
         housing: userData.expenses.housing,
         health: userData.expenses.health,
+        beauty: userData.expenses.beauty,
+        therapy: userData.expenses.therapy,
+        gym: userData.expenses.gym,
         transport: userData.expenses.transport,
         subscriptionsTotal: monthlySubscriptions,
         subscriptionsCount: userData.subscriptions.length,
@@ -156,7 +167,7 @@ export function buildFullReasoning(userData: UserData, analysis: FinancialAnalys
       fixedExpensesPercentage: Number(fixedExpensesPercentage.toFixed(2)),
       installmentsPercentage: Number(installmentsPercentage.toFixed(2)),
       formulas: {
-        totalExpenses: `fijos(${userData.expenses.housing} + ${userData.expenses.health} + ${userData.expenses.transport}) + suscripciones(${monthlySubscriptions}) + ocio(${userData.entertainmentFrequency} × ${userData.entertainmentAmount} × 4.33) + delivery(${userData.deliveryFrequency} × ${userData.deliveryAmount} × 4.33) + cuotas(${monthlyInstallments}) = ${totalExpenses}`,
+        totalExpenses: `fijos(${userData.expenses.housing} + ${userData.expenses.health} + ${userData.expenses.beauty} + ${userData.expenses.therapy} + ${userData.expenses.gym} + ${userData.expenses.transport}) + suscripciones(${monthlySubscriptions}) + ocio(${userData.entertainmentFrequency} × ${userData.entertainmentAmount} × 4.33) + delivery(${userData.deliveryFrequency} × ${userData.deliveryAmount} × 4.33) + cuotas(${monthlyInstallments}) = ${totalExpenses}`,
         available: `${totalIncome} - ${totalExpenses} = ${available}`,
         weeklyToMonthlyEntertainment: `${userData.entertainmentFrequency} × ${userData.entertainmentAmount} × 4.33 = ${Math.round(monthlyEntertainment)}`,
         weeklyToMonthlyDelivery: `${userData.deliveryFrequency} × ${userData.deliveryAmount} × 4.33 = ${Math.round(monthlyDelivery)}`,

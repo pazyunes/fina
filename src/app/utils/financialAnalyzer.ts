@@ -15,6 +15,9 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
   const totalExpenses =
     userData.expenses.housing +
     userData.expenses.health +
+    userData.expenses.beauty +
+    userData.expenses.therapy +
+    userData.expenses.gym +
     userData.expenses.transport +
     subscriptionsCost +
     monthlyDelivery +
