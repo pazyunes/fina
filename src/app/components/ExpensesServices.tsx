@@ -41,6 +41,9 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
+  // Vive acompañado → recordatorio de cargar solo su parte en gastos compartibles
+  const livesAccompanied = initial?.livesAlone === false;
+
   const initialSubs = initial?.subscriptions ?? [];
 
   // Subscriptions
@@ -226,6 +229,9 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                 <p className="text-xs text-gray-500 mb-3">
                   Apps y plataformas que pagás todos los meses
                 </p>
+                {livesAccompanied && (
+                  <p className="text-xs text-[#D4537E] mb-3">Poné solo lo que pagás vos</p>
+                )}
                 <div className="space-y-3">
                   {PRESET_SUBSCRIPTIONS.map(service => (
                     <div key={service.name} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50">
@@ -473,6 +479,9 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                 <TriggerLabel icon={ShoppingCart} color="#D4537E" title="Supermercado" done={supermarketComplete} />
               </AccordionTrigger>
               <AccordionContent className="pt-0 pb-5">
+                {livesAccompanied && (
+                  <p className="text-xs text-[#D4537E] mb-3">Poné solo lo que pagás vos</p>
+                )}
                 <div className="flex items-center gap-2 mb-4">
                   <Switch
                     checked={noSupermarket}
