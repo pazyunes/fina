@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
 import { Switch } from './ui/switch';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import { Zap, UtensilsCrossed, Sparkles, Plus, X, Check, ShoppingCart } from 'lucide-react';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
@@ -64,6 +65,11 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   const [supermarketFrequency, setSupermarketFrequency] = useState(initial?.supermarketFrequency ? String(initial.supermarketFrequency) : '');
   const [supermarketAmount, setSupermarketAmount] = useState(initial?.supermarketAmount ? String(initial.supermarketAmount) : '');
   const [noSupermarket, setNoSupermarket] = useState(false);
+
+  // Controlled accordion so completed sections collapse automatically while
+  // staying reopenable. Suscripciones starts open.
+  const [openItems, setOpenItems] = useState<string[]>(['subs']);
+  const closeItem = (key: string) => setOpenItems(prev => prev.filter(k => k !== key));
 
   const toggleSubscription = (name: string) => {
     const newSelected = new Set(selectedSubscriptions);
@@ -141,12 +147,29 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
     navigate('/habits');
   };
 
+  // Per-section completion (drives the auto-close + the trigger check icon)
+  const entertainmentComplete = noEntertainment || (entertainmentFrequency !== '' && entertainmentAmount !== '');
+  const deliveryComplete = noDelivery || (deliveryFrequency !== '' && deliveryAmount !== '');
+  const supermarketComplete = noSupermarket || (supermarketFrequency !== '' && supermarketAmount !== '');
+  const subsCount = selectedSubscriptions.size + customSubscriptions.filter(s => s.confirmed).length;
+
   const isValid =
-    (noEntertainment || (entertainmentFrequency !== '' && entertainmentAmount !== '')) &&
-    (noDelivery || (deliveryFrequency !== '' && deliveryAmount !== '')) &&
-    (noSupermarket || (supermarketFrequency !== '' && supermarketAmount !== '')) &&
+    entertainmentComplete &&
+    deliveryComplete &&
+    supermarketComplete &&
     // All custom subscriptions must have both name and cost
     customSubscriptions.every(sub => !sub.name || (sub.name && sub.cost));
+
+  const TriggerLabel = ({ icon: Icon, color, title, done, badge }: { icon: any; color: string; title: string; done?: boolean; badge?: string }) => (
+    <div className="flex items-center gap-3 flex-1">
+      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}20` }}>
+        <Icon className="w-5 h-5" style={{ color }} />
+      </div>
+      <span className="text-gray-700 text-left flex-1" style={{ fontFamily: 'var(--font-sans)' }}>{title}</span>
+      {badge && <span className="text-xs text-gray-500 mr-1">{badge}</span>}
+      {done && <Check className="w-4 h-4 text-green-600 shrink-0" />}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col">
@@ -166,353 +189,338 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
               Gastos que cambian mes a mes
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Salidas, delivery, súper y suscripciones: lo que varía según el mes
+              Salidas, delivery, súper y suscripciones: lo que varía según el mes. Tocá cada categoría para completarla
             </p>
           </div>
 
-          <div className="space-y-6">
+          <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-3">
             {/* Subscriptions Section */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#D85A30]/20">
-                  <Zap className="w-5 h-5 text-[#D85A30]" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg text-[#D4537E]" style={{ fontFamily: 'var(--font-sans)' }}>
-                    Servicios / suscripciones
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Apps y plataformas que pagás todos los meses
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {PRESET_SUBSCRIPTIONS.map(service => (
-                  <div key={service.name} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50">
-                    <Checkbox
-                      id={`sub-${service.name}`}
-                      checked={selectedSubscriptions.has(service.name)}
-                      onCheckedChange={() => toggleSubscription(service.name)}
-                    />
-                    <label
-                      htmlFor={`sub-${service.name}`}
-                      className="flex-1 text-gray-700 cursor-pointer"
-                    >
-                      {service.name}
-                    </label>
-                  </div>
-                ))}
-
-                {/* Custom subscriptions */}
-                {customSubscriptions.map((sub, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className={`space-y-2 pt-3 border-t rounded-lg p-3 transition-colors ${
-                      sub.confirmed ? 'bg-[#F0FAF4]' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 space-y-2">
-                        <Input
-                          type="text"
-                          value={sub.name}
-                          onChange={(e) => updateCustomSubscription(index, 'name', e.target.value)}
-                          placeholder="Nombre del servicio"
-                          className="w-full"
-                        />
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={formatCurrency(sub.cost)}
-                          onChange={(e) => updateCustomSubscription(index, 'cost', e.target.value.replace(/\D/g, ''))}
-                          placeholder="¿Cuánto cuesta?"
-                          className={`w-full ${AMOUNT_FIELD_CLASS}`}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleConfirmSubscription(index)}
-                          className={`${
-                            sub.confirmed
-                              ? 'text-green-600 hover:text-green-700 bg-green-100'
-                              : 'text-gray-400 hover:text-green-600'
-                          } transition-colors`}
-                          disabled={!sub.name || !sub.cost}
-                        >
-                          <Check className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeCustomSubscription(index)}
-                          className={`text-red-500 hover:text-red-700 transition-opacity ${
-                            sub.confirmed ? 'opacity-30' : 'opacity-100'
-                          }`}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
+            <AccordionItem value="subs" className="bg-white rounded-2xl shadow-sm border-0 px-5">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <TriggerLabel icon={Zap} color="#D85A30" title="Suscripciones y servicios" badge={subsCount > 0 ? `${subsCount}` : undefined} done={subsCount > 0} />
+              </AccordionTrigger>
+              <AccordionContent className="pt-0 pb-5">
+                <p className="text-xs text-gray-500 mb-3">
+                  Apps y plataformas que pagás todos los meses
+                </p>
+                <div className="space-y-3">
+                  {PRESET_SUBSCRIPTIONS.map(service => (
+                    <div key={service.name} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50">
+                      <Checkbox
+                        id={`sub-${service.name}`}
+                        checked={selectedSubscriptions.has(service.name)}
+                        onCheckedChange={() => toggleSubscription(service.name)}
+                      />
+                      <label
+                        htmlFor={`sub-${service.name}`}
+                        className="flex-1 text-gray-700 cursor-pointer"
+                      >
+                        {service.name}
+                      </label>
                     </div>
-                  </motion.div>
-                ))}
+                  ))}
 
-                <Button
-                  variant="outline"
-                  onClick={addCustomSubscription}
-                  className="w-full mt-3 border-dashed"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Agregar otro servicio
-                </Button>
-              </div>
-            </div>
+                  {/* Custom subscriptions */}
+                  {customSubscriptions.map((sub, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className={`space-y-2 pt-3 border-t rounded-lg p-3 transition-colors ${
+                        sub.confirmed ? 'bg-[#F0FAF4]' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            type="text"
+                            value={sub.name}
+                            onChange={(e) => updateCustomSubscription(index, 'name', e.target.value)}
+                            placeholder="Nombre del servicio"
+                            className="w-full"
+                          />
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={formatCurrency(sub.cost)}
+                            onChange={(e) => updateCustomSubscription(index, 'cost', e.target.value.replace(/\D/g, ''))}
+                            placeholder="¿Cuánto cuesta?"
+                            className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleConfirmSubscription(index)}
+                            className={`${
+                              sub.confirmed
+                                ? 'text-green-600 hover:text-green-700 bg-green-100'
+                                : 'text-gray-400 hover:text-green-600'
+                            } transition-colors`}
+                            disabled={!sub.name || !sub.cost}
+                          >
+                            <Check className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeCustomSubscription(index)}
+                            className={`text-red-500 hover:text-red-700 transition-opacity ${
+                              sub.confirmed ? 'opacity-30' : 'opacity-100'
+                            }`}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    onClick={addCustomSubscription}
+                    className="w-full mt-3 border-dashed"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar otro servicio
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
             {/* Entertainment Section */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#D4537E]/20">
-                  <Sparkles className="w-5 h-5 text-[#D4537E]" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg text-[#D4537E]" style={{ fontFamily: 'var(--font-sans)' }}>
-                    Entretenimiento / ocio / salidas
-                  </h3>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mb-4">
-                <Switch
-                  checked={noEntertainment}
-                  onCheckedChange={(checked) => {
-                    setNoEntertainment(checked);
-                    if (checked) {
-                      setEntertainmentFrequency('0');
-                      setEntertainmentAmount('0');
-                    }
-                  }}
-                  className="data-[state=checked]:bg-[#D4537E]"
-                />
-                <span className="text-sm text-gray-500">No consumo</span>
-              </div>
-
-              {noEntertainment && (
-                <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
-                  <span className="text-xs text-gray-600">No aplica</span>
-                </div>
-              )}
-
-              <div className="space-y-4" style={{ opacity: noEntertainment ? 0.4 : 1, pointerEvents: noEntertainment ? 'none' : 'auto' }}>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    ¿Cuántas veces salís por semana aproximadamente?
-                  </label>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.5"
-                    value={entertainmentFrequency}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      if (val >= 0 || e.target.value === '') {
-                        setEntertainmentFrequency(e.target.value);
+            <AccordionItem value="entertainment" className="bg-white rounded-2xl shadow-sm border-0 px-5">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <TriggerLabel icon={Sparkles} color="#D4537E" title="Salidas y entretenimiento" done={entertainmentComplete} />
+              </AccordionTrigger>
+              <AccordionContent className="pt-0 pb-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Switch
+                    checked={noEntertainment}
+                    onCheckedChange={(checked) => {
+                      setNoEntertainment(checked);
+                      if (checked) {
+                        setEntertainmentFrequency('0');
+                        setEntertainmentAmount('0');
+                        closeItem('entertainment');
                       }
                     }}
-                    placeholder="Ej: 2"
-                    min="0"
-                    className="w-full"
-                    disabled={noEntertainment}
-                    style={{ backgroundColor: noEntertainment ? '#f3f3f5' : 'white' }}
+                    className="data-[state=checked]:bg-[#D4537E]"
                   />
+                  <span className="text-sm text-gray-500">No consumo</span>
                 </div>
 
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    ¿Cuánto gastás aproximadamente por salida?
-                  </label>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={formatCurrency(entertainmentAmount)}
-                    onChange={(e) => {
-                      const numbers = e.target.value.replace(/\D/g, '');
-                      setEntertainmentAmount(numbers);
-                    }}
-                    placeholder="$0"
-                    className={`w-full ${AMOUNT_FIELD_CLASS}`}
-                    disabled={noEntertainment}
-                    style={{ backgroundColor: noEntertainment ? '#f3f3f5' : undefined }}
-                  />
+                {noEntertainment && (
+                  <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
+                    <span className="text-xs text-gray-600">No aplica</span>
+                  </div>
+                )}
+
+                <div className="space-y-4" style={{ opacity: noEntertainment ? 0.4 : 1, pointerEvents: noEntertainment ? 'none' : 'auto' }}>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuántas veces salís por semana aproximadamente?
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.5"
+                      value={entertainmentFrequency}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (val >= 0 || e.target.value === '') {
+                          setEntertainmentFrequency(e.target.value);
+                        }
+                      }}
+                      onBlur={() => { if (entertainmentComplete) closeItem('entertainment'); }}
+                      placeholder="Ej: 2"
+                      min="0"
+                      className="w-full"
+                      disabled={noEntertainment}
+                      style={{ backgroundColor: noEntertainment ? '#f3f3f5' : 'white' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuánto gastás aproximadamente por salida?
+                    </label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formatCurrency(entertainmentAmount)}
+                      onChange={(e) => {
+                        const numbers = e.target.value.replace(/\D/g, '');
+                        setEntertainmentAmount(numbers);
+                      }}
+                      onBlur={() => { if (entertainmentComplete) closeItem('entertainment'); }}
+                      placeholder="$0"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      disabled={noEntertainment}
+                      style={{ backgroundColor: noEntertainment ? '#f3f3f5' : undefined }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
+              </AccordionContent>
+            </AccordionItem>
 
             {/* Delivery Section */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#3B6D11]/20">
-                  <UtensilsCrossed className="w-5 h-5 text-[#3B6D11]" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg text-[#D4537E]" style={{ fontFamily: 'var(--font-sans)' }}>
-                    Delivery / comida por app
-                  </h3>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mb-4">
-                <Switch
-                  checked={noDelivery}
-                  onCheckedChange={(checked) => {
-                    setNoDelivery(checked);
-                    if (checked) {
-                      setDeliveryFrequency('0');
-                      setDeliveryAmount('0');
-                    }
-                  }}
-                  className="data-[state=checked]:bg-[#D4537E]"
-                />
-                <span className="text-sm text-gray-500">No consumo</span>
-              </div>
-
-              {noDelivery && (
-                <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
-                  <span className="text-xs text-gray-600">No aplica</span>
-                </div>
-              )}
-
-              <div className="space-y-4" style={{ opacity: noDelivery ? 0.4 : 1, pointerEvents: noDelivery ? 'none' : 'auto' }}>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    ¿Cuántas veces pedís delivery por semana aproximadamente?
-                  </label>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.5"
-                    value={deliveryFrequency}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      if (val >= 0 || e.target.value === '') {
-                        setDeliveryFrequency(e.target.value);
+            <AccordionItem value="delivery" className="bg-white rounded-2xl shadow-sm border-0 px-5">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <TriggerLabel icon={UtensilsCrossed} color="#3B6D11" title="Delivery / comida pedida" done={deliveryComplete} />
+              </AccordionTrigger>
+              <AccordionContent className="pt-0 pb-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Switch
+                    checked={noDelivery}
+                    onCheckedChange={(checked) => {
+                      setNoDelivery(checked);
+                      if (checked) {
+                        setDeliveryFrequency('0');
+                        setDeliveryAmount('0');
+                        closeItem('delivery');
                       }
                     }}
-                    placeholder="Ej: 3"
-                    min="0"
-                    className="w-full"
-                    disabled={noDelivery}
-                    style={{ backgroundColor: noDelivery ? '#f3f3f5' : 'white' }}
+                    className="data-[state=checked]:bg-[#D4537E]"
                   />
+                  <span className="text-sm text-gray-500">No consumo</span>
                 </div>
 
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    ¿Cuánto gastás aproximadamente por pedido?
-                  </label>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={formatCurrency(deliveryAmount)}
-                    onChange={(e) => {
-                      const numbers = e.target.value.replace(/\D/g, '');
-                      setDeliveryAmount(numbers);
-                    }}
-                    placeholder="$0"
-                    className={`w-full ${AMOUNT_FIELD_CLASS}`}
-                    disabled={noDelivery}
-                    style={{ backgroundColor: noDelivery ? '#f3f3f5' : undefined }}
-                  />
+                {noDelivery && (
+                  <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
+                    <span className="text-xs text-gray-600">No aplica</span>
+                  </div>
+                )}
+
+                <div className="space-y-4" style={{ opacity: noDelivery ? 0.4 : 1, pointerEvents: noDelivery ? 'none' : 'auto' }}>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuántas veces pedís delivery por semana aproximadamente?
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.5"
+                      value={deliveryFrequency}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (val >= 0 || e.target.value === '') {
+                          setDeliveryFrequency(e.target.value);
+                        }
+                      }}
+                      onBlur={() => { if (deliveryComplete) closeItem('delivery'); }}
+                      placeholder="Ej: 3"
+                      min="0"
+                      className="w-full"
+                      disabled={noDelivery}
+                      style={{ backgroundColor: noDelivery ? '#f3f3f5' : 'white' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuánto gastás aproximadamente por pedido?
+                    </label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formatCurrency(deliveryAmount)}
+                      onChange={(e) => {
+                        const numbers = e.target.value.replace(/\D/g, '');
+                        setDeliveryAmount(numbers);
+                      }}
+                      onBlur={() => { if (deliveryComplete) closeItem('delivery'); }}
+                      placeholder="$0"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      disabled={noDelivery}
+                      style={{ backgroundColor: noDelivery ? '#f3f3f5' : undefined }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
+              </AccordionContent>
+            </AccordionItem>
 
             {/* Supermarket Section */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#D4537E]/20">
-                  <ShoppingCart className="w-5 h-5 text-[#D4537E]" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg text-[#D4537E]" style={{ fontFamily: 'var(--font-sans)' }}>
-                    Supermercado
-                  </h3>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mb-4">
-                <Switch
-                  checked={noSupermarket}
-                  onCheckedChange={(checked) => {
-                    setNoSupermarket(checked);
-                    if (checked) {
-                      setSupermarketFrequency('0');
-                      setSupermarketAmount('0');
-                    }
-                  }}
-                  className="data-[state=checked]:bg-[#D4537E]"
-                />
-                <span className="text-sm text-gray-500">No aplica</span>
-              </div>
-
-              {noSupermarket && (
-                <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
-                  <span className="text-xs text-gray-600">No aplica</span>
-                </div>
-              )}
-
-              <div className="space-y-4" style={{ opacity: noSupermarket ? 0.4 : 1, pointerEvents: noSupermarket ? 'none' : 'auto' }}>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    ¿Cuántas veces por semana hacés compras en el súper?
-                  </label>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.5"
-                    value={supermarketFrequency}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      if (val >= 0 || e.target.value === '') {
-                        setSupermarketFrequency(e.target.value);
+            <AccordionItem value="super" className="bg-white rounded-2xl shadow-sm border-0 px-5">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <TriggerLabel icon={ShoppingCart} color="#D4537E" title="Supermercado" done={supermarketComplete} />
+              </AccordionTrigger>
+              <AccordionContent className="pt-0 pb-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Switch
+                    checked={noSupermarket}
+                    onCheckedChange={(checked) => {
+                      setNoSupermarket(checked);
+                      if (checked) {
+                        setSupermarketFrequency('0');
+                        setSupermarketAmount('0');
+                        closeItem('super');
                       }
                     }}
-                    placeholder="Ej: 1"
-                    min="0"
-                    className="w-full"
-                    disabled={noSupermarket}
-                    style={{ backgroundColor: noSupermarket ? '#f3f3f5' : 'white' }}
+                    className="data-[state=checked]:bg-[#D4537E]"
                   />
+                  <span className="text-sm text-gray-500">No aplica</span>
                 </div>
 
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    ¿Cuánto gastás aproximadamente por compra?
-                  </label>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={formatCurrency(supermarketAmount)}
-                    onChange={(e) => {
-                      const numbers = e.target.value.replace(/\D/g, '');
-                      setSupermarketAmount(numbers);
-                    }}
-                    placeholder="$0"
-                    className={`w-full ${AMOUNT_FIELD_CLASS}`}
-                    disabled={noSupermarket}
-                    style={{ backgroundColor: noSupermarket ? '#f3f3f5' : undefined }}
-                  />
+                {noSupermarket && (
+                  <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
+                    <span className="text-xs text-gray-600">No aplica</span>
+                  </div>
+                )}
+
+                <div className="space-y-4" style={{ opacity: noSupermarket ? 0.4 : 1, pointerEvents: noSupermarket ? 'none' : 'auto' }}>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuántas veces por semana hacés compras en el súper?
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.5"
+                      value={supermarketFrequency}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (val >= 0 || e.target.value === '') {
+                          setSupermarketFrequency(e.target.value);
+                        }
+                      }}
+                      onBlur={() => { if (supermarketComplete) closeItem('super'); }}
+                      placeholder="Ej: 1"
+                      min="0"
+                      className="w-full"
+                      disabled={noSupermarket}
+                      style={{ backgroundColor: noSupermarket ? '#f3f3f5' : 'white' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuánto gastás aproximadamente por compra?
+                    </label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formatCurrency(supermarketAmount)}
+                      onChange={(e) => {
+                        const numbers = e.target.value.replace(/\D/g, '');
+                        setSupermarketAmount(numbers);
+                      }}
+                      onBlur={() => { if (supermarketComplete) closeItem('super'); }}
+                      placeholder="$0"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      disabled={noSupermarket}
+                      style={{ backgroundColor: noSupermarket ? '#f3f3f5' : undefined }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </motion.div>
       </div>
 

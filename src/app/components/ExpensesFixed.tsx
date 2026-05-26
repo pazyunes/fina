@@ -83,6 +83,11 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
     gym: false,
   });
 
+  // Controlled accordion so a category collapses once completed but can be
+  // reopened. Alquiler (housing) starts open.
+  const [openItems, setOpenItems] = useState<string[]>(['housing']);
+  const closeItem = (key: string) => setOpenItems(prev => prev.filter(k => k !== key));
+
   const [transportData, setTransportData] = useState<TransportData>(
     initial?.transportDetails ?? DEFAULT_TRANSPORT
   );
@@ -196,7 +201,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
           </div>
 
           {/* Categorías de monto fijo, cada una colapsable (la primera abierta) */}
-          <Accordion type="multiple" defaultValue={['housing']} className="space-y-3">
+          <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-3">
             {CATEGORIES.map(category => {
               const Icon = category.icon;
               const isNotPaying = notPaying[category.key];
@@ -235,6 +240,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
                           setNotPaying(prev => ({ ...prev, [category.key]: checked }));
                           if (checked) {
                             setExpenses(prev => ({ ...prev, [category.key]: 0 }));
+                            closeItem(category.key);
                           }
                         }}
                         className="data-[state=checked]:bg-[#D4537E]"
@@ -255,6 +261,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
                         pattern="[0-9]*"
                         value={value > 0 ? formatCurrency(value) : ''}
                         onChange={(e) => updateExpenseInput(category.key, e.target.value)}
+                        onBlur={() => { if (expenses[category.key] > 0) closeItem(category.key); }}
                         placeholder="$0"
                         className={`w-36 text-right rounded-xl ${AMOUNT_FIELD_CLASS}`}
                         style={{
