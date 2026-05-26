@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
+import { BackButton } from './BackButton';
+import { OnboardingProgress } from './OnboardingProgress';
+import { UserData } from '../types';
 
 interface BankProps {
+  initial?: Partial<UserData>;
   onComplete: (data: { banks: string[] }) => void;
 }
 
@@ -23,9 +27,10 @@ const BANKS = [
   'No uso banco'
 ];
 
-export function Bank({ onComplete }: BankProps) {
+export function Bank({ initial, onComplete }: BankProps) {
   const navigate = useNavigate();
-  const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
+  const { pathname } = useLocation();
+  const [selectedBanks, setSelectedBanks] = useState<string[]>(initial?.banks ?? []);
 
   const toggleBank = (bank: string) => {
     if (bank === 'No uso banco') {
@@ -57,19 +62,21 @@ export function Bank({ onComplete }: BankProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <div className="mb-8">
-            <h2 
+          <BackButton currentPath={pathname} />
+
+          <div className="mb-6">
+            <h2
               className="text-3xl mb-2 text-[#D4537E]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
-              Tu banco
+              ¿Dónde tenés tu plata?
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Podés seleccionar varios
+              Elegí los bancos o billeteras que uses. Podés marcar varios
             </p>
           </div>
 
-          <div className="space-y-3 max-h-96 overflow-y-auto">
+          <div className="space-y-2 max-h-96 overflow-y-auto">
             {BANKS.map(bank => (
               <div
                 key={bank}
@@ -80,7 +87,7 @@ export function Bank({ onComplete }: BankProps) {
                     : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
                 }`}
               >
-                <Checkbox 
+                <Checkbox
                   checked={selectedBanks.includes(bank)}
                   onCheckedChange={() => toggleBank(bank)}
                   className="data-[state=checked]:bg-[#D4537E] data-[state=checked]:border-[#D4537E]"
@@ -93,7 +100,7 @@ export function Bank({ onComplete }: BankProps) {
           <Button
             onClick={handleSubmit}
             disabled={selectedBanks.length === 0}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-6 rounded-full text-lg mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar
           </Button>
@@ -101,14 +108,7 @@ export function Bank({ onComplete }: BankProps) {
       </div>
 
       <div className="p-4">
-        <div className="flex justify-center gap-2 mb-4">
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-        </div>
+        <OnboardingProgress currentPath={pathname} />
       </div>
     </div>
   );

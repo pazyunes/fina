@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
 import { Switch } from './ui/switch';
 import { Zap, UtensilsCrossed, Sparkles, Plus, X, Check, ShoppingCart } from 'lucide-react';
+import { BackButton } from './BackButton';
+import { OnboardingProgress } from './OnboardingProgress';
+import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
+import { UserData } from '../types';
 
 interface ExpensesServicesProps {
+  initial?: Partial<UserData>;
   onComplete: (data: {
     subscriptions: Array<{
       name: string;
@@ -31,26 +36,33 @@ const PRESET_SUBSCRIPTIONS = [
   { name: 'Prime Video', price: 6000 },
 ];
 
-export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
+export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps) {
   const navigate = useNavigate();
-  
+  const { pathname } = useLocation();
+
+  const initialSubs = initial?.subscriptions ?? [];
+
   // Subscriptions
-  const [selectedSubscriptions, setSelectedSubscriptions] = useState<Set<string>>(new Set());
-  const [customSubscriptions, setCustomSubscriptions] = useState<Array<{ name: string; cost: string; confirmed: boolean }>>([]);
-  
+  const [selectedSubscriptions, setSelectedSubscriptions] = useState<Set<string>>(
+    new Set(initialSubs.filter((s) => !s.isCustom).map((s) => s.name))
+  );
+  const [customSubscriptions, setCustomSubscriptions] = useState<Array<{ name: string; cost: string; confirmed: boolean }>>(
+    initialSubs.filter((s) => s.isCustom).map((s) => ({ name: s.name, cost: String(s.cost), confirmed: true }))
+  );
+
   // Entertainment
-  const [entertainmentFrequency, setEntertainmentFrequency] = useState('');
-  const [entertainmentAmount, setEntertainmentAmount] = useState('');
+  const [entertainmentFrequency, setEntertainmentFrequency] = useState(initial?.entertainmentFrequency ? String(initial.entertainmentFrequency) : '');
+  const [entertainmentAmount, setEntertainmentAmount] = useState(initial?.entertainmentAmount ? String(initial.entertainmentAmount) : '');
   const [noEntertainment, setNoEntertainment] = useState(false);
 
   // Delivery
-  const [deliveryFrequency, setDeliveryFrequency] = useState('');
-  const [deliveryAmount, setDeliveryAmount] = useState('');
+  const [deliveryFrequency, setDeliveryFrequency] = useState(initial?.deliveryFrequency ? String(initial.deliveryFrequency) : '');
+  const [deliveryAmount, setDeliveryAmount] = useState(initial?.deliveryAmount ? String(initial.deliveryAmount) : '');
   const [noDelivery, setNoDelivery] = useState(false);
 
   // Supermarket
-  const [supermarketFrequency, setSupermarketFrequency] = useState('');
-  const [supermarketAmount, setSupermarketAmount] = useState('');
+  const [supermarketFrequency, setSupermarketFrequency] = useState(initial?.supermarketFrequency ? String(initial.supermarketFrequency) : '');
+  const [supermarketAmount, setSupermarketAmount] = useState(initial?.supermarketAmount ? String(initial.supermarketAmount) : '');
   const [noSupermarket, setNoSupermarket] = useState(false);
 
   const toggleSubscription = (name: string) => {
@@ -144,19 +156,21 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full pb-24"
         >
-          <div className="mb-8 sticky top-0 bg-gradient-to-br from-white to-[#FBEAF0] pb-4 z-10">
-            <h2 
+          <BackButton currentPath={pathname} />
+
+          <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#FBEAF0] pb-3 z-10">
+            <h2
               className="text-3xl mb-2 text-[#D4537E]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
-              Servicios y hábitos
+              Gastos que cambian mes a mes
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Contanos sobre tus suscripciones y consumos
+              Salidas, delivery, súper y suscripciones: lo que varía según el mes
             </p>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Subscriptions Section */}
             <div className="bg-white p-6 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-4">
@@ -168,7 +182,7 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                     Servicios / suscripciones
                   </h3>
                   <p className="text-xs text-gray-500 mt-1">
-                    Servicios que abonas desde tu ingreso
+                    Apps y plataformas que pagás todos los meses
                   </p>
                 </div>
               </div>
@@ -216,7 +230,7 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                           value={formatCurrency(sub.cost)}
                           onChange={(e) => updateCustomSubscription(index, 'cost', e.target.value.replace(/\D/g, ''))}
                           placeholder="¿Cuánto cuesta?"
-                          className="w-full"
+                          className={`w-full ${AMOUNT_FIELD_CLASS}`}
                         />
                       </div>
                       <div className="flex flex-col gap-1">
@@ -331,9 +345,9 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                       setEntertainmentAmount(numbers);
                     }}
                     placeholder="$0"
-                    className="w-full"
+                    className={`w-full ${AMOUNT_FIELD_CLASS}`}
                     disabled={noEntertainment}
-                    style={{ backgroundColor: noEntertainment ? '#f3f3f5' : 'white' }}
+                    style={{ backgroundColor: noEntertainment ? '#f3f3f5' : undefined }}
                   />
                 </div>
               </div>
@@ -411,9 +425,9 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                       setDeliveryAmount(numbers);
                     }}
                     placeholder="$0"
-                    className="w-full"
+                    className={`w-full ${AMOUNT_FIELD_CLASS}`}
                     disabled={noDelivery}
-                    style={{ backgroundColor: noDelivery ? '#f3f3f5' : 'white' }}
+                    style={{ backgroundColor: noDelivery ? '#f3f3f5' : undefined }}
                   />
                 </div>
               </div>
@@ -491,9 +505,9 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
                       setSupermarketAmount(numbers);
                     }}
                     placeholder="$0"
-                    className="w-full"
+                    className={`w-full ${AMOUNT_FIELD_CLASS}`}
                     disabled={noSupermarket}
-                    style={{ backgroundColor: noSupermarket ? '#f3f3f5' : 'white' }}
+                    style={{ backgroundColor: noSupermarket ? '#f3f3f5' : undefined }}
                   />
                 </div>
               </div>
@@ -507,19 +521,13 @@ export function ExpensesServices({ onComplete }: ExpensesServicesProps) {
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-6 rounded-full text-lg disabled:opacity-50"
+            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
             Continuar
           </Button>
-          
-          <div className="flex justify-center gap-2 mt-4">
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+
+          <div className="mt-4">
+            <OnboardingProgress currentPath={pathname} />
           </div>
         </div>
       </div>

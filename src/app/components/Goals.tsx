@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -7,6 +7,10 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { X, Plus, Check } from 'lucide-react';
 import { DEBUG_MODE } from '../config';
+import { BackButton } from './BackButton';
+import { OnboardingProgress } from './OnboardingProgress';
+import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
+import { UserData } from '../types';
 
 interface GoalItem {
   title: string;
@@ -15,6 +19,7 @@ interface GoalItem {
 }
 
 interface GoalsProps {
+  initial?: Partial<UserData>;
   onComplete: (data: {
     goals: string[];
     specificGoals: Array<{
@@ -24,6 +29,13 @@ interface GoalsProps {
     }>;
   }) => void;
 }
+
+// "12000" -> "12.000" (sin símbolo, igual que el resto del flujo de objetivos)
+const formatGoalAmount = (value: string) => {
+  const numbers = value.replace(/\D/g, '');
+  const cleanNumbers = numbers.replace(/^0+/, '') || '0';
+  return cleanNumbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
 
 const GOAL_OPTIONS = [
   'Ahorrar para emergencias',
@@ -35,17 +47,24 @@ const GOAL_OPTIONS = [
   'No tengo'
 ];
 
-export function Goals({ onComplete }: GoalsProps) {
+export function Goals({ initial, onComplete }: GoalsProps) {
   const navigate = useNavigate();
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [specificGoals, setSpecificGoals] = useState<GoalItem[]>([]);
+  const { pathname } = useLocation();
+  const [selectedGoals, setSelectedGoals] = useState<string[]>(initial?.goals ?? []);
+  const [specificGoals, setSpecificGoals] = useState<GoalItem[]>(
+    (initial?.specificGoals ?? []).map((goal) => ({
+      title: goal.title,
+      amount: formatGoalAmount(String(goal.amount)),
+      timeframe: String(goal.timeframe),
+    }))
+  );
   const [currentGoal, setCurrentGoal] = useState<GoalItem>({
     title: '',
     amount: '',
     timeframe: '',
   });
 
-  const [showSavingsGoal, setShowSavingsGoal] = useState(false);
+  const [showSavingsGoal, setShowSavingsGoal] = useState(initial?.goals?.includes('No tengo') ?? false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   const toggleGoal = (goal: string) => {
@@ -123,7 +142,9 @@ export function Goals({ onComplete }: GoalsProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <div className="mb-8">
+          <BackButton currentPath={pathname} />
+
+          <div className="mb-6">
             <h2
               className="text-3xl mb-2 text-[#D4537E]"
               style={{ fontFamily: 'var(--font-serif)' }}
@@ -186,7 +207,7 @@ export function Goals({ onComplete }: GoalsProps) {
                     value={currentGoal.amount}
                     onChange={(e) => setCurrentGoal({ ...currentGoal, amount: formatCurrency(e.target.value), title: 'Ahorro general' })}
                     placeholder="0"
-                    className="pl-8 bg-white border-gray-200 focus:border-[#D85A30] focus:ring-[#D85A30] rounded-xl"
+                    className={`pl-8 rounded-xl ${AMOUNT_FIELD_CLASS}`}
                   />
                 </div>
               </div>
@@ -304,7 +325,7 @@ export function Goals({ onComplete }: GoalsProps) {
                       value={currentGoal.amount}
                       onChange={(e) => setCurrentGoal({ ...currentGoal, amount: formatCurrency(e.target.value) })}
                       placeholder="0"
-                      className="pl-8 bg-white border-gray-200 focus:border-[#D4537E] focus:ring-[#D4537E] rounded-xl"
+                      className={`pl-8 rounded-xl ${AMOUNT_FIELD_CLASS}`}
                     />
                   </div>
                 </div>
@@ -366,18 +387,13 @@ export function Goals({ onComplete }: GoalsProps) {
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-6 rounded-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Ver mi análisis
           </Button>
-          
-          <div className="flex justify-center gap-2 mt-4">
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-            <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
+
+          <div className="mt-4">
+            <OnboardingProgress currentPath={pathname} />
           </div>
         </div>
       </div>

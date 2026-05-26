@@ -1,21 +1,43 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { BackButton } from './BackButton';
+import { OnboardingProgress } from './OnboardingProgress';
+import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
+import { UserData } from '../types';
+
+type Activity = 'works' | 'studies' | 'both' | 'neither';
 
 interface ActivityProps {
-  onComplete: (data: { 
-    worksOrStudies: 'works' | 'studies' | 'both' | 'neither';
+  initial?: Partial<UserData>;
+  onComplete: (data: {
+    worksOrStudies: Activity;
     monthlyIncome: number;
   }) => void;
 }
 
-export function Activity({ onComplete }: ActivityProps) {
+const formatCurrency = (value: string) => {
+  // Remove all non-digit characters
+  const numbers = value.replace(/\D/g, '');
+  // Prevent leading zeros except for "0" itself
+  const cleanNumbers = numbers.replace(/^0+/, '') || '0';
+  // Ensure non-negative
+  const numValue = parseInt(cleanNumbers);
+  if (numValue < 0) return '0';
+  // Format with thousands separator
+  return cleanNumbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+export function Activity({ initial, onComplete }: ActivityProps) {
   const navigate = useNavigate();
-  const [activity, setActivity] = useState<'works' | 'studies' | 'both' | 'neither' | null>(null);
-  const [income, setIncome] = useState('');
+  const { pathname } = useLocation();
+  const [activity, setActivity] = useState<Activity | null>(initial?.worksOrStudies ?? null);
+  const [income, setIncome] = useState(
+    initial?.monthlyIncome ? formatCurrency(String(initial.monthlyIncome)) : ''
+  );
 
   const handleSubmit = () => {
     if (activity && income) {
@@ -29,18 +51,6 @@ export function Activity({ onComplete }: ActivityProps) {
         navigate('/bank');
       }
     }
-  };
-
-  const formatCurrency = (value: string) => {
-    // Remove all non-digit characters
-    const numbers = value.replace(/\D/g, '');
-    // Prevent leading zeros except for "0" itself
-    const cleanNumbers = numbers.replace(/^0+/, '') || '0';
-    // Ensure non-negative
-    const numValue = parseInt(cleanNumbers);
-    if (numValue < 0) return '0';
-    // Format with thousands separator
-    return cleanNumbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
   const getIncomeLabel = () => {
@@ -58,23 +68,25 @@ export function Activity({ onComplete }: ActivityProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <div className="mb-8">
-            <h2 
+          <BackButton currentPath={pathname} />
+
+          <div className="mb-6">
+            <h2
               className="text-3xl mb-2 text-[#D4537E]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               Tu actividad
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Esto nos ayuda a personalizar tu análisis
+              Esto nos ayuda a darte un resultado más personalizado
             </p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div>
-              <p className="text-lg mb-4 text-gray-700">¿Trabajás o estudiás?</p>
-              
-              <div className="space-y-3">
+              <p className="text-lg mb-3 text-gray-700">¿Trabajás o estudiás?</p>
+
+              <div className="space-y-2">
                 <button
                   onClick={() => setActivity('works')}
                   className={`w-full p-4 rounded-xl border-2 transition-all ${
@@ -125,13 +137,13 @@ export function Activity({ onComplete }: ActivityProps) {
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="pt-4"
+                className="pt-2"
               >
                 <Label htmlFor="income" className="text-gray-700">
                   {getIncomeLabel()}
                 </Label>
                 <div className="relative mt-2">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 z-10">
                     $
                   </span>
                   <Input
@@ -143,7 +155,7 @@ export function Activity({ onComplete }: ActivityProps) {
                     onChange={(e) => setIncome(formatCurrency(e.target.value))}
                     placeholder="0"
                     required
-                    className="pl-8 bg-white border-gray-200 focus:border-[#D4537E] focus:ring-[#D4537E] rounded-xl"
+                    className={`pl-8 rounded-xl ${AMOUNT_FIELD_CLASS}`}
                   />
                 </div>
                 <p className="text-sm text-gray-500 mt-2">
@@ -156,7 +168,7 @@ export function Activity({ onComplete }: ActivityProps) {
           <Button
             onClick={handleSubmit}
             disabled={!activity || !income}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-6 rounded-full text-lg mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar
           </Button>
@@ -164,14 +176,7 @@ export function Activity({ onComplete }: ActivityProps) {
       </div>
 
       <div className="p-4">
-        <div className="flex justify-center gap-2 mb-4">
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-        </div>
+        <OnboardingProgress currentPath={pathname} />
       </div>
     </div>
   );

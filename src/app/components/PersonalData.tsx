@@ -1,23 +1,28 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { BackButton } from './BackButton';
+import { OnboardingProgress } from './OnboardingProgress';
+import { UserData } from '../types';
 
 type Gender = 'femenino' | 'masculino' | 'prefiero_no_decir';
 
 interface PersonalDataProps {
+  initial?: Partial<UserData>;
   onComplete: (data: { name: string; age: string; email: string; gender: Gender }) => void;
 }
 
-export function PersonalData({ onComplete }: PersonalDataProps) {
+export function PersonalData({ initial, onComplete }: PersonalDataProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [formData, setFormData] = useState<{ name: string; age: string; email: string; gender: Gender | '' }>({
-    name: '',
-    age: '',
-    email: '',
-    gender: ''
+    name: initial?.name ?? '',
+    age: initial?.age ?? '',
+    email: initial?.email ?? '',
+    gender: initial?.gender ?? ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,8 +41,10 @@ export function PersonalData({ onComplete }: PersonalDataProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <div className="mb-8">
-            <h2 
+          <BackButton currentPath={pathname} />
+
+          <div className="mb-6">
+            <h2
               className="text-3xl mb-2 text-[#D4537E]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
@@ -48,7 +55,7 @@ export function PersonalData({ onComplete }: PersonalDataProps) {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <Label htmlFor="name" className="text-gray-700">
                 ¿Cómo te llamás?
@@ -132,7 +139,7 @@ export function PersonalData({ onComplete }: PersonalDataProps) {
             <Button
               type="submit"
               disabled={!formData.name || !formData.age || !formData.email || !formData.gender}
-              className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-6 rounded-full text-lg mt-8 disabled:opacity-50"
+              className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50"
             >
               Continuar
             </Button>
@@ -141,14 +148,7 @@ export function PersonalData({ onComplete }: PersonalDataProps) {
       </div>
 
       <div className="p-4">
-        <div className="flex justify-center gap-2 mb-4">
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-          <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-        </div>
+        <OnboardingProgress currentPath={pathname} />
       </div>
     </div>
   );

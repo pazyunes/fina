@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
+import { BackButton } from './BackButton';
+import { OnboardingProgress } from './OnboardingProgress';
+import { UserData } from '../types';
 
 interface HabitsProps {
+  initial?: Partial<UserData>;
   onComplete: (data: {
     knowsLastMonthExpenses: boolean;
     saves: boolean;
@@ -11,16 +15,17 @@ interface HabitsProps {
   }) => void;
 }
 
-export function Habits({ onComplete }: HabitsProps) {
+export function Habits({ initial, onComplete }: HabitsProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [habits, setHabits] = useState({
-    knowsLastMonthExpenses: null as boolean | null,
-    saves: null as boolean | null,
-    invests: null as boolean | null,
+    knowsLastMonthExpenses: initial?.knowsLastMonthExpenses ?? null as boolean | null,
+    saves: initial?.saves ?? null as boolean | null,
+    invests: initial?.invests ?? null as boolean | null,
   });
 
-  const isComplete = habits.knowsLastMonthExpenses !== null && 
-                     habits.saves !== null && 
+  const isComplete = habits.knowsLastMonthExpenses !== null &&
+                     habits.saves !== null &&
                      habits.invests !== null;
 
   const handleSubmit = () => {
@@ -34,6 +39,12 @@ export function Habits({ onComplete }: HabitsProps) {
     }
   };
 
+  const QUESTIONS: Array<{ key: 'knowsLastMonthExpenses' | 'saves' | 'invests'; text: string }> = [
+    { key: 'knowsLastMonthExpenses', text: '¿Sabés cuánto gastaste el mes pasado?' },
+    { key: 'saves', text: '¿Ahorrás regularmente?' },
+    { key: 'invests', text: '¿Invertís tu dinero?' },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
@@ -42,8 +53,10 @@ export function Habits({ onComplete }: HabitsProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <div className="mb-8">
-            <h2 
+          <BackButton currentPath={pathname} />
+
+          <div className="mb-6">
+            <h2
               className="text-3xl mb-2 text-[#D4537E]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
@@ -54,99 +67,40 @@ export function Habits({ onComplete }: HabitsProps) {
             </p>
           </div>
 
-          <div className="space-y-8">
-            {/* Question 1 */}
-            <div>
-              <p className="text-lg mb-4 text-gray-700">
-                ¿Sabés cuánto gastaste el mes pasado?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setHabits({ ...habits, knowsLastMonthExpenses: true })}
-                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                    habits.knowsLastMonthExpenses === true
-                      ? 'border-[#D4537E] bg-[#FBEAF0]'
-                      : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
-                  }`}
-                >
-                  Sí
-                </button>
-                <button
-                  onClick={() => setHabits({ ...habits, knowsLastMonthExpenses: false })}
-                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                    habits.knowsLastMonthExpenses === false
-                      ? 'border-[#D4537E] bg-[#FBEAF0]'
-                      : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
-                  }`}
-                >
-                  No
-                </button>
+          <div className="space-y-6">
+            {QUESTIONS.map(({ key, text }) => (
+              <div key={key}>
+                <p className="text-lg mb-3 text-gray-700">{text}</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setHabits({ ...habits, [key]: true })}
+                    className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+                      habits[key] === true
+                        ? 'border-[#D4537E] bg-[#FBEAF0]'
+                        : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
+                    }`}
+                  >
+                    Sí
+                  </button>
+                  <button
+                    onClick={() => setHabits({ ...habits, [key]: false })}
+                    className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+                      habits[key] === false
+                        ? 'border-[#D4537E] bg-[#FBEAF0]'
+                        : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Question 2 */}
-            <div>
-              <p className="text-lg mb-4 text-gray-700">
-                ¿Ahorrás regularmente?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setHabits({ ...habits, saves: true })}
-                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                    habits.saves === true
-                      ? 'border-[#D4537E] bg-[#FBEAF0]'
-                      : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
-                  }`}
-                >
-                  Sí
-                </button>
-                <button
-                  onClick={() => setHabits({ ...habits, saves: false })}
-                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                    habits.saves === false
-                      ? 'border-[#D4537E] bg-[#FBEAF0]'
-                      : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
-                  }`}
-                >
-                  No
-                </button>
-              </div>
-            </div>
-
-            {/* Question 3 */}
-            <div>
-              <p className="text-lg mb-4 text-gray-700">
-                ¿Invertís tu dinero?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setHabits({ ...habits, invests: true })}
-                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                    habits.invests === true
-                      ? 'border-[#D4537E] bg-[#FBEAF0]'
-                      : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
-                  }`}
-                >
-                  Sí
-                </button>
-                <button
-                  onClick={() => setHabits({ ...habits, invests: false })}
-                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                    habits.invests === false
-                      ? 'border-[#D4537E] bg-[#FBEAF0]'
-                      : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
-                  }`}
-                >
-                  No
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
 
           <Button
             onClick={handleSubmit}
             disabled={!isComplete}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-6 rounded-full text-lg mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar
           </Button>
@@ -154,14 +108,7 @@ export function Habits({ onComplete }: HabitsProps) {
       </div>
 
       <div className="p-4">
-        <div className="flex justify-center gap-2 mb-4">
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-          <div className="w-3 h-3 bg-[#D4537E] rounded-full"></div>
-        </div>
+        <OnboardingProgress currentPath={pathname} />
       </div>
     </div>
   );
