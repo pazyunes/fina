@@ -2,6 +2,8 @@ import { createBrowserRouter } from "react-router";
 import { Main } from "./Main";
 import { Splash } from "./components/Splash";
 import { Login } from "./components/Login";
+import { Profile } from "./components/Profile";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
   {
@@ -15,6 +17,14 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "/perfil",
+    element: (
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/personal-data",
