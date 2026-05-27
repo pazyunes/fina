@@ -191,7 +191,11 @@ export function buildFullReasoning(userData: UserData, analysis: FinancialAnalys
 // failures are logged but never surfaced in the UI.
 export async function saveReport(userData: UserData, analysis: FinancialAnalysis): Promise<void> {
   if (!isSupabaseConfigured) return;
+  // Si hay sesión, el informe queda vinculado al usuario y aparece en su
+  // historial (/perfil). Si no, se guarda anónimo (user_id null) como antes.
+  const { data: { session } } = await supabase.auth.getSession();
   const { error } = await supabase.from('reports').insert({
+    user_id: session?.user?.id ?? null,
     email: userData.email?.trim().toLowerCase() || null,
     name: userData.name || null,
     user_data: userData,
