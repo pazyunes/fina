@@ -13,5 +13,7 @@ if (!isSupabaseConfigured) {
 export const supabase: SupabaseClient = createClient(
   url ?? 'http://localhost',
   anonKey ?? 'anon',
-  { auth: { persistSession: false } }
+  // PR3: persistimos la sesión para soportar login email/contraseña y el
+  // historial por usuario (/perfil). autoRefreshToken mantiene viva la sesión.
+  { auth: { persistSession: true, autoRefreshToken: true } }
 );
