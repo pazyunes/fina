@@ -49,21 +49,12 @@ export function Splash() {
           transition={{ delay: 0.5 }}
         >
           <Button
-            onClick={() => navigate('/personal-data')}
+            onClick={() => navigate('/login')}
             className="bg-[#D4537E] hover:bg-[#C14870] text-white px-8 py-6 rounded-full text-lg"
             style={{ fontFamily: 'var(--font-sans)' }}
           >
             Empezar
           </Button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/perfil')}
-            className="block mx-auto mt-6 text-sm text-gray-500 hover:text-[#D4537E]"
-            style={{ fontFamily: 'var(--font-sans)' }}
-          >
-            Ya tengo cuenta · Ver mi perfil
-          </button>
         </motion.div>
       </motion.div>
     </div>

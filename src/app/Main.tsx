@@ -16,10 +16,12 @@ import { analyzeFinances } from './utils/financialAnalyzer';
 import { DEBUG_MODE } from './config';
 import { saveReport } from './lib/reports';
 import { fetchExchangeRate } from './lib/exchangeRate';
+import { useAuth } from './lib/auth';
 
 export function Main() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, profile, updateProfile } = useAuth();
 
   const [userData, setUserData] = useState<Partial<UserData>>({
     name: '',
@@ -73,6 +75,20 @@ export function Main() {
     }
   }, []);
 
+  // Pre-fill personal data from the saved profile (auth metadata + email) so a
+  // returning user can skip PersonalData and start the flow at /context, while
+  // the report still carries their name/age/email/gender.
+  useEffect(() => {
+    if (!user) return;
+    setUserData(prev => ({
+      ...prev,
+      name: prev.name || profile.name,
+      age: prev.age || profile.age,
+      gender: prev.gender || (profile.gender || undefined),
+      email: prev.email || user.email || '',
+    }));
+  }, [user, profile.name, profile.age, profile.gender]);
+
   // Fetch the USD blue rate once and snapshot it into userData, so every USD
   // amount in this flow uses the same rate and the report stays anchored to it.
   useEffect(() => {
@@ -96,6 +112,9 @@ export function Main() {
 
   const handlePersonalData = (data: { name: string; age: string; email: string; gender: 'femenino' | 'masculino' | 'prefiero_no_decir' }) => {
     setUserData(prev => ({ ...prev, ...data }));
+    // Persistimos al perfil para que las próximas veces se pre-cargue y se
+    // pueda saltear este paso.
+    void updateProfile({ name: data.name, age: data.age, gender: data.gender });
   };
 
   const handleContext = (data: { livesAlone: boolean }) => {

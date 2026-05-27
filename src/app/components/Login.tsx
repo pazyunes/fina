@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Heart } from 'lucide-react';
@@ -12,7 +12,7 @@ type Mode = 'signin' | 'signup';
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signUp } = useAuth();
+  const { session, profile, signIn, signUp } = useAuth();
 
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
@@ -21,8 +21,15 @@ export function Login() {
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // A dónde volver después de loguear (lo setea ProtectedRoute), por defecto /perfil.
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/perfil';
+  // Destino tras autenticar: si venías de una ruta protegida, volvés ahí; si no,
+  // un usuario con perfil va a /perfil y uno nuevo arranca el onboarding.
+  const from = (location.state as { from?: string } | null)?.from;
+
+  // Cuando hay sesión (recién logueado o ya logueado), redirigimos.
+  useEffect(() => {
+    if (!session) return;
+    navigate(from ?? (profile.name ? '/perfil' : '/personal-data'), { replace: true });
+  }, [session, from, profile.name]);
 
   const valid = email.trim() !== '' && password.length >= 6;
 
@@ -36,16 +43,15 @@ export function Login() {
     if (mode === 'signin') {
       const { error } = await signIn(email, password);
       if (error) setError(traducirError(error));
-      else navigate(redirectTo, { replace: true });
+      // El redirect lo dispara el efecto cuando se setea la sesión.
     } else {
       const { error, needsConfirmation } = await signUp(email, password);
       if (error) setError(traducirError(error));
       else if (needsConfirmation) {
         setInfo('Te enviamos un email para confirmar tu cuenta. Confirmalo y volvé a iniciar sesión.');
         setMode('signin');
-      } else {
-        navigate(redirectTo, { replace: true });
       }
+      // Si no requiere confirmación, queda sesión y redirige el efecto.
     }
     setSubmitting(false);
   };
