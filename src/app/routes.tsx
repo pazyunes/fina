@@ -3,6 +3,7 @@ import { Main } from "./Main";
 import { Splash } from "./components/Splash";
 import { Login } from "./components/Login";
 import { Profile } from "./components/Profile";
+import { ReportView } from "./components/ReportView";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -23,6 +24,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <Profile />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/report/:id",
+    element: (
+      <ProtectedRoute>
+        <ReportView />
       </ProtectedRoute>
     ),
   },
