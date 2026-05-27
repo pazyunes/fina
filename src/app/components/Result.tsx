@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
 import { FinancialAnalysis } from '../types';
 import { g } from '../utils/gender';
 import { formatUsd } from '../lib/currency';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
-import { Download, Flame, TrendingUp, Target, ChevronDown, ChevronUp } from 'lucide-react';
+import { Download, Flame, TrendingUp, Target, ChevronDown, ChevronUp, CircleUserRound } from 'lucide-react';
 import jsPDF from 'jspdf';
 // html2canvas-pro is a drop-in fork that parses oklch/lab/lch/color-mix
 // natively — required for Tailwind v4's default color palette.
@@ -96,6 +97,7 @@ interface ResultProps {
 }
 
 export function Result({ analysis }: ResultProps) {
+  const navigate = useNavigate();
   const reportRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [expandedInvestments, setExpandedInvestments] = useState<Set<number>>(new Set());
@@ -706,14 +708,24 @@ export function Result({ analysis }: ResultProps) {
           >
             FINA
           </h1>
-          <Button
-            onClick={generatePDF}
-            disabled={isGeneratingPDF}
-            className="bg-[#D4537E] hover:bg-[#C14870] text-white gap-2 disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" />
-            {isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => navigate('/perfil')}
+              variant="outline"
+              className="gap-2 border-[#D4537E] text-[#D4537E] hover:bg-[#FBEAF0]"
+            >
+              <CircleUserRound className="w-4 h-4" />
+              Mi perfil
+            </Button>
+            <Button
+              onClick={generatePDF}
+              disabled={isGeneratingPDF}
+              className="bg-[#D4537E] hover:bg-[#C14870] text-white gap-2 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              {isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}
+            </Button>
+          </div>
         </div>
       </div>
 
