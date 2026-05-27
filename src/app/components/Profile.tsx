@@ -80,7 +80,7 @@ export function Profile() {
             <p className="text-sm text-gray-400">Cargando tus informes…</p>
           ) : reports.length === 0 ? (
             <p className="text-sm text-gray-400">
-              Todavía no generaste ningún informe estando logueada. Tocá “Generar informe nuevamente”.
+              Todavía no generaste ningún informe. Tocá “Generar informe nuevamente”.
             </p>
           ) : (
             <div className="space-y-3">

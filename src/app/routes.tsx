@@ -35,44 +35,26 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
-  {
-    path: "/personal-data",
-    Component: Main,
-  },
-  {
-    path: "/context",
-    Component: Main,
-  },
-  {
-    path: "/activity",
-    Component: Main,
-  },
-  {
-    path: "/bank",
-    Component: Main,
-  },
-  {
-    path: "/expenses-fixed",
-    Component: Main,
-  },
-  {
-    path: "/expenses-services",
-    Component: Main,
-  },
-  {
-    path: "/habits",
-    Component: Main,
-  },
-  {
-    path: "/goals",
-    Component: Main,
-  },
-  {
-    path: "/ai-reasoning",
-    Component: Main,
-  },
-  {
-    path: "/result",
-    Component: Main,
-  },
+  // El onboarding y el informe requieren sesión: sin login se redirige a
+  // /login y se vuelve acá después de iniciar sesión. Todas estas rutas
+  // renderizan <Main>, que mantiene el estado del flujo entre pasos.
+  ...[
+    "/personal-data",
+    "/context",
+    "/activity",
+    "/bank",
+    "/expenses-fixed",
+    "/expenses-services",
+    "/habits",
+    "/goals",
+    "/ai-reasoning",
+    "/result",
+  ].map((path) => ({
+    path,
+    element: (
+      <ProtectedRoute>
+        <Main />
+      </ProtectedRoute>
+    ),
+  })),
 ]);

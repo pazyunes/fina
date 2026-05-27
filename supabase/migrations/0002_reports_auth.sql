@@ -1,10 +1,11 @@
 -- PR3 — Historial por usuario.
--- Vincula los informes (`reports`) a un usuario de Supabase Auth sin romper
--- las filas anónimas ya existentes ni el guardado anónimo del onboarding.
+-- Vincula los informes (`reports`) a un usuario de Supabase Auth. El onboarding
+-- ahora requiere sesión, así que cada informe nuevo tiene dueño; las filas
+-- anónimas viejas se conservan (user_id = null) pero no se pueden crear más.
 -- Correr una vez en el SQL editor de Supabase.
 
--- 1) Columna para el dueño del informe. Nullable a propósito: las filas viejas
---    y los informes generados sin sesión quedan con user_id = null.
+-- 1) Columna para el dueño del informe. Nullable solo por las filas históricas
+--    anónimas; los informes nuevos siempre llevan user_id (ver policy de insert).
 alter table reports
   add column if not exists user_id uuid references auth.users (id);
 
@@ -23,9 +24,10 @@ create policy "reports owner read"
   on reports for select
   using (auth.uid() = user_id);
 
--- Inserción: el onboarding anónimo (user_id null) o el usuario logueado
--- guardando su propio informe (auth.uid() = user_id).
+-- Inserción: solo el usuario logueado guardando su propio informe. El
+-- onboarding exige sesión, así que no se permiten inserciones anónimas.
 drop policy if exists "reports self or anon insert" on reports;
-create policy "reports self or anon insert"
+drop policy if exists "reports self insert" on reports;
+create policy "reports self insert"
   on reports for insert
-  with check (user_id is null or auth.uid() = user_id);
+  with check (auth.uid() = user_id);
