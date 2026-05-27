@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { Main } from "./Main";
 import { Splash } from "./components/Splash";
+import { Login } from "./components/Login";
 
 export const router = createBrowserRouter([
   {
@@ -10,6 +11,10 @@ export const router = createBrowserRouter([
   {
     path: "/splash",
     element: <Splash />,
+  },
+  {
+    path: "/login",
+    element: <Login />,
   },
   {
     path: "/personal-data",
