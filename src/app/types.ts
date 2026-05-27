@@ -36,8 +36,10 @@ export interface UserData {
 
   // Activity
   worksOrStudies: 'works' | 'studies' | 'both' | 'neither';
-  monthlyIncome: number; // Valor usado en cálculos (monto exacto, o punto medio del rango)
+  monthlyIncome: number; // Valor usado en cálculos, SIEMPRE en ARS (convertido si se cargó en USD)
   incomeRange?: string; // Etiqueta del rango elegido, o 'Monto exacto' si cargó un valor preciso
+  incomeCurrency?: Currency; // Moneda en la que el usuario cargó el ingreso
+  incomeOriginalAmount?: number; // Monto original (USD si incomeCurrency === 'USD', si no ARS)
 
   // Bank
   banks: string[];
