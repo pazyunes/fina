@@ -1,12 +1,32 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Heart, LogOut, RefreshCw } from 'lucide-react';
+import { Heart, LogOut, RefreshCw, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '../lib/auth';
+import { fetchUserReports, ReportSummary } from '../lib/reports';
+import { formatArs } from '../lib/currency';
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export function Profile() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+
+  const [reports, setReports] = useState<ReportSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetchUserReports().then((data) => {
+      if (active) {
+        setReports(data);
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -56,8 +76,32 @@ export function Profile() {
             Historial
           </h2>
 
-          {/* La lista de informes se completa en el commit siguiente */}
-          <p className="text-sm text-gray-400">Todavía no hay informes para mostrar.</p>
+          {loading ? (
+            <p className="text-sm text-gray-400">Cargando tus informes…</p>
+          ) : reports.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              Todavía no generaste ningún informe estando logueada. Tocá “Generar informe nuevamente”.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {reports.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => navigate(`/report/${r.id}`)}
+                  className="w-full text-left bg-white rounded-2xl shadow-sm px-5 py-4 flex items-center justify-between hover:bg-[#FBEAF0]/40 transition-colors"
+                >
+                  <div>
+                    <p className="text-sm text-gray-700">{formatDate(r.createdAt)}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Ingreso {formatArs(r.monthlyIncome)} · Balance {formatArs(r.available)}/mes
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

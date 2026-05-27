@@ -207,3 +207,64 @@ export async function saveReport(userData: UserData, analysis: FinancialAnalysis
     console.error('[fina] saveReport failed:', error.message);
   }
 }
+
+// Resumen de un informe para el listado del historial (/perfil).
+export interface ReportSummary {
+  id: string;
+  createdAt: string;
+  monthlyIncome: number; // ARS
+  available: number;     // balance neto (ingresos - gastos), ARS
+}
+
+// Informe completo para abrirlo en modo lectura (/report/:id).
+export interface StoredReport {
+  id: string;
+  createdAt: string;
+  userData: UserData;
+  analysis: FinancialAnalysis;
+}
+
+// Historial del usuario logueado, ordenado por fecha descendente. La RLS
+// garantiza que solo se devuelvan los informes propios.
+export async function fetchUserReports(): Promise<ReportSummary[]> {
+  if (!isSupabaseConfigured) return [];
+  const { data, error } = await supabase
+    .from('reports')
+    .select('id, created_at, user_data, analysis')
+    .order('created_at', { ascending: false });
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error('[fina] fetchUserReports failed:', error.message);
+    return [];
+  }
+  return (data ?? []).map((r: any) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    monthlyIncome: r.user_data?.monthlyIncome ?? r.analysis?.totalIncome ?? 0,
+    available: r.analysis?.available ?? 0,
+  }));
+}
+
+// Un informe completo por id (para la vista de lectura). La RLS impide leer
+// informes de otros usuarios.
+export async function fetchReportById(id: string): Promise<StoredReport | null> {
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase
+    .from('reports')
+    .select('id, created_at, user_data, analysis')
+    .eq('id', id)
+    .maybeSingle();
+  if (error || !data) {
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('[fina] fetchReportById failed:', error.message);
+    }
+    return null;
+  }
+  return {
+    id: data.id,
+    createdAt: data.created_at,
+    userData: data.user_data as UserData,
+    analysis: data.analysis as FinancialAnalysis,
+  };
+}
