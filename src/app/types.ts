@@ -36,10 +36,22 @@ export interface UserData {
 
   // Activity
   worksOrStudies: 'works' | 'studies' | 'both' | 'neither';
-  monthlyIncome: number; // Valor usado en cálculos, SIEMPRE en ARS (convertido si se cargó en USD)
-  incomeRange?: string; // Etiqueta del rango elegido, o 'Monto exacto' si cargó un valor preciso
-  incomeCurrency?: Currency; // Moneda en la que el usuario cargó el ingreso
-  incomeOriginalAmount?: number; // Monto original (USD si incomeCurrency === 'USD', si no ARS)
+  monthlyIncome: number; // Valor usado en cálculos, SIEMPRE en ARS (convertido si se cargó en USD). Para freelance/both = fijo + promedio freelance.
+  incomeRange?: string; // Etiqueta del rango elegido, o 'Monto exacto' si cargó un valor preciso (solo aplica al bloque fijo)
+  incomeCurrency?: Currency; // Moneda en la que el usuario cargó el ingreso fijo
+  incomeOriginalAmount?: number; // Monto original del fijo (USD si incomeCurrency === 'USD', si no ARS)
+
+  // Tipo de ingreso (PR4). Si está ausente, se trata como 'fixed' (compat con informes viejos).
+  incomeType?: 'fixed' | 'freelance' | 'both';
+
+  // Detalle del ingreso freelance (PR4) — 3 últimos meses, mes1 = más reciente.
+  // El exchange_rate_id se reusa del snapshot global del informe (userData.exchangeRate.id).
+  freelanceIncome?: {
+    month1: { amount: number; currency: Currency; ars: number }; // mes más reciente
+    month2: { amount: number; currency: Currency; ars: number };
+    month3: { amount: number; currency: Currency; ars: number };
+    monthlyAvgArs: number; // (m1.ars + m2.ars + m3.ars) / 3
+  };
 
   // Bank
   banks: string[];
