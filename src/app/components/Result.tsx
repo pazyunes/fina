@@ -858,6 +858,49 @@ export function Result({ analysis }: ResultProps) {
           </motion.div>
         )}
 
+        {/* Contingency fund recommendation (PR4) — only when freelance income is involved.
+            "Gastos fijos mensuales" uses the same definition as fullReasoning.fixedExpensesPercentage:
+            housing + health + beauty + therapy + gym + transport. */}
+        {(analysis.userData.incomeType === 'freelance' || analysis.userData.incomeType === 'both') && analysis.userData.freelanceIncome && (() => {
+          const fx = analysis.userData.expenses;
+          const fixedMonthly = fx.housing + fx.health + fx.beauty + fx.therapy + fx.gym + fx.transport;
+          const cushion = fixedMonthly * 3;
+          const lowestMonth = Math.min(
+            analysis.userData.freelanceIncome.month1.ars,
+            analysis.userData.freelanceIncome.month2.ars,
+            analysis.userData.freelanceIncome.month3.ars,
+          );
+          const onlyFreelance = analysis.userData.incomeType === 'freelance';
+          const lowMonthCoversFixed = lowestMonth >= fixedMonthly;
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.23 }}
+              className="bg-gradient-to-br from-[#FBEAF0] to-white rounded-2xl p-5 shadow-sm border border-[#D4537E]/20"
+            >
+              <h3 className="text-lg text-[#D4537E] mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
+                💡 Recomendación para ingresos variables
+              </h3>
+              <p className="text-sm text-gray-700 mb-2">
+                Como parte de tu ingreso es variable, te recomendamos tener ahorrado al menos{' '}
+                <span className="text-[#D4537E]">3 meses de gastos fijos</span> como colchón para meses flojos.
+              </p>
+              <p className="text-sm text-gray-700">
+                En tu caso: <span className="text-[#D4537E]">${cushion.toLocaleString('es-AR').replace(/,/g, '.')}</span>
+                <span className="text-xs text-gray-500"> (${fixedMonthly.toLocaleString('es-AR').replace(/,/g, '.')} × 3)</span>
+              </p>
+              {onlyFreelance && (
+                <p className={`text-sm mt-3 ${lowMonthCoversFixed ? 'text-[#3B6D11]' : 'text-[#D85A30]'}`}>
+                  {lowMonthCoversFixed
+                    ? '✅ Incluso en tu mes más flojo cubrís tus gastos fijos.'
+                    : '⚠️ En tu mes más flojo no llegás a cubrir tus gastos fijos. El colchón es especialmente importante en tu caso.'}
+                </p>
+              )}
+            </motion.div>
+          );
+        })()}
+
         {/* Deficit Warning - only show if expenses exceed income */}
         {hasDeficit && (
           <motion.div
