@@ -121,7 +121,15 @@ export function Main() {
     setUserData(prev => ({ ...prev, ...data }));
   };
 
-  const handleActivity = (data: { worksOrStudies: 'works' | 'studies' | 'both' | 'neither'; monthlyIncome: number; incomeRange?: string; incomeCurrency: 'ARS' | 'USD'; incomeOriginalAmount: number }) => {
+  const handleActivity = (data: {
+    worksOrStudies: 'works' | 'studies' | 'both' | 'neither';
+    monthlyIncome: number;
+    incomeRange?: string;
+    incomeCurrency: 'ARS' | 'USD';
+    incomeOriginalAmount: number;
+    incomeType: 'fixed' | 'freelance' | 'both';
+    freelanceIncome?: UserData['freelanceIncome'];
+  }) => {
     setUserData(prev => ({ ...prev, ...data }));
   };
 
