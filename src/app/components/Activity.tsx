@@ -243,7 +243,7 @@ export function Activity({ initial, onComplete }: ActivityProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
+      <div className={`flex-1 flex flex-col items-center justify-center p-6 mx-auto w-full ${incomeType === 'both' ? 'max-w-md md:max-w-3xl' : 'max-w-md'}`}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -320,8 +320,12 @@ export function Activity({ initial, onComplete }: ActivityProps) {
               </motion.div>
             )}
 
-            {/* Bloque ingreso fijo (existente, sin cambios) */}
-            {activity && fixedNeeded && (
+            {/* Bloques de ingreso. En modo 'both', en md+ se renderizan en dos columnas
+                (fijo a la izquierda, freelance a la derecha) para reducir scrolling. En
+                mobile o en los modos de un solo bloque, se apilan como antes. */}
+            {activity && (fixedNeeded || freelanceNeeded) && (
+            <div className={incomeType === 'both' ? 'space-y-5 md:space-y-0 md:grid md:grid-cols-2 md:gap-5 md:items-start' : ''}>
+            {fixedNeeded && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -407,7 +411,7 @@ export function Activity({ initial, onComplete }: ActivityProps) {
             )}
 
             {/* Bloque ingreso freelance (PR4) */}
-            {activity && freelanceNeeded && (
+            {freelanceNeeded && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -441,6 +445,8 @@ export function Activity({ initial, onComplete }: ActivityProps) {
                   )}
                 </div>
               </motion.div>
+            )}
+            </div>
             )}
           </div>
 
