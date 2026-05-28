@@ -137,6 +137,7 @@ export function Main() {
     gym: number;
     housingCurrency: 'ARS' | 'USD';
     housingOriginalAmount: number;
+    therapyDetails: { sessionPrice: number; sessionsPerMonth: number };
     transportDetails: TransportData;
     installments: Array<{
       name: string;
@@ -177,6 +178,7 @@ export function Main() {
       },
       housingCurrency: data.housingCurrency,
       housingOriginalAmount: data.housingOriginalAmount,
+      therapyDetails: data.therapyDetails,
       transportDetails: data.transportDetails,
       installments: data.installments,
     }));

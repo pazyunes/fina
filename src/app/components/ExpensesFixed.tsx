@@ -28,6 +28,7 @@ interface ExpensesFixedProps {
     gym: number;
     housingCurrency: Currency;
     housingOriginalAmount: number;
+    therapyDetails: { sessionPrice: number; sessionsPerMonth: number };
     transportDetails: TransportData;
     installments: Array<{
       name: string;
@@ -50,8 +51,8 @@ interface ExpenseCategory {
 const CATEGORIES: ExpenseCategory[] = [
   { key: 'housing', label: 'Alquiler', icon: Home, color: '#D4537E', helper: 'Poné solo tu parte, no el total' },
   { key: 'health', label: 'Salud', icon: Heart, color: '#D85A30', helper: 'Nos referimos a la prepaga' },
-  { key: 'beauty', label: 'Belleza y cuidado personal', icon: Sparkles, color: '#9C7AA5', helper: 'Peluquería, manicura, cosmética y similares' },
-  { key: 'therapy', label: 'Psicóloga / terapia', icon: Brain, color: '#3B6D11', helper: 'Lo que pagás por mes en sesiones' },
+  { key: 'beauty', label: 'Belleza y cuidado personal', icon: Sparkles, color: '#9C7AA5', helper: 'Cuánto gastás por mes en peluquería, manicura, pedicura, definitiva, etc.' },
+  { key: 'therapy', label: 'Psicóloga / terapia', icon: Brain, color: '#3B6D11' },
   { key: 'gym', label: 'Gimnasio', icon: Dumbbell, color: '#D85A30', helper: 'La cuota del gym o tu actividad física' },
 ];
 
@@ -95,6 +96,20 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
   const [housingUsd, setHousingUsd] = useState<string>(
     initial?.housingCurrency === 'USD' && initial?.housingOriginalAmount ? String(initial.housingOriginalAmount) : ''
   );
+
+  // Terapia: el usuario carga precio por sesión y frecuencia mensual; el monto
+  // mensual (expenses.therapy) se deriva como el producto.
+  const [therapySessionPrice, setTherapySessionPrice] = useState<string>(
+    initial?.therapyDetails?.sessionPrice ? String(initial.therapyDetails.sessionPrice) : ''
+  );
+  const [therapySessionsPerMonth, setTherapySessionsPerMonth] = useState<string>(
+    initial?.therapyDetails?.sessionsPerMonth ? String(initial.therapyDetails.sessionsPerMonth) : ''
+  );
+  const recalcTherapy = (priceStr: string, freqStr: string) => {
+    const p = parseInt(priceStr.replace(/\D/g, '')) || 0;
+    const f = parseInt(freqStr) || 0;
+    setExpenses(prev => ({ ...prev, therapy: p * f }));
+  };
 
   // Controlled accordion so a category collapses once completed but can be
   // reopened. Alquiler (housing) starts open.
@@ -213,10 +228,16 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
       ? (parseInt(housingUsd.replace(/\D/g, '')) || 0)
       : expenses.housing;
 
+    const therapyDetails = {
+      sessionPrice: parseInt(therapySessionPrice.replace(/\D/g, '')) || 0,
+      sessionsPerMonth: parseInt(therapySessionsPerMonth) || 0,
+    };
+
     onComplete({
       ...expenses,
       housingCurrency,
       housingOriginalAmount,
+      therapyDetails,
       transportDetails: transportData,
       installments: validInstallments,
     });
@@ -322,7 +343,58 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
                       </div>
                     )}
 
-                    {category.key === 'housing' && housingCurrency === 'USD' ? (
+                    {category.key === 'therapy' ? (
+                      <div className="space-y-3" style={{ opacity: isNotPaying ? 0.4 : 1, pointerEvents: isNotPaying ? 'none' : 'auto' }}>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-2">
+                            ¿Cuánto pagás por sesión?
+                          </label>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={therapySessionPrice ? formatCurrency(parseInt(therapySessionPrice) || 0) : ''}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, '');
+                              setTherapySessionPrice(digits);
+                              recalcTherapy(digits, therapySessionsPerMonth);
+                            }}
+                            placeholder="$0"
+                            className={`rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                            style={{ color: category.color, fontFamily: 'var(--font-sans)' }}
+                            disabled={isNotPaying}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600 mb-2">
+                            Frecuencia por mes
+                          </label>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            step="1"
+                            min="0"
+                            value={therapySessionsPerMonth}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === '' || /^\d+$/.test(v)) {
+                                setTherapySessionsPerMonth(v);
+                                recalcTherapy(therapySessionPrice, v);
+                              }
+                            }}
+                            onBlur={() => { if (expenses.therapy > 0) advanceFrom('therapy'); }}
+                            placeholder="0"
+                            className={`rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                            disabled={isNotPaying}
+                          />
+                        </div>
+                        {expenses.therapy > 0 && (
+                          <p className="text-sm text-gray-500">
+                            Total mensual: <span style={{ color: category.color }}>{formatCurrency(expenses.therapy)}</span>
+                          </p>
+                        )}
+                      </div>
+                    ) : category.key === 'housing' && housingCurrency === 'USD' ? (
                       <div style={{ opacity: isNotPaying ? 0.4 : 1, pointerEvents: isNotPaying ? 'none' : 'auto' }}>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm z-10">USD</span>

@@ -58,6 +58,14 @@ export interface UserData {
     creditCard: number; // Deprecated - ahora se usa installments
   };
 
+  // Therapy details — el monto mensual (expenses.therapy) se calcula como
+  // sessionPrice × sessionsPerMonth; guardamos los dos crudos para poder
+  // re-mostrarlos si el usuario vuelve a este paso.
+  therapyDetails?: {
+    sessionPrice: number;
+    sessionsPerMonth: number;
+  };
+
   // Transport details
   transportDetails: TransportData;
 
