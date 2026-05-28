@@ -386,13 +386,14 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                     </label>
                     <Input
                       type="number"
-                      inputMode="decimal"
-                      step="0.5"
+                      inputMode="numeric"
+                      step="1"
+                      min="0"
                       value={entertainmentFrequency}
                       onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        if (val >= 0 || e.target.value === '') {
-                          setEntertainmentFrequency(e.target.value);
+                        const v = e.target.value;
+                        if (v === '' || /^\d+$/.test(v)) {
+                          setEntertainmentFrequency(v);
                         }
                       }}
                       onBlur={() => { if (entertainmentComplete) advanceFrom('entertainment'); }}
@@ -463,13 +464,14 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                     </label>
                     <Input
                       type="number"
-                      inputMode="decimal"
-                      step="0.5"
+                      inputMode="numeric"
+                      step="1"
+                      min="0"
                       value={deliveryFrequency}
                       onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        if (val >= 0 || e.target.value === '') {
-                          setDeliveryFrequency(e.target.value);
+                        const v = e.target.value;
+                        if (v === '' || /^\d+$/.test(v)) {
+                          setDeliveryFrequency(v);
                         }
                       }}
                       onBlur={() => { if (deliveryComplete) advanceFrom('delivery'); }}
@@ -543,13 +545,14 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                     </label>
                     <Input
                       type="number"
-                      inputMode="decimal"
-                      step="0.5"
+                      inputMode="numeric"
+                      step="1"
+                      min="0"
                       value={supermarketFrequency}
                       onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        if (val >= 0 || e.target.value === '') {
-                          setSupermarketFrequency(e.target.value);
+                        const v = e.target.value;
+                        if (v === '' || /^\d+$/.test(v)) {
+                          setSupermarketFrequency(v);
                         }
                       }}
                       onBlur={() => { if (supermarketComplete) advanceFrom('super'); }}
