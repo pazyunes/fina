@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Heart } from 'lucide-react';
 import { Button } from './ui/button';
@@ -11,8 +11,7 @@ type Mode = 'signin' | 'signup';
 
 export function Login() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { session, profile, signIn, signUp } = useAuth();
+  const { session, signIn, signUp } = useAuth();
 
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
@@ -21,23 +20,17 @@ export function Login() {
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Destino tras autenticar:
-  // - Usuario sin perfil (recién registrado o que nunca terminó el onboarding):
-  //   siempre al onboarding, ignorando `from` (no tiene sentido mandarlo a
-  //   /perfil o /report/:id si todavía no generó nada).
-  // - Usuario con perfil: vuelve a la ruta protegida de origen, o a /perfil
-  //   si entró derecho al login.
-  const from = (location.state as { from?: string } | null)?.from;
-
-  // Cuando hay sesión (recién logueado o ya logueado), redirigimos.
+  // Regla de redirect (definida por el botón que tocó el usuario, no por el
+  // estado del perfil):
+  //   - Iniciar sesión → /perfil (donde está el historial)
+  //   - Crear cuenta   → /personal-data (arranca el onboarding)
+  //
+  // Si el usuario ya viene con sesión activa cuando llega acá (p. ej. tocó
+  // "Empezar" desde el Splash estando ya logueado), lo tratamos como un
+  // login: lo mandamos a /perfil.
   useEffect(() => {
-    if (!session) return;
-    if (!profile.name) {
-      navigate('/personal-data', { replace: true });
-    } else {
-      navigate(from ?? '/perfil', { replace: true });
-    }
-  }, [session, from, profile.name]);
+    if (session) navigate('/perfil', { replace: true });
+  }, [session]);
 
   const valid = email.trim() !== '' && password.length >= 6;
 
@@ -51,15 +44,16 @@ export function Login() {
     if (mode === 'signin') {
       const { error } = await signIn(email, password);
       if (error) setError(traducirError(error));
-      // El redirect lo dispara el efecto cuando se setea la sesión.
+      else navigate('/perfil', { replace: true });
     } else {
       const { error, needsConfirmation } = await signUp(email, password);
       if (error) setError(traducirError(error));
       else if (needsConfirmation) {
         setInfo('Te enviamos un email para confirmar tu cuenta. Confirmalo y volvé a iniciar sesión.');
         setMode('signin');
+      } else {
+        navigate('/personal-data', { replace: true });
       }
-      // Si no requiere confirmación, queda sesión y redirige el efecto.
     }
     setSubmitting(false);
   };
