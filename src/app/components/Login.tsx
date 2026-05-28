@@ -21,14 +21,22 @@ export function Login() {
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Destino tras autenticar: si venías de una ruta protegida, volvés ahí; si no,
-  // un usuario con perfil va a /perfil y uno nuevo arranca el onboarding.
+  // Destino tras autenticar:
+  // - Usuario sin perfil (recién registrado o que nunca terminó el onboarding):
+  //   siempre al onboarding, ignorando `from` (no tiene sentido mandarlo a
+  //   /perfil o /report/:id si todavía no generó nada).
+  // - Usuario con perfil: vuelve a la ruta protegida de origen, o a /perfil
+  //   si entró derecho al login.
   const from = (location.state as { from?: string } | null)?.from;
 
   // Cuando hay sesión (recién logueado o ya logueado), redirigimos.
   useEffect(() => {
     if (!session) return;
-    navigate(from ?? (profile.name ? '/perfil' : '/personal-data'), { replace: true });
+    if (!profile.name) {
+      navigate('/personal-data', { replace: true });
+    } else {
+      navigate(from ?? '/perfil', { replace: true });
+    }
   }, [session, from, profile.name]);
 
   const valid = email.trim() !== '' && password.length >= 6;
