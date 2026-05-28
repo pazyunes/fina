@@ -815,6 +815,49 @@ export function Result({ analysis }: ResultProps) {
           </div>
         </motion.div>
 
+        {/* Income breakdown (PR4) — visible only when the user has freelance
+            income. Single-source format helper kept inline since this is the
+            only place that consumes freelanceIncome for display. */}
+        {(analysis.userData.incomeType === 'freelance' || analysis.userData.incomeType === 'both') && analysis.userData.freelanceIncome && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.22 }}
+            className="bg-white rounded-2xl p-5 shadow-sm"
+          >
+            <p className="text-sm text-gray-500 mb-1">Tu ingreso mensual estimado</p>
+            <p className="text-xl text-[#3B6D11] mb-3" style={{ fontFamily: 'var(--font-sans)' }}>
+              ${analysis.totalIncome.toLocaleString('es-AR').replace(/,/g, '.')}
+            </p>
+            <div className="text-sm text-gray-700 space-y-1">
+              {analysis.userData.incomeType === 'both' && (
+                <p>
+                  <span className="text-gray-500">Sueldo:</span>{' '}
+                  ${(analysis.totalIncome - analysis.userData.freelanceIncome.monthlyAvgArs).toLocaleString('es-AR').replace(/,/g, '.')}
+                </p>
+              )}
+              <p>
+                <span className="text-gray-500">Freelance (promedio últimos 3 meses):</span>{' '}
+                ${analysis.userData.freelanceIncome.monthlyAvgArs.toLocaleString('es-AR').replace(/,/g, '.')}
+              </p>
+              {(() => {
+                const months = [
+                  analysis.userData.freelanceIncome.month1.ars,
+                  analysis.userData.freelanceIncome.month2.ars,
+                  analysis.userData.freelanceIncome.month3.ars,
+                ];
+                const lo = Math.min(...months);
+                const hi = Math.max(...months);
+                return (
+                  <p className="text-xs text-gray-500 pt-1">
+                    Mes flojo: ${lo.toLocaleString('es-AR').replace(/,/g, '.')} · Mes bueno: ${hi.toLocaleString('es-AR').replace(/,/g, '.')}
+                  </p>
+                );
+              })()}
+            </div>
+          </motion.div>
+        )}
+
         {/* Deficit Warning - only show if expenses exceed income */}
         {hasDeficit && (
           <motion.div
