@@ -428,18 +428,24 @@ limit 1;
 
 Expected keys (from the codebase as of PR4): `name, age, email, gender, livesAlone, worksOrStudies, monthlyIncome, incomeRange, incomeCurrency, incomeOriginalAmount, incomeType, freelanceIncome, banks, expenses, transportDetails, housingCurrency, housingOriginalAmount, therapyDetails, installments, subscriptions, entertainmentFrequency, entertainmentAmount, deliveryFrequency, deliveryAmount, supermarketFrequency, supermarketAmount, goals, exchangeRate`.
 
-Also sample the goals shape specifically — the spec doesn't pin it down and the code path that wrote it predates PR3:
+Also sample the goals shape — **the codebase has TWO related fields**:
+- `user_data->'goals'` is `string[]` (top-level category labels picked in the onboarding UI).
+- `user_data->'specificGoals'` is `Array<{ title, amount, timeframe, currency?, originalAmount? }>` — these are the measurable goals.
+
+The new `goals` table only models measurable goals, so the backfill reads from `specificGoals`, NOT from `goals`. The `string[]` categories are discarded — they were ephemeral UI state.
+
+Confirm the shape on real rows:
 
 ```sql
-select user_data->'goals'
+select user_data->'specificGoals'
 from reports
 where user_id is not null
-  and user_data->'goals' is not null
-  and jsonb_array_length(user_data->'goals') > 0
+  and user_data->'specificGoals' is not null
+  and jsonb_array_length(user_data->'specificGoals') > 0
 limit 3;
 ```
 
-The backfill SQL below assumes goals are objects with keys `title`, `amount`, `timeframe`. **If the keys differ, stop and adjust the goals INSERT in step 2 before continuing.** Common alternatives in this codebase: `name` instead of `title`, `months` instead of `timeframe`.
+The backfill SQL below assumes each item has keys `title`, `amount`, `timeframe`. **If the keys differ, stop and adjust the goals INSERT in step 2 before continuing.**
 
 - [ ] **Step 2: Create the backfill migration file**
 
@@ -639,10 +645,10 @@ from _latest_report lr
 where coalesce((lr.user_data->>'supermarketFrequency')::int, 0) > 0
 on conflict (user_id, category) do nothing;
 
--- ── goals ──────────────────────────────────────────────────────────────
--- Assumes goals[] items have keys {title, amount, timeframe}. If the
--- sampling in Task 3 step 1 showed different keys, this SELECT is the
--- ONLY thing to adjust.
+-- ── goals (from user_data.specificGoals[]) ───────────────────────────
+-- Reads from `specificGoals`, NOT `goals`. `goals` is a string[] of
+-- onboarding category labels with no amount/timeframe; only specificGoals
+-- has the measurable data the new goals table models.
 insert into goals (user_id, title, amount_ars, timeframe_months, status)
 select
   lr.user_id,
@@ -651,7 +657,7 @@ select
   (goal->>'timeframe')::int,
   'active'
 from _latest_report lr
-cross join lateral jsonb_array_elements(coalesce(lr.user_data->'goals','[]'::jsonb)) as goal
+cross join lateral jsonb_array_elements(coalesce(lr.user_data->'specificGoals','[]'::jsonb)) as goal
 where coalesce(goal->>'title','') <> ''
   and not exists (
     select 1 from goals g
