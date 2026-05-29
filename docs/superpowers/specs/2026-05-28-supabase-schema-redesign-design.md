@@ -170,7 +170,7 @@ through WhatsApp or the web.
 |---|---|---|
 | `id` | uuid PK | |
 | `user_id` | uuid FK | |
-| `occurred_at` | timestamptz | when the spend actually happened (user-provided, not when the row was inserted) |
+| `occurred_at` | timestamptz | when the spend actually happened (user-provided, not when the row was inserted). See inference rule below. |
 | `type` | text | 'expense' \| 'income' |
 | `amount_ars` | numeric | |
 | `currency` | text | default 'ARS' |
@@ -192,6 +192,24 @@ This is the only write-heavy table. With those three indexes Postgres
 handles tens of millions of rows per Supabase project before partitioning
 matters; we explicitly defer partitioning until that becomes a real
 bottleneck.
+
+**`occurred_at` inference rule.** Inserts from the WhatsApp bot rarely
+carry a precise time, only a relative day ("hoy", "ayer", "el viernes").
+The bot resolves the date and then stamps the time component as follows:
+
+- If the user says "hoy" → date is today and time is the moment the
+  webhook fired (basically `now()`).
+- If the user says any past relative day ("ayer", "el viernes",
+  "anteayer") → date is that day and time is `12:00` local time.
+- If the user gives an explicit time ("ayer a las 9 pm") → use it.
+
+Web inserts (manual editing on `/perfil` or from the report) follow the
+same rule: the date the user picks + `now()` if it is today, `12:00`
+otherwise.
+
+There is no separate `occurred_date` column; queries that group by day
+use `date_trunc('day', occurred_at)` or `occurred_at::date`, which the
+indexes still serve correctly.
 
 ### 1.7 `reports` — historical snapshots (existing table, lightly tweaked)
 
