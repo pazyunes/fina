@@ -72,7 +72,8 @@ select
   lr.user_data->>'incomeRange'
 from _latest_report lr
 where coalesce(lr.user_data->>'incomeType','fixed') in ('fixed','both')
-  and (lr.user_data->>'monthlyIncome')::numeric > 0
+  and (lr.user_data->>'monthlyIncome')::numeric
+      - coalesce((lr.user_data->'freelanceIncome'->>'monthlyAvgArs')::numeric, 0) > 0
   and not exists (
     select 1 from incomes i
     where i.user_id = lr.user_id and i.type = 'fixed'
@@ -92,6 +93,7 @@ from _latest_report lr
 cross join (values ('month1'),('month2'),('month3')) as p(period)
 where lr.user_data->>'incomeType' in ('freelance','both')
   and lr.user_data->'freelanceIncome'->p.period is not null
+  and ((lr.user_data->'freelanceIncome'->p.period)->>'ars')::numeric > 0
   and not exists (
     select 1 from incomes i
     where i.user_id = lr.user_id
@@ -205,6 +207,8 @@ select
 from _latest_report lr
 cross join lateral jsonb_array_elements(coalesce(lr.user_data->'specificGoals','[]'::jsonb)) as goal
 where coalesce(goal->>'title','') <> ''
+  and (goal->>'timeframe')::int > 0
+  and (goal->>'amount')::numeric > 0
   and not exists (
     select 1 from goals g
     where g.user_id = lr.user_id
