@@ -16,9 +16,15 @@ export function Login() {
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState(''); // E.164 (+ país sin espacios), opcional
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Mismo regex que el CHECK de user_profiles.phone en 0003_live_profile.sql.
+  // Opcional en el formulario: si está vacío se omite; si está cargado, debe matchear.
+  const E164 = /^\+[1-9][0-9]{1,14}$/;
+  const phoneValid = mode === 'signin' || phone.trim() === '' || E164.test(phone.trim());
 
   // Regla de redirect (definida por el botón que tocó el usuario, no por el
   // estado del perfil):
@@ -32,7 +38,7 @@ export function Login() {
     if (session) navigate('/perfil', { replace: true });
   }, [session]);
 
-  const valid = email.trim() !== '' && password.length >= 6;
+  const valid = email.trim() !== '' && password.length >= 6 && phoneValid;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +52,7 @@ export function Login() {
       if (error) setError(traducirError(error));
       else navigate('/perfil', { replace: true });
     } else {
-      const { error, needsConfirmation } = await signUp(email, password);
+      const { error, needsConfirmation } = await signUp(email, password, phone.trim() || undefined);
       if (error) setError(traducirError(error));
       else if (needsConfirmation) {
         setInfo('Te enviamos un email para confirmar tu cuenta. Confirmalo y volvé a iniciar sesión.');
@@ -106,6 +112,30 @@ export function Login() {
               className="mt-1 rounded-xl"
             />
           </div>
+
+          {mode === 'signup' && (
+            <div>
+              <Label htmlFor="phone" className="text-gray-700 text-sm">Teléfono (WhatsApp, opcional)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+5491112345678"
+                className="mt-1 rounded-xl"
+              />
+              {phone.trim() !== '' && !phoneValid && (
+                <p className="text-xs text-[#D4537E] mt-1">
+                  Formato: + código de país sin espacios. Ej: +5491112345678
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Lo usamos para conectar tu cuenta con WhatsApp cuando lancemos el chatbot.
+              </p>
+            </div>
+          )}
 
           {error && <p className="text-sm text-[#D4537E]">{error}</p>}
           {info && <p className="text-sm text-[#3B6D11]">{info}</p>}

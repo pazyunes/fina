@@ -16,7 +16,9 @@ interface AuthContextValue {
   loading: boolean; // true mientras se resuelve la sesión inicial
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   // needsConfirmation: true si Supabase pide confirmar el email antes de loguear.
-  signUp: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  // phone (opcional, E.164) se guarda en user_metadata y un effect lo copia a
+  // user_profiles.phone cuando aparece la sesión (cubre el caso confirmación).
+  signUp: (email: string, password: string, phone?: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
   // Actualiza nombre/edad/sexo (metadata) y, si cambió, el email de acceso.
   // emailChangePending: true si el cambio de email espera confirmación.
@@ -46,13 +48,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Cuando llega una sesión nueva, si el user_metadata trae phone y la fila
+  // de user_profiles todavía no lo tiene seteado, lo copiamos. Cubre dos
+  // casos: signup con sesión inmediata (write redundante pero idempotente)
+  // y signup con confirmación por mail (el phone estuvo guardado en
+  // metadata hasta que el usuario confirma y entra).
+  useEffect(() => {
+    if (!isSupabaseConfigured || !session?.user) return;
+    const phoneInMeta = (session.user.user_metadata?.phone as string | undefined)?.trim();
+    if (!phoneInMeta) return;
+    void supabase
+      .from('user_profiles')
+      .update({ phone: phoneInMeta })
+      .eq('id', session.user.id)
+      .is('phone', null)
+      .then(({ error }) => {
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.error('[fina] copy phone to user_profiles failed:', error.message);
+        }
+      });
+  }, [session?.user?.id]);
+
   const signIn: AuthContextValue['signIn'] = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     return { error: error?.message ?? null };
   };
 
-  const signUp: AuthContextValue['signUp'] = async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+  const signUp: AuthContextValue['signUp'] = async (email, password, phone) => {
+    const trimmedPhone = phone?.trim();
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      // El teléfono va a user_metadata; el effect de abajo lo copia a
+      // user_profiles.phone cuando llega la sesión, así también funciona si
+      // la cuenta requiere confirmación por mail.
+      options: trimmedPhone ? { data: { phone: trimmedPhone } } : undefined,
+    });
     return { error: error?.message ?? null, needsConfirmation: !error && !data.session };
   };
 
