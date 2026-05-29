@@ -247,3 +247,29 @@ begin
 end $$;
 
 commit;
+
+-- ── Rollback runbook (DO NOT RUN unless you mean it) ─────────────────
+-- This block intentionally has no executable statements. Each line is a
+-- statement you would run manually in the SQL editor to fully undo this
+-- migration. It assumes Phase 2 (app dual-write) has NOT shipped yet —
+-- once the app starts writing to these tables, rolling back loses data.
+--
+-- 1) Drop the auth.users trigger first so new signups don't try to
+--    insert into a table that's about to disappear:
+--    drop trigger if exists on_auth_user_created on auth.users;
+--    drop function if exists handle_new_user();
+--
+-- 2) Drop the six new tables (CASCADE drops indexes, policies, triggers):
+--    drop table if exists transactions cascade;
+--    drop table if exists goals cascade;
+--    drop table if exists variable_expense_estimates cascade;
+--    drop table if exists fixed_expenses cascade;
+--    drop table if exists incomes cascade;
+--    drop table if exists user_profiles cascade;
+--
+-- 3) Drop the shared trigger function (only after all tables that used it
+--    are gone):
+--    drop function if exists set_updated_at();
+--
+-- Reports table is unchanged by 0003/0004, so the rollback returns the
+-- database to its post-0002 state exactly.
