@@ -9,6 +9,8 @@
 -- usa IF NOT EXISTS, los TRIGGER se DROPpean antes y los CREATE POLICY se
 -- DROPpean antes, así que re-correrlo no rompe nada.
 
+begin;
+
 create extension if not exists pgcrypto;
 
 -- ── Shared updated_at trigger ─────────────────────────────────────────
@@ -34,7 +36,7 @@ create table if not exists user_profiles (
   lives_alone       boolean,
   works_or_studies  text check (works_or_studies in ('works','studies','both','neither')),
   banks             text[] not null default '{}',
-  phone             text,
+  phone             text check (phone is null or phone ~ '^\+[1-9][0-9]{1,14}$'),
   phone_verified_at timestamptz,
   income_type       text check (income_type in ('fixed','freelance','both')),
   created_at        timestamptz not null default now(),
@@ -86,7 +88,11 @@ create table if not exists incomes (
   range_label       text,
   active            boolean not null default true,
   created_at        timestamptz not null default now(),
-  updated_at        timestamptz not null default now()
+  updated_at        timestamptz not null default now(),
+  check (
+    (type = 'fixed'     and period is null) or
+    (type = 'freelance' and period is not null)
+  )
 );
 
 create index if not exists incomes_user_id_idx on incomes (user_id);
@@ -108,6 +114,7 @@ create table if not exists fixed_expenses (
   )),
   merchant          text,
   amount_ars        numeric not null,
+  -- Any category may be USD (e.g. USD-priced subscriptions), not only housing.
   currency          text not null default 'ARS' check (currency in ('ARS','USD')),
   original_amount   numeric,
   exchange_rate_id  uuid references exchange_rates (id),
@@ -134,7 +141,7 @@ create table if not exists variable_expense_estimates (
   id                  uuid primary key default gen_random_uuid(),
   user_id             uuid not null references auth.users (id) on delete cascade,
   category            text not null check (category in ('entertainment','delivery','supermarket')),
-  weekly_frequency    int not null check (weekly_frequency >= 0),
+  weekly_frequency    int not null check (weekly_frequency > 0),
   average_amount_ars  numeric not null check (average_amount_ars >= 0),
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
@@ -210,6 +217,10 @@ create policy "user_profiles owner update" on user_profiles for update using   (
 create policy "user_profiles owner delete" on user_profiles for delete using   (auth.uid() = id);
 
 -- The other five tables all key off user_id and share the same policies.
+-- For each of the five tables below, this generates four RLS policies:
+--   "<table> owner read", "<table> owner insert",
+--   "<table> owner update", "<table> owner delete".
+-- They mirror the user_profiles policies above.
 do $$
 declare
   t text;
@@ -234,3 +245,5 @@ begin
     execute format('create policy "%s owner delete" on %I for delete using   (auth.uid() = user_id)', t, t);
   end loop;
 end $$;
+
+commit;
