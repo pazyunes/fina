@@ -142,7 +142,7 @@ export function Goals({ initial, onComplete }: GoalsProps) {
     });
     
     // Navigate to AI Reasoning if debug mode is enabled, otherwise go to result
-    navigate(DEBUG_MODE ? '/ai-reasoning' : '/result');
+    navigate(DEBUG_MODE ? '/ai-reasoning' : '/loading');
   };
 
   const isValid = selectedGoals.length > 0 || specificGoals.length > 0;

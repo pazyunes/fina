@@ -241,7 +241,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
       transportDetails: transportData,
       installments: validInstallments,
     });
-    navigate('/expenses-services');
+    navigate('/mensaje/gastos-variables');
   };
 
   const isTransportValid = isTransportDataValid(transportData);

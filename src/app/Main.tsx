@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { Splash } from './components/Splash';
 import { PersonalData } from './components/PersonalData';
 import { Context } from './components/Context';
 import { Activity } from './components/Activity';
@@ -11,17 +10,24 @@ import { Habits } from './components/Habits';
 import { Goals } from './components/Goals';
 import { AIReasoning } from './components/AIReasoning';
 import { Result } from './components/Result';
+import {
+  WelcomeScreen,
+  MessageIngresos,
+  MessageGastosFijos,
+  MessageGastosVariables,
+  LoadingScreen,
+} from './components/OnboardingMessages';
 import { UserData, FinancialAnalysis, TransportData } from './types';
 import { analyzeFinances } from './utils/financialAnalyzer';
 import { DEBUG_MODE } from './config';
-import { saveReport } from './lib/reports';
+import { saveReport, fetchUserReport } from './lib/reports';
 import { fetchExchangeRate } from './lib/exchangeRate';
 import { useAuth } from './lib/auth';
 
 export function Main() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, hasReport, markHasReport } = useAuth();
 
   const [userData, setUserData] = useState<Partial<UserData>>({
     name: '',
@@ -68,12 +74,9 @@ export function Main() {
 
   const [analysis, setAnalysis] = useState<FinancialAnalysis | null>(null);
 
-  useEffect(() => {
-    // Redirect to splash on initial load
-    if (location.pathname === '/') {
-      navigate('/splash');
-    }
-  }, []);
+  // PR6 — la lógica de "qué se muestra en /" la maneja RootRedirect ahora;
+  // Main solo se monta en step routes / informe. Si por algún motivo se carga
+  // en `/` lo dejamos en manos del router (Main no debería ni montarse acá).
 
   // Pre-fill personal data from the saved profile (auth metadata + email) so a
   // returning user can skip PersonalData and start the flow at /context, while
@@ -220,36 +223,67 @@ export function Main() {
     const financialAnalysis = analyzeFinances(completeData);
     setAnalysis(financialAnalysis);
 
-    // Silently persist the finished flow to Supabase for internal history.
-    // Fire-and-forget — UI never blocks and never surfaces failures.
-    void saveReport(completeData, financialAnalysis);
+    // Silently persist the finished flow to Supabase. PR6: marca hasReport=true
+    // localmente para que OnboardingGate empiece a redirigir las rutas de
+    // onboarding sin esperar al próximo refetch.
+    void saveReport(completeData, financialAnalysis).then(() => markHasReport());
   };
+
+  // PR6 — Hidratación de /result desde DB. Si el usuario aterriza acá tras
+  // un refresh (RootRedirect → /result porque hasReport=true), el state
+  // in-memory está vacío. Cargamos su único informe (UNIQUE en reports.user_id
+  // garantiza que es uno solo) y lo dejamos en analysis para que el switch
+  // de abajo renderice. AIReasoning se hidrata igual porque comparte estado.
+  const needsHydration =
+    !analysis &&
+    (location.pathname === '/result' || location.pathname === '/ai-reasoning') &&
+    !!user &&
+    hasReport === true;
+  useEffect(() => {
+    if (!needsHydration) return;
+    let active = true;
+    fetchUserReport().then((r) => {
+      if (active && r) {
+        setUserData(r.userData);
+        setAnalysis(r.analysis);
+      }
+    });
+    return () => { active = false; };
+  }, [needsHydration]);
 
   // Render appropriate component based on route
   switch (location.pathname) {
-    case '/splash':
-      return <Splash />;
+    case '/welcome':
+      return <WelcomeScreen />;
     case '/personal-data':
       return <PersonalData initial={userData} onComplete={handlePersonalData} />;
     case '/context':
       return <Context initial={userData} gender={userData.gender} onComplete={handleContext} />;
+    case '/mensaje/ingresos':
+      return <MessageIngresos />;
     case '/activity':
       return <Activity initial={userData} onComplete={handleActivity} />;
     case '/bank':
       return <Bank initial={userData} onComplete={handleBank} />;
+    case '/mensaje/gastos-fijos':
+      return <MessageGastosFijos />;
     case '/expenses-fixed':
       return <ExpensesFixed initial={userData} monthlyIncome={userData.monthlyIncome || 0} onComplete={handleExpensesFixed} />;
+    case '/mensaje/gastos-variables':
+      return <MessageGastosVariables />;
     case '/expenses-services':
       return <ExpensesServices initial={userData} onComplete={handleExpensesServices} />;
     case '/habits':
       return <Habits initial={userData} onComplete={handleHabits} />;
     case '/goals':
       return <Goals initial={userData} onComplete={handleGoals} />;
+    case '/loading':
+      return <LoadingScreen />;
     case '/ai-reasoning':
-      return analysis ? <AIReasoning analysis={analysis} /> : <Splash />;
+      return analysis ? <AIReasoning analysis={analysis} /> : <LoadingScreen />;
     case '/result':
-      return analysis ? <Result analysis={analysis} /> : <Splash />;
+      return analysis ? <Result analysis={analysis} /> : <LoadingScreen />;
     default:
-      return <Splash />;
+      return <WelcomeScreen />;
   }
 }

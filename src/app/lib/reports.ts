@@ -230,3 +230,26 @@ export async function userHasReport(): Promise<boolean> {
   }
   return (count ?? 0) > 0;
 }
+
+// PR6 — fetch del único informe del usuario logueado. Devuelve userData y
+// analysis para que /result pueda renderizar tras un refresh sin que Main
+// pierda contexto (el state in-memory se vacía con cada reload).
+// El UNIQUE constraint en reports.user_id garantiza max 1 row.
+export async function fetchUserReport(): Promise<{ userData: UserData; analysis: FinancialAnalysis } | null> {
+  if (!isSupabaseConfigured) return null;
+  const { data, error } = await supabase
+    .from('reports')
+    .select('user_data, analysis')
+    .maybeSingle();
+  if (error || !data) {
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('[fina] fetchUserReport failed:', error.message);
+    }
+    return null;
+  }
+  return {
+    userData: data.user_data as UserData,
+    analysis: data.analysis as FinancialAnalysis,
+  };
+}
