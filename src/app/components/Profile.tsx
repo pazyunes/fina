@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useAuth, Profile as ProfileData } from '../lib/auth';
+import { BottomNav } from './BottomNav';
 
 const GENDER_OPTIONS: { value: ProfileData['gender']; label: string }[] = [
   { value: 'femenino', label: 'Femenino' },
@@ -53,7 +54,7 @@ export function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col pb-24">
       <div className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -191,6 +192,7 @@ export function Profile() {
           </Button>
         </motion.div>
       </div>
+      <BottomNav />
     </div>
   );
 }
