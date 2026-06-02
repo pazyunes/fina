@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
@@ -86,6 +86,19 @@ export function Activity({ initial, onComplete }: ActivityProps) {
   const [incomeType, setIncomeType] = useState<IncomeType | null>(
     initial?.incomeType ?? (initial?.monthlyIncome ? 'fixed' : null)
   );
+
+  // PR7b — Si la usuaria seleccionó "studies" o "neither" no le mostramos el
+  // selector de tipo de ingreso (no aplica sueldo/freelance) y forzamos
+  // incomeType='fixed' bajo el capó. La pregunta de monto pasa a ser
+  // "¿Cuánta plata disponible tenés por mes?" con el mismo selector de rango
+  // / monto exacto que ya teníamos.
+  const showIncomeTypeSelector = activity === 'works' || activity === 'both';
+  useEffect(() => {
+    if (!activity) return;
+    if (!showIncomeTypeSelector && incomeType !== 'fixed') {
+      setIncomeType('fixed');
+    }
+  }, [activity, showIncomeTypeSelector, incomeType]);
 
   // Cotización del blue para convertir ingresos cargados en USD a ARS.
   const usdRate = initial?.exchangeRate?.rate ?? null;
@@ -199,7 +212,9 @@ export function Activity({ initial, onComplete }: ActivityProps) {
 
   const getFixedLabel = () => {
     if (incomeType === 'both') return '¿Cuánto ganás de sueldo por mes?';
-    if (activity === 'works' || activity === 'both') return '¿Cuánto cobrás por mes aproximadamente?';
+    if (activity === 'works') return '¿Cuánto cobrás por mes aproximadamente?';
+    // PR7b — para estudiantes / sin trabajo la pregunta no habla de sueldo.
+    if (activity === 'studies' || activity === 'neither') return '¿Cuánta plata disponible tenés por mes?';
     return '¿Cuánto recibís por mes aproximadamente?';
   };
 
@@ -295,8 +310,11 @@ export function Activity({ initial, onComplete }: ActivityProps) {
               </div>
             </div>
 
-            {/* Selector de tipo de ingreso (PR4) */}
-            {activity && (
+            {/* Selector de tipo de ingreso (PR4). Oculto para studies/neither
+                (PR7b): para esos perfiles forzamos incomeType='fixed' bajo el
+                capó y mostramos el bloque con la pregunta "plata disponible"
+                directamente. */}
+            {activity && showIncomeTypeSelector && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -409,6 +427,8 @@ export function Activity({ initial, onComplete }: ActivityProps) {
                     <p className="text-xs text-gray-500 mt-2">
                       {incomeType === 'both'
                         ? 'Cargá solo tu sueldo fijo. El freelance se carga aparte.'
+                        : activity === 'studies' || activity === 'neither'
+                        ? 'Mesada, beca, ayuda de familia, ahorros que retirás, lo que sea.'
                         : 'Incluí sueldo, alquiler o cualquier ingreso regular'}
                     </p>
                   </motion.div>
