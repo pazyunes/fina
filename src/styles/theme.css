@@ -195,4 +195,31 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+
+  /* PR7b — Scrollbar visible y rosa para que se entienda que hay más contenido
+     hacia abajo en los pasos largos del onboarding y en las tabs del informe.
+     Aplica a cualquier elemento scrollable.
+     - Firefox: scrollbar-width: thin + colores explícitos.
+     - WebKit (Chrome/Safari): pseudo-elementos. En iOS Safari las barras
+       siguen apareciendo solo durante el scroll; ese es el comportamiento
+       nativo y no se puede forzar always-visible. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 83, 126, 0.45) rgba(212, 83, 126, 0.08);
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: rgba(212, 83, 126, 0.08);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(212, 83, 126, 0.45);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 83, 126, 0.65);
+  }
 }
