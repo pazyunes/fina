@@ -9,6 +9,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './
 import { Zap, UtensilsCrossed, Sparkles, Plus, X, Check, ShoppingCart, Coffee } from 'lucide-react';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
+import { StepIntroMessage } from './StepIntroMessage';
 import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
@@ -237,6 +238,16 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
           className="w-full pb-24"
         >
           <BackButton currentPath={pathname} />
+
+          <StepIntroMessage
+            title="Última parte."
+            body={
+              <>
+                Ahora los <strong>gastos que cambian mes a mes</strong>: salidas, supermercado,
+                regalitos, todo lo que no es fijo.
+              </>
+            }
+          />
 
           <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#FBEAF0] pb-3 z-10">
             <h2

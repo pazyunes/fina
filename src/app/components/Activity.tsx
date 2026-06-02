@@ -7,6 +7,7 @@ import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
+import { StepIntroMessage } from './StepIntroMessage';
 import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
@@ -250,6 +251,11 @@ export function Activity({ initial, onComplete }: ActivityProps) {
           className="w-full"
         >
           <BackButton currentPath={pathname} />
+
+          <StepIntroMessage
+            title="Ahora hablemos de plata 💰"
+            body="Vamos a entender cuánto te entra cada mes. Si tenés freelance o más de una fuente de ingresos, también lo vamos a contemplar."
+          />
 
           <div className="mb-6">
             <h2

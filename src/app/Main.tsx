@@ -10,13 +10,7 @@ import { Habits } from './components/Habits';
 import { Goals } from './components/Goals';
 import { AIReasoning } from './components/AIReasoning';
 import { Result } from './components/Result';
-import {
-  WelcomeScreen,
-  MessageIngresos,
-  MessageGastosFijos,
-  MessageGastosVariables,
-  LoadingScreen,
-} from './components/OnboardingMessages';
+import { LoadingScreen } from './components/OnboardingMessages';
 import { UserData, FinancialAnalysis, TransportData } from './types';
 import { analyzeFinances } from './utils/financialAnalyzer';
 import { DEBUG_MODE } from './config';
@@ -257,24 +251,16 @@ export function Main() {
 
   // Render appropriate component based on route
   switch (location.pathname) {
-    case '/welcome':
-      return <WelcomeScreen />;
     case '/personal-data':
       return <PersonalData initial={userData} onComplete={handlePersonalData} />;
     case '/context':
       return <Context initial={userData} gender={userData.gender} onComplete={handleContext} />;
-    case '/mensaje/ingresos':
-      return <MessageIngresos />;
     case '/activity':
       return <Activity initial={userData} onComplete={handleActivity} />;
     case '/bank':
       return <Bank initial={userData} onComplete={handleBank} />;
-    case '/mensaje/gastos-fijos':
-      return <MessageGastosFijos />;
     case '/expenses-fixed':
       return <ExpensesFixed initial={userData} monthlyIncome={userData.monthlyIncome || 0} onComplete={handleExpensesFixed} />;
-    case '/mensaje/gastos-variables':
-      return <MessageGastosVariables />;
     case '/expenses-services':
       return <ExpensesServices initial={userData} onComplete={handleExpensesServices} />;
     case '/habits':
@@ -288,6 +274,6 @@ export function Main() {
     case '/result':
       return analysis ? <Result analysis={analysis} /> : <LoadingScreen />;
     default:
-      return <WelcomeScreen />;
+      return <LoadingScreen />;
   }
 }

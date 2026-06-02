@@ -21,7 +21,7 @@ export function Context({ initial, gender, onComplete }: ContextProps) {
   const handleSubmit = () => {
     if (livesAlone !== null) {
       onComplete({ livesAlone });
-      navigate('/mensaje/ingresos');
+      navigate('/activity');
     }
   };
 

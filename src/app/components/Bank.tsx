@@ -50,7 +50,7 @@ export function Bank({ initial, onComplete }: BankProps) {
   const handleSubmit = () => {
     if (selectedBanks.length > 0) {
       onComplete({ banks: selectedBanks });
-      navigate('/mensaje/gastos-fijos');
+      navigate('/expenses-fixed');
     }
   };
 

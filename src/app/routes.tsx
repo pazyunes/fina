@@ -28,15 +28,11 @@ export const router = createBrowserRouter([
   // redirige a /result si ya hay informe (excepto la propia /result y
   // /ai-reasoning, que es debug-only). El onboarding es one-shot por PR6.
   ...[
-    "/welcome",
     "/personal-data",
     "/context",
-    "/mensaje/ingresos",
     "/activity",
     "/bank",
-    "/mensaje/gastos-fijos",
     "/expenses-fixed",
-    "/mensaje/gastos-variables",
     "/expenses-services",
     "/habits",
     "/goals",

@@ -10,6 +10,7 @@ import { Home, Heart, Sparkles, Brain, Dumbbell, Plus, X, Check } from 'lucide-r
 import { TransportSelector, isTransportDataValid } from './TransportSelector';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
+import { StepIntroMessage } from './StepIntroMessage';
 import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
@@ -241,7 +242,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
       transportDetails: transportData,
       installments: validInstallments,
     });
-    navigate('/mensaje/gastos-variables');
+    navigate('/expenses-services');
   };
 
   const isTransportValid = isTransportDataValid(transportData);
@@ -257,6 +258,17 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
           className="w-full pb-24"
         >
           <BackButton currentPath={pathname} />
+
+          <StepIntroMessage
+            title="¡Vamos bien!"
+            body={
+              <>
+                Ahora pensemos en los <strong>gastos que se repiten todos los meses</strong>:
+                alquiler, expensas, suscripciones, gimnasio, esas cosas. No te olvides de
+                ninguna 😉
+              </>
+            }
+          />
 
           <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#FBEAF0] pb-3 z-10">
             <h2
