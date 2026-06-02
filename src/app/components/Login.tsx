@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Heart } from 'lucide-react';
 import { Button } from './ui/button';
@@ -11,9 +11,13 @@ type Mode = 'signin' | 'signup';
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { session, signIn, signUp } = useAuth();
 
-  const [mode, setMode] = useState<Mode>('signin');
+  // Splash pasa state.mode para abrir directo en signin o signup. Si la ruta
+  // se carga directo sin state (link compartido), arrancamos en signin.
+  const initialMode: Mode = (location.state as { mode?: Mode } | null)?.mode === 'signup' ? 'signup' : 'signin';
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState(''); // E.164 (+ país sin espacios), opcional
@@ -26,16 +30,11 @@ export function Login() {
   const E164 = /^\+[1-9][0-9]{1,14}$/;
   const phoneValid = mode === 'signin' || phone.trim() === '' || E164.test(phone.trim());
 
-  // Regla de redirect (definida por el botón que tocó el usuario, no por el
-  // estado del perfil):
-  //   - Iniciar sesión → /perfil (donde está el historial)
-  //   - Crear cuenta   → /personal-data (arranca el onboarding)
-  //
-  // Si el usuario ya viene con sesión activa cuando llega acá (p. ej. tocó
-  // "Empezar" desde el Splash estando ya logueado), lo tratamos como un
-  // login: lo mandamos a /perfil.
+  // PR6 — Tras autenticar volvemos a `/` y RootRedirect decide adónde:
+  // con informe → /result; sin informe → /welcome (mensajito de bienvenida).
+  // Si llegan acá ya con sesión activa, mismo redirect.
   useEffect(() => {
-    if (session) navigate('/perfil', { replace: true });
+    if (session) navigate('/', { replace: true });
   }, [session]);
 
   const valid = email.trim() !== '' && password.length >= 6 && phoneValid;
@@ -50,7 +49,7 @@ export function Login() {
     if (mode === 'signin') {
       const { error } = await signIn(email, password);
       if (error) setError(traducirError(error));
-      else navigate('/perfil', { replace: true });
+      else navigate('/', { replace: true });
     } else {
       const { error, needsConfirmation } = await signUp(email, password, phone.trim() || undefined);
       if (error) setError(traducirError(error));
@@ -58,7 +57,7 @@ export function Login() {
         setInfo('Te enviamos un email para confirmar tu cuenta. Confirmalo y volvé a iniciar sesión.');
         setMode('signin');
       } else {
-        navigate('/personal-data', { replace: true });
+        navigate('/', { replace: true });
       }
     }
     setSubmitting(false);
