@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './supabase';
+import { userHasReport } from './reports';
 
 // Datos de perfil guardados en el user_metadata de Supabase Auth.
 export interface Profile {
@@ -14,6 +15,13 @@ interface AuthContextValue {
   user: User | null;
   profile: Profile;   // derivado de user.user_metadata
   loading: boolean; // true mientras se resuelve la sesión inicial
+  // PR6 — ¿el usuario ya generó su informe? null mientras se resuelve, true|false
+  // después. Lo consumen los gates de routing para decidir entre /result y el
+  // flujo de onboarding sin tener que cada componente hacer su propia query.
+  hasReport: boolean | null;
+  // Permite a Result.tsx avisarle al provider que acaba de guardarse un informe
+  // sin tener que esperar al próximo session change (que no llega).
+  markHasReport: () => void;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   // needsConfirmation: true si Supabase pide confirmar el email antes de loguear.
   // phone (opcional, E.164) se guarda en user_metadata y un effect lo copia a
@@ -30,6 +38,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // null = todavía no se resolvió la query (loading); true/false una vez resuelta.
+  const [hasReport, setHasReport] = useState<boolean | null>(null);
+  const markHasReport = useCallback(() => setHasReport(true), []);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -47,6 +58,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // PR6 — Cada vez que cambia el usuario logueado, consultamos si tiene su
+  // informe. RLS garantiza que solo cuenta los propios. Cuando no hay sesión
+  // se resetea a false (no relevante igual; el RootRedirect no lo mira).
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setHasReport(false);
+      return;
+    }
+    const uid = session?.user?.id;
+    if (!uid) {
+      setHasReport(false);
+      return;
+    }
+    setHasReport(null);
+    let active = true;
+    userHasReport().then((has) => {
+      if (active) setHasReport(has);
+    });
+    return () => { active = false; };
+  }, [session?.user?.id]);
 
   // Cuando llega una sesión nueva, si el user_metadata trae phone y la fila
   // de user_profiles todavía no lo tiene seteado, lo copiamos. Cubre dos
@@ -112,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, signIn, signUp, signOut, updateProfile }}
+      value={{ session, user, profile, loading, hasReport, markHasReport, signIn, signUp, signOut, updateProfile }}
     >
       {children}
     </AuthContext.Provider>
