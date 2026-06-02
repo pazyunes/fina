@@ -18,17 +18,19 @@ interface PersonalDataProps {
 export function PersonalData({ initial, onComplete }: PersonalDataProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [formData, setFormData] = useState<{ name: string; age: string; email: string; gender: Gender | '' }>({
+  // PR6c — Email se omite del form (ya se pidió en el signup; Main lo
+  // prefille en userData.email desde session.user.email). Lo seguimos
+  // pasando en onComplete porque el resto del flujo lo consume.
+  const [formData, setFormData] = useState<{ name: string; age: string; gender: Gender | '' }>({
     name: initial?.name ?? '',
     age: initial?.age ?? '',
-    email: initial?.email ?? '',
     gender: initial?.gender ?? ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.age && formData.email && formData.gender) {
-      onComplete({ ...formData, gender: formData.gender as Gender });
+    if (formData.name && formData.age && formData.gender) {
+      onComplete({ ...formData, email: initial?.email ?? '', gender: formData.gender as Gender });
       navigate('/context');
     }
   };
@@ -96,21 +98,6 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
             </div>
 
             <div>
-              <Label htmlFor="email" className="text-gray-700">
-                Tu email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="tu@email.com"
-                required
-                className="mt-2 bg-white border-gray-200 focus:border-[#D4537E] focus:ring-[#D4537E] rounded-xl"
-              />
-            </div>
-
-            <div>
               <Label className="text-gray-700">
                 ¿Con qué género te identificás?
               </Label>
@@ -138,7 +125,7 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
 
             <Button
               type="submit"
-              disabled={!formData.name || !formData.age || !formData.email || !formData.gender}
+              disabled={!formData.name || !formData.age || !formData.gender}
               className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50"
             >
               Continuar
