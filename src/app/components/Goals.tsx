@@ -42,13 +42,16 @@ const formatGoalAmount = (value: string) => {
   return cleanNumbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
 
+// PR6c — sacadas "Ahorrar para emergencias" e "Invertir"; agregada
+// "Otro / Agregar objetivo específico" que abre el panel para crear un
+// objetivo a medida.
+const CUSTOM_GOAL_OPTION = 'Otro / Agregar objetivo específico';
 const GOAL_OPTIONS = [
-  'Ahorrar para emergencias',
   'Viajar',
   'Comprar algo específico',
   'Pagar deudas',
-  'Invertir',
   'Independizarme',
+  CUSTOM_GOAL_OPTION,
   'No tengo'
 ];
 
@@ -137,7 +140,10 @@ export function Goals({ initial, onComplete }: GoalsProps) {
     });
 
     onComplete({
-      goals: selectedGoals,
+      // PR6c — "Otro / Agregar objetivo específico" es solo un trigger de UI
+      // que abre el panel de objetivo específico; no es una categoría de meta
+      // en sí, así que se filtra antes de persistir.
+      goals: selectedGoals.filter(g => g !== CUSTOM_GOAL_OPTION),
       specificGoals: parsedGoals,
     });
     
@@ -314,11 +320,13 @@ export function Goals({ initial, onComplete }: GoalsProps) {
             )}
           </AnimatePresence>
 
-          {/* Formulario para agregar objetivo específico - DESPUÉS */}
-          {!showSavingsGoal && (
+          {/* Formulario para agregar objetivo específico — PR6c: se despliega
+              SOLO cuando el usuario eligió "Otro / Agregar objetivo específico"
+              en la lista de arriba. */}
+          {selectedGoals.includes(CUSTOM_GOAL_OPTION) && !showSavingsGoal && (
             <div className="mb-6">
               <h3 className="text-sm font-medium text-gray-700 mb-3">
-                O definí un objetivo específico (viaje, compra, etc.)
+                Definí tu objetivo específico (viaje, compra, etc.)
               </h3>
               <div className="bg-white p-6 rounded-2xl shadow-sm space-y-4">
                 <div>
