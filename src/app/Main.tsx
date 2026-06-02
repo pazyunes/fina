@@ -10,6 +10,8 @@ import { Habits } from './components/Habits';
 import { Goals } from './components/Goals';
 import { AIReasoning } from './components/AIReasoning';
 import { Result } from './components/Result';
+import { ObjetivosPage } from './components/ObjetivosPage';
+import { InversionesPage } from './components/InversionesPage';
 import { LoadingScreen } from './components/OnboardingMessages';
 import { UserData, FinancialAnalysis, TransportData } from './types';
 import { analyzeFinances } from './utils/financialAnalyzer';
@@ -234,7 +236,7 @@ export function Main() {
   // de abajo renderice. AIReasoning se hidrata igual porque comparte estado.
   const needsHydration =
     !analysis &&
-    (location.pathname === '/result' || location.pathname === '/ai-reasoning') &&
+    ['/result', '/ai-reasoning', '/objetivos', '/inversiones'].includes(location.pathname) &&
     !!user &&
     hasReport === true;
   useEffect(() => {
@@ -273,6 +275,10 @@ export function Main() {
       return analysis ? <AIReasoning analysis={analysis} /> : <LoadingScreen />;
     case '/result':
       return analysis ? <Result analysis={analysis} /> : <LoadingScreen />;
+    case '/objetivos':
+      return analysis ? <ObjetivosPage analysis={analysis} /> : <LoadingScreen />;
+    case '/inversiones':
+      return analysis ? <InversionesPage analysis={analysis} /> : <LoadingScreen />;
     default:
       return <LoadingScreen />;
   }

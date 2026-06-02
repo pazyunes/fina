@@ -2,18 +2,44 @@ import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '../lib/auth';
 
-// Wrapper para los step routes del onboarding. PR6: el onboarding es one-shot.
-// Si el usuario ya tiene su informe, intentar entrar a un step lo redirige a
-// /result. La excepción es la propia ruta /result (se renderiza sin gate
-// adicional para no entrar en loop). Mientras hasReport está sin resolver,
-// devolvemos los children igual — Main se hidrata desde DB en ese caso y la
-// hidratación cubre la latencia.
+// PR6/7 — Gate de los step routes del onboarding y las tabs del informe.
+// Reglas:
+//   - Si la usuaria YA tiene su informe y entra a un step de onboarding
+//     (one-shot), la mandamos a /result.
+//   - Si NO tiene informe y entra a una pestaña del informe
+//     (/result, /objetivos, /inversiones, /ai-reasoning), la mandamos al
+//     primer step (/personal-data) para que primero genere el informe.
+//   - /loading y /perfil pasan siempre — son neutrales.
+//   - hasReport === null (loading) deja pasar; Main muestra LoadingScreen
+//     mientras hidrata desde DB.
+
+const ONBOARDING_FAMILY = [
+  '/personal-data',
+  '/context',
+  '/activity',
+  '/bank',
+  '/expenses-fixed',
+  '/expenses-services',
+  '/habits',
+  '/goals',
+];
+
+const REPORT_FAMILY = [
+  '/result',
+  '/objetivos',
+  '/inversiones',
+  '/ai-reasoning',
+];
+
 export function OnboardingGate({ children }: { children: ReactNode }) {
   const { hasReport } = useAuth();
   const { pathname } = useLocation();
 
-  if (hasReport === true && pathname !== '/result' && pathname !== '/ai-reasoning') {
+  if (hasReport === true && ONBOARDING_FAMILY.includes(pathname)) {
     return <Navigate to="/result" replace />;
+  }
+  if (hasReport === false && REPORT_FAMILY.includes(pathname)) {
+    return <Navigate to="/personal-data" replace />;
   }
 
   return <>{children}</>;

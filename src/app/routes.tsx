@@ -39,6 +39,9 @@ export const router = createBrowserRouter([
     "/loading",
     "/ai-reasoning",
     "/result",
+    // PR7 — pestañas adicionales del informe (Bottom Nav).
+    "/objetivos",
+    "/inversiones",
   ].map((path) => ({
     path,
     element: (
