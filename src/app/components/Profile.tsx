@@ -1,16 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { LogOut, RefreshCw, ChevronRight, CircleUserRound, Pencil } from 'lucide-react';
+import { LogOut, CircleUserRound, Pencil } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useAuth, Profile as ProfileData } from '../lib/auth';
-import { fetchUserReports, ReportSummary } from '../lib/reports';
-import { formatArs } from '../lib/currency';
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 const GENDER_OPTIONS: { value: ProfileData['gender']; label: string }[] = [
   { value: 'femenino', label: 'Femenino' },
@@ -25,29 +20,15 @@ export function Profile() {
   const navigate = useNavigate();
   const { user, profile, signOut, updateProfile } = useAuth();
 
-  const [reports, setReports] = useState<ReportSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
   // Edición de datos del perfil.
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: profile.name, age: profile.age, email: user?.email ?? '', gender: profile.gender });
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    fetchUserReports().then((data) => {
-      if (active) {
-        setReports(data);
-        setLoading(false);
-      }
-    });
-    return () => { active = false; };
-  }, []);
-
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   const startEditing = () => {
@@ -69,12 +50,6 @@ export function Profile() {
     if (emailChangePending) {
       setFeedback('Te enviamos un email a la nueva dirección para confirmar el cambio.');
     }
-  };
-
-  // Para regenerar: si el perfil ya tiene los datos básicos, arrancamos en la
-  // pregunta de convivencia (/context); si no, en datos personales.
-  const handleRegenerate = () => {
-    navigate(profile.name && profile.gender ? '/context' : '/personal-data');
   };
 
   return (
@@ -209,43 +184,11 @@ export function Profile() {
           </div>
 
           <Button
-            onClick={handleRegenerate}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg mb-8 flex items-center justify-center gap-2"
+            onClick={() => navigate('/result')}
+            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2"
           >
-            <RefreshCw className="w-5 h-5" />
-            Generar informe nuevamente
+            Volver al informe
           </Button>
-
-          <h2 className="text-lg text-gray-700 mb-3" style={{ fontFamily: 'var(--font-sans)' }}>
-            Historial
-          </h2>
-
-          {loading ? (
-            <p className="text-sm text-gray-400">Cargando tus informes…</p>
-          ) : reports.length === 0 ? (
-            <p className="text-sm text-gray-400">
-              Todavía no generaste ningún informe. Tocá “Generar informe nuevamente”.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {reports.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => navigate(`/report/${r.id}`)}
-                  className="w-full text-left bg-white rounded-2xl shadow-sm px-5 py-4 flex items-center justify-between hover:bg-[#FBEAF0]/40 transition-colors"
-                >
-                  <div>
-                    <p className="text-sm text-gray-700">{formatDate(r.createdAt)}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Ingreso {formatArs(r.monthlyIncome)} · Balance {formatArs(r.available)}/mes
-                    </p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
-                </button>
-              ))}
-            </div>
-          )}
         </motion.div>
       </div>
     </div>

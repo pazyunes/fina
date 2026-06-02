@@ -3,7 +3,6 @@ import { Main } from "./Main";
 import { Splash } from "./components/Splash";
 import { Login } from "./components/Login";
 import { Profile } from "./components/Profile";
-import { ReportView } from "./components/ReportView";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -27,17 +26,9 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
-  {
-    path: "/report/:id",
-    element: (
-      <ProtectedRoute>
-        <ReportView />
-      </ProtectedRoute>
-    ),
-  },
-  // El onboarding y el informe requieren sesión: sin login se redirige a
-  // /login y se vuelve acá después de iniciar sesión. Todas estas rutas
-  // renderizan <Main>, que mantiene el estado del flujo entre pasos.
+  // El onboarding y el informe requieren sesión. PR6: además de ProtectedRoute,
+  // los step routes están bajo OnboardingGate (en Main.tsx) que redirige a
+  // /result si el usuario ya tiene su informe — el onboarding es one-shot.
   ...[
     "/personal-data",
     "/context",

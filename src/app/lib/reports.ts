@@ -187,84 +187,46 @@ export function buildFullReasoning(userData: UserData, analysis: FinancialAnalys
   };
 }
 
-// Fire-and-forget persistence of a finished flow. Invisible to the end user;
-// failures are logged but never surfaced in the UI.
+// Persistencia del informe terminado. PR6: cada usuario tiene UN solo
+// informe (UNIQUE constraint en reports.user_id). Usamos upsert con
+// ignoreDuplicates así un segundo intento no crashea — el redirect del
+// onboarding ya debería prevenir esto, pero es defensa en profundidad.
+// Sin sesión no se guarda nada (el onboarding requiere auth desde PR3).
 export async function saveReport(userData: UserData, analysis: FinancialAnalysis): Promise<void> {
   if (!isSupabaseConfigured) return;
-  // Si hay sesión, el informe queda vinculado al usuario y aparece en su
-  // historial (/perfil). Si no, se guarda anónimo (user_id null) como antes.
   const { data: { session } } = await supabase.auth.getSession();
-  const { error } = await supabase.from('reports').insert({
-    user_id: session?.user?.id ?? null,
-    email: userData.email?.trim().toLowerCase() || null,
-    name: userData.name || null,
-    user_data: userData,
-    analysis,
-    ai_reasoning: buildFullReasoning(userData, analysis),
-  });
+  if (!session?.user) return;
+  const { error } = await supabase
+    .from('reports')
+    .upsert(
+      {
+        user_id: session.user.id,
+        email: userData.email?.trim().toLowerCase() || null,
+        name: userData.name || null,
+        user_data: userData,
+        analysis,
+        ai_reasoning: buildFullReasoning(userData, analysis),
+      },
+      { onConflict: 'user_id', ignoreDuplicates: true }
+    );
   if (error) {
     // eslint-disable-next-line no-console
     console.error('[fina] saveReport failed:', error.message);
   }
 }
 
-// Resumen de un informe para el listado del historial (/perfil).
-export interface ReportSummary {
-  id: string;
-  createdAt: string;
-  monthlyIncome: number; // ARS
-  available: number;     // balance neto (ingresos - gastos), ARS
-}
-
-// Informe completo para abrirlo en modo lectura (/report/:id).
-export interface StoredReport {
-  id: string;
-  createdAt: string;
-  userData: UserData;
-  analysis: FinancialAnalysis;
-}
-
-// Historial del usuario logueado, ordenado por fecha descendente. La RLS
-// garantiza que solo se devuelvan los informes propios.
-export async function fetchUserReports(): Promise<ReportSummary[]> {
-  if (!isSupabaseConfigured) return [];
-  const { data, error } = await supabase
+// PR6 — saber si el usuario logueado tiene su informe ya generado.
+// Se usa para gatekeeping de rutas: con informe → /result, sin informe →
+// flujo de onboarding. RLS garantiza que solo cuenta los propios.
+export async function userHasReport(): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  const { count, error } = await supabase
     .from('reports')
-    .select('id, created_at, user_data, analysis')
-    .order('created_at', { ascending: false });
+    .select('id', { count: 'exact', head: true });
   if (error) {
     // eslint-disable-next-line no-console
-    console.error('[fina] fetchUserReports failed:', error.message);
-    return [];
+    console.error('[fina] userHasReport failed:', error.message);
+    return false;
   }
-  return (data ?? []).map((r: any) => ({
-    id: r.id,
-    createdAt: r.created_at,
-    monthlyIncome: r.user_data?.monthlyIncome ?? r.analysis?.totalIncome ?? 0,
-    available: r.analysis?.available ?? 0,
-  }));
-}
-
-// Un informe completo por id (para la vista de lectura). La RLS impide leer
-// informes de otros usuarios.
-export async function fetchReportById(id: string): Promise<StoredReport | null> {
-  if (!isSupabaseConfigured) return null;
-  const { data, error } = await supabase
-    .from('reports')
-    .select('id, created_at, user_data, analysis')
-    .eq('id', id)
-    .maybeSingle();
-  if (error || !data) {
-    if (error) {
-      // eslint-disable-next-line no-console
-      console.error('[fina] fetchReportById failed:', error.message);
-    }
-    return null;
-  }
-  return {
-    id: data.id,
-    createdAt: data.created_at,
-    userData: data.user_data as UserData,
-    analysis: data.analysis as FinancialAnalysis,
-  };
+  return (count ?? 0) > 0;
 }
