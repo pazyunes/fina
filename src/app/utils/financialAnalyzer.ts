@@ -8,6 +8,9 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
   const monthlyEntertainment = userData.entertainmentFrequency * userData.entertainmentAmount * 4.33;
   const monthlyDelivery = userData.deliveryFrequency * userData.deliveryAmount * 4.33;
   const monthlySupermarket = (userData.supermarketFrequency || 0) * (userData.supermarketAmount || 0) * 4.33;
+  // PR6 — cafeterías/restaurantes. Opcional para compat con informes pre-PR6
+  // (los campos pueden no estar presentes en user_data jsonb antiguo).
+  const monthlyCafeterias = (userData.cafeteriasFrequency || 0) * (userData.cafeteriasAmount || 0) * 4.33;
   const subscriptionsCost = userData.subscriptions.reduce((sum, sub) => sum + sub.cost, 0);
   const installmentsCost = userData.installments.reduce((sum, inst) => sum + inst.monthlyAmount, 0);
 
@@ -23,6 +26,7 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
     monthlyDelivery +
     monthlyEntertainment +
     monthlySupermarket +
+    monthlyCafeterias +
     installmentsCost;
     
   const available = totalIncome - totalExpenses;

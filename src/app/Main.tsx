@@ -68,6 +68,8 @@ export function Main() {
     deliveryAmount: 0,
     supermarketFrequency: 0,
     supermarketAmount: 0,
+    cafeteriasFrequency: 0,
+    cafeteriasAmount: 0,
     goals: [],
     specificGoals: [],
   });
@@ -207,6 +209,8 @@ export function Main() {
     deliveryAmount: number;
     supermarketFrequency: number;
     supermarketAmount: number;
+    cafeteriasFrequency: number;
+    cafeteriasAmount: number;
   }) => {
     setUserData(prev => ({ ...prev, ...data }));
   };

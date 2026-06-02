@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
 import { Switch } from './ui/switch';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
-import { Zap, UtensilsCrossed, Sparkles, Plus, X, Check, ShoppingCart } from 'lucide-react';
+import { Zap, UtensilsCrossed, Sparkles, Plus, X, Check, ShoppingCart, Coffee } from 'lucide-react';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
 import { CurrencyToggle } from './CurrencyToggle';
@@ -30,6 +30,8 @@ interface ExpensesServicesProps {
     deliveryAmount: number;
     supermarketFrequency: number;
     supermarketAmount: number;
+    cafeteriasFrequency: number;
+    cafeteriasAmount: number;
   }) => void;
 }
 
@@ -74,6 +76,11 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   const [deliveryAmount, setDeliveryAmount] = useState(initial?.deliveryAmount ? String(initial.deliveryAmount) : '');
   const [noDelivery, setNoDelivery] = useState(false);
 
+  // PR6 — Cafeterías y restaurantes
+  const [cafeteriasFrequency, setCafeteriasFrequency] = useState(initial?.cafeteriasFrequency ? String(initial.cafeteriasFrequency) : '');
+  const [cafeteriasAmount, setCafeteriasAmount] = useState(initial?.cafeteriasAmount ? String(initial.cafeteriasAmount) : '');
+  const [noCafeterias, setNoCafeterias] = useState(false);
+
   // Supermarket
   const [supermarketFrequency, setSupermarketFrequency] = useState(initial?.supermarketFrequency ? String(initial.supermarketFrequency) : '');
   const [supermarketAmount, setSupermarketAmount] = useState(initial?.supermarketAmount ? String(initial.supermarketAmount) : '');
@@ -82,7 +89,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   // Controlled accordion so completed sections collapse automatically while
   // staying reopenable. Suscripciones starts open.
   const [openItems, setOpenItems] = useState<string[]>(['subs']);
-  const SECTION_ORDER = ['subs', 'entertainment', 'delivery', 'super'];
+  const SECTION_ORDER = ['subs', 'entertainment', 'delivery', 'cafeterias', 'super'];
 
   const toggleSubscription = (name: string) => {
     const newSelected = new Set(selectedSubscriptions);
@@ -164,6 +171,8 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
       deliveryAmount: parseInt(deliveryAmount.replace(/\D/g, '') || '0'),
       supermarketFrequency: parseFloat(supermarketFrequency) || 0,
       supermarketAmount: parseInt(supermarketAmount.replace(/\D/g, '') || '0'),
+      cafeteriasFrequency: parseFloat(cafeteriasFrequency) || 0,
+      cafeteriasAmount: parseInt(cafeteriasAmount.replace(/\D/g, '') || '0'),
     });
 
     navigate('/habits');
@@ -172,6 +181,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   // Per-section completion (drives the auto-close + the trigger check icon)
   const entertainmentComplete = noEntertainment || (entertainmentFrequency !== '' && entertainmentAmount !== '');
   const deliveryComplete = noDelivery || (deliveryFrequency !== '' && deliveryAmount !== '');
+  const cafeteriasComplete = noCafeterias || (cafeteriasFrequency !== '' && cafeteriasAmount !== '');
   const supermarketComplete = noSupermarket || (supermarketFrequency !== '' && supermarketAmount !== '');
   const subsCount = selectedSubscriptions.size + customSubscriptions.filter(s => s.confirmed).length;
 
@@ -182,6 +192,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
       subs: subsCount > 0,
       entertainment: entertainmentComplete,
       delivery: deliveryComplete,
+      cafeterias: cafeteriasComplete,
       super: supermarketComplete,
     };
     setOpenItems(prev => {
@@ -201,6 +212,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
   const isValid =
     entertainmentComplete &&
     deliveryComplete &&
+    cafeteriasComplete &&
     supermarketComplete &&
     // All custom subscriptions must have both name and cost
     customSubscriptions.every(sub => !sub.name || (sub.name && sub.cost));
@@ -501,6 +513,86 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
                       className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noDelivery}
                       style={{ backgroundColor: noDelivery ? '#f3f3f5' : undefined }}
+                    />
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Cafeterías y restaurantes (PR6) */}
+            <AccordionItem value="cafeterias" className="bg-white rounded-2xl shadow-sm border-0 px-5">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <TriggerLabel icon={Coffee} color="#9C7AA5" title="Cafeterías y restaurantes" done={cafeteriasComplete} />
+              </AccordionTrigger>
+              <AccordionContent className="pt-0 pb-5">
+                <p className="text-xs text-gray-500 mb-3">
+                  Salidas a almorzar / cenar, café en la calle, etc.
+                </p>
+                <div className="flex items-center gap-2 mb-4">
+                  <Switch
+                    checked={noCafeterias}
+                    onCheckedChange={(checked) => {
+                      setNoCafeterias(checked);
+                      if (checked) {
+                        setCafeteriasFrequency('0');
+                        setCafeteriasAmount('0');
+                        advanceFrom('cafeterias');
+                      }
+                    }}
+                    className="data-[state=checked]:bg-[#D4537E]"
+                  />
+                  <span className="text-sm text-gray-500">No consumo</span>
+                </div>
+
+                {noCafeterias && (
+                  <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
+                    <span className="text-xs text-gray-600">No aplica</span>
+                  </div>
+                )}
+
+                <div className="space-y-4" style={{ opacity: noCafeterias ? 0.4 : 1, pointerEvents: noCafeterias ? 'none' : 'auto' }}>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuántas veces por semana vas a una cafetería o restaurante?
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      step="1"
+                      min="0"
+                      value={cafeteriasFrequency}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === '' || /^\d+$/.test(v)) {
+                          setCafeteriasFrequency(v);
+                        }
+                      }}
+                      onBlur={() => { if (cafeteriasComplete) advanceFrom('cafeterias'); }}
+                      placeholder="Ej: 2"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      disabled={noCafeterias}
+                      style={{ backgroundColor: noCafeterias ? '#f3f3f5' : undefined }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuánto gastás aproximadamente por visita?
+                    </label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formatCurrency(cafeteriasAmount)}
+                      onChange={(e) => {
+                        const numbers = e.target.value.replace(/\D/g, '');
+                        setCafeteriasAmount(numbers);
+                      }}
+                      onBlur={() => { if (cafeteriasComplete) advanceFrom('cafeterias'); }}
+                      placeholder="$0"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      disabled={noCafeterias}
+                      style={{ backgroundColor: noCafeterias ? '#f3f3f5' : undefined }}
                     />
                   </div>
                 </div>

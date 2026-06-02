@@ -106,6 +106,10 @@ export interface UserData {
   deliveryAmount: number; // gasto por pedido
   supermarketFrequency: number; // veces por semana que va al super
   supermarketAmount: number; // gasto por visita al super
+  // PR6 — cafeterías/restaurantes (salidas, almuerzos afuera, café en la calle, etc.).
+  // Opcional para compat con informes pre-PR6 — el analyzer trata undefined como 0.
+  cafeteriasFrequency?: number; // veces por semana
+  cafeteriasAmount?: number; // gasto por visita
 
   // Habits
   knowsLastMonthExpenses: boolean;
