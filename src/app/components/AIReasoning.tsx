@@ -82,7 +82,7 @@ export function AIReasoning({ analysis }: AIReasoningProps) {
       <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-400">No hay datos de análisis disponibles</p>
-          <Button onClick={() => navigate('/splash')} className="mt-4">
+          <Button onClick={() => navigate('/')} className="mt-4">
             Volver al inicio
           </Button>
         </div>
