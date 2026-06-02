@@ -196,30 +196,39 @@
     line-height: 1.5;
   }
 
-  /* PR7b — Scrollbar visible y rosa para que se entienda que hay más contenido
-     hacia abajo en los pasos largos del onboarding y en las tabs del informe.
-     Aplica a cualquier elemento scrollable.
-     - Firefox: scrollbar-width: thin + colores explícitos.
-     - WebKit (Chrome/Safari): pseudo-elementos. En iOS Safari las barras
-       siguen apareciendo solo durante el scroll; ese es el comportamiento
-       nativo y no se puede forzar always-visible. */
-  * {
+  /* PR7b/c — Scrollbar rosa SIEMPRE visible en desktop.
+     - `overflow-y: scroll` en <html> fuerza que la barra siempre exista
+       (aunque no haya overflow), evitando que macOS/Chrome la auto-oculten.
+     - `scrollbar-gutter: stable` reserva el espacio para que el layout no
+       salte cuando aparece la barra en otras vistas.
+     - Pseudo-elementos `::-webkit-scrollbar` la pintan rosa.
+     - Firefox: scrollbar-width + scrollbar-color.
+     iOS Safari sigue auto-ocultando la barra nativa durante el reposo —
+     es una limitación del WebView que no se puede forzar desde CSS. */
+  html {
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
+  html, body, * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(212, 83, 126, 0.45) rgba(212, 83, 126, 0.08);
+    scrollbar-color: rgba(212, 83, 126, 0.55) rgba(212, 83, 126, 0.1);
   }
   *::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
   *::-webkit-scrollbar-track {
-    background: rgba(212, 83, 126, 0.08);
+    background: rgba(212, 83, 126, 0.1);
     border-radius: 9999px;
   }
   *::-webkit-scrollbar-thumb {
-    background: rgba(212, 83, 126, 0.45);
+    background: rgba(212, 83, 126, 0.55);
     border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
   }
   *::-webkit-scrollbar-thumb:hover {
-    background: rgba(212, 83, 126, 0.65);
+    background: rgba(212, 83, 126, 0.8);
+    background-clip: padding-box;
   }
 }
