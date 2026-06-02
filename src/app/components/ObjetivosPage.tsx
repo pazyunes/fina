@@ -5,6 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Check, TrendingUp, Sparkles, Clock } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
+import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
 import { BottomNav } from './BottomNav';
 import { PreferencesModal } from './PreferencesModal';
 
@@ -47,6 +48,7 @@ export function ObjetivosPage({ analysis }: ObjetivosPageProps) {
   const navigate = useNavigate();
   const [showPrefs, setShowPrefs] = useState(false);
   const goals = analysis.goalsAnalysis ?? [];
+  const strategies = buildGoalStrategies(analysis);
 
   return (
     <div className="min-h-screen bg-[#FBEAF0] pb-24 flex flex-col">
@@ -80,22 +82,25 @@ export function ObjetivosPage({ analysis }: ObjetivosPageProps) {
           )}
         </section>
 
-        {/* ACCIONABLES */}
-        {analysis.actionPlan && analysis.actionPlan.length > 0 && (
+        {/* ESTRATEGIAS PARA LLEGAR AL OBJETIVO */}
+        {strategies.length > 0 && (
           <section>
             <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">
-              Cómo llegar al objetivo — accionables
+              Cómo llegar al objetivo — varias opciones
+            </p>
+            <p className="text-xs text-gray-500 mb-2">
+              Marcá las que vas implementando. Cada una suma a la cuota mensual de tu objetivo.
             </p>
             <div className="bg-white rounded-xl px-4 py-1 border border-[#F4C0D1]/50">
-              {analysis.actionPlan.map((step, i) => (
-                <ActionRow key={i} text={step} first={i === 0} />
+              {strategies.map((s, i) => (
+                <StrategyRow key={i} strategy={s} first={i === 0} />
               ))}
             </div>
           </section>
         )}
 
         {/* SI CUMPLÍS TODO */}
-        {analysis.actionPlan && analysis.actionPlan.length > 0 && (
+        {strategies.length > 0 && (
           <section>
             <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">
               Si cumplís todos los accionables
@@ -206,7 +211,10 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
   );
 }
 
-function ActionRow({ text, first }: { text: string; first: boolean }) {
+// Row del listado de estrategias. Layout del HTML de referencia: checkbox a la
+// izquierda, título + subtítulo en el medio, badge de impacto verde a la
+// derecha. El estado "done" es solo visual (no se persiste todavía).
+function StrategyRow({ strategy, first }: { strategy: GoalStrategy; first: boolean }) {
   const [done, setDone] = useState(false);
   return (
     <div
@@ -216,9 +224,17 @@ function ActionRow({ text, first }: { text: string; first: boolean }) {
       <div className={`w-5 h-5 rounded-full border-2 border-[#D4537E] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${done ? 'bg-[#D4537E]' : ''}`}>
         {done && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
       </div>
-      <p className={`flex-1 text-xs leading-relaxed ${done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-        {text}
-      </p>
+      <div className="flex-1 min-w-0">
+        <p className={`text-xs font-medium leading-snug ${done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+          {strategy.emoji} {strategy.title}
+        </p>
+        <p className={`text-[11px] leading-relaxed mt-0.5 ${done ? 'text-gray-300' : 'text-gray-500'}`}>
+          {strategy.subtitle}
+        </p>
+      </div>
+      <span className={`text-[11px] font-medium whitespace-nowrap shrink-0 mt-0.5 ${done ? 'text-gray-300' : 'text-[#3B6D11]'}`}>
+        {strategy.impact}
+      </span>
     </div>
   );
 }
