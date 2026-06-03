@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { FinancialAnalysis, UserData } from '../types';
+import { analyzeFinances } from '../utils/financialAnalyzer';
 
 // Full, human-auditable dump of every step the AI Reasoning dashboard shows
 // plus the raw inputs that fed into the financial analyzer. Stored in the
@@ -252,4 +253,34 @@ export async function fetchUserReport(): Promise<{ userData: UserData; analysis:
     userData: data.user_data as UserData,
     analysis: data.analysis as FinancialAnalysis,
   };
+}
+
+// PR8 — Reescribe el informe del usuario con un userData actualizado.
+// Re-corre el analyzer del lado cliente y persiste user_data + analysis +
+// ai_reasoning. Devuelve el nuevo analysis (o null si falló) así el caller
+// puede actualizar el estado de UI sin esperar a un refetch redondante.
+// Sigue siendo "un informe por usuario" (UNIQUE en user_id) — la UPDATE
+// matchea la fila existente.
+export async function updateReportData(newUserData: UserData): Promise<{ error: string | null; analysis: FinancialAnalysis | null }> {
+  if (!isSupabaseConfigured) return { error: 'Supabase no configurado', analysis: null };
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return { error: 'Sin sesión activa', analysis: null };
+
+  const analysis = analyzeFinances(newUserData);
+
+  const { error } = await supabase
+    .from('reports')
+    .update({
+      user_data: newUserData,
+      analysis,
+      ai_reasoning: buildFullReasoning(newUserData, analysis),
+    })
+    .eq('user_id', session.user.id);
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error('[fina] updateReportData failed:', error.message);
+    return { error: error.message, analysis: null };
+  }
+  return { error: null, analysis };
 }

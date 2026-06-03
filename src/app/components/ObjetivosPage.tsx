@@ -2,15 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Check, TrendingUp, Sparkles, Clock } from 'lucide-react';
-import { FinancialAnalysis } from '../types';
+import { Check, TrendingUp, Sparkles, Clock, Plus } from 'lucide-react';
+import { FinancialAnalysis, UserData } from '../types';
 import { formatArs } from '../lib/currency';
 import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
+import { updateReportData } from '../lib/reports';
 import { BottomNav } from './BottomNav';
 import { PreferencesModal } from './PreferencesModal';
+import { AddGoalModal } from './AddGoalModal';
 
 interface ObjetivosPageProps {
   analysis: FinancialAnalysis;
+  // PR8 — Main pasa este callback para que al agregar/editar datos el
+  // analysis vivo se refresque sin esperar a un refetch.
+  onAnalysisChange?: (analysis: FinancialAnalysis, userData: UserData) => void;
 }
 
 // PR7 — Pestaña Objetivos. Layout inspirado en el HTML de referencia:
@@ -44,11 +49,37 @@ function goalEmoji(title: string): string {
   return '🎯';
 }
 
-export function ObjetivosPage({ analysis }: ObjetivosPageProps) {
+export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps) {
   const navigate = useNavigate();
   const [showPrefs, setShowPrefs] = useState(false);
+  const [showAddGoal, setShowAddGoal] = useState(false);
+  const [savingGoal, setSavingGoal] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const goals = analysis.goalsAnalysis ?? [];
   const strategies = buildGoalStrategies(analysis);
+
+  // Add new goal: mergea con userData, llama a updateReportData, propaga.
+  const handleAddGoal = async (goal: {
+    title: string;
+    amount: number;
+    timeframe: number;
+    currency: 'ARS' | 'USD';
+    originalAmount: number;
+  }) => {
+    setSavingGoal(true);
+    setErrorMsg(null);
+    const newUserData: UserData = {
+      ...analysis.userData,
+      specificGoals: [...(analysis.userData.specificGoals ?? []), goal],
+    };
+    const { error, analysis: nextAnalysis } = await updateReportData(newUserData);
+    setSavingGoal(false);
+    if (error || !nextAnalysis) {
+      setErrorMsg(error ?? 'No se pudo guardar el objetivo.');
+      return;
+    }
+    onAnalysisChange?.(nextAnalysis, newUserData);
+  };
 
   return (
     <div className="min-h-screen bg-[#FBEAF0] pb-24 flex flex-col">
@@ -122,6 +153,17 @@ export function ObjetivosPage({ analysis }: ObjetivosPageProps) {
           </section>
         )}
 
+        {/* CTA → Agregar objetivo nuevo */}
+        <button
+          type="button"
+          onClick={() => setShowAddGoal(true)}
+          disabled={savingGoal}
+          className="w-full bg-white border-2 border-[#D4537E] text-[#D4537E] rounded-xl py-3 text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#FBEAF0]/40 transition-colors disabled:opacity-50"
+        >
+          <Plus className="w-4 h-4" /> {savingGoal ? 'Guardando…' : 'Agregar nuevo objetivo'}
+        </button>
+        {errorMsg && <p className="text-xs text-[#D4537E] text-center">{errorMsg}</p>}
+
         {/* CTA → Inversiones */}
         <button
           type="button"
@@ -145,6 +187,14 @@ export function ObjetivosPage({ analysis }: ObjetivosPageProps) {
 
       {showPrefs && (
         <PreferencesModal onClose={() => setShowPrefs(false)} />
+      )}
+
+      {showAddGoal && (
+        <AddGoalModal
+          usdRate={analysis.userData.exchangeRate?.rate ?? null}
+          onClose={() => setShowAddGoal(false)}
+          onAdd={handleAddGoal}
+        />
       )}
     </div>
   );

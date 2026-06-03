@@ -276,7 +276,15 @@ export function Main() {
     case '/result':
       return analysis ? <Result analysis={analysis} /> : <LoadingScreen />;
     case '/objetivos':
-      return analysis ? <ObjetivosPage analysis={analysis} /> : <LoadingScreen />;
+      return analysis ? (
+        <ObjetivosPage
+          analysis={analysis}
+          onAnalysisChange={(next, nextUserData) => {
+            setAnalysis(next);
+            setUserData(nextUserData);
+          }}
+        />
+      ) : <LoadingScreen />;
     case '/inversiones':
       return analysis ? <InversionesPage analysis={analysis} /> : <LoadingScreen />;
     default:
