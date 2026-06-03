@@ -71,6 +71,15 @@ export function Result({ analysis }: ResultProps) {
   // Top 5 para el bar chart horizontal — el HTML muestra 5 barras.
   const topCategories = categories.slice(0, 5);
 
+  // PR8 — Potencial de inversión: % de los ingresos que podrían destinarse a
+  // inversión recomendada. Asumimos 70% del disponible (resto liquidez/
+  // imprevistos). Si available <= 0 → 0%.
+  const investRecommended = analysis.available > 0 && analysis.totalIncome > 0
+    ? Math.max(0, Math.min(100, Math.round((analysis.available * 0.7 / analysis.totalIncome) * 100)))
+    : 0;
+  const investRest = 100 - investRecommended;
+  const investAmount = analysis.available > 0 ? Math.round(analysis.available * 0.7) : 0;
+
   return (
     <div className="min-h-screen bg-[#FBEAF0] pb-24 flex flex-col">
       {/* Header rosa sticky */}
@@ -133,6 +142,51 @@ export function Result({ analysis }: ResultProps) {
             <div className="bg-[#FBEAF0] rounded-lg px-3 py-2.5 text-xs text-[#993556] border-l-[3px] border-[#D4537E]">
               Aproximadamente el <strong className="text-[#D4537E]">{reducible}%</strong> de tus gastos son reducibles con pequeños cambios de hábitos.
             </div>
+          </div>
+        </section>
+
+        {/* POTENCIAL DE INVERSIÓN (PR8) */}
+        <section>
+          <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">Potencial de inversión</p>
+          <div className="bg-white rounded-xl p-4 border border-[#F4C0D1]/50">
+            <p className="text-sm mb-3">¿Cuánto podrías invertir?</p>
+            {investRecommended > 0 ? (
+              <>
+                <div className="h-40 mb-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Invertible', value: investRecommended },
+                          { name: 'Para gastos / buffer', value: investRest },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={0}
+                        outerRadius={65}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        <Cell fill="#D4537E" />
+                        <Cell fill="#F4C0D1" />
+                      </Pie>
+                      <Tooltip formatter={(v: number) => `${v}%`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex justify-center gap-4 text-[11px] text-gray-600 mb-3">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#D4537E' }} /> Invertible {investRecommended}%</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#F4C0D1' }} /> Resto {investRest}%</span>
+                </div>
+                <div className="bg-[#FBEAF0] rounded-lg px-3 py-2.5 text-xs text-[#993556] border-l-[3px] border-[#D4537E]">
+                  Podrías destinar hasta <strong className="text-[#D4537E]">{formatKpi(investAmount)}/mes</strong> a inversión y mantener el resto líquido para gastos e imprevistos. Mirá la pestaña Inversiones para opciones concretas.
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-gray-500 text-center py-6">
+                Por ahora tus gastos absorben todo lo que entra. Cuando liberés disponible — bajando gastos reducibles o sumando ingresos — vas a poder destinar parte a inversión.
+              </p>
+            )}
           </div>
         </section>
 
