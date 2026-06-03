@@ -17,6 +17,8 @@ import { UserData, Currency } from '../types';
 
 interface ExpensesServicesProps {
   initial?: Partial<UserData>;
+  // PR8 — edit mode skips the internal navigate('/habits').
+  editMode?: boolean;
   onComplete: (data: {
     subscriptions: Array<{
       name: string;
@@ -44,7 +46,7 @@ const PRESET_SUBSCRIPTIONS = [
   { name: 'Prime Video', price: 6000 },
 ];
 
-export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps) {
+export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServicesProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -176,7 +178,7 @@ export function ExpensesServices({ initial, onComplete }: ExpensesServicesProps)
       cafeteriasAmount: parseInt(cafeteriasAmount.replace(/\D/g, '') || '0'),
     });
 
-    navigate('/habits');
+    if (!editMode) navigate('/habits');
   };
 
   // Per-section completion (drives the auto-close + the trigger check icon)

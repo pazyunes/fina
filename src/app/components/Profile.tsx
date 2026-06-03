@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { LogOut, CircleUserRound, Pencil } from 'lucide-react';
+import { LogOut, CircleUserRound, Pencil, Wallet, Home, Coffee, Target, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -184,6 +184,22 @@ export function Profile() {
             {feedback && <p className="text-xs text-[#3B6D11] mt-3">{feedback}</p>}
           </div>
 
+          {/* PR8 — Sección de edición de datos del informe */}
+          <div className="mb-6">
+            <h2 className="text-sm font-medium text-gray-700 mb-3" style={{ fontFamily: 'var(--font-sans)' }}>
+              Mis datos financieros
+            </h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Actualizá lo que cambió y el informe se recalcula al toque.
+            </p>
+            <div className="bg-white rounded-2xl shadow-sm divide-y divide-[#F4C0D1]/50 overflow-hidden">
+              <EditRow icon={Wallet} label="Mis ingresos" to="/editar/ingresos" navigate={navigate} />
+              <EditRow icon={Home} label="Mis gastos fijos" to="/editar/gastos-fijos" navigate={navigate} />
+              <EditRow icon={Coffee} label="Mis gastos variables" to="/editar/gastos-variables" navigate={navigate} />
+              <EditRow icon={Target} label="Mis objetivos" to="/editar/objetivos" navigate={navigate} />
+            </div>
+          </div>
+
           <Button
             onClick={() => navigate('/result')}
             className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2"
@@ -194,5 +210,30 @@ export function Profile() {
       </div>
       <BottomNav />
     </div>
+  );
+}
+
+// Fila clickeable para editar una sección de datos financieros del informe.
+function EditRow({
+  icon: Icon,
+  label,
+  to,
+  navigate,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  to: string;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(to)}
+      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[#FBEAF0]/40 transition-colors"
+    >
+      <Icon className="w-5 h-5 text-[#D4537E]" />
+      <span className="flex-1 text-sm text-gray-700">{label}</span>
+      <ChevronRight className="w-4 h-4 text-gray-300" />
+    </button>
   );
 }

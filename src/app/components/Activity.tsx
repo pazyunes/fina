@@ -18,6 +18,9 @@ type IncomeType = 'fixed' | 'freelance' | 'both';
 
 interface ActivityProps {
   initial?: Partial<UserData>;
+  // PR8 — En edit mode el componente NO navega al siguiente step; deja que el
+  // contenedor (Main, vía la ruta /editar/ingresos) decida adónde ir.
+  editMode?: boolean;
   onComplete: (data: {
     worksOrStudies: Activity;
     monthlyIncome: number; // siempre en ARS (suma de fijo + promedio freelance, según corresponda)
@@ -76,7 +79,7 @@ const initMonth = (
   return { amount: formatCurrency(String(saved.amount)), currency: saved.currency };
 };
 
-export function Activity({ initial, onComplete }: ActivityProps) {
+export function Activity({ initial, onComplete, editMode }: ActivityProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [activity, setActivity] = useState<Activity | null>(initial?.worksOrStudies ?? null);
@@ -207,7 +210,7 @@ export function Activity({ initial, onComplete }: ActivityProps) {
       incomeType,
       freelanceIncome,
     });
-    navigate('/bank');
+    if (!editMode) navigate('/bank');
   };
 
   const getFixedLabel = () => {

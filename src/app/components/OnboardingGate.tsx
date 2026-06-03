@@ -29,6 +29,11 @@ const REPORT_FAMILY = [
   '/objetivos',
   '/inversiones',
   '/ai-reasoning',
+  // PR8 — edición desde /perfil. Requieren informe ya generado.
+  '/editar/ingresos',
+  '/editar/gastos-fijos',
+  '/editar/gastos-variables',
+  '/editar/objetivos',
 ];
 
 export function OnboardingGate({ children }: { children: ReactNode }) {

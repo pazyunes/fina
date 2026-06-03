@@ -21,6 +21,8 @@ type FixedKey = 'housing' | 'health' | 'beauty' | 'therapy' | 'gym';
 interface ExpensesFixedProps {
   initial?: Partial<UserData>;
   monthlyIncome: number;
+  // PR8 — En edit mode no navega al siguiente step; el contenedor decide.
+  editMode?: boolean;
   onComplete: (data: {
     housing: number;
     health: number;
@@ -71,7 +73,7 @@ const DEFAULT_TRANSPORT: TransportData = {
   rideAppCostPerTrip: 4000,
 };
 
-export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFixedProps) {
+export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: ExpensesFixedProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -242,7 +244,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete }: ExpensesFi
       transportDetails: transportData,
       installments: validInstallments,
     });
-    navigate('/expenses-services');
+    if (!editMode) navigate('/expenses-services');
   };
 
   const isTransportValid = isTransportDataValid(transportData);

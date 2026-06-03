@@ -16,7 +16,7 @@ import { LoadingScreen } from './components/OnboardingMessages';
 import { UserData, FinancialAnalysis, TransportData } from './types';
 import { analyzeFinances } from './utils/financialAnalyzer';
 import { DEBUG_MODE } from './config';
-import { saveReport, fetchUserReport } from './lib/reports';
+import { saveReport, fetchUserReport, updateReportData } from './lib/reports';
 import { fetchExchangeRate } from './lib/exchangeRate';
 import { useAuth } from './lib/auth';
 
@@ -304,6 +304,82 @@ export function Main() {
       ) : <LoadingScreen />;
     case '/inversiones':
       return analysis ? <InversionesPage analysis={analysis} /> : <LoadingScreen />;
+    // PR8 — Rutas de edición. Reusan los step components con editMode=true
+    // y un onComplete que mergea con userData, persiste vía updateReportData
+    // y vuelve a /perfil. La OnboardingGate ya garantiza hasReport=true.
+    case '/editar/ingresos':
+      return (
+        <Activity
+          initial={userData}
+          editMode
+          onComplete={async (data) => {
+            const merged = { ...userData, ...data } as UserData;
+            const { analysis: next } = await updateReportData(merged);
+            setUserData(merged);
+            if (next) setAnalysis(next);
+            navigate('/perfil');
+          }}
+        />
+      );
+    case '/editar/gastos-fijos':
+      return (
+        <ExpensesFixed
+          initial={userData}
+          monthlyIncome={userData.monthlyIncome || 0}
+          editMode
+          onComplete={async (data) => {
+            // ExpensesFixed envía housing/health/.../transportDetails/installments aparte.
+            const merged: UserData = {
+              ...(userData as UserData),
+              expenses: {
+                ...(userData as UserData).expenses,
+                housing: data.housing,
+                health: data.health,
+                beauty: data.beauty,
+                therapy: data.therapy,
+                gym: data.gym,
+              },
+              housingCurrency: data.housingCurrency,
+              housingOriginalAmount: data.housingOriginalAmount,
+              therapyDetails: data.therapyDetails,
+              transportDetails: data.transportDetails,
+              installments: data.installments,
+            };
+            const { analysis: next } = await updateReportData(merged);
+            setUserData(merged);
+            if (next) setAnalysis(next);
+            navigate('/perfil');
+          }}
+        />
+      );
+    case '/editar/gastos-variables':
+      return (
+        <ExpensesServices
+          initial={userData}
+          editMode
+          onComplete={async (data) => {
+            const merged: UserData = { ...(userData as UserData), ...data };
+            const { analysis: next } = await updateReportData(merged);
+            setUserData(merged);
+            if (next) setAnalysis(next);
+            navigate('/perfil');
+          }}
+        />
+      );
+    case '/editar/objetivos':
+      return (
+        <Goals
+          initial={userData}
+          editMode
+          onComplete={async (data) => {
+            const merged: UserData = { ...(userData as UserData), ...data };
+            const { analysis: next } = await updateReportData(merged);
+            setUserData(merged);
+            if (next) setAnalysis(next);
+            navigate('/perfil');
+          }}
+        />
+      );
     default:
       return <LoadingScreen />;
   }

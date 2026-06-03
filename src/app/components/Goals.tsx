@@ -23,6 +23,8 @@ interface GoalItem {
 
 interface GoalsProps {
   initial?: Partial<UserData>;
+  // PR8 — edit mode skips the internal navigate('/loading' | '/ai-reasoning').
+  editMode?: boolean;
   onComplete: (data: {
     goals: string[];
     specificGoals: Array<{
@@ -57,7 +59,7 @@ const GOAL_OPTIONS = [
   'No tengo'
 ];
 
-export function Goals({ initial, onComplete }: GoalsProps) {
+export function Goals({ initial, onComplete, editMode }: GoalsProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const usdRate = initial?.exchangeRate?.rate ?? null;
@@ -150,7 +152,7 @@ export function Goals({ initial, onComplete }: GoalsProps) {
     });
     
     // Navigate to AI Reasoning if debug mode is enabled, otherwise go to result
-    navigate(DEBUG_MODE ? '/ai-reasoning' : '/loading');
+    if (!editMode) navigate(DEBUG_MODE ? '/ai-reasoning' : '/loading');
   };
 
   const isValid = selectedGoals.length > 0 || specificGoals.length > 0;

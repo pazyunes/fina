@@ -9,6 +9,9 @@ interface OnboardingProgressProps {
 // filled, upcoming ones are greyed out.
 export function OnboardingProgress({ currentPath }: OnboardingProgressProps) {
   const currentIndex = getStepIndex(currentPath);
+  // PR8 — fuera del flujo de onboarding (ej: rutas /editar/*) no tiene sentido
+  // mostrar la barra; nos saltamos el render.
+  if (currentIndex === -1) return null;
 
   return (
     <div

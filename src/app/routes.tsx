@@ -42,6 +42,11 @@ export const router = createBrowserRouter([
     // PR7 — pestañas adicionales del informe (Bottom Nav).
     "/objetivos",
     "/inversiones",
+    // PR8 — Edición de datos desde /perfil.
+    "/editar/ingresos",
+    "/editar/gastos-fijos",
+    "/editar/gastos-variables",
+    "/editar/objetivos",
   ].map((path) => ({
     path,
     element: (
