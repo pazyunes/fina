@@ -98,13 +98,25 @@ export function Result({ analysis }: ResultProps) {
         transition={{ duration: 0.3 }}
         className="flex-1 p-4 max-w-md mx-auto w-full space-y-5"
       >
-        {/* RESUMEN */}
+        {/* RESUMEN — PR8b: Disponible grande arriba, Ingresos y Gastos abajo */}
         <section>
           <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">Resumen</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2 bg-white rounded-xl px-4 py-4 border border-[#F4C0D1]/50 text-center">
+              <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-wider">Disponible</p>
+              <p
+                className="font-medium leading-none"
+                style={{
+                  color: '#D4537E',
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 'clamp(1.75rem, 7vw, 2.5rem)',
+                }}
+              >
+                {formatKpi(Math.max(analysis.available, 0))}
+              </p>
+            </div>
             <KpiTile label="Ingresos" value={formatKpi(analysis.totalIncome)} color="#3B6D11" />
             <KpiTile label="Gastos" value={formatKpi(analysis.totalExpenses)} color="#D85A30" />
-            <KpiTile label="Disponible" value={formatKpi(Math.max(analysis.available, 0))} color="#D4537E" />
           </div>
         </section>
 
