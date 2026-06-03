@@ -45,12 +45,14 @@ const formatGoalAmount = (value: string) => {
 // PR6c — sacadas "Ahorrar para emergencias" e "Invertir"; agregada
 // "Otro / Agregar objetivo específico" que abre el panel para crear un
 // objetivo a medida.
+// PR8 — Invertir vuelve.
 const CUSTOM_GOAL_OPTION = 'Otro / Agregar objetivo específico';
 const GOAL_OPTIONS = [
   'Viajar',
   'Comprar algo específico',
   'Pagar deudas',
   'Independizarme',
+  'Invertir',
   CUSTOM_GOAL_OPTION,
   'No tengo'
 ];

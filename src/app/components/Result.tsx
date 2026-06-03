@@ -70,7 +70,6 @@ export function Result({ analysis }: ResultProps) {
 
   // Top 5 para el bar chart horizontal — el HTML muestra 5 barras.
   const topCategories = categories.slice(0, 5);
-  const desgloseCategories = categories.slice(0, 6);
 
   return (
     <div className="min-h-screen bg-[#FBEAF0] pb-24 flex flex-col">
@@ -169,35 +168,18 @@ export function Result({ analysis }: ResultProps) {
           </section>
         )}
 
-        {/* DESGLOSE DETALLADO */}
-        {desgloseCategories.length > 0 && (
-          <section>
-            <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">Desglose detallado</p>
-            <div className="bg-white rounded-xl px-4 py-2 border border-[#F4C0D1]/50">
-              {desgloseCategories.map((c, i) => {
-                const pct = totalCategories > 0 ? Math.round((c.amount / totalCategories) * 100) : 0;
-                return (
-                  <div key={c.key} className={`flex items-center gap-2 py-2 ${i > 0 ? 'border-t border-[#F4C0D1]/50' : ''}`}>
-                    <span className="text-base">{c.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium mb-1 truncate">{c.label}</p>
-                      <div className="h-1.5 bg-[#FBEAF0] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#D4537E] rounded-full"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-medium">~{formatKpi(c.amount)}</p>
-                      <p className="text-[10px] text-gray-500">{pct}%</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
+        {/* DESCUENTOS DISPONIBLES PARA VOS (PR8 — placeholder de cupones) */}
+        <section>
+          <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">Descuentos disponibles para vos</p>
+          <div className="bg-white rounded-xl px-4 py-5 border border-[#F4C0D1]/50 text-center">
+            <p className="text-2xl mb-2">🎟️</p>
+            <p className="text-sm font-medium text-gray-800 mb-1">Próximamente</p>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Acá van a aparecer cupones de descuento elegidos según tus gustos y categorías de gasto.
+              Estamos trabajando para conseguirlos.
+            </p>
+          </div>
+        </section>
 
         {/* TU NIVEL FINANCIERO */}
         <section>
