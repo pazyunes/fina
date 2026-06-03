@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './supabase';
-import { userHasReport } from './reports';
+import { userHasReport, fetchUserReport } from './reports';
+import type { FinancialAnalysis, UserData } from '../types';
 
 // Datos de perfil guardados en el user_metadata de Supabase Auth.
 export interface Profile {
@@ -22,6 +23,11 @@ interface AuthContextValue {
   // Permite a Result.tsx avisarle al provider que acaba de guardarse un informe
   // sin tener que esperar al próximo session change (que no llega).
   markHasReport: () => void;
+  // PR8 — Informe cacheado al nivel del provider para que la navegación entre
+  // tabs no muestre LoadingScreen. Se hidrata una sola vez cuando session +
+  // hasReport=true. Main puede sobreescribirlo cuando regenera el informe.
+  cachedReport: { userData: UserData; analysis: FinancialAnalysis } | null;
+  setCachedReport: (data: { userData: UserData; analysis: FinancialAnalysis } | null) => void;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   // needsConfirmation: true si Supabase pide confirmar el email antes de loguear.
   // phone (opcional, E.164) se guarda en user_metadata y un effect lo copia a
@@ -41,6 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // null = todavía no se resolvió la query (loading); true/false una vez resuelta.
   const [hasReport, setHasReport] = useState<boolean | null>(null);
   const markHasReport = useCallback(() => setHasReport(true), []);
+  // PR8 — Cache del informe del usuario para que las navegaciones entre tabs no
+  // disparen LoadingScreen.
+  const [cachedReport, setCachedReport] = useState<{ userData: UserData; analysis: FinancialAnalysis } | null>(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -70,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const uid = session?.user?.id;
     if (!uid) {
       setHasReport(false);
+      setCachedReport(null); // logout o cambio de usuario → tirar cache.
       return;
     }
     setHasReport(null);
@@ -79,6 +89,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => { active = false; };
   }, [session?.user?.id]);
+
+  // PR8 — Cuando se confirma que el usuario tiene informe, lo precargamos en
+  // cache una sola vez. A partir de ahí cualquier navegación a /result,
+  // /objetivos o /inversiones renderiza con datos en memoria, sin pasar por
+  // LoadingScreen.
+  useEffect(() => {
+    if (!isSupabaseConfigured || !session?.user || hasReport !== true || cachedReport) return;
+    let active = true;
+    fetchUserReport().then((r) => {
+      if (active && r) setCachedReport(r);
+    });
+    return () => { active = false; };
+  }, [session?.user?.id, hasReport, cachedReport]);
 
   // Cuando llega una sesión nueva, si el user_metadata trae phone y la fila
   // de user_profiles todavía no lo tiene seteado, lo copiamos. Cubre dos
@@ -144,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, hasReport, markHasReport, signIn, signUp, signOut, updateProfile }}
+      value={{ session, user, profile, loading, hasReport, markHasReport, cachedReport, setCachedReport, signIn, signUp, signOut, updateProfile }}
     >
       {children}
     </AuthContext.Provider>

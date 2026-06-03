@@ -23,9 +23,9 @@ import { useAuth } from './lib/auth';
 export function Main() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, updateProfile, hasReport, markHasReport } = useAuth();
+  const { user, profile, updateProfile, hasReport, markHasReport, cachedReport, setCachedReport } = useAuth();
 
-  const [userData, setUserData] = useState<Partial<UserData>>({
+  const [userData, setUserData] = useState<Partial<UserData>>(() => cachedReport?.userData ?? {
     name: '',
     age: '',
     email: '',
@@ -70,7 +70,10 @@ export function Main() {
     specificGoals: [],
   });
 
-  const [analysis, setAnalysis] = useState<FinancialAnalysis | null>(null);
+  // PR8 — Si AuthProvider ya tiene cacheado el informe (caso típico al volver
+  // desde /perfil), inicializamos directamente con esos valores y nos
+  // ahorramos el LoadingScreen.
+  const [analysis, setAnalysis] = useState<FinancialAnalysis | null>(() => cachedReport?.analysis ?? null);
 
   // PR6 — la lógica de "qué se muestra en /" la maneja RootRedirect ahora;
   // Main solo se monta en step routes / informe. Si por algún motivo se carga
@@ -231,25 +234,39 @@ export function Main() {
 
   // PR6 — Hidratación de /result desde DB. Si el usuario aterriza acá tras
   // un refresh (RootRedirect → /result porque hasReport=true), el state
-  // in-memory está vacío. Cargamos su único informe (UNIQUE en reports.user_id
-  // garantiza que es uno solo) y lo dejamos en analysis para que el switch
-  // de abajo renderice. AIReasoning se hidrata igual porque comparte estado.
-  const needsHydration =
-    !analysis &&
-    ['/result', '/ai-reasoning', '/objetivos', '/inversiones'].includes(location.pathname) &&
-    !!user &&
-    hasReport === true;
+  // in-memory está vacío. PR8 — la mayoría de las veces el cache de
+  // AuthProvider ya tiene el informe y los useState arriba lo agarraron en
+  // la inicialización; este effect cubre el caso edge donde el cache llega
+  // después del mount (p. ej. usuaria que entra directo a /result en una
+  // sesión recién hidratada).
   useEffect(() => {
-    if (!needsHydration) return;
+    if (analysis) return;
+    if (cachedReport) {
+      setUserData(cachedReport.userData);
+      setAnalysis(cachedReport.analysis);
+      return;
+    }
+    if (!user || hasReport !== true) return;
+    if (!['/result', '/ai-reasoning', '/objetivos', '/inversiones'].includes(location.pathname)) return;
     let active = true;
     fetchUserReport().then((r) => {
       if (active && r) {
         setUserData(r.userData);
         setAnalysis(r.analysis);
+        setCachedReport(r);
       }
     });
     return () => { active = false; };
-  }, [needsHydration]);
+  }, [analysis, cachedReport, hasReport, user, location.pathname]);
+
+  // PR8 — Reflejar cualquier cambio local (terminar onboarding, agregar
+  // objetivo, etc.) en el cache compartido para que el resto de la app
+  // (Profile, otras tabs si reabren) lo vea.
+  useEffect(() => {
+    if (analysis && (userData as UserData).name) {
+      setCachedReport({ userData: userData as UserData, analysis });
+    }
+  }, [analysis, userData]);
 
   // Render appropriate component based on route
   switch (location.pathname) {
