@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { ShieldHalf } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
+import { g } from '../utils/gender';
 import { BottomNav } from './BottomNav';
 
 interface InversionesPageProps {
@@ -13,19 +14,20 @@ interface InversionesPageProps {
 // disclaimer.
 
 // Mapeo grueso del financialLevel a un perfil de riesgo + badge.
-function riskProfile(level: string): { title: string; copy: string; badge: 'moderado' | 'conservador' | 'inicio' } {
+// PR8 — Los títulos usan g() para adaptarse al género elegido en el onboarding.
+function riskProfile(level: string, gender: FinancialAnalysis['userData']['gender']): { title: string; copy: string; badge: 'moderado' | 'conservador' | 'inicio' } {
   if (level.includes('Inversor')) return {
-    title: 'Equilibrada',
+    title: g(gender, 'Equilibrada', 'Equilibrado'),
     copy: 'Ya invertís — te interesa balancear riesgo y rendimiento',
     badge: 'moderado',
   };
   if (level.includes('Con ahorro')) return {
-    title: 'Conservadora con apertura',
+    title: `${g(gender, 'Conservadora', 'Conservador')} con apertura`,
     copy: 'Priorizás la seguridad pero querés que la plata rinda',
     badge: 'moderado',
   };
   if (level.includes('sin control')) return {
-    title: 'Conservadora',
+    title: g(gender, 'Conservadora', 'Conservador'),
     copy: 'Mejor arrancar por instrumentos seguros y líquidos',
     badge: 'conservador',
   };
@@ -70,7 +72,7 @@ function projection(available: number) {
 }
 
 export function InversionesPage({ analysis }: InversionesPageProps) {
-  const profile = riskProfile(analysis.financialLevel);
+  const profile = riskProfile(analysis.financialLevel, analysis.userData.gender);
   const recommendations = (analysis.recommendedInvestments ?? []).slice(0, 3);
   const rows = projection(analysis.available);
   const extraVsBase = rows[2].value - rows[0].value; // FCI vs sin invertir

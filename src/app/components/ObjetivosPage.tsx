@@ -186,7 +186,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
       <BottomNav />
 
       {showPrefs && (
-        <PreferencesModal onClose={() => setShowPrefs(false)} />
+        <PreferencesModal onClose={() => setShowPrefs(false)} gender={analysis.userData.gender} />
       )}
 
       {showAddGoal && (

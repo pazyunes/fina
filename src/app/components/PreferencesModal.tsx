@@ -4,6 +4,8 @@ import { X, Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { fetchUserPreferences, saveUserPreferences } from '../lib/preferences';
+import { g } from '../utils/gender';
+import { UserData } from '../types';
 
 // PR7 — Form de "Quiero recomendaciones personalizadas". Persistencia en
 // user_preferences (migration 0006). Se abre desde ObjetivosPage como un
@@ -31,9 +33,11 @@ const emojiOf = (slug: string) =>
 
 interface PreferencesModalProps {
   onClose: () => void;
+  // PR8 — Gender opcional para adaptar el copy del form ("dispuesta/o").
+  gender?: UserData['gender'];
 }
 
-export function PreferencesModal({ onClose }: PreferencesModalProps) {
+export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
   // Ranking: array ordenado de slugs. ranking[0] = #1 (la que MENOS está
   // dispuesta a recortar); ranking[4] = #5 (la que más). Máx 5.
   const [ranking, setRanking] = useState<string[]>([]);
@@ -112,7 +116,7 @@ export function PreferencesModal({ onClose }: PreferencesModalProps) {
           {/* Top-5 ranking */}
           <section>
             <p className="text-sm font-medium text-gray-700 mb-1">
-              ¿Qué gastos NO estás dispuesta a recortar?
+              ¿Qué gastos NO estás {g(gender, 'dispuesta', 'dispuesto')} a recortar?
             </p>
             <p className="text-xs text-gray-500 mb-3">
               Tocá hasta 5 en orden. El <strong>#1</strong> es lo que menos recortarías; el <strong>#5</strong>, lo que más.
