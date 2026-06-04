@@ -241,15 +241,17 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
         >
           <BackButton currentPath={pathname} />
 
-          <StepIntroMessage
-            title="Última parte."
-            body={
-              <>
-                Ahora los <strong>gastos que cambian mes a mes</strong>: salidas, supermercado,
-                regalitos, todo lo que no es fijo.
-              </>
-            }
-          />
+          {!editMode && (
+            <StepIntroMessage
+              title="Última parte."
+              body={
+                <>
+                  Ahora los <strong>gastos que cambian mes a mes</strong>: salidas, supermercado,
+                  regalitos, todo lo que no es fijo.
+                </>
+              }
+            />
+          )}
 
           <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#FBEAF0] pb-3 z-10">
             <h2

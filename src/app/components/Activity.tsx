@@ -270,10 +270,12 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
         >
           <BackButton currentPath={pathname} />
 
-          <StepIntroMessage
-            title="Ahora hablemos de plata 💰"
-            body="Vamos a entender cuánto te entra cada mes. Si tenés freelance o más de una fuente de ingresos, también lo vamos a contemplar."
-          />
+          {!editMode && (
+            <StepIntroMessage
+              title="Ahora hablemos de plata 💰"
+              body="Vamos a entender cuánto te entra cada mes. Si tenés freelance o más de una fuente de ingresos, también lo vamos a contemplar."
+            />
+          )}
 
           <div className="mb-6">
             <h2

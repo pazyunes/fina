@@ -261,16 +261,18 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
         >
           <BackButton currentPath={pathname} />
 
-          <StepIntroMessage
-            title="¡Vamos bien!"
-            body={
-              <>
-                Ahora pensemos en los <strong>gastos que se repiten todos los meses</strong>:
-                alquiler, expensas, suscripciones, gimnasio, esas cosas. No te olvides de
-                ninguna 😉
-              </>
-            }
-          />
+          {!editMode && (
+            <StepIntroMessage
+              title="¡Vamos bien!"
+              body={
+                <>
+                  Ahora pensemos en los <strong>gastos que se repiten todos los meses</strong>:
+                  alquiler, expensas, suscripciones, gimnasio, esas cosas. No te olvides de
+                  ninguna 😉
+                </>
+              }
+            />
+          )}
 
           <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#FBEAF0] pb-3 z-10">
             <h2

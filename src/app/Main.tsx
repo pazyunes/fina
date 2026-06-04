@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import { PersonalData } from './components/PersonalData';
 import { Context } from './components/Context';
 import { Activity } from './components/Activity';
@@ -268,6 +269,21 @@ export function Main() {
     }
   }, [analysis, userData]);
 
+  // PR — Edición desde /perfil: persiste el cambio, avisa con un toast y vuelve
+  // al perfil. Si updateReportData falla (p. ej. RLS) NO navega, así el usuario
+  // puede reintentar sin perder lo que cargó.
+  const persistEdit = async (merged: UserData) => {
+    const { error, analysis: next } = await updateReportData(merged);
+    if (error) {
+      toast.error('No se pudieron guardar los cambios. Intentá de nuevo.');
+      return;
+    }
+    setUserData(merged);
+    if (next) setAnalysis(next);
+    toast.success('Cambios guardados');
+    navigate('/perfil');
+  };
+
   // Render appropriate component based on route
   switch (location.pathname) {
     case '/personal-data':
@@ -314,10 +330,7 @@ export function Main() {
           editMode
           onComplete={async (data) => {
             const merged = { ...userData, ...data } as UserData;
-            const { analysis: next } = await updateReportData(merged);
-            setUserData(merged);
-            if (next) setAnalysis(next);
-            navigate('/perfil');
+            await persistEdit(merged);
           }}
         />
       );
@@ -345,10 +358,7 @@ export function Main() {
               transportDetails: data.transportDetails,
               installments: data.installments,
             };
-            const { analysis: next } = await updateReportData(merged);
-            setUserData(merged);
-            if (next) setAnalysis(next);
-            navigate('/perfil');
+            await persistEdit(merged);
           }}
         />
       );
@@ -359,10 +369,7 @@ export function Main() {
           editMode
           onComplete={async (data) => {
             const merged: UserData = { ...(userData as UserData), ...data };
-            const { analysis: next } = await updateReportData(merged);
-            setUserData(merged);
-            if (next) setAnalysis(next);
-            navigate('/perfil');
+            await persistEdit(merged);
           }}
         />
       );
@@ -373,10 +380,7 @@ export function Main() {
           editMode
           onComplete={async (data) => {
             const merged: UserData = { ...(userData as UserData), ...data };
-            const { analysis: next } = await updateReportData(merged);
-            setUserData(merged);
-            if (next) setAnalysis(next);
-            navigate('/perfil');
+            await persistEdit(merged);
           }}
         />
       );
