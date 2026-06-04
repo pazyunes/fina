@@ -153,9 +153,19 @@ export function Result({ analysis }: ResultProps) {
             <SectionLabel>Potencial de ahorro</SectionLabel>
             <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#E2C4EA]/50">
               <p className="text-base font-semibold mb-3">¿En qué podés recortar?</p>
-              <div className="h-40 mb-2">
+              <div className="relative h-44 mb-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
+                    <defs>
+                      <linearGradient id="gradReducible" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#F0794A" />
+                        <stop offset="100%" stopColor="#D85A30" />
+                      </linearGradient>
+                      <linearGradient id="gradFijo" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#5C9426" />
+                        <stop offset="100%" stopColor="#3B6D11" />
+                      </linearGradient>
+                    </defs>
                     <Pie
                       data={[
                         { name: 'Reducible', value: reducible },
@@ -163,17 +173,23 @@ export function Result({ analysis }: ResultProps) {
                       ]}
                       cx="50%"
                       cy="50%"
-                      innerRadius={0}
-                      outerRadius={65}
+                      innerRadius={52}
+                      outerRadius={74}
+                      cornerRadius={8}
+                      paddingAngle={3}
                       dataKey="value"
                       stroke="none"
                     >
-                      <Cell fill="#D85A30" />
-                      <Cell fill="#3B6D11" />
+                      <Cell fill="url(#gradReducible)" />
+                      <Cell fill="url(#gradFijo)" />
                     </Pie>
                     <Tooltip formatter={(v: number) => `${v}%`} />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <p className="text-3xl font-bold text-[#D85A30] leading-none">{reducible}%</p>
+                  <p className="text-[11px] text-gray-500 mt-1">reducible</p>
+                </div>
               </div>
               <div className="flex justify-center gap-4 text-xs text-gray-600 mb-3">
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#D85A30' }} /> Reducible {reducible}%</span>
@@ -192,9 +208,19 @@ export function Result({ analysis }: ResultProps) {
               <p className="text-base font-semibold mb-3">¿Cuánto podrías invertir?</p>
               {investRecommended > 0 ? (
                 <>
-                  <div className="h-40 mb-2">
+                  <div className="relative h-44 mb-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
+                        <defs>
+                          <linearGradient id="gradInvertible" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#B45FB8" />
+                            <stop offset="100%" stopColor="#7E3082" />
+                          </linearGradient>
+                          <linearGradient id="gradInvRest" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#EED6F2" />
+                            <stop offset="100%" stopColor="#E2C4EA" />
+                          </linearGradient>
+                        </defs>
                         <Pie
                           data={[
                             { name: 'Invertible', value: investRecommended },
@@ -202,17 +228,23 @@ export function Result({ analysis }: ResultProps) {
                           ]}
                           cx="50%"
                           cy="50%"
-                          innerRadius={0}
-                          outerRadius={65}
+                          innerRadius={52}
+                          outerRadius={74}
+                          cornerRadius={8}
+                          paddingAngle={3}
                           dataKey="value"
                           stroke="none"
                         >
-                          <Cell fill="#9A3D9E" />
-                          <Cell fill="#E2C4EA" />
+                          <Cell fill="url(#gradInvertible)" />
+                          <Cell fill="url(#gradInvRest)" />
                         </Pie>
                         <Tooltip formatter={(v: number) => `${v}%`} />
                       </PieChart>
                     </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <p className="text-3xl font-bold text-[#9A3D9E] leading-none">{investRecommended}%</p>
+                      <p className="text-[11px] text-gray-500 mt-1">invertible</p>
+                    </div>
                   </div>
                   <div className="flex justify-center gap-4 text-xs text-gray-600 mb-3">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#9A3D9E' }} /> Invertible {investRecommended}%</span>
@@ -239,22 +271,23 @@ export function Result({ analysis }: ResultProps) {
                 <div className="h-44">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={topCategories.map((c, i) => ({
+                      data={topCategories.map((c) => ({
                         label: c.label.slice(0, 8),
                         value: totalCategories > 0 ? Math.round((c.amount / totalCategories) * 100) : 0,
-                        fill: BAR_COLORS[i] ?? BAR_COLORS[0],
                       }))}
                       layout="vertical"
                       margin={{ top: 5, right: 10, bottom: 5, left: 0 }}
                     >
+                      <defs>
+                        <linearGradient id="gradBar" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#7E3082" />
+                          <stop offset="100%" stopColor="#C06FCC" />
+                        </linearGradient>
+                      </defs>
                       <XAxis type="number" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
                       <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={72} axisLine={false} tickLine={false} />
                       <Tooltip formatter={(v: number) => `${v}%`} />
-                      <Bar dataKey="value" radius={[5, 5, 5, 5]} isAnimationActive={false}>
-                        {topCategories.map((_, i) => (
-                          <Cell key={i} fill={BAR_COLORS[i] ?? BAR_COLORS[0]} />
-                        ))}
-                      </Bar>
+                      <Bar dataKey="value" radius={[8, 8, 8, 8]} isAnimationActive={false} fill="url(#gradBar)" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

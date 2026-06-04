@@ -175,8 +175,14 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                 {rows.map((r) => (
                   <div key={r.label} className="flex items-center gap-2">
                     <span className="text-xs text-gray-600 w-24 shrink-0">{r.label}</span>
-                    <div className="flex-1 h-2 bg-[#F3E9F8] rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${r.pct}%`, background: r.color }} />
+                    <div className="flex-1 h-2.5 bg-[#F3E9F8] rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${r.pct}%`,
+                          background: r.color === '#CCC' ? '#CFCFCF' : 'linear-gradient(90deg, #7E3082, #C06FCC)',
+                        }}
+                      />
                     </div>
                     <span className="text-xs font-medium w-16 text-right" style={{ color: r.valColor }}>
                       {formatArs(r.value)}
