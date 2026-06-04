@@ -114,7 +114,7 @@ export function Result({ analysis }: ResultProps) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 p-4 lg:px-8 lg:pt-16 lg:pb-8 max-w-md lg:max-w-6xl mx-auto w-full"
+        className="flex-1 p-4 lg:px-8 lg:pt-20 lg:pb-8 max-w-md lg:max-w-6xl mx-auto w-full"
       >
        <div className="lg:grid lg:grid-cols-3 lg:gap-5 lg:items-start">
         {/* COLUMNA PRINCIPAL (2/3) */}

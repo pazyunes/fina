@@ -91,7 +91,11 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
   // Controlled accordion so completed sections collapse automatically while
   // staying reopenable. Suscripciones starts open.
-  const [openItems, setOpenItems] = useState<string[]>(['subs']);
+  // En edición abrimos todo para que vea sus valores y edite el que quiera; en
+  // onboarding arranca solo "Suscripciones".
+  const [openItems, setOpenItems] = useState<string[]>(
+    editMode ? ['subs', 'entertainment', 'delivery', 'cafeterias', 'super'] : ['subs']
+  );
   const SECTION_ORDER = ['subs', 'entertainment', 'delivery', 'cafeterias', 'super'];
 
   const toggleSubscription = (name: string) => {
@@ -191,6 +195,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   // Collapse a finished section and open the next one that's still incomplete.
   // Only called when the section itself is already complete (all its fields).
   const advanceFrom = (key: string) => {
+    if (editMode) return; // en edición no auto-colapsamos: editás lo que querés
     const sectionComplete: Record<string, boolean> = {
       subs: subsCount > 0,
       entertainment: entertainmentComplete,
@@ -212,12 +217,11 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
     });
   };
 
+  // En edición no exigimos completar todas las categorías: la usuaria actualiza
+  // solo lo que cambió. Lo único que validamos es que las suscripciones custom
+  // tengan nombre y costo.
   const isValid =
-    entertainmentComplete &&
-    deliveryComplete &&
-    cafeteriasComplete &&
-    supermarketComplete &&
-    // All custom subscriptions must have both name and cost
+    (editMode || (entertainmentComplete && deliveryComplete && cafeteriasComplete && supermarketComplete)) &&
     customSubscriptions.every(sub => !sub.name || (sub.name && sub.cost));
 
   const TriggerLabel = ({ icon: Icon, color, title, done, badge }: { icon: any; color: string; title: string; done?: boolean; badge?: string }) => (
@@ -261,7 +265,9 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
               Gastos que cambian mes a mes
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Salidas, delivery, súper y suscripciones: lo que varía según el mes. Tocá cada categoría para completarla
+              {editMode
+                ? 'Actualizá solo lo que cambió. No hace falta tocar todas las categorías.'
+                : 'Salidas, delivery, súper y suscripciones: lo que varía según el mes. Tocá cada categoría para completarla'}
             </p>
           </div>
 
@@ -705,12 +711,14 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
             disabled={!isValid}
             className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
-            Continuar
+            {editMode ? 'Guardar cambios' : 'Continuar'}
           </Button>
 
-          <div className="mt-4">
-            <OnboardingProgress currentPath={pathname} />
-          </div>
+          {!editMode && (
+            <div className="mt-4">
+              <OnboardingProgress currentPath={pathname} />
+            </div>
+          )}
         </div>
       </div>
     </div>

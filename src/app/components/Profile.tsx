@@ -59,7 +59,7 @@ export function Profile() {
     <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col pb-24 lg:pb-8 lg:pl-56">
       <Sidebar />
       <TopRightUser />
-      <div className="flex-1 flex flex-col p-6 lg:pt-16 max-w-md lg:max-w-4xl mx-auto w-full">
+      <div className="flex-1 flex flex-col p-6 lg:pt-20 max-w-md lg:max-w-4xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -128,17 +128,6 @@ export function Profile() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="p-email" className="text-gray-700 text-sm">Email</Label>
-                  <Input
-                    id="p-email"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="mt-1 rounded-xl"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Cambiar el email pide confirmación por correo.</p>
-                </div>
-                <div>
                   <Label htmlFor="p-age" className="text-gray-700 text-sm">Edad</Label>
                   <Input
                     id="p-age"
@@ -169,6 +158,18 @@ export function Profile() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="p-email" className="text-gray-700 text-sm">Email</Label>
+                  <Input
+                    id="p-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="mt-1 rounded-xl"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Cambiar el email pide confirmación por correo.</p>
                 </div>
 
                 <div className="flex gap-2 pt-1">

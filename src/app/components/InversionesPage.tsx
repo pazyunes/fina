@@ -104,7 +104,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 p-4 lg:px-8 lg:pt-16 lg:pb-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
+        className="flex-1 p-4 lg:px-8 lg:pt-20 lg:pb-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
       >
         {/* GUÍAS PARA ABRIR CUENTA — solo si no está bancarizada. Va primero
             porque es el paso previo a cualquier inversión. */}

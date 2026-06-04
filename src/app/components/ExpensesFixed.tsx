@@ -116,11 +116,15 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
 
   // Controlled accordion so a category collapses once completed but can be
   // reopened. Alquiler (housing) starts open.
-  const [openItems, setOpenItems] = useState<string[]>(['housing']);
+  // En edición abrimos todas las categorías para que edite la que quiera.
+  const [openItems, setOpenItems] = useState<string[]>(
+    editMode ? CATEGORIES.map(c => c.key) : ['housing']
+  );
   const FIXED_ORDER = CATEGORIES.map(c => c.key);
   // Collapse the finished category and open the next one that's still empty.
   // Only called once the category is complete (amount entered or "no lo pago yo").
   const advanceFrom = (key: FixedKey) => {
+    if (editMode) return; // en edición no auto-colapsamos
     setOpenItems(prev => {
       const without = prev.filter(k => k !== key);
       const startIdx = FIXED_ORDER.indexOf(key);
@@ -211,8 +215,8 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   };
 
   const handleSubmit = () => {
-    // Check transport validation first
-    if (!isTransportDataValid(transportData)) {
+    // Check transport validation first (en edición no bloqueamos por esto)
+    if (!editMode && !isTransportDataValid(transportData)) {
       setShowTransportValidation(true);
       return;
     }
@@ -248,7 +252,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   };
 
   const isTransportValid = isTransportDataValid(transportData);
-  const isValid = hasInstallments !== null && isTransportValid;
+  const isValid = editMode ? true : (hasInstallments !== null && isTransportValid);
   const canAddCurrentInstallment = currentInstallment.name && currentInstallment.monthlyAmount && currentInstallment.remainingInstallments;
 
   return (
@@ -282,7 +286,9 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
               Gastos que se repiten todos los meses
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Lo que pagás casi igual mes a mes. Tocá cada categoría para completarla
+              {editMode
+                ? 'Actualizá solo lo que cambió. No hace falta tocar todas las categorías.'
+                : 'Lo que pagás casi igual mes a mes. Tocá cada categoría para completarla'}
             </p>
           </div>
 
@@ -681,12 +687,14 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
             disabled={!isValid}
             className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
-            Continuar
+            {editMode ? 'Guardar cambios' : 'Continuar'}
           </Button>
 
-          <div className="mt-4">
-            <OnboardingProgress currentPath={pathname} />
-          </div>
+          {!editMode && (
+            <div className="mt-4">
+              <OnboardingProgress currentPath={pathname} />
+            </div>
+          )}
         </div>
       </div>
     </div>
