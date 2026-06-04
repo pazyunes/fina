@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useAuth, Profile as ProfileData } from '../lib/auth';
 import { BottomNav } from './BottomNav';
+import { Sidebar } from './Sidebar';
 
 const GENDER_OPTIONS: { value: ProfileData['gender']; label: string }[] = [
   { value: 'femenino', label: 'Femenino' },
@@ -54,8 +55,9 @@ export function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col pb-24">
-      <div className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col pb-24 lg:pb-8 lg:pl-56">
+      <Sidebar />
+      <div className="flex-1 flex flex-col p-6 max-w-md lg:max-w-4xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -76,8 +78,9 @@ export function Profile() {
             </button>
           </div>
 
+          <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
           {/* Tarjeta de datos del perfil con avatar predeterminado */}
-          <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
+          <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 lg:mb-0">
             <div className="flex items-center gap-4">
               <CircleUserRound className="w-16 h-16 text-[#D4537E] shrink-0" strokeWidth={1.25} />
               <div className="min-w-0 flex-1">
@@ -185,11 +188,11 @@ export function Profile() {
           </div>
 
           {/* PR8 — Sección de edición de datos del informe */}
-          <div className="mb-6">
-            <h2 className="text-sm font-medium text-gray-700 mb-3" style={{ fontFamily: 'var(--font-sans)' }}>
+          <div className="mb-6 lg:mb-0">
+            <h2 className="text-base font-semibold text-gray-700 mb-3" style={{ fontFamily: 'var(--font-sans)' }}>
               Mis datos financieros
             </h2>
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-sm text-gray-500 mb-3">
               Actualizá lo que cambió y el informe se recalcula al toque.
             </p>
             <div className="bg-white rounded-2xl shadow-sm divide-y divide-[#F4C0D1]/50 overflow-hidden">
@@ -200,9 +203,11 @@ export function Profile() {
             </div>
           </div>
 
+          </div>
+
           <Button
             onClick={() => navigate('/result')}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2"
+            className="w-full lg:w-auto lg:self-start lg:px-10 bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2 lg:mt-6"
           >
             Volver al informe
           </Button>
@@ -232,7 +237,7 @@ function EditRow({
       className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[#FBEAF0]/40 transition-colors"
     >
       <Icon className="w-5 h-5 text-[#D4537E]" />
-      <span className="flex-1 text-sm text-gray-700">{label}</span>
+      <span className="flex-1 text-base font-medium text-gray-700">{label}</span>
       <ChevronRight className="w-4 h-4 text-gray-300" />
     </button>
   );

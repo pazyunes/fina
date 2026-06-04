@@ -4,6 +4,7 @@ import { TrendingUp } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
 import { BottomNav } from './BottomNav';
+import { Sidebar } from './Sidebar';
 
 interface ResultProps {
   analysis: FinancialAnalysis;
@@ -95,7 +96,8 @@ export function Result({ analysis }: ResultProps) {
   const investAmount = analysis.available > 0 ? Math.round(analysis.available * 0.7) : 0;
 
   return (
-    <div className="min-h-screen bg-[#FBEAF0] pb-24 flex flex-col">
+    <div className="min-h-screen bg-[#FBEAF0] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
+      <Sidebar />
       {/* Header rosa sticky */}
       <div className="bg-[#D4537E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
         <div className="max-w-md lg:max-w-5xl mx-auto">

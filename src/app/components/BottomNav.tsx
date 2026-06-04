@@ -25,7 +25,7 @@ export function BottomNav() {
   const { pathname } = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#F4C0D1] flex items-stretch z-50 pb-safe">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#F4C0D1] flex items-stretch z-50 pb-safe">
       {TABS.map((tab) => {
         const active = pathname === tab.to;
         const Icon = tab.icon;

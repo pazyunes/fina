@@ -6,6 +6,7 @@ import { formatArs } from '../lib/currency';
 import { g } from '../utils/gender';
 import { BottomNav } from './BottomNav';
 import { OpenAccountGuides } from './OpenAccountGuides';
+import { Sidebar } from './Sidebar';
 import { InvestmentGuideScreen } from './InvestmentGuideScreen';
 import { resolveInvestmentGuide, InvestmentGuide } from '../lib/investmentGuides';
 
@@ -87,12 +88,13 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
   const [activeGuide, setActiveGuide] = useState<InvestmentGuide | null>(null);
 
   return (
-    <div className="min-h-screen bg-[#FBEAF0] pb-24 flex flex-col">
+    <div className="min-h-screen bg-[#FBEAF0] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
+      <Sidebar />
       {/* Header */}
       <div className="bg-[#D4537E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-lg" style={{ fontFamily: 'var(--font-sans)' }}>Inversiones para vos</h1>
-          <p className="text-xs text-white/80 mt-0.5">Basadas en tu perfil y objetivo</p>
+        <div className="max-w-md lg:max-w-3xl mx-auto">
+          <h1 className="text-xl lg:text-2xl font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>Inversiones para vos</h1>
+          <p className="text-sm text-white/80 mt-0.5">Basadas en tu perfil y objetivo</p>
         </div>
       </div>
 
@@ -100,7 +102,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 p-4 max-w-md mx-auto w-full space-y-5"
+        className="flex-1 p-4 lg:p-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
       >
         {/* GUÍAS PARA ABRIR CUENTA — solo si no está bancarizada. Va primero
             porque es el paso previo a cualquier inversión. */}
@@ -108,14 +110,14 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
 
         {/* PERFIL DE RIESGO */}
         <section>
-          <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">Tu perfil de riesgo</p>
+          <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">Tu perfil de riesgo</p>
           <div className="bg-white rounded-xl p-4 border border-[#F4C0D1]/50 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#FAEEDA] flex items-center justify-center shrink-0">
               <ShieldHalf className="w-5 h-5 text-[#854F0B]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{profile.title}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{profile.copy}</p>
+              <p className="text-base font-semibold">{profile.title}</p>
+              <p className="text-sm text-gray-500 mt-0.5">{profile.copy}</p>
             </div>
             <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap ${BADGE_COLOR[profile.badge]}`}>
               {profile.badge}
@@ -126,7 +128,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         {/* OPCIONES RECOMENDADAS */}
         {recommendations.length > 0 && (
           <section>
-            <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">Opciones recomendadas</p>
+            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">Opciones recomendadas</p>
             <div className="bg-white rounded-xl p-3 border border-[#F4C0D1]/50 space-y-2">
               {recommendations.map((name, i) => {
                 const info = INSTRUMENT_INFO[name] ?? { desc: '', tasa: '', liquidez: '' };
@@ -162,11 +164,11 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         {/* TASA DE MEJORA */}
         {analysis.available > 0 && (
           <section>
-            <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">
+            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">
               Tasa de mejora — si invertís tu disponible
             </p>
             <div className="bg-white rounded-xl p-4 border border-[#F4C0D1]/50">
-              <p className="text-sm mb-4">¿Cuánto más podrías tener en 5 meses?</p>
+              <p className="text-base font-semibold mb-4">¿Cuánto más podrías tener en 5 meses?</p>
               <div className="space-y-2.5">
                 {rows.map((r) => (
                   <div key={r.label} className="flex items-center gap-2">

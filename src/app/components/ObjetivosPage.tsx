@@ -8,6 +8,7 @@ import { formatArs } from '../lib/currency';
 import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
 import { updateReportData } from '../lib/reports';
 import { BottomNav } from './BottomNav';
+import { Sidebar } from './Sidebar';
 import { PreferencesModal } from './PreferencesModal';
 import { AddGoalModal } from './AddGoalModal';
 
@@ -82,12 +83,13 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
   };
 
   return (
-    <div className="min-h-screen bg-[#FBEAF0] pb-24 flex flex-col">
+    <div className="min-h-screen bg-[#FBEAF0] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
+      <Sidebar />
       {/* Header */}
       <div className="bg-[#D4537E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-lg" style={{ fontFamily: 'var(--font-sans)' }}>Mis objetivos</h1>
-          <p className="text-xs text-white/80 mt-0.5">Seguí tu avance y tus próximos pasos</p>
+        <div className="max-w-md lg:max-w-3xl mx-auto">
+          <h1 className="text-xl lg:text-2xl font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>Mis objetivos</h1>
+          <p className="text-sm text-white/80 mt-0.5">Seguí tu avance y tus próximos pasos</p>
         </div>
       </div>
 
@@ -95,11 +97,11 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 p-4 max-w-md mx-auto w-full space-y-5"
+        className="flex-1 p-4 lg:p-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
       >
         {/* EN CURSO */}
         <section>
-          <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">En curso</p>
+          <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">En curso</p>
           {goals.length === 0 ? (
             <div className="bg-white rounded-xl p-4 border border-[#F4C0D1]/50 text-sm text-gray-500">
               Todavía no cargaste objetivos específicos.
@@ -116,7 +118,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         {/* ESTRATEGIAS PARA LLEGAR AL OBJETIVO */}
         {strategies.length > 0 && (
           <section>
-            <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">
+            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">
               Cómo llegar al objetivo — varias opciones
             </p>
             <p className="text-xs text-gray-500 mb-2">
@@ -133,7 +135,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         {/* SI CUMPLÍS TODO */}
         {strategies.length > 0 && (
           <section>
-            <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">
+            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">
               Si cumplís todos los accionables
             </p>
             <div className="bg-white rounded-xl p-4 border border-[#F4C0D1]/50 flex items-center gap-3">
@@ -158,7 +160,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           type="button"
           onClick={() => setShowAddGoal(true)}
           disabled={savingGoal}
-          className="w-full bg-white border-2 border-[#D4537E] text-[#D4537E] rounded-xl py-3 text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#FBEAF0]/40 transition-colors disabled:opacity-50"
+          className="w-full bg-white border-2 border-[#D4537E] text-[#D4537E] rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#FBEAF0]/40 transition-colors disabled:opacity-50"
         >
           <Plus className="w-4 h-4" /> {savingGoal ? 'Guardando…' : 'Agregar nuevo objetivo'}
         </button>
@@ -168,7 +170,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         <button
           type="button"
           onClick={() => navigate('/inversiones')}
-          className="w-full bg-white border-2 border-[#D4537E] text-[#D4537E] rounded-xl py-3 text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#FBEAF0]/40 transition-colors"
+          className="w-full bg-white border-2 border-[#D4537E] text-[#D4537E] rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#FBEAF0]/40 transition-colors"
         >
           <TrendingUp className="w-4 h-4" /> Ver inversiones recomendadas
         </button>
@@ -177,7 +179,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         <button
           type="button"
           onClick={() => setShowPrefs(true)}
-          className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white rounded-xl py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+          className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors"
         >
           <Sparkles className="w-4 h-4" /> Quiero recomendaciones personalizadas
         </button>
@@ -275,10 +277,10 @@ function StrategyRow({ strategy, first }: { strategy: GoalStrategy; first: boole
         {done && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-xs font-medium leading-snug ${done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+        <p className={`text-sm font-semibold leading-snug ${done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
           {strategy.emoji} {strategy.title}
         </p>
-        <p className={`text-[11px] leading-relaxed mt-0.5 ${done ? 'text-gray-300' : 'text-gray-500'}`}>
+        <p className={`text-xs leading-relaxed mt-0.5 ${done ? 'text-gray-300' : 'text-gray-500'}`}>
           {strategy.subtitle}
         </p>
       </div>
