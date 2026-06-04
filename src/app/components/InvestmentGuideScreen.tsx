@@ -158,7 +158,7 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
           </Button>
           <Button
             onClick={next}
-            className="flex-1 bg-[#FF5C8A] hover:bg-[#E84A77] text-white rounded-full"
+            className="flex-1 bg-[#059669] hover:bg-[#047857] text-white rounded-full"
           >
             {isLast ? '¡Listo!' : 'Siguiente'}
             {!isLast && <ArrowRight className="w-4 h-4 ml-1" />}

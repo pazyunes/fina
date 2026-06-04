@@ -177,7 +177,7 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
                 type="button"
                 onClick={addSpot}
                 disabled={!newSpot.trim() || spots.length >= 20}
-                className="bg-[#FF5C8A] hover:bg-[#E84A77] text-white rounded-xl px-3"
+                className="bg-[#059669] hover:bg-[#047857] text-white rounded-xl px-3"
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -219,7 +219,7 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="w-full bg-[#FF5C8A] hover:bg-[#E84A77] text-white rounded-full py-5 text-base"
+            className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-full py-5 text-base"
           >
             {saving ? 'Guardando…' : 'Guardar preferencias'}
           </Button>

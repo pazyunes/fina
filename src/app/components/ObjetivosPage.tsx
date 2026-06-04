@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Check, TrendingUp, Sparkles, Clock, Plus } from 'lucide-react';
 import { FinancialAnalysis, UserData } from '../types';
 import { formatArs } from '../lib/currency';
@@ -83,7 +84,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
   };
 
   return (
-    <div className="min-h-screen bg-[#F1E8F8] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
+    <div className="min-h-screen bg-white pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
       <TopRightUser />
       {/* Header — solo mobile */}
@@ -105,7 +106,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           type="button"
           onClick={() => setShowAddGoal(true)}
           disabled={savingGoal}
-          className="w-full bg-[#FF5C8A] hover:bg-[#E84A77] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+          className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
         >
           <Plus className="w-4 h-4" /> {savingGoal ? 'Guardando…' : 'Agregar nuevo objetivo'}
         </button>
@@ -115,7 +116,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         <section>
           <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">En curso</p>
           {goals.length === 0 ? (
-            <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/50 text-sm text-gray-500">
+            <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/70 shadow-sm text-sm text-gray-500">
               Todavía no cargaste objetivos específicos.
             </div>
           ) : (
@@ -136,7 +137,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
             <p className="text-xs text-gray-500 mb-2">
               Marcá las que vas implementando. Cada una suma a la cuota mensual de tu objetivo.
             </p>
-            <div className="bg-white rounded-xl px-4 py-1 border border-[#DCC6EC]/50">
+            <div className="bg-white rounded-xl px-4 py-1 border border-[#DCC6EC]/70 shadow-sm">
               {strategies.map((s, i) => (
                 <StrategyRow key={i} strategy={s} first={i === 0} />
               ))}
@@ -150,7 +151,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
             <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">
               Si cumplís todos los accionables
             </p>
-            <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/50 flex items-center gap-3">
+            <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/70 shadow-sm flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#EAF3DE] flex items-center justify-center shrink-0">
                 <Clock className="w-5 h-5 text-[#3B6D11]" />
               </div>
@@ -180,7 +181,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         <button
           type="button"
           onClick={() => setShowPrefs(true)}
-          className="w-full bg-[#FF5C8A] hover:bg-[#E84A77] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+          className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors"
         >
           <Sparkles className="w-4 h-4" /> Quiero recomendaciones personalizadas
         </button>
@@ -207,7 +208,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
 // + monto/plazo + status badge + tip con la cuota mensual sugerida.
 function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/50 space-y-3">
+    <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/70 shadow-sm space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-base font-medium truncate">
@@ -222,20 +223,38 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
         </span>
       </div>
 
-      {/* Progreso del objetivo (0% en v1) + total */}
-      <div>
-        <div className="flex items-baseline justify-between mb-1.5">
-          <span className="text-xs text-gray-500">Avance</span>
-          <span className="text-sm font-semibold text-[#7E2EA8]">0% · recién empezás</span>
-        </div>
-        <div className="h-2.5 rounded-full bg-[#F1E8F8] overflow-hidden">
-          <div className="h-full rounded-full bg-[#7E2EA8]" style={{ width: '2%' }} />
+      {/* Donut con texto central — 0% logrado en v1 (anillo finito). */}
+      <div className="relative h-32">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={[
+                { name: 'Logrado', value: 0 },
+                { name: 'Resto', value: 100 },
+              ]}
+              cx="50%"
+              cy="50%"
+              innerRadius={50}
+              outerRadius={62}
+              cornerRadius={6}
+              dataKey="value"
+              stroke="none"
+              isAnimationActive={false}
+            >
+              <Cell fill="#7E2EA8" />
+              <Cell fill="#DCC6EC" />
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <p className="text-xl font-bold text-[#7E2EA8]" style={{ fontFamily: 'var(--font-sans)' }}>0%</p>
+          <p className="text-[10px] text-gray-500">recién empezás</p>
         </div>
       </div>
 
-      <div className="flex justify-between text-sm pt-1">
+      <div className="flex justify-between text-xs">
         <span className="text-gray-500">Total objetivo</span>
-        <span className="font-bold text-[#7E2EA8]">{formatArs(goal.amount)}</span>
+        <span className="font-medium text-[#7E2EA8]">{formatArs(goal.amount)}</span>
       </div>
 
       <div className="bg-[#F1E8F8] rounded-lg px-3 py-2.5 text-xs text-[#4A1C66] border-l-[3px] border-[#7E2EA8]">

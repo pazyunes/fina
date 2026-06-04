@@ -50,7 +50,7 @@ export function Splash() {
         >
           <Button
             onClick={() => navigate('/login', { state: { mode: 'signin' } })}
-            className="bg-[#FF5C8A] hover:bg-[#E84A77] text-white py-6 rounded-full text-lg"
+            className="bg-[#059669] hover:bg-[#047857] text-white py-6 rounded-full text-lg"
             style={{ fontFamily: 'var(--font-sans)' }}
           >
             Iniciar sesión

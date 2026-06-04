@@ -56,7 +56,7 @@ export function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F1E8F8] flex flex-col pb-24 lg:pb-8 lg:pl-56">
+    <div className="min-h-screen bg-white flex flex-col pb-24 lg:pb-8 lg:pl-56">
       <Sidebar />
       <TopRightUser />
       <div className="flex-1 flex flex-col p-6 lg:pt-20 max-w-md lg:max-w-4xl mx-auto w-full">
@@ -176,7 +176,7 @@ export function Profile() {
                   <Button
                     onClick={handleSave}
                     disabled={saving || !form.name || !form.gender}
-                    className="flex-1 bg-[#FF5C8A] hover:bg-[#E84A77] text-white rounded-full disabled:opacity-50"
+                    className="flex-1 bg-[#059669] hover:bg-[#047857] text-white rounded-full disabled:opacity-50"
                   >
                     {saving ? 'Guardando…' : 'Guardar'}
                   </Button>
@@ -213,7 +213,7 @@ export function Profile() {
 
           <Button
             onClick={() => navigate('/result')}
-            className="w-full lg:w-auto lg:self-start lg:px-10 bg-[#FF5C8A] hover:bg-[#E84A77] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2 lg:mt-6"
+            className="w-full lg:w-auto lg:self-start lg:px-10 bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2 lg:mt-6"
           >
             Volver al informe
           </Button>

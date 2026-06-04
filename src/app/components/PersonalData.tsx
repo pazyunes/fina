@@ -126,7 +126,7 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
             <Button
               type="submit"
               disabled={!formData.name || !formData.age || !formData.gender}
-              className="w-full bg-[#FF5C8A] hover:bg-[#E84A77] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50"
+              className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50"
             >
               Continuar
             </Button>

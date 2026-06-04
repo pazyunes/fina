@@ -89,7 +89,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
   const [activeGuide, setActiveGuide] = useState<InvestmentGuide | null>(null);
 
   return (
-    <div className="min-h-screen bg-[#F1E8F8] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
+    <div className="min-h-screen bg-white pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
       <TopRightUser />
       {/* Header — solo mobile */}
@@ -113,7 +113,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         {/* PERFIL DE RIESGO */}
         <section>
           <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">Tu perfil de riesgo</p>
-          <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/50 flex items-center gap-3">
+          <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/70 shadow-sm flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#FAEEDA] flex items-center justify-center shrink-0">
               <ShieldHalf className="w-5 h-5 text-[#854F0B]" />
             </div>
@@ -131,7 +131,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         {recommendations.length > 0 && (
           <section>
             <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">Opciones recomendadas</p>
-            <div className="bg-white rounded-xl p-3 border border-[#DCC6EC]/50 space-y-2">
+            <div className="bg-white rounded-xl p-3 border border-[#DCC6EC]/70 shadow-sm space-y-2">
               {recommendations.map((name, i) => {
                 const info = INSTRUMENT_INFO[name] ?? { desc: '', tasa: '', liquidez: '' };
                 return (
@@ -169,7 +169,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
             <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">
               Tasa de mejora — si invertís tu disponible
             </p>
-            <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/50">
+            <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/70 shadow-sm">
               <p className="text-base font-semibold mb-4">¿Cuánto más podrías tener en 5 meses?</p>
               <div className="space-y-2.5">
                 {rows.map((r) => (

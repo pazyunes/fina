@@ -131,7 +131,7 @@ export function AddGoalModal({ onClose, onAdd, usdRate }: AddGoalModalProps) {
           <Button
             onClick={handleSave}
             disabled={!canSave}
-            className="w-full bg-[#FF5C8A] hover:bg-[#E84A77] text-white rounded-full py-5 text-base disabled:opacity-50"
+            className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-full py-5 text-base disabled:opacity-50"
           >
             Agregar objetivo
           </Button>

@@ -509,7 +509,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                     setShowInstallmentForm(true);
                   }}
                   variant={hasInstallments === true ? 'default' : 'outline'}
-                  className={`flex-1 ${hasInstallments === true ? 'bg-[#FF5C8A] hover:bg-[#E84A77]' : ''}`}
+                  className={`flex-1 ${hasInstallments === true ? 'bg-[#059669] hover:bg-[#047857]' : ''}`}
                 >
                   Sí
                 </Button>
@@ -521,7 +521,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                     setCurrentInstallment({ name: '', monthlyAmount: '', remainingInstallments: '' });
                   }}
                   variant={hasInstallments === false ? 'default' : 'outline'}
-                  className={`flex-1 ${hasInstallments === false ? 'bg-[#FF5C8A] hover:bg-[#E84A77]' : ''}`}
+                  className={`flex-1 ${hasInstallments === false ? 'bg-[#059669] hover:bg-[#047857]' : ''}`}
                 >
                   No
                 </Button>
@@ -652,7 +652,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                     <Button
                       onClick={addInstallment}
                       disabled={!canAddCurrentInstallment}
-                      className="w-full bg-[#FF5C8A] hover:bg-[#E84A77] text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#059669] hover:bg-[#047857] text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Check className="w-4 h-4" />
                       Guardar cuota
@@ -685,7 +685,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="w-full bg-[#FF5C8A] hover:bg-[#E84A77] text-white py-5 rounded-full text-lg disabled:opacity-50"
+            className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
             {editMode ? 'Guardar cambios' : 'Continuar'}
           </Button>
