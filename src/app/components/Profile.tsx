@@ -176,7 +176,7 @@ export function Profile() {
                   <Button
                     onClick={handleSave}
                     disabled={saving || !form.name || !form.gender}
-                    className="flex-1 bg-[#7E2EA8] hover:bg-[#682690] text-white rounded-full disabled:opacity-50"
+                    className="flex-1 bg-[#FF5C8A] hover:bg-[#E84A77] text-white rounded-full disabled:opacity-50"
                   >
                     {saving ? 'Guardando…' : 'Guardar'}
                   </Button>
@@ -213,7 +213,7 @@ export function Profile() {
 
           <Button
             onClick={() => navigate('/result')}
-            className="w-full lg:w-auto lg:self-start lg:px-10 bg-[#7E2EA8] hover:bg-[#682690] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2 lg:mt-6"
+            className="w-full lg:w-auto lg:self-start lg:px-10 bg-[#FF5C8A] hover:bg-[#E84A77] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2 lg:mt-6"
           >
             Volver al informe
           </Button>

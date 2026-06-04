@@ -1,5 +1,4 @@
 import { motion } from 'motion/react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
@@ -65,8 +64,6 @@ function formatKpi(ars: number): string {
   if (ars >= 1_000) return `$${Math.round(ars / 1_000)}k`;
   return `$${ars}`;
 }
-
-const BAR_COLORS = ['#7E2EA8', '#A95FC8', '#E899B8', '#F0BBCF', '#F8DDE7'];
 
 // Eyebrow de sección reutilizable — un poco más grande y bold que antes para
 // dar jerarquía, tanto en mobile como en desktop.
@@ -148,122 +145,88 @@ export function Result({ analysis }: ResultProps) {
           </div>
         </section>
 
-          {/* POTENCIAL DE AHORRO */}
+          {/* POTENCIAL DE AHORRO — stat grande + barra segmentada */}
           <section>
             <SectionLabel>Potencial de ahorro</SectionLabel>
-            <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#DCC6EC]/50">
-              <p className="text-base font-semibold mb-3">¿En qué podés recortar?</p>
-              <div className="relative h-44 mb-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Reducible', value: reducible },
-                        { name: 'Fijo', value: fijo },
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={52}
-                      outerRadius={74}
-                      cornerRadius={8}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      <Cell fill="#D85A30" />
-                      <Cell fill="#3B6D11" />
-                    </Pie>
-                    <Tooltip formatter={(v: number) => `${v}%`} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <p className="text-3xl font-bold text-[#D85A30] leading-none">{reducible}%</p>
-                  <p className="text-[11px] text-gray-500 mt-1">reducible</p>
-                </div>
+            <div className="bg-white rounded-xl p-5 border border-[#DCC6EC]/50">
+              <p className="text-base font-semibold mb-1">¿En qué podés recortar?</p>
+              <p className="text-sm text-gray-500 mb-4">De todo lo que gastás, esta parte la podés bajar con pequeños cambios.</p>
+              <div className="flex items-end gap-2">
+                <span className="text-5xl font-extrabold text-[#FF5C8A] leading-none">{reducible}%</span>
+                <span className="text-sm text-gray-500 mb-1">es recortable</span>
               </div>
-              <div className="flex justify-center gap-4 text-xs text-gray-600 mb-3">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#D85A30' }} /> Reducible {reducible}%</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#3B6D11' }} /> Fijo {fijo}%</span>
+              <div className="flex h-3.5 rounded-full overflow-hidden mt-4 bg-[#F1E8F8]">
+                <div className="bg-[#FF5C8A]" style={{ width: `${reducible}%` }} />
+                <div className="bg-[#DCC6EC]" style={{ width: `${fijo}%` }} />
               </div>
-              <div className="bg-[#F1E8F8] rounded-lg px-3 py-2.5 text-sm text-[#4A1C66] border-l-[3px] border-[#7E2EA8]">
-                Aproximadamente el <strong className="text-[#7E2EA8]">{reducible}%</strong> de tus gastos son reducibles con pequeños cambios de hábitos.
+              <div className="flex justify-between text-xs mt-2">
+                <span className="font-semibold text-[#FF5C8A]">Recortable {reducible}%</span>
+                <span className="text-gray-500">Fijo {fijo}%</span>
+              </div>
+              <div className="bg-[#F1E8F8] rounded-lg px-3 py-2.5 text-sm text-[#4A1C66] border-l-[3px] border-[#7E2EA8] mt-4">
+                Con pequeños cambios de hábitos podrías liberar ese <strong className="text-[#7E2EA8]">{reducible}%</strong> de tus gastos.
               </div>
             </div>
           </section>
 
-          {/* POTENCIAL DE INVERSIÓN (PR8) */}
+          {/* POTENCIAL DE INVERSIÓN — monto grande + barra */}
           <section>
             <SectionLabel>Potencial de inversión</SectionLabel>
-            <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#DCC6EC]/50">
-              <p className="text-base font-semibold mb-3">¿Cuánto podrías invertir?</p>
+            <div className="bg-white rounded-xl p-5 border border-[#DCC6EC]/50">
+              <p className="text-base font-semibold mb-1">¿Cuánto podrías invertir?</p>
               {investRecommended > 0 ? (
                 <>
-                  <div className="relative h-44 mb-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: 'Invertible', value: investRecommended },
-                            { name: 'Para gastos / buffer', value: investRest },
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={52}
-                          outerRadius={74}
-                          cornerRadius={8}
-                          paddingAngle={3}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          <Cell fill="#7E2EA8" />
-                          <Cell fill="#DCC6EC" />
-                        </Pie>
-                        <Tooltip formatter={(v: number) => `${v}%`} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <p className="text-3xl font-bold text-[#7E2EA8] leading-none">{investRecommended}%</p>
-                      <p className="text-[11px] text-gray-500 mt-1">invertible</p>
-                    </div>
+                  <p className="text-sm text-gray-500 mb-4">Una parte de lo que te queda libre puede ir a inversión.</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl lg:text-5xl font-extrabold text-[#7E2EA8] leading-none">{formatKpi(investAmount)}</span>
+                    <span className="text-sm text-gray-500 mb-1">/mes</span>
                   </div>
-                  <div className="flex justify-center gap-4 text-xs text-gray-600 mb-3">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#7E2EA8' }} /> Invertible {investRecommended}%</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#DCC6EC' }} /> Resto {investRest}%</span>
+                  <div className="flex h-3.5 rounded-full overflow-hidden mt-4 bg-[#F1E8F8]">
+                    <div className="bg-[#7E2EA8]" style={{ width: `${investRecommended}%` }} />
+                    <div className="bg-[#DCC6EC]" style={{ width: `${investRest}%` }} />
                   </div>
-                  <div className="bg-[#F1E8F8] rounded-lg px-3 py-2.5 text-sm text-[#4A1C66] border-l-[3px] border-[#7E2EA8]">
-                    Podrías destinar hasta <strong className="text-[#7E2EA8]">{formatKpi(investAmount)}/mes</strong> a inversión y mantener el resto líquido para gastos e imprevistos. Mirá la pestaña Inversiones para opciones concretas.
+                  <div className="flex justify-between text-xs mt-2">
+                    <span className="font-semibold text-[#7E2EA8]">Invertible {investRecommended}%</span>
+                    <span className="text-gray-500">Resto {investRest}%</span>
+                  </div>
+                  <div className="bg-[#F1E8F8] rounded-lg px-3 py-2.5 text-sm text-[#4A1C66] border-l-[3px] border-[#7E2EA8] mt-4">
+                    Mantené el resto líquido para gastos e imprevistos. Mirá la pestaña <strong className="text-[#7E2EA8]">Inversiones</strong> para opciones concretas.
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-gray-500 text-center py-6">
-                  Por ahora tus gastos absorben todo lo que entra. Cuando liberés disponible — bajando gastos reducibles o sumando ingresos — vas a poder destinar parte a inversión.
+                <p className="text-sm text-gray-500 py-4">
+                  Por ahora tus gastos absorben todo lo que entra. Cuando liberés disponible vas a poder destinar parte a inversión.
                 </p>
               )}
             </div>
           </section>
 
-          {/* CATEGORÍAS DE GASTO (bar chart horizontal) */}
+          {/* CATEGORÍAS DE GASTO — ranking con emoji + monto + barra */}
           {topCategories.length > 0 && (
             <section>
               <SectionLabel>Categorías de gasto</SectionLabel>
-              <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#DCC6EC]/50">
-                <p className="text-base font-semibold mb-3">¿A dónde va tu plata?</p>
-                <div className="h-44">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={topCategories.map((c) => ({
-                        label: c.label.slice(0, 8),
-                        value: totalCategories > 0 ? Math.round((c.amount / totalCategories) * 100) : 0,
-                      }))}
-                      layout="vertical"
-                      margin={{ top: 5, right: 10, bottom: 5, left: 0 }}
-                    >
-                      <XAxis type="number" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={72} axisLine={false} tickLine={false} />
-                      <Tooltip formatter={(v: number) => `${v}%`} />
-                      <Bar dataKey="value" radius={[8, 8, 8, 8]} isAnimationActive={false} fill="#7E2EA8" />
-                    </BarChart>
-                  </ResponsiveContainer>
+              <div className="bg-white rounded-xl p-5 border border-[#DCC6EC]/50">
+                <p className="text-base font-semibold mb-4">¿A dónde va tu plata?</p>
+                <div className="space-y-3.5">
+                  {topCategories.map((c) => {
+                    const rel = topCategories[0].amount > 0 ? Math.round((c.amount / topCategories[0].amount) * 100) : 0;
+                    const share = totalCategories > 0 ? Math.round((c.amount / totalCategories) * 100) : 0;
+                    return (
+                      <div key={c.key}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm text-gray-700 flex items-center gap-2">
+                            <span className="text-base">{c.emoji}</span>{c.label}
+                          </span>
+                          <span className="text-sm font-semibold text-gray-800">
+                            {formatKpi(c.amount)} <span className="text-xs font-normal text-gray-400">· {share}%</span>
+                          </span>
+                        </div>
+                        <div className="h-2.5 rounded-full bg-[#F1E8F8] overflow-hidden">
+                          <div className="h-full rounded-full bg-[#7E2EA8]" style={{ width: `${rel}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>

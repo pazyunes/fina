@@ -709,7 +709,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="w-full bg-[#7E2EA8] hover:bg-[#682690] text-white py-5 rounded-full text-lg disabled:opacity-50"
+            className="w-full bg-[#FF5C8A] hover:bg-[#E84A77] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
             {editMode ? 'Guardar cambios' : 'Continuar'}
           </Button>
