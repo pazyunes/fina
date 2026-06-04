@@ -270,19 +270,29 @@ export async function updateReportData(newUserData: UserData): Promise<{ error: 
 
   const analysis = analyzeFinances(newUserData);
 
-  const { error } = await supabase
+  // .select() para saber cuántas filas tocó: un UPDATE bloqueado por RLS (p. ej.
+  // si falta la policy de update en reports) afecta 0 filas SIN devolver error.
+  // Sin esta verificación el fallo es silencioso y la UI "miente" hasta el reload.
+  const { data, error } = await supabase
     .from('reports')
     .update({
       user_data: newUserData,
       analysis,
       ai_reasoning: buildFullReasoning(newUserData, analysis),
     })
-    .eq('user_id', session.user.id);
+    .eq('user_id', session.user.id)
+    .select('user_id');
 
   if (error) {
     // eslint-disable-next-line no-console
     console.error('[fina] updateReportData failed:', error.message);
     return { error: error.message, analysis: null };
+  }
+  if (!data || data.length === 0) {
+    const msg = 'No se pudo guardar el cambio (0 filas actualizadas). Falta la policy de UPDATE en reports (migration 0008).';
+    // eslint-disable-next-line no-console
+    console.error('[fina] updateReportData affected 0 rows — likely missing RLS update policy');
+    return { error: msg, analysis: null };
   }
   // PR8c — Espejamos a las tablas relacionales después de cada edición.
   await syncProfileTables(session.user.id, newUserData);
