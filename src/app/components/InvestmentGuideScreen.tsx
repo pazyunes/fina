@@ -34,7 +34,7 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
         <div className="max-w-md mx-auto w-full">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] text-white/80 uppercase tracking-wider">¿Cómo lo hago?</p>
+              <p className="text-xs text-white/80 uppercase tracking-wider">¿Cómo lo hago?</p>
               <h1 className="text-xl font-semibold leading-tight" style={{ fontFamily: 'var(--font-sans)' }}>
                 {guide.title}
               </h1>
@@ -56,7 +56,7 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
                 <div
                   className={`h-1.5 rounded-full transition-colors ${i <= step ? 'bg-white' : 'bg-white/30'}`}
                 />
-                <p className={`text-[10px] mt-1 ${i === step ? 'text-white font-semibold' : 'text-white/70'}`}>
+                <p className={`text-xs mt-1 ${i === step ? 'text-white font-semibold' : 'text-white/70'}`}>
                   {i + 1}. {label}
                 </p>
               </div>

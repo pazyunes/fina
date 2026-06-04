@@ -176,7 +176,7 @@ export function Result({ analysis }: ResultProps) {
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <p className="text-3xl font-bold text-[#7E2EA8] leading-none">{reducible}%</p>
-                  <p className="text-[11px] text-gray-500 mt-1">reducible</p>
+                  <p className="text-xs text-gray-500 mt-1">reducible</p>
                 </div>
               </div>
               <div className="flex justify-center gap-4 text-xs text-gray-600 mb-3">
@@ -221,7 +221,7 @@ export function Result({ analysis }: ResultProps) {
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <p className="text-3xl font-bold text-[#7E2EA8] leading-none">{investRecommended}%</p>
-                      <p className="text-[11px] text-gray-500 mt-1">invertible</p>
+                      <p className="text-xs text-gray-500 mt-1">invertible</p>
                     </div>
                   </div>
                   <div className="flex justify-center gap-4 text-xs text-gray-600 mb-3">
@@ -318,7 +318,7 @@ export function Result({ analysis }: ResultProps) {
 function KpiTile({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className="bg-white rounded-xl px-2 py-3 lg:py-4 border border-[#DCC6EC]/70 shadow-sm text-center">
-      <p className="text-[10px] lg:text-xs text-gray-500 mb-1 uppercase tracking-wide font-medium">{label}</p>
+      <p className="text-xs lg:text-xs text-gray-500 mb-1 uppercase tracking-wide font-medium">{label}</p>
       <p className="text-lg lg:text-2xl font-bold" style={{ color }}>{value}</p>
     </div>
   );

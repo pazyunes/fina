@@ -161,7 +161,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
                   Aplicando los pasos de arriba el plazo de tus objetivos se acorta.
                 </p>
               </div>
-              <span className="bg-[#EAF3DE] text-[#3B6D11] text-[10px] font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap">
+              <span className="bg-[#EAF3DE] text-[#3B6D11] text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap">
                 avance
               </span>
             </div>
@@ -214,11 +214,11 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
           <p className="text-base font-medium truncate">
             {goalEmoji(goal.title)} {goal.title}
           </p>
-          <p className="text-[11px] text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5">
             ~{formatArs(goal.monthlyRequired)}/mes · {goal.timeframe} meses
           </p>
         </div>
-        <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap ${STATUS_BADGE[goal.status]}`}>
+        <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap ${STATUS_BADGE[goal.status]}`}>
           {STATUS_LABEL[goal.status]}
         </span>
       </div>
@@ -248,7 +248,7 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <p className="text-xl font-bold text-[#7E2EA8]" style={{ fontFamily: 'var(--font-sans)' }}>0%</p>
-          <p className="text-[10px] text-gray-500">recién empezás</p>
+          <p className="text-xs text-gray-500">recién empezás</p>
         </div>
       </div>
 
@@ -285,7 +285,7 @@ function StrategyRow({ strategy, first }: { strategy: GoalStrategy; first: boole
           {strategy.subtitle}
         </p>
       </div>
-      <span className={`text-[11px] font-medium whitespace-nowrap shrink-0 mt-0.5 ${done ? 'text-gray-300' : 'text-[#3B6D11]'}`}>
+      <span className={`text-xs font-medium whitespace-nowrap shrink-0 mt-0.5 ${done ? 'text-gray-300' : 'text-[#3B6D11]'}`}>
         {strategy.impact}
       </span>
     </div>

@@ -40,7 +40,7 @@ export function BottomNav() {
             aria-current={active ? 'page' : undefined}
           >
             <Icon className="w-5 h-5" />
-            <span className="text-[10px]" style={{ fontFamily: 'var(--font-sans)' }}>
+            <span className="text-xs" style={{ fontFamily: 'var(--font-sans)' }}>
               {tab.label}
             </span>
           </button>

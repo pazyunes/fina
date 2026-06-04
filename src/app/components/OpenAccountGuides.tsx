@@ -132,13 +132,13 @@ export function OpenAccountGuides() {
                       className="overflow-hidden"
                     >
                       <div className="px-3 pb-3.5 pt-0.5">
-                        <span className="inline-block text-[11px] font-medium text-[#854F0B] bg-[#FAEEDA] rounded-full px-2.5 py-0.5 mb-3">
+                        <span className="inline-block text-xs font-medium text-[#854F0B] bg-[#FAEEDA] rounded-full px-2.5 py-0.5 mb-3">
                           {guide.meta}
                         </span>
                         <ol className="space-y-2.5">
                           {guide.steps.map((step, i) => (
                             <li key={i} className="flex gap-2.5">
-                              <span className="w-5 h-5 rounded-full bg-[#7E2EA8] text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              <span className="w-5 h-5 rounded-full bg-[#7E2EA8] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                                 {i + 1}
                               </span>
                               <span className="text-sm text-gray-700 leading-snug">{step}</span>
@@ -154,7 +154,7 @@ export function OpenAccountGuides() {
           })}
         </div>
 
-        <p className="text-[11px] text-gray-400 mt-4 leading-relaxed">
+        <p className="text-xs text-gray-400 mt-4 leading-relaxed">
           Son ejemplos para que puedas arrancar. FINA no tiene relación comercial con estas apps
           ni mueve tu plata.
         </p>

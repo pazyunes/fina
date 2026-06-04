@@ -121,7 +121,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
               <p className="text-base font-semibold">{profile.title}</p>
               <p className="text-sm text-gray-500 mt-0.5">{profile.copy}</p>
             </div>
-            <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap ${BADGE_COLOR[profile.badge]}`}>
+            <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap ${BADGE_COLOR[profile.badge]}`}>
               {profile.badge}
             </span>
           </div>
@@ -142,11 +142,11 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">{name}</p>
-                        {info.desc && <p className="text-[11px] text-gray-500">{info.desc}</p>}
+                        {info.desc && <p className="text-xs text-gray-500">{info.desc}</p>}
                       </div>
                       <div className="text-right shrink-0">
                         {info.tasa && <p className="text-xs font-medium text-[#3B6D11]">{info.tasa}</p>}
-                        {info.liquidez && <p className="text-[10px] text-gray-500">{info.liquidez}</p>}
+                        {info.liquidez && <p className="text-xs text-gray-500">{info.liquidez}</p>}
                       </div>
                     </div>
                     <button
@@ -200,7 +200,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         )}
 
         {/* DISCLAIMER */}
-        <div className="bg-white/70 rounded-lg px-3 py-2.5 text-[11px] text-gray-500 border-l-[3px] border-gray-300">
+        <div className="bg-white/70 rounded-lg px-3 py-2.5 text-xs text-gray-500 border-l-[3px] border-gray-300">
           Este informe es orientativo y no constituye asesoramiento financiero. FINA no mueve tu plata.
         </div>
       </motion.div>
