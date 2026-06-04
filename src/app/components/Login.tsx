@@ -69,18 +69,18 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F3E9F8] flex flex-col items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#D4537E] rounded-full mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#9A3D9E] rounded-full mb-4">
             <Heart className="w-8 h-8 text-white fill-white" />
           </div>
           <h1
-            className="text-3xl mb-2 text-[#D4537E]"
+            className="text-3xl mb-2 text-[#9A3D9E]"
             style={{ fontFamily: 'var(--font-serif)' }}
           >
             {mode === 'signin' ? 'Iniciá sesión' : 'Creá tu cuenta'}
@@ -120,7 +120,7 @@ export function Login() {
           {mode === 'signup' && (
             <div>
               <Label htmlFor="phone" className="text-gray-700 text-sm">Teléfono (opcional)</Label>
-              <div className="mt-1 flex items-stretch rounded-xl border border-gray-200 focus-within:border-[#D4537E] overflow-hidden bg-white">
+              <div className="mt-1 flex items-stretch rounded-xl border border-gray-200 focus-within:border-[#9A3D9E] overflow-hidden bg-white">
                 <span className="px-3 flex items-center text-sm text-gray-600 bg-gray-50 border-r border-gray-200 select-none">
                   +54
                 </span>
@@ -140,7 +140,7 @@ export function Login() {
                 />
               </div>
               {phoneDigits !== '' && !phoneValid && (
-                <p className="text-xs text-[#D4537E] mt-1">
+                <p className="text-xs text-[#9A3D9E] mt-1">
                   Ingresá entre 8 y 13 dígitos (código de área + número), sin espacios.
                 </p>
               )}
@@ -150,13 +150,13 @@ export function Login() {
             </div>
           )}
 
-          {error && <p className="text-sm text-[#D4537E]">{error}</p>}
+          {error && <p className="text-sm text-[#9A3D9E]">{error}</p>}
           {info && <p className="text-sm text-[#3B6D11]">{info}</p>}
 
           <Button
             type="submit"
             disabled={!valid || submitting}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white py-5 rounded-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? 'Un momento…' : mode === 'signin' ? 'Iniciar sesión' : 'Crear cuenta'}
           </Button>
@@ -165,7 +165,7 @@ export function Login() {
         <button
           type="button"
           onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); setInfo(null); }}
-          className="w-full text-center text-sm text-gray-600 mt-6 hover:text-[#D4537E]"
+          className="w-full text-center text-sm text-gray-600 mt-6 hover:text-[#9A3D9E]"
         >
           {mode === 'signin'
             ? '¿No tenés cuenta? Creá una'

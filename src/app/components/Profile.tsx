@@ -56,7 +56,7 @@ export function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col pb-24 lg:pb-8 lg:pl-56">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F3E9F8] flex flex-col pb-24 lg:pb-8 lg:pl-56">
       <Sidebar />
       <TopRightUser />
       <div className="flex-1 flex flex-col p-6 lg:pt-20 max-w-md lg:max-w-4xl mx-auto w-full">
@@ -66,13 +66,13 @@ export function Profile() {
           className="w-full"
         >
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl text-[#D4537E]" style={{ fontFamily: 'var(--font-serif)' }}>
+            <h1 className="text-2xl text-[#9A3D9E]" style={{ fontFamily: 'var(--font-serif)' }}>
               Tu perfil
             </h1>
             <button
               type="button"
               onClick={handleSignOut}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#D4537E]"
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#9A3D9E]"
               title="Cerrar sesión"
             >
               <LogOut className="w-4 h-4" />
@@ -83,11 +83,11 @@ export function Profile() {
           <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
           {/* DATOS PERSONALES */}
           <div className="mb-6 lg:mb-0">
-            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">Datos personales</p>
+            <p className="text-xs font-bold text-[#9A3D9E] uppercase tracking-wider mb-2">Datos personales</p>
             <div className="bg-white rounded-2xl shadow-sm p-5">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-[#FBEAF0] flex items-center justify-center shrink-0">
-                <CircleUserRound className="w-10 h-10 text-[#D4537E]" strokeWidth={1.5} />
+              <div className="w-16 h-16 rounded-full bg-[#F3E9F8] flex items-center justify-center shrink-0">
+                <CircleUserRound className="w-10 h-10 text-[#9A3D9E]" strokeWidth={1.5} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-semibold text-gray-800 truncate">{profile.name || 'Sin nombre'}</p>
@@ -97,7 +97,7 @@ export function Profile() {
                 <button
                   type="button"
                   onClick={startEditing}
-                  className="flex items-center gap-1 text-sm text-[#D4537E] border border-[#F4C0D1] rounded-lg px-3 py-1.5 hover:bg-[#FBEAF0] shrink-0"
+                  className="flex items-center gap-1 text-sm text-[#9A3D9E] border border-[#E2C4EA] rounded-lg px-3 py-1.5 hover:bg-[#F3E9F8] shrink-0"
                 >
                   <Pencil className="w-4 h-4" />
                   Editar
@@ -106,7 +106,7 @@ export function Profile() {
             </div>
 
             {!editing ? (
-              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#F4C0D1]/50 text-sm">
+              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#E2C4EA]/50 text-sm">
                 <div>
                   <p className="text-gray-400">Edad</p>
                   <p className="text-gray-700">{profile.age || '—'}</p>
@@ -150,8 +150,8 @@ export function Profile() {
                         onClick={() => setForm({ ...form, gender: opt.value })}
                         className={`text-left px-4 py-2.5 rounded-xl border-2 transition-all text-sm ${
                           form.gender === opt.value
-                            ? 'border-[#D4537E] bg-[#FBEAF0] text-[#D4537E]'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-[#D4537E]/50'
+                            ? 'border-[#9A3D9E] bg-[#F3E9F8] text-[#9A3D9E]'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-[#9A3D9E]/50'
                         }`}
                       >
                         {opt.label}
@@ -176,7 +176,7 @@ export function Profile() {
                   <Button
                     onClick={handleSave}
                     disabled={saving || !form.name || !form.gender}
-                    className="flex-1 bg-[#D4537E] hover:bg-[#C14870] text-white rounded-full disabled:opacity-50"
+                    className="flex-1 bg-[#9A3D9E] hover:bg-[#7E3082] text-white rounded-full disabled:opacity-50"
                   >
                     {saving ? 'Guardando…' : 'Guardar'}
                   </Button>
@@ -197,11 +197,11 @@ export function Profile() {
 
           {/* PR8 — Sección de edición de datos del informe */}
           <div className="mb-6 lg:mb-0">
-            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">Mis datos financieros</p>
+            <p className="text-xs font-bold text-[#9A3D9E] uppercase tracking-wider mb-2">Mis datos financieros</p>
             <p className="text-sm text-gray-500 mb-3">
               Actualizá lo que cambió y el informe se recalcula al toque.
             </p>
-            <div className="bg-white rounded-2xl shadow-sm divide-y divide-[#F4C0D1]/50 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm divide-y divide-[#E2C4EA]/50 overflow-hidden">
               <EditRow icon={Wallet} label="Mis ingresos" to="/editar/ingresos" navigate={navigate} />
               <EditRow icon={Home} label="Mis gastos fijos" to="/editar/gastos-fijos" navigate={navigate} />
               <EditRow icon={Coffee} label="Mis gastos variables" to="/editar/gastos-variables" navigate={navigate} />
@@ -213,7 +213,7 @@ export function Profile() {
 
           <Button
             onClick={() => navigate('/result')}
-            className="w-full lg:w-auto lg:self-start lg:px-10 bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2 lg:mt-6"
+            className="w-full lg:w-auto lg:self-start lg:px-10 bg-[#9A3D9E] hover:bg-[#7E3082] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2 lg:mt-6"
           >
             Volver al informe
           </Button>
@@ -240,9 +240,9 @@ function EditRow({
     <button
       type="button"
       onClick={() => navigate(to)}
-      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[#FBEAF0]/40 transition-colors"
+      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[#F3E9F8]/40 transition-colors"
     >
-      <Icon className="w-5 h-5 text-[#D4537E]" />
+      <Icon className="w-5 h-5 text-[#9A3D9E]" />
       <span className="flex-1 text-base font-medium text-gray-700">{label}</span>
       <ChevronRight className="w-4 h-4 text-gray-300" />
     </button>

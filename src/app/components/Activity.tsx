@@ -261,7 +261,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F3E9F8] flex flex-col">
       <div className={`flex-1 flex flex-col items-center justify-center p-6 mx-auto w-full ${incomeType === 'both' ? 'max-w-md md:max-w-3xl' : 'max-w-md'}`}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -279,7 +279,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
 
           <div className="mb-6">
             <h2
-              className="text-3xl mb-2 text-[#D4537E]"
+              className="text-3xl mb-2 text-[#9A3D9E]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               Tu actividad
@@ -305,8 +305,8 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
                     onClick={() => setActivity(opt.value)}
                     className={`w-full p-4 rounded-xl border-2 transition-all ${
                       activity === opt.value
-                        ? 'border-[#D4537E] bg-[#FBEAF0]'
-                        : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
+                        ? 'border-[#9A3D9E] bg-[#F3E9F8]'
+                        : 'border-gray-200 bg-white hover:border-[#9A3D9E]/50'
                     }`}
                   >
                     {opt.label}
@@ -338,8 +338,8 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
                       onClick={() => setIncomeType(opt.value)}
                       className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                         incomeType === opt.value
-                          ? 'border-[#D4537E] bg-[#FBEAF0] text-[#D4537E]'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-[#D4537E]/50'
+                          ? 'border-[#9A3D9E] bg-[#F3E9F8] text-[#9A3D9E]'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-[#9A3D9E]/50'
                       }`}
                     >
                       {opt.label}
@@ -383,8 +383,8 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
                       }}
                       className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
                         !useExact && incomeRange === range.id
-                          ? 'border-[#D4537E] bg-[#FBEAF0] text-[#D4537E]'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-[#D4537E]/50'
+                          ? 'border-[#9A3D9E] bg-[#F3E9F8] text-[#9A3D9E]'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-[#9A3D9E]/50'
                       }`}
                     >
                       {range.label}
@@ -396,7 +396,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
                   <Switch
                     checked={useExact}
                     onCheckedChange={(checked) => setUseExact(checked)}
-                    className="data-[state=checked]:bg-[#D4537E]"
+                    className="data-[state=checked]:bg-[#9A3D9E]"
                   />
                   <span className="text-sm text-gray-600">Quiero una experiencia más personalizada</span>
                 </div>
@@ -462,7 +462,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
                   {freelanceComplete ? (
                     <>
                       <p className="text-sm text-gray-700">
-                        Promedio mensual: <span className="text-[#D4537E]">{formatArs(freelanceAvg)}</span>
+                        Promedio mensual: <span className="text-[#9A3D9E]">{formatArs(freelanceAvg)}</span>
                       </p>
                       {highVariability && (
                         <p className="text-xs text-gray-500 mt-2 italic">
@@ -484,7 +484,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
           <Button
             onClick={handleSubmit}
             disabled={!activity || !incomeValid}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar
           </Button>

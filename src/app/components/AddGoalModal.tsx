@@ -63,11 +63,11 @@ export function AddGoalModal({ onClose, onAdd, usdRate }: AddGoalModalProps) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto"
       >
-        <div className="sticky top-0 bg-white border-b border-[#F4C0D1]/60 px-5 py-3 flex items-center justify-between">
-          <h2 className="text-base font-medium text-[#D4537E]" style={{ fontFamily: 'var(--font-serif)' }}>
+        <div className="sticky top-0 bg-white border-b border-[#E2C4EA]/60 px-5 py-3 flex items-center justify-between">
+          <h2 className="text-base font-medium text-[#9A3D9E]" style={{ fontFamily: 'var(--font-serif)' }}>
             Nuevo objetivo
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-[#D4537E]">
+          <button onClick={onClose} className="text-gray-400 hover:text-[#9A3D9E]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -131,7 +131,7 @@ export function AddGoalModal({ onClose, onAdd, usdRate }: AddGoalModalProps) {
           <Button
             onClick={handleSave}
             disabled={!canSave}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white rounded-full py-5 text-base disabled:opacity-50"
+            className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white rounded-full py-5 text-base disabled:opacity-50"
           >
             Agregar objetivo
           </Button>

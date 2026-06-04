@@ -1,11 +1,2 @@
-/* Mona Sans — variable font served from jsDelivr CDN */
-@font-face {
-  font-family: 'Mona Sans';
-  src: url('https://cdn.jsdelivr.net/gh/github/mona-sans@main/fonts/webfonts/Mona-Sans.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Epilogue — Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600&display=swap');
+/* Poppins — fuente geométrica redondeada (estilo Cocos Capital), Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');

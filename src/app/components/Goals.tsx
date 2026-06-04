@@ -159,7 +159,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
   const canAddCurrentGoal = currentGoal.title && currentGoal.amount && currentGoal.timeframe;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F3E9F8] flex flex-col">
       <div className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full overflow-y-auto pb-32">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -170,7 +170,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
 
           <div className="mb-6">
             <h2
-              className="text-3xl mb-2 text-[#D4537E]"
+              className="text-3xl mb-2 text-[#9A3D9E]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               Tus objetivos
@@ -190,14 +190,14 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
                   onClick={() => toggleGoal(goal)}
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     selectedGoals.includes(goal)
-                      ? 'border-[#D4537E] bg-[#FBEAF0]'
-                      : 'border-gray-200 bg-white hover:border-[#D4537E]/50'
+                      ? 'border-[#9A3D9E] bg-[#F3E9F8]'
+                      : 'border-gray-200 bg-white hover:border-[#9A3D9E]/50'
                   }`}
                 >
                   <Checkbox
                     checked={selectedGoals.includes(goal)}
                     onCheckedChange={() => toggleGoal(goal)}
-                    className="data-[state=checked]:bg-[#D4537E] data-[state=checked]:border-[#D4537E]"
+                    className="data-[state=checked]:bg-[#9A3D9E] data-[state=checked]:border-[#9A3D9E]"
                   />
                   <span className="text-gray-700">{goal}</span>
                 </div>
@@ -303,17 +303,17 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
-                      className="bg-white p-4 rounded-xl border-2 border-[#D4537E] flex items-start justify-between"
+                      className="bg-white p-4 rounded-xl border-2 border-[#9A3D9E] flex items-start justify-between"
                     >
                       <div className="flex-1">
-                        <p className="font-medium text-[#D4537E] mb-1">{goal.title}</p>
+                        <p className="font-medium text-[#9A3D9E] mb-1">{goal.title}</p>
                         <p className="text-sm text-gray-600">
                           {goal.currency === 'USD' ? `USD ${goal.amount}` : `$${formatCurrency(goal.amount)}`} en {goal.timeframe} meses
                         </p>
                       </div>
                       <button
                         onClick={() => removeGoal(index)}
-                        className="text-gray-400 hover:text-[#D4537E] p-1"
+                        className="text-gray-400 hover:text-[#9A3D9E] p-1"
                       >
                         <X className="w-5 h-5" />
                       </button>
@@ -343,7 +343,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
                     value={currentGoal.title}
                     onChange={(e) => setCurrentGoal({ ...currentGoal, title: e.target.value })}
                     placeholder="Ej: Viaje a San Martín, nueva notebook..."
-                    className="mt-2 bg-white border-gray-200 focus:border-[#D4537E] focus:ring-[#D4537E] rounded-xl"
+                    className="mt-2 bg-white border-gray-200 focus:border-[#9A3D9E] focus:ring-[#9A3D9E] rounded-xl"
                   />
                 </div>
 
@@ -399,7 +399,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
                     placeholder="3"
                     min="1"
                     max="60"
-                    className="mt-2 bg-white border-gray-200 focus:border-[#D4537E] focus:ring-[#D4537E] rounded-xl"
+                    className="mt-2 bg-white border-gray-200 focus:border-[#9A3D9E] focus:ring-[#9A3D9E] rounded-xl"
                   />
                 </div>
 
@@ -437,7 +437,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white py-5 rounded-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Ver mi análisis
           </Button>

@@ -86,10 +86,10 @@ export function OpenAccountGuides() {
 
   return (
     <section>
-      <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">
+      <p className="text-xs font-bold text-[#9A3D9E] uppercase tracking-wider mb-2">
         Empezá por acá: abrí tu cuenta
       </p>
-      <div className="bg-white rounded-xl p-4 border border-[#F4C0D1]/50">
+      <div className="bg-white rounded-xl p-4 border border-[#E2C4EA]/50">
         <p className="text-base font-semibold mb-1">Todavía no tenés cuenta. ¡Arranquemos! 🚀</p>
         <p className="text-sm text-gray-500 mb-4">
           Estas son las formas más fáciles de abrir una cuenta para guardar e invertir.
@@ -103,7 +103,7 @@ export function OpenAccountGuides() {
               <div
                 key={guide.id}
                 className={`rounded-xl border transition-colors ${
-                  isOpen ? 'border-[#D4537E] bg-[#FBEAF0]/40' : 'border-gray-200 bg-white'
+                  isOpen ? 'border-[#9A3D9E] bg-[#F3E9F8]/40' : 'border-gray-200 bg-white'
                 }`}
               >
                 <button
@@ -118,7 +118,7 @@ export function OpenAccountGuides() {
                     <p className="text-xs text-gray-500 leading-snug">{guide.tagline}</p>
                   </div>
                   <ChevronDown
-                    className={`w-5 h-5 text-[#D4537E] shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-[#9A3D9E] shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
                   />
                 </button>
 
@@ -138,7 +138,7 @@ export function OpenAccountGuides() {
                         <ol className="space-y-2.5">
                           {guide.steps.map((step, i) => (
                             <li key={i} className="flex gap-2.5">
-                              <span className="w-5 h-5 rounded-full bg-[#D4537E] text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              <span className="w-5 h-5 rounded-full bg-[#9A3D9E] text-white text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                                 {i + 1}
                               </span>
                               <span className="text-sm text-gray-700 leading-snug">{step}</span>

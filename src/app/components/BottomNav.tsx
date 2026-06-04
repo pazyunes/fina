@@ -25,7 +25,7 @@ export function BottomNav() {
   const { pathname } = useLocation();
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#F4C0D1] flex items-stretch z-50 pb-safe">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E2C4EA] flex items-stretch z-50 pb-safe">
       {TABS.map((tab) => {
         const active = pathname === tab.to;
         const Icon = tab.icon;
@@ -35,7 +35,7 @@ export function BottomNav() {
             type="button"
             onClick={() => navigate(tab.to)}
             className={`flex-1 flex flex-col items-center gap-1 py-2 transition-colors ${
-              active ? 'text-[#D4537E]' : 'text-gray-400 hover:text-[#D4537E]/70'
+              active ? 'text-[#9A3D9E]' : 'text-gray-400 hover:text-[#9A3D9E]/70'
             }`}
             aria-current={active ? 'page' : undefined}
           >

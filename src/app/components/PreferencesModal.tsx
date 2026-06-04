@@ -103,11 +103,11 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto"
       >
-        <div className="sticky top-0 bg-white border-b border-[#F4C0D1]/60 px-5 py-3 flex items-center justify-between">
-          <h2 className="text-base font-medium text-[#D4537E]" style={{ fontFamily: 'var(--font-serif)' }}>
+        <div className="sticky top-0 bg-white border-b border-[#E2C4EA]/60 px-5 py-3 flex items-center justify-between">
+          <h2 className="text-base font-medium text-[#9A3D9E]" style={{ fontFamily: 'var(--font-serif)' }}>
             Recomendaciones personalizadas
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-[#D4537E]">
+          <button onClick={onClose} className="text-gray-400 hover:text-[#9A3D9E]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -133,16 +133,16 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
                     disabled={!picked && ranking.length >= 5}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-sm ${
                       picked
-                        ? 'border-[#D4537E] bg-[#FBEAF0] text-[#D4537E]'
+                        ? 'border-[#9A3D9E] bg-[#F3E9F8] text-[#9A3D9E]'
                         : ranking.length >= 5
                         ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-[#D4537E]/50'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-[#9A3D9E]/50'
                     }`}
                   >
                     <span className="text-base">{cat.emoji}</span>
                     <span className="flex-1 text-left">{cat.label}</span>
                     {picked && (
-                      <span className="w-6 h-6 rounded-full bg-[#D4537E] text-white text-xs font-medium flex items-center justify-center">
+                      <span className="w-6 h-6 rounded-full bg-[#9A3D9E] text-white text-xs font-medium flex items-center justify-center">
                         {pos + 1}
                       </span>
                     )}
@@ -177,7 +177,7 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
                 type="button"
                 onClick={addSpot}
                 disabled={!newSpot.trim() || spots.length >= 20}
-                className="bg-[#D4537E] hover:bg-[#C14870] text-white rounded-xl px-3"
+                className="bg-[#9A3D9E] hover:bg-[#7E3082] text-white rounded-xl px-3"
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -187,13 +187,13 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
                 {spots.map((s, i) => (
                   <span
                     key={`${s}-${i}`}
-                    className="inline-flex items-center gap-1.5 bg-[#FBEAF0] text-[#993556] text-xs rounded-full pl-3 pr-2 py-1"
+                    className="inline-flex items-center gap-1.5 bg-[#F3E9F8] text-[#5E2A6E] text-xs rounded-full pl-3 pr-2 py-1"
                   >
                     {s}
                     <button
                       type="button"
                       onClick={() => removeSpot(i)}
-                      className="text-[#D4537E] hover:text-[#993556]"
+                      className="text-[#9A3D9E] hover:text-[#5E2A6E]"
                       aria-label={`Quitar ${s}`}
                     >
                       <X className="w-3 h-3" />
@@ -206,20 +206,20 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
 
           {/* Preview del ranking guardado */}
           {ranking.length > 0 && (
-            <section className="bg-[#FBEAF0]/60 rounded-xl p-3 border-l-[3px] border-[#D4537E]">
-              <p className="text-xs text-[#993556]">
+            <section className="bg-[#F3E9F8]/60 rounded-xl p-3 border-l-[3px] border-[#9A3D9E]">
+              <p className="text-xs text-[#5E2A6E]">
                 Vamos a usar este orden para priorizar dónde NO sugerir recortes:{' '}
                 {ranking.map((s, i) => `${i + 1}) ${emojiOf(s)} ${labelOf(s)}`).join(' · ')}
               </p>
             </section>
           )}
 
-          {feedback && <p className="text-xs text-[#D4537E]">{feedback}</p>}
+          {feedback && <p className="text-xs text-[#9A3D9E]">{feedback}</p>}
 
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white rounded-full py-5 text-base"
+            className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white rounded-full py-5 text-base"
           >
             {saving ? 'Guardando…' : 'Guardar preferencias'}
           </Button>

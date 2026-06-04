@@ -8,10 +8,10 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #D4537E;
+  --primary: #9A3D9E;
   --primary-foreground: #ffffff;
-  --secondary: #FBEAF0;
-  --secondary-foreground: #D4537E;
+  --secondary: #F3E9F8;
+  --secondary-foreground: #9A3D9E;
   --muted: #ececf0;
   --muted-foreground: #717182;
   --accent: #D85A30;
@@ -25,10 +25,10 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: oklch(0.708 0 0);
-  --chart-1: #D4537E;
+  --chart-1: #9A3D9E;
   --chart-2: #D85A30;
   --chart-3: #3B6D11;
-  --chart-4: #FBEAF0;
+  --chart-4: #F3E9F8;
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
@@ -41,15 +41,15 @@
   --sidebar-ring: oklch(0.708 0 0);
   
   /* FINA Custom Colors */
-  --fina-pink: #D4537E;
-  --fina-pink-light: #FBEAF0;
+  --fina-pink: #9A3D9E;
+  --fina-pink-light: #F3E9F8;
   --fina-coral: #D85A30;
   --fina-green: #3B6D11;
   --fina-neutral: #f5f1ed;
   
-  /* FINA Custom Fonts */
-  --font-serif: 'Mona Sans', sans-serif;
-  --font-sans: 'Epilogue', sans-serif;
+  /* FINA Custom Fonts — Poppins (geométrica redondeada, estilo Cocos) */
+  --font-serif: 'Poppins', sans-serif;
+  --font-sans: 'Poppins', sans-serif;
 }
 
 .dark {

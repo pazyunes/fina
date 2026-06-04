@@ -18,16 +18,16 @@ export function LoadingScreen() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FBEAF0] to-white flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#F3E9F8] to-white flex flex-col items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="text-center max-w-md w-full"
       >
-        <Loader2 className="w-12 h-12 text-[#D4537E] mx-auto mb-6 animate-spin" strokeWidth={2} />
+        <Loader2 className="w-12 h-12 text-[#9A3D9E] mx-auto mb-6 animate-spin" strokeWidth={2} />
         <h2
-          className="mb-3 text-[#D4537E]"
+          className="mb-3 text-[#9A3D9E]"
           style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem' }}
         >
           Pensando tu plan… ⚡

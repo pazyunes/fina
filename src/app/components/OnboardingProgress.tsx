@@ -27,9 +27,9 @@ export function OnboardingProgress({ currentPath }: OnboardingProgressProps) {
           key={step.path}
           className={`h-2 rounded-full transition-all duration-300 ${
             index === currentIndex
-              ? 'w-6 bg-[#D4537E]'
+              ? 'w-6 bg-[#9A3D9E]'
               : index < currentIndex
-                ? 'w-2 bg-[#D4537E]'
+                ? 'w-2 bg-[#9A3D9E]'
                 : 'w-2 bg-gray-300'
           }`}
         />

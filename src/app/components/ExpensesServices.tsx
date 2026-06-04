@@ -236,7 +236,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F3E9F8] flex flex-col">
       <div className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -257,9 +257,9 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
             />
           )}
 
-          <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#FBEAF0] pb-3 z-10">
+          <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#F3E9F8] pb-3 z-10">
             <h2
-              className="text-3xl mb-2 text-[#D4537E]"
+              className="text-3xl mb-2 text-[#9A3D9E]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               Gastos que cambian mes a mes
@@ -282,7 +282,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                   Apps y plataformas que pagás todos los meses
                 </p>
                 {livesAccompanied && (
-                  <p className="text-xs text-[#D4537E] mb-3">Poné solo lo que pagás vos</p>
+                  <p className="text-xs text-[#9A3D9E] mb-3">Poné solo lo que pagás vos</p>
                 )}
                 <div className="space-y-3">
                   {PRESET_SUBSCRIPTIONS.map(service => (
@@ -387,7 +387,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
             {/* Entertainment Section */}
             <AccordionItem value="entertainment" className="bg-white rounded-2xl shadow-sm border-0 px-5">
               <AccordionTrigger className="hover:no-underline py-4">
-                <TriggerLabel icon={Sparkles} color="#D4537E" title="Salidas y entretenimiento" done={entertainmentComplete} />
+                <TriggerLabel icon={Sparkles} color="#9A3D9E" title="Salidas y entretenimiento" done={entertainmentComplete} />
               </AccordionTrigger>
               <AccordionContent className="pt-0 pb-5">
                 <div className="flex items-center gap-2 mb-4">
@@ -401,7 +401,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                         advanceFrom('entertainment');
                       }
                     }}
-                    className="data-[state=checked]:bg-[#D4537E]"
+                    className="data-[state=checked]:bg-[#9A3D9E]"
                   />
                   <span className="text-sm text-gray-500">No consumo</span>
                 </div>
@@ -479,7 +479,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                         advanceFrom('delivery');
                       }
                     }}
-                    className="data-[state=checked]:bg-[#D4537E]"
+                    className="data-[state=checked]:bg-[#9A3D9E]"
                   />
                   <span className="text-sm text-gray-500">No consumo</span>
                 </div>
@@ -560,7 +560,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                         advanceFrom('cafeterias');
                       }
                     }}
-                    className="data-[state=checked]:bg-[#D4537E]"
+                    className="data-[state=checked]:bg-[#9A3D9E]"
                   />
                   <span className="text-sm text-gray-500">No consumo</span>
                 </div>
@@ -623,11 +623,11 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
             {/* Supermarket Section */}
             <AccordionItem value="super" className="bg-white rounded-2xl shadow-sm border-0 px-5">
               <AccordionTrigger className="hover:no-underline py-4">
-                <TriggerLabel icon={ShoppingCart} color="#D4537E" title="Supermercado" done={supermarketComplete} />
+                <TriggerLabel icon={ShoppingCart} color="#9A3D9E" title="Supermercado" done={supermarketComplete} />
               </AccordionTrigger>
               <AccordionContent className="pt-0 pb-5">
                 {livesAccompanied && (
-                  <p className="text-xs text-[#D4537E] mb-3">Poné solo lo que pagás vos</p>
+                  <p className="text-xs text-[#9A3D9E] mb-3">Poné solo lo que pagás vos</p>
                 )}
                 <div className="flex items-center gap-2 mb-4">
                   <Switch
@@ -640,7 +640,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                         advanceFrom('super');
                       }
                     }}
-                    className="data-[state=checked]:bg-[#D4537E]"
+                    className="data-[state=checked]:bg-[#9A3D9E]"
                   />
                   <span className="text-sm text-gray-500">No aplica</span>
                 </div>
@@ -709,7 +709,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white py-5 rounded-full text-lg disabled:opacity-50"
+            className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
             {editMode ? 'Guardar cambios' : 'Continuar'}
           </Button>

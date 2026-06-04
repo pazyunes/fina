@@ -10,7 +10,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-white to-[#F3E9F8] flex items-center justify-center">
         <p className="text-gray-500" style={{ fontFamily: 'var(--font-sans)' }}>Cargando…</p>
       </div>
     );

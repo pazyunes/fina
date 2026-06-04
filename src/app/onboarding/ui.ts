@@ -2,4 +2,4 @@
 // + low-opacity fill so amount fields read as money inputs at a glance, while
 // keeping the brand focus state. Apply to every amount Input in the onboarding.
 export const AMOUNT_FIELD_CLASS =
-  'border-2 border-[#D4537E]/30 bg-[#D4537E]/[0.05] focus:border-[#D4537E] focus-visible:border-[#D4537E] focus-visible:ring-[#D4537E]/30';
+  'border-2 border-[#9A3D9E]/30 bg-[#9A3D9E]/[0.05] focus:border-[#9A3D9E] focus-visible:border-[#9A3D9E] focus-visible:ring-[#9A3D9E]/30';

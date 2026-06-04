@@ -34,7 +34,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_BADGE: Record<string, string> = {
   possible: 'bg-[#EAF3DE] text-[#3B6D11]',
   tight: 'bg-[#FAEEDA] text-[#854F0B]',
-  not_possible: 'bg-[#FBEAF0] text-[#993556]',
+  not_possible: 'bg-[#F3E9F8] text-[#5E2A6E]',
 };
 
 // Emoji por palabra clave del título del objetivo. Si no matchea ninguna,
@@ -84,11 +84,11 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
   };
 
   return (
-    <div className="min-h-screen bg-[#FBEAF0] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
+    <div className="min-h-screen bg-[#F3E9F8] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
       <TopRightUser />
       {/* Header — solo mobile */}
-      <div className="lg:hidden bg-[#D4537E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
+      <div className="lg:hidden bg-[#9A3D9E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
         <div className="max-w-md lg:max-w-3xl mx-auto">
           <h1 className="text-xl lg:text-2xl font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>Mis objetivos</h1>
           <p className="text-sm text-white/80 mt-0.5">Seguí tu avance y tus próximos pasos</p>
@@ -106,17 +106,17 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           type="button"
           onClick={() => setShowAddGoal(true)}
           disabled={savingGoal}
-          className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+          className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
         >
           <Plus className="w-4 h-4" /> {savingGoal ? 'Guardando…' : 'Agregar nuevo objetivo'}
         </button>
-        {errorMsg && <p className="text-xs text-[#D4537E] text-center">{errorMsg}</p>}
+        {errorMsg && <p className="text-xs text-[#9A3D9E] text-center">{errorMsg}</p>}
 
         {/* EN CURSO */}
         <section>
-          <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">En curso</p>
+          <p className="text-xs font-bold text-[#9A3D9E] uppercase tracking-wider mb-2">En curso</p>
           {goals.length === 0 ? (
-            <div className="bg-white rounded-xl p-4 border border-[#F4C0D1]/50 text-sm text-gray-500">
+            <div className="bg-white rounded-xl p-4 border border-[#E2C4EA]/50 text-sm text-gray-500">
               Todavía no cargaste objetivos específicos.
             </div>
           ) : (
@@ -131,13 +131,13 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         {/* ESTRATEGIAS PARA LLEGAR AL OBJETIVO */}
         {strategies.length > 0 && (
           <section>
-            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">
+            <p className="text-xs font-bold text-[#9A3D9E] uppercase tracking-wider mb-2">
               Cómo llegar al objetivo — varias opciones
             </p>
             <p className="text-xs text-gray-500 mb-2">
               Marcá las que vas implementando. Cada una suma a la cuota mensual de tu objetivo.
             </p>
-            <div className="bg-white rounded-xl px-4 py-1 border border-[#F4C0D1]/50">
+            <div className="bg-white rounded-xl px-4 py-1 border border-[#E2C4EA]/50">
               {strategies.map((s, i) => (
                 <StrategyRow key={i} strategy={s} first={i === 0} />
               ))}
@@ -148,10 +148,10 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         {/* SI CUMPLÍS TODO */}
         {strategies.length > 0 && (
           <section>
-            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">
+            <p className="text-xs font-bold text-[#9A3D9E] uppercase tracking-wider mb-2">
               Si cumplís todos los accionables
             </p>
-            <div className="bg-white rounded-xl p-4 border border-[#F4C0D1]/50 flex items-center gap-3">
+            <div className="bg-white rounded-xl p-4 border border-[#E2C4EA]/50 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#EAF3DE] flex items-center justify-center shrink-0">
                 <Clock className="w-5 h-5 text-[#3B6D11]" />
               </div>
@@ -172,7 +172,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         <button
           type="button"
           onClick={() => navigate('/inversiones')}
-          className="w-full bg-white border-2 border-[#D4537E] text-[#D4537E] rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#FBEAF0]/40 transition-colors"
+          className="w-full bg-white border-2 border-[#9A3D9E] text-[#9A3D9E] rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#F3E9F8]/40 transition-colors"
         >
           <TrendingUp className="w-4 h-4" /> Ver inversiones recomendadas
         </button>
@@ -181,7 +181,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         <button
           type="button"
           onClick={() => setShowPrefs(true)}
-          className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+          className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors"
         >
           <Sparkles className="w-4 h-4" /> Quiero recomendaciones personalizadas
         </button>
@@ -208,7 +208,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
 // + monto/plazo + status badge + tip con la cuota mensual sugerida.
 function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-[#F4C0D1]/50 space-y-3">
+    <div className="bg-white rounded-xl p-4 border border-[#E2C4EA]/50 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-base font-medium truncate">
@@ -240,13 +240,13 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
               stroke="none"
               isAnimationActive={false}
             >
-              <Cell fill="#D4537E" />
-              <Cell fill="#FBEAF0" />
+              <Cell fill="#9A3D9E" />
+              <Cell fill="#F3E9F8" />
             </Pie>
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <p className="text-xl font-medium text-[#D4537E]" style={{ fontFamily: 'var(--font-sans)' }}>
+          <p className="text-xl font-medium text-[#9A3D9E]" style={{ fontFamily: 'var(--font-sans)' }}>
             0%
           </p>
           <p className="text-[10px] text-gray-500">recién empezás</p>
@@ -255,10 +255,10 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
 
       <div className="flex justify-between text-xs">
         <span className="text-gray-500">Total objetivo</span>
-        <span className="font-medium text-[#D4537E]">{formatArs(goal.amount)}</span>
+        <span className="font-medium text-[#9A3D9E]">{formatArs(goal.amount)}</span>
       </div>
 
-      <div className="bg-[#FBEAF0] rounded-lg px-3 py-2.5 text-xs text-[#993556] border-l-[3px] border-[#D4537E]">
+      <div className="bg-[#F3E9F8] rounded-lg px-3 py-2.5 text-xs text-[#5E2A6E] border-l-[3px] border-[#9A3D9E]">
         📅 {goal.insight}
       </div>
     </div>
@@ -273,9 +273,9 @@ function StrategyRow({ strategy, first }: { strategy: GoalStrategy; first: boole
   return (
     <div
       onClick={() => setDone(d => !d)}
-      className={`flex items-start gap-3 py-3 cursor-pointer ${first ? '' : 'border-t border-[#F4C0D1]/50'}`}
+      className={`flex items-start gap-3 py-3 cursor-pointer ${first ? '' : 'border-t border-[#E2C4EA]/50'}`}
     >
-      <div className={`w-5 h-5 rounded-full border-2 border-[#D4537E] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${done ? 'bg-[#D4537E]' : ''}`}>
+      <div className={`w-5 h-5 rounded-full border-2 border-[#9A3D9E] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${done ? 'bg-[#9A3D9E]' : ''}`}>
         {done && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
       </div>
       <div className="flex-1 min-w-0">
