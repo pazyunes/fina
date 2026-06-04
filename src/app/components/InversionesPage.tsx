@@ -4,6 +4,7 @@ import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
 import { g } from '../utils/gender';
 import { BottomNav } from './BottomNav';
+import { OpenAccountGuides } from './OpenAccountGuides';
 
 interface InversionesPageProps {
   analysis: FinancialAnalysis;
@@ -73,6 +74,9 @@ function projection(available: number) {
 
 export function InversionesPage({ analysis }: InversionesPageProps) {
   const profile = riskProfile(analysis.financialLevel, analysis.userData.gender);
+  // No bancarizada: eligió "No uso banco" en el onboarding. En ese caso, antes
+  // que recomendar instrumentos, le mostramos cómo abrir su primera cuenta.
+  const notBanked = analysis.userData.banks?.includes('No uso banco') ?? false;
   const recommendations = (analysis.recommendedInvestments ?? []).slice(0, 3);
   const rows = projection(analysis.available);
   const extraVsBase = rows[2].value - rows[0].value; // FCI vs sin invertir
@@ -93,6 +97,10 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         transition={{ duration: 0.3 }}
         className="flex-1 p-4 max-w-md mx-auto w-full space-y-5"
       >
+        {/* GUÍAS PARA ABRIR CUENTA — solo si no está bancarizada. Va primero
+            porque es el paso previo a cualquier inversión. */}
+        {notBanked && <OpenAccountGuides />}
+
         {/* PERFIL DE RIESGO */}
         <section>
           <p className="text-[10px] font-medium text-[#D4537E] uppercase tracking-wider mb-2">Tu perfil de riesgo</p>
