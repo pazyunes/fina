@@ -112,10 +112,13 @@ export function Result({ analysis }: ResultProps) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 p-4 lg:p-8 max-w-md lg:max-w-5xl mx-auto w-full"
+        className="flex-1 p-4 lg:p-8 max-w-md lg:max-w-6xl mx-auto w-full"
       >
+       <div className="lg:grid lg:grid-cols-3 lg:gap-5 lg:items-start">
+        {/* COLUMNA PRINCIPAL (2/3) */}
+        <div className="space-y-5 lg:col-span-2">
         {/* RESUMEN — Disponible como hero a todo el ancho + Ingresos/Gastos */}
-        <section className="mb-5">
+        <section>
           <SectionLabel>Resumen</SectionLabel>
           <div className="grid grid-cols-2 gap-2 lg:gap-4">
             {/* Hero Disponible: gradiente rosa + número gigante para impacto */}
@@ -143,8 +146,6 @@ export function Result({ analysis }: ResultProps) {
           </div>
         </section>
 
-        {/* Resto de secciones: single-column en mobile, grilla 2-col en desktop */}
-        <div className="space-y-5 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-5 lg:items-start">
           {/* POTENCIAL DE AHORRO */}
           <section>
             <SectionLabel>Potencial de ahorro</SectionLabel>
@@ -258,7 +259,10 @@ export function Result({ analysis }: ResultProps) {
               </div>
             </section>
           )}
+        </div>
 
+        {/* COLUMNA DERECHA / right rail (1/3) */}
+        <div className="space-y-5">
           {/* DESCUENTOS DISPONIBLES PARA VOS (PR8 — placeholder de cupones) */}
           <section>
             <SectionLabel>Descuentos disponibles para vos</SectionLabel>
@@ -272,8 +276,8 @@ export function Result({ analysis }: ResultProps) {
             </div>
           </section>
 
-          {/* TU NIVEL FINANCIERO — ocupa las 2 columnas en desktop */}
-          <section className="lg:col-span-2">
+          {/* TU NIVEL FINANCIERO */}
+          <section>
             <SectionLabel>Tu nivel financiero</SectionLabel>
             <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#F4C0D1]/50 flex items-center gap-3">
               <div className="w-11 h-11 rounded-full bg-[#FBEAF0] flex items-center justify-center shrink-0">
@@ -289,6 +293,7 @@ export function Result({ analysis }: ResultProps) {
             </div>
           </section>
         </div>
+       </div>
 
         {/* Deficit warning si available negativo */}
         {analysis.available < 0 && (
