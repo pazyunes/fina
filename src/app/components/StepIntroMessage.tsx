@@ -16,9 +16,9 @@ export function StepIntroMessage({ title, body }: StepIntroMessageProps) {
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="bg-[#F3E9F8]/70 border border-[#9A3D9E]/20 rounded-2xl px-5 py-4 mb-5"
+      className="bg-[#F1E8F8]/70 border border-[#7E2EA8]/20 rounded-2xl px-5 py-4 mb-5"
     >
-      <p className="text-[#9A3D9E] mb-1" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.15rem' }}>
+      <p className="text-[#7E2EA8] mb-1" style={{ fontFamily: 'var(--font-serif)', fontSize: '1.15rem' }}>
         {title}
       </p>
       <p className="text-sm text-gray-700 leading-relaxed">

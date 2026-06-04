@@ -10,7 +10,7 @@ export function Splash() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F3E9F8] to-white flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#F1E8F8] to-white flex flex-col items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -23,13 +23,13 @@ export function Splash() {
           transition={{ duration: 0.5, type: 'spring', stiffness: 200 }}
           className="mb-8"
         >
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-[#9A3D9E] rounded-full mb-6">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-[#7E2EA8] rounded-full mb-6">
             <Heart className="w-12 h-12 text-white fill-white" />
           </div>
         </motion.div>
 
         <h1
-          className="mb-4 text-[#9A3D9E]"
+          className="mb-4 text-[#7E2EA8]"
           style={{ fontFamily: 'var(--font-serif)', fontSize: '3rem', lineHeight: '1.1' }}
         >
           FINA
@@ -50,7 +50,7 @@ export function Splash() {
         >
           <Button
             onClick={() => navigate('/login', { state: { mode: 'signin' } })}
-            className="bg-[#9A3D9E] hover:bg-[#7E3082] text-white py-6 rounded-full text-lg"
+            className="bg-[#7E2EA8] hover:bg-[#682690] text-white py-6 rounded-full text-lg"
             style={{ fontFamily: 'var(--font-sans)' }}
           >
             Iniciar sesión
@@ -58,7 +58,7 @@ export function Splash() {
           <Button
             onClick={() => navigate('/login', { state: { mode: 'signup' } })}
             variant="outline"
-            className="border-2 border-[#9A3D9E] text-[#9A3D9E] hover:bg-[#F3E9F8] py-6 rounded-full text-lg"
+            className="border-2 border-[#7E2EA8] text-[#7E2EA8] hover:bg-[#F1E8F8] py-6 rounded-full text-lg"
             style={{ fontFamily: 'var(--font-sans)' }}
           >
             Crear cuenta

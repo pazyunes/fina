@@ -52,7 +52,7 @@ interface ExpenseCategory {
 }
 
 const CATEGORIES: ExpenseCategory[] = [
-  { key: 'housing', label: 'Alquiler', icon: Home, color: '#9A3D9E', helper: 'Poné solo tu parte, no el total' },
+  { key: 'housing', label: 'Alquiler', icon: Home, color: '#7E2EA8', helper: 'Poné solo tu parte, no el total' },
   { key: 'health', label: 'Salud', icon: Heart, color: '#D85A30', helper: 'Nos referimos a la prepaga' },
   { key: 'beauty', label: 'Belleza y cuidado personal', icon: Sparkles, color: '#9C7AA5', helper: 'Cuánto gastás por mes en peluquería, manicura, pedicura, definitiva, etc.' },
   { key: 'therapy', label: 'Psicóloga / terapia', icon: Brain, color: '#3B6D11' },
@@ -256,7 +256,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   const canAddCurrentInstallment = currentInstallment.name && currentInstallment.monthlyAmount && currentInstallment.remainingInstallments;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F3E9F8] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F1E8F8] flex flex-col">
       <div className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -278,9 +278,9 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
             />
           )}
 
-          <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#F3E9F8] pb-3 z-10">
+          <div className="mb-6 sticky top-0 bg-gradient-to-br from-white to-[#F1E8F8] pb-3 z-10">
             <h2
-              className="text-3xl mb-2 text-[#9A3D9E]"
+              className="text-3xl mb-2 text-[#7E2EA8]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               Gastos que se repiten todos los meses
@@ -354,7 +354,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                             advanceFrom(category.key);
                           }
                         }}
-                        className="data-[state=checked]:bg-[#9A3D9E]"
+                        className="data-[state=checked]:bg-[#7E2EA8]"
                       />
                       <span className="text-sm text-gray-500">No lo pago yo</span>
                     </div>
@@ -498,7 +498,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
 
             {/* Installments section */}
             <div className="bg-white p-6 rounded-2xl shadow-sm">
-              <h3 className="text-lg mb-4 text-[#9A3D9E]" style={{ fontFamily: 'var(--font-sans)' }}>
+              <h3 className="text-lg mb-4 text-[#7E2EA8]" style={{ fontFamily: 'var(--font-sans)' }}>
                 ¿Estás pagando algo en cuotas?
               </h3>
 
@@ -509,7 +509,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                     setShowInstallmentForm(true);
                   }}
                   variant={hasInstallments === true ? 'default' : 'outline'}
-                  className={`flex-1 ${hasInstallments === true ? 'bg-[#9A3D9E] hover:bg-[#7E3082]' : ''}`}
+                  className={`flex-1 ${hasInstallments === true ? 'bg-[#7E2EA8] hover:bg-[#682690]' : ''}`}
                 >
                   Sí
                 </Button>
@@ -521,7 +521,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                     setCurrentInstallment({ name: '', monthlyAmount: '', remainingInstallments: '' });
                   }}
                   variant={hasInstallments === false ? 'default' : 'outline'}
-                  className={`flex-1 ${hasInstallments === false ? 'bg-[#9A3D9E] hover:bg-[#7E3082]' : ''}`}
+                  className={`flex-1 ${hasInstallments === false ? 'bg-[#7E2EA8] hover:bg-[#682690]' : ''}`}
                 >
                   No
                 </Button>
@@ -544,10 +544,10 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
-                          className="bg-white p-4 rounded-xl border-2 border-[#9A3D9E] flex items-start justify-between"
+                          className="bg-white p-4 rounded-xl border-2 border-[#7E2EA8] flex items-start justify-between"
                         >
                           <div className="flex-1">
-                            <p className="font-medium text-[#9A3D9E] mb-1">{inst.name}</p>
+                            <p className="font-medium text-[#7E2EA8] mb-1">{inst.name}</p>
                             <p className="text-sm text-gray-600">
                               ${formatThousands(inst.monthlyAmount)}/mes × {inst.remainingInstallments} cuotas restantes
                             </p>
@@ -559,7 +559,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                           </div>
                           <button
                             onClick={() => removeInstallment(index)}
-                            className="text-gray-400 hover:text-[#9A3D9E] p-1"
+                            className="text-gray-400 hover:text-[#7E2EA8] p-1"
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -652,7 +652,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                     <Button
                       onClick={addInstallment}
                       disabled={!canAddCurrentInstallment}
-                      className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#7E2EA8] hover:bg-[#682690] text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Check className="w-4 h-4" />
                       Guardar cuota
@@ -685,7 +685,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
           <Button
             onClick={handleSubmit}
             disabled={!isValid}
-            className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white py-5 rounded-full text-lg disabled:opacity-50"
+            className="w-full bg-[#7E2EA8] hover:bg-[#682690] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
             {editMode ? 'Guardar cambios' : 'Continuar'}
           </Button>

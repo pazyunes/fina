@@ -47,7 +47,7 @@ function riskProfile(level: string, gender: FinancialAnalysis['userData']['gende
 const BADGE_COLOR: Record<string, string> = {
   moderado: 'bg-[#FAEEDA] text-[#854F0B]',
   conservador: 'bg-[#EAF3DE] text-[#3B6D11]',
-  inicio: 'bg-[#F3E9F8] text-[#5E2A6E]',
+  inicio: 'bg-[#F1E8F8] text-[#4A1C66]',
 };
 
 // Catálogo corto con descripción + TNA aproximada para cada instrumento que
@@ -71,9 +71,9 @@ function projection(available: number) {
   const base = Math.max(available, 0) * months;
   return [
     { label: 'Sin invertir',     value: base,                   pct: 60,  color: '#CCC',     valColor: '#999' },
-    { label: 'Cta. remunerada',  value: Math.round(base * 1.09), pct: 75,  color: '#9A3D9E', valColor: '#9A3D9E' },
-    { label: 'FCI Money Mkt',    value: Math.round(base * 1.13), pct: 85,  color: '#9A3D9E', valColor: '#9A3D9E' },
-    { label: 'Plazo fijo UVA',   value: Math.round(base * 1.17), pct: 100, color: '#9A3D9E', valColor: '#9A3D9E' },
+    { label: 'Cta. remunerada',  value: Math.round(base * 1.09), pct: 75,  color: '#7E2EA8', valColor: '#7E2EA8' },
+    { label: 'FCI Money Mkt',    value: Math.round(base * 1.13), pct: 85,  color: '#7E2EA8', valColor: '#7E2EA8' },
+    { label: 'Plazo fijo UVA',   value: Math.round(base * 1.17), pct: 100, color: '#7E2EA8', valColor: '#7E2EA8' },
   ];
 }
 
@@ -89,11 +89,11 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
   const [activeGuide, setActiveGuide] = useState<InvestmentGuide | null>(null);
 
   return (
-    <div className="min-h-screen bg-[#F3E9F8] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
+    <div className="min-h-screen bg-[#F1E8F8] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
       <TopRightUser />
       {/* Header — solo mobile */}
-      <div className="lg:hidden bg-[#9A3D9E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
+      <div className="lg:hidden bg-[#7E2EA8] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
         <div className="max-w-md lg:max-w-3xl mx-auto">
           <h1 className="text-xl lg:text-2xl font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>Inversiones para vos</h1>
           <p className="text-sm text-white/80 mt-0.5">Basadas en tu perfil y objetivo</p>
@@ -112,8 +112,8 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
 
         {/* PERFIL DE RIESGO */}
         <section>
-          <p className="text-xs font-bold text-[#9A3D9E] uppercase tracking-wider mb-2">Tu perfil de riesgo</p>
-          <div className="bg-white rounded-xl p-4 border border-[#E2C4EA]/50 flex items-center gap-3">
+          <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">Tu perfil de riesgo</p>
+          <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/50 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#FAEEDA] flex items-center justify-center shrink-0">
               <ShieldHalf className="w-5 h-5 text-[#854F0B]" />
             </div>
@@ -130,14 +130,14 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         {/* OPCIONES RECOMENDADAS */}
         {recommendations.length > 0 && (
           <section>
-            <p className="text-xs font-bold text-[#9A3D9E] uppercase tracking-wider mb-2">Opciones recomendadas</p>
-            <div className="bg-white rounded-xl p-3 border border-[#E2C4EA]/50 space-y-2">
+            <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">Opciones recomendadas</p>
+            <div className="bg-white rounded-xl p-3 border border-[#DCC6EC]/50 space-y-2">
               {recommendations.map((name, i) => {
                 const info = INSTRUMENT_INFO[name] ?? { desc: '', tasa: '', liquidez: '' };
                 return (
-                  <div key={i} className="p-2.5 bg-[#F3E9F8]/60 rounded-lg">
+                  <div key={i} className="p-2.5 bg-[#F1E8F8]/60 rounded-lg">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-[#9A3D9E] text-white text-xs font-medium flex items-center justify-center shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-[#7E2EA8] text-white text-xs font-medium flex items-center justify-center shrink-0">
                         {i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -152,7 +152,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                     <button
                       type="button"
                       onClick={() => setActiveGuide(resolveInvestmentGuide(name))}
-                      className="mt-2.5 w-full text-xs font-semibold text-[#9A3D9E] bg-white border border-[#9A3D9E]/40 rounded-full py-2 hover:bg-[#9A3D9E] hover:text-white transition-colors"
+                      className="mt-2.5 w-full text-xs font-semibold text-[#7E2EA8] bg-white border border-[#7E2EA8]/40 rounded-full py-2 hover:bg-[#7E2EA8] hover:text-white transition-colors"
                     >
                       ¿Cómo lo hago? →
                     </button>
@@ -166,21 +166,21 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         {/* TASA DE MEJORA */}
         {analysis.available > 0 && (
           <section>
-            <p className="text-xs font-bold text-[#9A3D9E] uppercase tracking-wider mb-2">
+            <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">
               Tasa de mejora — si invertís tu disponible
             </p>
-            <div className="bg-white rounded-xl p-4 border border-[#E2C4EA]/50">
+            <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/50">
               <p className="text-base font-semibold mb-4">¿Cuánto más podrías tener en 5 meses?</p>
               <div className="space-y-2.5">
                 {rows.map((r) => (
                   <div key={r.label} className="flex items-center gap-2">
                     <span className="text-xs text-gray-600 w-24 shrink-0">{r.label}</span>
-                    <div className="flex-1 h-2.5 bg-[#F3E9F8] rounded-full overflow-hidden">
+                    <div className="flex-1 h-2.5 bg-[#F1E8F8] rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{
                           width: `${r.pct}%`,
-                          background: r.color === '#CCC' ? '#CFCFCF' : '#9A3D9E',
+                          background: r.color === '#CCC' ? '#CFCFCF' : '#7E2EA8',
                         }}
                       />
                     </div>
@@ -191,7 +191,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                 ))}
               </div>
               {extraVsBase > 0 && (
-                <div className="bg-[#F3E9F8] rounded-lg px-3 py-2.5 text-xs text-[#5E2A6E] border-l-[3px] border-[#9A3D9E] mt-4">
+                <div className="bg-[#F1E8F8] rounded-lg px-3 py-2.5 text-xs text-[#4A1C66] border-l-[3px] border-[#7E2EA8] mt-4">
                   💡 Invertir tu ahorro en un FCI te genera ~{formatArs(extraVsBase)} extra — sin hacer nada.
                 </div>
               )}

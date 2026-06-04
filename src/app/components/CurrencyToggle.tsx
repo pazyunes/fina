@@ -22,7 +22,7 @@ export function CurrencyToggle({ value, onChange, usdEnabled = true }: CurrencyT
             disabled={disabled}
             onClick={() => onChange(opt)}
             className={`px-3 py-1 text-sm transition-colors ${
-              active ? 'bg-[#9A3D9E] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+              active ? 'bg-[#7E2EA8] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
             } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
             title={disabled ? 'Cotización no disponible' : undefined}
           >

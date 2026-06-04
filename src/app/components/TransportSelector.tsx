@@ -47,7 +47,7 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-2xl shadow-sm">
-        <h3 className="text-lg mb-4 text-[#9A3D9E]" style={{ fontFamily: 'var(--font-sans)' }}>
+        <h3 className="text-lg mb-4 text-[#7E2EA8]" style={{ fontFamily: 'var(--font-sans)' }}>
           ¿Cómo te movés?
         </h3>
         <p className="text-sm text-gray-500 mb-6">
@@ -97,7 +97,7 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                           insurance: checked ? 0 : value.insurance
                         });
                       }}
-                      className="data-[state=checked]:bg-[#9A3D9E]"
+                      className="data-[state=checked]:bg-[#7E2EA8]"
                     />
                     <span className="text-sm text-gray-500">No lo pago yo</span>
                   </div>
@@ -135,7 +135,7 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                           fuel: checked ? 0 : value.fuel
                         });
                       }}
-                      className="data-[state=checked]:bg-[#9A3D9E]"
+                      className="data-[state=checked]:bg-[#7E2EA8]"
                     />
                     <span className="text-sm text-gray-500">No lo pago yo</span>
                   </div>
@@ -358,7 +358,7 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
               <span className="text-lg font-medium text-gray-700">
                 Total movilidad:
               </span>
-              <span className="text-2xl font-medium text-[#9A3D9E]">
+              <span className="text-2xl font-medium text-[#7E2EA8]">
                 ${totalTransportCost.toLocaleString('es-AR').replace(/,/g, '.')}/mes
               </span>
             </div>

@@ -28,7 +28,7 @@ export function Sidebar() {
     .replace(/^./, (c) => c.toUpperCase());
 
   return (
-    <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-56 bg-[#9A3D9E] text-white flex-col z-40">
+    <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-56 bg-[#7E2EA8] text-white flex-col z-40">
       <div className="px-5 pt-7 pb-6">
         <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-serif)' }}>FINA</p>
         <p className="text-xs text-white/60 mt-0.5">{monthLabel}</p>

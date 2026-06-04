@@ -46,7 +46,7 @@ export function Habits({ initial, onComplete }: HabitsProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F3E9F8] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F1E8F8] flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -57,7 +57,7 @@ export function Habits({ initial, onComplete }: HabitsProps) {
 
           <div className="mb-6">
             <h2
-              className="text-3xl mb-2 text-[#9A3D9E]"
+              className="text-3xl mb-2 text-[#7E2EA8]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               Tus hábitos
@@ -76,8 +76,8 @@ export function Habits({ initial, onComplete }: HabitsProps) {
                     onClick={() => setHabits({ ...habits, [key]: true })}
                     className={`flex-1 p-4 rounded-xl border-2 transition-all ${
                       habits[key] === true
-                        ? 'border-[#9A3D9E] bg-[#F3E9F8]'
-                        : 'border-gray-200 bg-white hover:border-[#9A3D9E]/50'
+                        ? 'border-[#7E2EA8] bg-[#F1E8F8]'
+                        : 'border-gray-200 bg-white hover:border-[#7E2EA8]/50'
                     }`}
                   >
                     Sí
@@ -86,8 +86,8 @@ export function Habits({ initial, onComplete }: HabitsProps) {
                     onClick={() => setHabits({ ...habits, [key]: false })}
                     className={`flex-1 p-4 rounded-xl border-2 transition-all ${
                       habits[key] === false
-                        ? 'border-[#9A3D9E] bg-[#F3E9F8]'
-                        : 'border-gray-200 bg-white hover:border-[#9A3D9E]/50'
+                        ? 'border-[#7E2EA8] bg-[#F1E8F8]'
+                        : 'border-gray-200 bg-white hover:border-[#7E2EA8]/50'
                     }`}
                   >
                     No
@@ -100,7 +100,7 @@ export function Habits({ initial, onComplete }: HabitsProps) {
           <Button
             onClick={handleSubmit}
             disabled={!isComplete}
-            className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#7E2EA8] hover:bg-[#682690] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar
           </Button>

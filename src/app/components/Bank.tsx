@@ -55,7 +55,7 @@ export function Bank({ initial, onComplete }: BankProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F3E9F8] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F1E8F8] flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -66,7 +66,7 @@ export function Bank({ initial, onComplete }: BankProps) {
 
           <div className="mb-6">
             <h2
-              className="text-3xl mb-2 text-[#9A3D9E]"
+              className="text-3xl mb-2 text-[#7E2EA8]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               ¿Dónde tenés tu plata?
@@ -83,14 +83,14 @@ export function Bank({ initial, onComplete }: BankProps) {
                 onClick={() => toggleBank(bank)}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                   selectedBanks.includes(bank)
-                    ? 'border-[#9A3D9E] bg-[#F3E9F8]'
-                    : 'border-gray-200 bg-white hover:border-[#9A3D9E]/50'
+                    ? 'border-[#7E2EA8] bg-[#F1E8F8]'
+                    : 'border-gray-200 bg-white hover:border-[#7E2EA8]/50'
                 }`}
               >
                 <Checkbox
                   checked={selectedBanks.includes(bank)}
                   onCheckedChange={() => toggleBank(bank)}
-                  className="data-[state=checked]:bg-[#9A3D9E] data-[state=checked]:border-[#9A3D9E]"
+                  className="data-[state=checked]:bg-[#7E2EA8] data-[state=checked]:border-[#7E2EA8]"
                 />
                 <span className="text-gray-700">{bank}</span>
               </div>
@@ -100,7 +100,7 @@ export function Bank({ initial, onComplete }: BankProps) {
           <Button
             onClick={handleSubmit}
             disabled={selectedBanks.length === 0}
-            className="w-full bg-[#9A3D9E] hover:bg-[#7E3082] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#7E2EA8] hover:bg-[#682690] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar
           </Button>
