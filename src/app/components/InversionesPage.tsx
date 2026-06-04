@@ -7,6 +7,7 @@ import { g } from '../utils/gender';
 import { BottomNav } from './BottomNav';
 import { OpenAccountGuides } from './OpenAccountGuides';
 import { Sidebar } from './Sidebar';
+import { TopRightUser } from './TopRightUser';
 import { InvestmentGuideScreen } from './InvestmentGuideScreen';
 import { resolveInvestmentGuide, InvestmentGuide } from '../lib/investmentGuides';
 
@@ -90,8 +91,9 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
   return (
     <div className="min-h-screen bg-[#FBEAF0] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
-      {/* Header */}
-      <div className="bg-[#D4537E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
+      <TopRightUser />
+      {/* Header — solo mobile */}
+      <div className="lg:hidden bg-[#D4537E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
         <div className="max-w-md lg:max-w-3xl mx-auto">
           <h1 className="text-xl lg:text-2xl font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>Inversiones para vos</h1>
           <p className="text-sm text-white/80 mt-0.5">Basadas en tu perfil y objetivo</p>
@@ -102,7 +104,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 p-4 lg:p-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
+        className="flex-1 p-4 lg:px-8 lg:pt-16 lg:pb-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
       >
         {/* GUÍAS PARA ABRIR CUENTA — solo si no está bancarizada. Va primero
             porque es el paso previo a cualquier inversión. */}

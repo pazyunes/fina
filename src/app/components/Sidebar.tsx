@@ -1,6 +1,5 @@
 import { useNavigate, useLocation } from 'react-router';
 import { FileText, Target, TrendingUp, CircleUserRound } from 'lucide-react';
-import { useAuth } from '../lib/auth';
 
 // PR — Navegación lateral para desktop (lg+). Reemplaza a la BottomNav, que
 // pasa a ser solo-mobile. Mismo set de tabs. Sidebar rosa fijo a la izquierda
@@ -23,12 +22,10 @@ const TABS: Tab[] = [
 export function Sidebar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user, profile } = useAuth();
 
   const monthLabel = new Date()
     .toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
     .replace(/^./, (c) => c.toUpperCase());
-  const initials = (profile.name || user?.email || '?').slice(0, 2).toUpperCase();
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-56 bg-[#D4537E] text-white flex-col z-40">
@@ -57,14 +54,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
-      <div className="px-5 py-5 border-t border-white/15">
-        <div className="w-9 h-9 rounded-full bg-white/25 flex items-center justify-center text-xs font-semibold mb-2">
-          {initials}
-        </div>
-        <p className="text-sm font-medium truncate">{profile.name || 'Vos'}</p>
-        {user?.email && <p className="text-[11px] text-white/55 break-all">{user.email}</p>}
-      </div>
     </aside>
   );
 }

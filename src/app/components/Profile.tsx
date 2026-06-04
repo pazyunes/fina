@@ -8,6 +8,7 @@ import { Label } from './ui/label';
 import { useAuth, Profile as ProfileData } from '../lib/auth';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
+import { TopRightUser } from './TopRightUser';
 
 const GENDER_OPTIONS: { value: ProfileData['gender']; label: string }[] = [
   { value: 'femenino', label: 'Femenino' },
@@ -57,7 +58,8 @@ export function Profile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-[#FBEAF0] flex flex-col pb-24 lg:pb-8 lg:pl-56">
       <Sidebar />
-      <div className="flex-1 flex flex-col p-6 max-w-md lg:max-w-4xl mx-auto w-full">
+      <TopRightUser />
+      <div className="flex-1 flex flex-col p-6 lg:pt-16 max-w-md lg:max-w-4xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

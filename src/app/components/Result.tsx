@@ -5,6 +5,7 @@ import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
+import { TopRightUser } from './TopRightUser';
 
 interface ResultProps {
   analysis: FinancialAnalysis;
@@ -98,8 +99,9 @@ export function Result({ analysis }: ResultProps) {
   return (
     <div className="min-h-screen bg-[#FBEAF0] pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
-      {/* Header rosa sticky */}
-      <div className="bg-[#D4537E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
+      <TopRightUser />
+      {/* Header rosa sticky — solo mobile (en desktop manda el sidebar) */}
+      <div className="lg:hidden bg-[#D4537E] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
         <div className="max-w-md lg:max-w-5xl mx-auto">
           <h1 className="text-lg lg:text-2xl font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>Tu informe financiero</h1>
           <p className="text-xs lg:text-sm text-white/80 mt-0.5">
@@ -112,7 +114,7 @@ export function Result({ analysis }: ResultProps) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 p-4 lg:p-8 max-w-md lg:max-w-6xl mx-auto w-full"
+        className="flex-1 p-4 lg:px-8 lg:pt-16 lg:pb-8 max-w-md lg:max-w-6xl mx-auto w-full"
       >
        <div className="lg:grid lg:grid-cols-3 lg:gap-5 lg:items-start">
         {/* COLUMNA PRINCIPAL (2/3) */}
