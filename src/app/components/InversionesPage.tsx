@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { ShieldHalf } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
@@ -5,6 +6,8 @@ import { formatArs } from '../lib/currency';
 import { g } from '../utils/gender';
 import { BottomNav } from './BottomNav';
 import { OpenAccountGuides } from './OpenAccountGuides';
+import { InvestmentGuideScreen } from './InvestmentGuideScreen';
+import { resolveInvestmentGuide, InvestmentGuide } from '../lib/investmentGuides';
 
 interface InversionesPageProps {
   analysis: FinancialAnalysis;
@@ -80,6 +83,8 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
   const recommendations = (analysis.recommendedInvestments ?? []).slice(0, 3);
   const rows = projection(analysis.available);
   const extraVsBase = rows[2].value - rows[0].value; // FCI vs sin invertir
+  // Instructivo "¿Cómo lo hago?" abierto (null = ninguno).
+  const [activeGuide, setActiveGuide] = useState<InvestmentGuide | null>(null);
 
   return (
     <div className="min-h-screen bg-[#FBEAF0] pb-24 flex flex-col">
@@ -126,18 +131,27 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
               {recommendations.map((name, i) => {
                 const info = INSTRUMENT_INFO[name] ?? { desc: '', tasa: '', liquidez: '' };
                 return (
-                  <div key={i} className="flex items-center gap-2.5 p-2.5 bg-[#FBEAF0]/60 rounded-lg">
-                    <div className="w-6 h-6 rounded-full bg-[#D4537E] text-white text-xs font-medium flex items-center justify-center shrink-0">
-                      {i + 1}
+                  <div key={i} className="p-2.5 bg-[#FBEAF0]/60 rounded-lg">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-[#D4537E] text-white text-xs font-medium flex items-center justify-center shrink-0">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold">{name}</p>
+                        {info.desc && <p className="text-[11px] text-gray-500">{info.desc}</p>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        {info.tasa && <p className="text-xs font-medium text-[#3B6D11]">{info.tasa}</p>}
+                        {info.liquidez && <p className="text-[10px] text-gray-500">{info.liquidez}</p>}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{name}</p>
-                      {info.desc && <p className="text-[11px] text-gray-500">{info.desc}</p>}
-                    </div>
-                    <div className="text-right shrink-0">
-                      {info.tasa && <p className="text-xs font-medium text-[#3B6D11]">{info.tasa}</p>}
-                      {info.liquidez && <p className="text-[10px] text-gray-500">{info.liquidez}</p>}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveGuide(resolveInvestmentGuide(name))}
+                      className="mt-2.5 w-full text-xs font-semibold text-[#D4537E] bg-white border border-[#D4537E]/40 rounded-full py-2 hover:bg-[#D4537E] hover:text-white transition-colors"
+                    >
+                      ¿Cómo lo hago? →
+                    </button>
                   </div>
                 );
               })}
@@ -182,6 +196,11 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
       </motion.div>
 
       <BottomNav />
+
+      {/* Instructivo full-screen "¿Cómo lo hago?" */}
+      {activeGuide && (
+        <InvestmentGuideScreen guide={activeGuide} onClose={() => setActiveGuide(null)} />
+      )}
     </div>
   );
 }
