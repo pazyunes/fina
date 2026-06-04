@@ -227,12 +227,6 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
       <div className="relative h-32">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <defs>
-              <linearGradient id="gradGoalTrack" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#EED6F2" />
-                <stop offset="100%" stopColor="#D9B9E6" />
-              </linearGradient>
-            </defs>
             <Pie
               data={[
                 { name: 'Logrado', value: 0 },
@@ -248,7 +242,7 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
               isAnimationActive={false}
             >
               <Cell fill="#9A3D9E" />
-              <Cell fill="url(#gradGoalTrack)" />
+              <Cell fill="#E2C4EA" />
             </Pie>
           </PieChart>
         </ResponsiveContainer>

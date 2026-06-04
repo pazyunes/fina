@@ -180,7 +180,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                         className="h-full rounded-full"
                         style={{
                           width: `${r.pct}%`,
-                          background: r.color === '#CCC' ? '#CFCFCF' : 'linear-gradient(90deg, #7E3082, #C06FCC)',
+                          background: r.color === '#CCC' ? '#CFCFCF' : '#9A3D9E',
                         }}
                       />
                     </div>

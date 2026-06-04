@@ -156,16 +156,6 @@ export function Result({ analysis }: ResultProps) {
               <div className="relative h-44 mb-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <defs>
-                      <linearGradient id="gradReducible" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#F0794A" />
-                        <stop offset="100%" stopColor="#D85A30" />
-                      </linearGradient>
-                      <linearGradient id="gradFijo" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#5C9426" />
-                        <stop offset="100%" stopColor="#3B6D11" />
-                      </linearGradient>
-                    </defs>
                     <Pie
                       data={[
                         { name: 'Reducible', value: reducible },
@@ -180,8 +170,8 @@ export function Result({ analysis }: ResultProps) {
                       dataKey="value"
                       stroke="none"
                     >
-                      <Cell fill="url(#gradReducible)" />
-                      <Cell fill="url(#gradFijo)" />
+                      <Cell fill="#D85A30" />
+                      <Cell fill="#3B6D11" />
                     </Pie>
                     <Tooltip formatter={(v: number) => `${v}%`} />
                   </PieChart>
@@ -211,16 +201,6 @@ export function Result({ analysis }: ResultProps) {
                   <div className="relative h-44 mb-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <defs>
-                          <linearGradient id="gradInvertible" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stopColor="#B45FB8" />
-                            <stop offset="100%" stopColor="#7E3082" />
-                          </linearGradient>
-                          <linearGradient id="gradInvRest" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#EED6F2" />
-                            <stop offset="100%" stopColor="#E2C4EA" />
-                          </linearGradient>
-                        </defs>
                         <Pie
                           data={[
                             { name: 'Invertible', value: investRecommended },
@@ -235,8 +215,8 @@ export function Result({ analysis }: ResultProps) {
                           dataKey="value"
                           stroke="none"
                         >
-                          <Cell fill="url(#gradInvertible)" />
-                          <Cell fill="url(#gradInvRest)" />
+                          <Cell fill="#9A3D9E" />
+                          <Cell fill="#E2C4EA" />
                         </Pie>
                         <Tooltip formatter={(v: number) => `${v}%`} />
                       </PieChart>
@@ -278,16 +258,10 @@ export function Result({ analysis }: ResultProps) {
                       layout="vertical"
                       margin={{ top: 5, right: 10, bottom: 5, left: 0 }}
                     >
-                      <defs>
-                        <linearGradient id="gradBar" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#7E3082" />
-                          <stop offset="100%" stopColor="#C06FCC" />
-                        </linearGradient>
-                      </defs>
                       <XAxis type="number" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
                       <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={72} axisLine={false} tickLine={false} />
                       <Tooltip formatter={(v: number) => `${v}%`} />
-                      <Bar dataKey="value" radius={[8, 8, 8, 8]} isAnimationActive={false} fill="url(#gradBar)" />
+                      <Bar dataKey="value" radius={[8, 8, 8, 8]} isAnimationActive={false} fill="#9A3D9E" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
