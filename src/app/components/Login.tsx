@@ -119,7 +119,7 @@ export function Login() {
 
           {mode === 'signup' && (
             <div>
-              <Label htmlFor="phone" className="text-gray-700 text-sm">Teléfono (WhatsApp, opcional)</Label>
+              <Label htmlFor="phone" className="text-gray-700 text-sm">Teléfono (opcional)</Label>
               <div className="mt-1 flex items-stretch rounded-xl border border-gray-200 focus-within:border-[#D4537E] overflow-hidden bg-white">
                 <span className="px-3 flex items-center text-sm text-gray-600 bg-gray-50 border-r border-gray-200 select-none">
                   +54
@@ -145,7 +145,7 @@ export function Login() {
                 </p>
               )}
               <p className="text-xs text-gray-500 mt-1">
-                Lo usamos para conectar tu cuenta con WhatsApp cuando lancemos el chatbot.
+                Opcional. Nos ayuda a identificarte y contactarte si lo necesitás.
               </p>
             </div>
           )}

@@ -298,8 +298,8 @@ export async function updateReportData(newUserData: UserData): Promise<{ error: 
 // Se invoca después de cada save/update del informe. Cada tabla se sincroniza
 // de forma independiente: si una falla (p. ej. constraint nuevo aún no
 // aplicado), se loguea el error pero el resto avanza. La verdad sigue siendo
-// reports.user_data jsonb; estas tablas son una vista normalizada para el
-// futuro bot de WhatsApp y para queries granulares.
+// reports.user_data jsonb; estas tablas son una vista normalizada para
+// queries granulares.
 async function syncProfileTables(userId: string, userData: UserData): Promise<void> {
   if (!isSupabaseConfigured) return;
 
