@@ -21,7 +21,7 @@ const fci: InvestmentGuide = {
   key: 'fci',
   title: 'Fondo Común de Inversión',
   what:
-    'Es como juntar tu plata con la de muchas otras personas para que un equipo de expertos la invierta por vos en un montón de cosas a la vez (bonos, acciones, plazos fijos). Vos comprás una “partecita” del fondo y listo: no tenés que decidir nada más. Hay de varios tipos: los Money Market son los más tranquilos (riesgo muy bajo y podés sacar la plata cuando quieras), los mixtos tienen algo más de riesgo, y los de acciones son los que más pueden crecer… pero también bajar. Para arrancar, los Money Market son los más recomendados.',
+    'Juntás tu plata con la de muchas personas y un equipo de expertos la invierte por vos. No tenés que decidir nada. Los tipo “Money Market” son los más seguros y podés retirar cuando quieras.',
   risk: { level: 'Bajo', note: 'Muy bajo en Money Market; sube si elegís uno mixto o de acciones.' },
   apps: ['Mercado Pago', 'Ualá', 'Naranja X', 'Cocos Capital', 'Balanz', 'IOL Invertir Online'],
   steps: [
@@ -39,7 +39,7 @@ const cuentaRemunerada: InvestmentGuide = {
   key: 'cuenta-remunerada',
   title: 'Cuenta remunerada',
   what:
-    'Es una cuenta donde la plata que tenés guardada genera intereses todos los días, sola, sin que hagas nada. La podés usar y retirar cuando quieras. Es la opción más simple y segura de todas: prácticamente sin riesgo. Ideal para tu “colchón” o fondo de emergencia.',
+    'Tu plata guardada genera intereses todos los días, sola. La usás y retirás cuando quieras. Es la opción más simple y segura, ideal para tu fondo de emergencia.',
   risk: { level: 'Bajo', note: 'Casi sin riesgo y tu plata queda siempre disponible.' },
   apps: ['Mercado Pago', 'Ualá', 'Brubank', 'Naranja X', 'Personal Pay'],
   steps: [
@@ -56,7 +56,7 @@ const plazoFijo: InvestmentGuide = {
   key: 'plazo-fijo',
   title: 'Plazo fijo UVA',
   what:
-    'Es dejar tu plata “quieta” por un tiempo (por ejemplo 90 días) y a cambio te pagan un interés. La versión UVA ajusta por inflación, así tu plata no pierde valor cuando los precios suben. El riesgo es muy bajo; lo único es que no podés tocar la plata hasta que termine el plazo.',
+    'Dejás tu plata quieta un tiempo (por ej. 90 días) y te pagan un interés. La versión UVA ajusta por inflación para que no pierda valor. No la podés tocar hasta que termine el plazo.',
   risk: { level: 'Bajo', note: 'Muy seguro, pero la plata queda inmovilizada hasta el vencimiento.' },
   apps: ['Mercado Pago', 'Ualá', 'Brubank', 'Naranja X', 'El homebanking de tu banco'],
   steps: [
@@ -74,7 +74,7 @@ const cedears: InvestmentGuide = {
   key: 'cedears',
   title: 'CEDEARs',
   what:
-    'Son una forma de comprar “pedacitos” de empresas grandes del exterior (como Apple, Coca-Cola o Google) pero en pesos y desde Argentina. Sirven para que tu plata quede atada al dólar y a empresas internacionales. Tienen más riesgo: su valor sube y baja todos los días, así que conviene pensarlos a largo plazo (varios años).',
+    'Comprás pedacitos de empresas grandes del exterior (Apple, Google) en pesos. Tu plata queda atada al dólar. Su valor sube y baja todos los días, así que conviene pensarlos a largo plazo.',
   risk: { level: 'Alto', note: 'Su precio varía todos los días; ideal solo para el largo plazo.' },
   apps: ['Cocos Capital', 'Balanz', 'IOL Invertir Online', 'Bull Market', 'Mercado Pago'],
   steps: [
@@ -92,7 +92,7 @@ const bonos: InvestmentGuide = {
   key: 'bonos',
   title: 'Bonos',
   what:
-    'Cuando comprás un bono, le estás prestando plata al Estado o a una empresa, y ellos te la devuelven con intereses. Los “Bonos CER” ajustan por inflación, así tu plata no pierde valor. Tienen un riesgo medio: su precio puede variar si los vendés antes de tiempo, pero si los mantenés hasta el final cobrás lo pactado.',
+    'Le prestás plata al Estado o a una empresa y te la devuelven con intereses. Los “CER” ajustan por inflación. Si los mantenés hasta el final, cobrás lo pactado.',
   risk: { level: 'Medio', note: 'Más estables que las acciones, pero su precio puede moverse en el camino.' },
   apps: ['Cocos Capital', 'Balanz', 'IOL Invertir Online', 'Bull Market'],
   steps: [
