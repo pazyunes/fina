@@ -350,7 +350,6 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
           source: 'sueldo',
           amount_ars: fixedArs,
           currency: userData.incomeCurrency ?? 'ARS',
-          original_amount: userData.incomeOriginalAmount ?? null,
           range_label: userData.incomeRange ?? null,
         });
       }
@@ -368,7 +367,6 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
               period,
               amount_ars: m.ars,
               currency: m.currency,
-              original_amount: m.amount ?? null,
             });
           }
         }
@@ -396,9 +394,6 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
           amount_ars: amt,
           currency: cat === 'housing' ? (userData.housingCurrency ?? 'ARS') : 'ARS',
         };
-        if (cat === 'housing' && userData.housingOriginalAmount) {
-          row.original_amount = userData.housingOriginalAmount;
-        }
         if (cat === 'therapy' && userData.therapyDetails) {
           row.metadata = {
             session_price: userData.therapyDetails.sessionPrice,
@@ -416,7 +411,6 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
           merchant: inst.name,
           amount_ars: inst.monthlyAmount,
           currency: inst.currency ?? 'ARS',
-          original_amount: inst.originalAmount ?? null,
           metadata: { remaining: inst.remainingInstallments },
         });
       }
@@ -429,7 +423,6 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
           merchant: sub.name,
           amount_ars: sub.cost,
           currency: sub.currency ?? 'ARS',
-          original_amount: sub.originalCost ?? null,
         });
       }
     }
