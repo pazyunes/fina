@@ -99,6 +99,17 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         transition={{ duration: 0.3 }}
         className="flex-1 p-4 lg:p-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
       >
+        {/* CTA → Agregar objetivo nuevo (arriba de todo) */}
+        <button
+          type="button"
+          onClick={() => setShowAddGoal(true)}
+          disabled={savingGoal}
+          className="w-full bg-[#D4537E] hover:bg-[#C14870] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+        >
+          <Plus className="w-4 h-4" /> {savingGoal ? 'Guardando…' : 'Agregar nuevo objetivo'}
+        </button>
+        {errorMsg && <p className="text-xs text-[#D4537E] text-center">{errorMsg}</p>}
+
         {/* EN CURSO */}
         <section>
           <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">En curso</p>
@@ -154,17 +165,6 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
             </div>
           </section>
         )}
-
-        {/* CTA → Agregar objetivo nuevo */}
-        <button
-          type="button"
-          onClick={() => setShowAddGoal(true)}
-          disabled={savingGoal}
-          className="w-full bg-white border-2 border-[#D4537E] text-[#D4537E] rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#FBEAF0]/40 transition-colors disabled:opacity-50"
-        >
-          <Plus className="w-4 h-4" /> {savingGoal ? 'Guardando…' : 'Agregar nuevo objetivo'}
-        </button>
-        {errorMsg && <p className="text-xs text-[#D4537E] text-center">{errorMsg}</p>}
 
         {/* CTA → Inversiones */}
         <button

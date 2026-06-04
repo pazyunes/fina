@@ -79,19 +79,23 @@ export function Profile() {
           </div>
 
           <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
-          {/* Tarjeta de datos del perfil con avatar predeterminado */}
-          <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 lg:mb-0">
+          {/* DATOS PERSONALES */}
+          <div className="mb-6 lg:mb-0">
+            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">Datos personales</p>
+            <div className="bg-white rounded-2xl shadow-sm p-5">
             <div className="flex items-center gap-4">
-              <CircleUserRound className="w-16 h-16 text-[#D4537E] shrink-0" strokeWidth={1.25} />
+              <div className="w-16 h-16 rounded-full bg-[#FBEAF0] flex items-center justify-center shrink-0">
+                <CircleUserRound className="w-10 h-10 text-[#D4537E]" strokeWidth={1.5} />
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="text-lg text-gray-800 truncate">{profile.name || 'Sin nombre'}</p>
+                <p className="text-lg font-semibold text-gray-800 truncate">{profile.name || 'Sin nombre'}</p>
                 <p className="text-sm text-gray-500 break-all">{user?.email}</p>
               </div>
               {!editing && (
                 <button
                   type="button"
                   onClick={startEditing}
-                  className="flex items-center gap-1 text-sm text-[#D4537E] hover:underline shrink-0"
+                  className="flex items-center gap-1 text-sm text-[#D4537E] border border-[#F4C0D1] rounded-lg px-3 py-1.5 hover:bg-[#FBEAF0] shrink-0"
                 >
                   <Pencil className="w-4 h-4" />
                   Editar
@@ -100,7 +104,7 @@ export function Profile() {
             </div>
 
             {!editing ? (
-              <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#F4C0D1]/50 text-sm">
                 <div>
                   <p className="text-gray-400">Edad</p>
                   <p className="text-gray-700">{profile.age || '—'}</p>
@@ -185,13 +189,12 @@ export function Profile() {
             )}
 
             {feedback && <p className="text-xs text-[#3B6D11] mt-3">{feedback}</p>}
+            </div>
           </div>
 
           {/* PR8 — Sección de edición de datos del informe */}
           <div className="mb-6 lg:mb-0">
-            <h2 className="text-base font-semibold text-gray-700 mb-3" style={{ fontFamily: 'var(--font-sans)' }}>
-              Mis datos financieros
-            </h2>
+            <p className="text-xs font-bold text-[#D4537E] uppercase tracking-wider mb-2">Mis datos financieros</p>
             <p className="text-sm text-gray-500 mb-3">
               Actualizá lo que cambió y el informe se recalcula al toque.
             </p>
