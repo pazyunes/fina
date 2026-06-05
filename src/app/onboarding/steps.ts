@@ -15,6 +15,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   { path: '/expenses-services', label: 'Gastos que cambian' },
   { path: '/habits', label: 'Tus hábitos' },
   { path: '/goals', label: 'Tus objetivos' },
+  { path: '/preferencias', label: 'Tus prioridades' },
 ];
 
 export function getStepIndex(path: string): number {

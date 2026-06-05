@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Check, TrendingUp, Sparkles, Clock, Plus, MessageCircle } from 'lucide-react';
+import { Check, TrendingUp, Clock, Plus, MessageCircle } from 'lucide-react';
 import { FinancialAnalysis, UserData } from '../types';
 import { formatArs } from '../lib/currency';
 import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
@@ -11,7 +11,6 @@ import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
 import { WhatsAppFab, WHATSAPP_URL } from './WhatsAppFab';
-import { PreferencesModal } from './PreferencesModal';
 import { AddGoalModal } from './AddGoalModal';
 
 interface ObjetivosPageProps {
@@ -54,7 +53,6 @@ function goalEmoji(title: string): string {
 
 export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps) {
   const navigate = useNavigate();
-  const [showPrefs, setShowPrefs] = useState(false);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -192,22 +190,9 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         >
           <TrendingUp className="w-4 h-4" /> Ver inversiones recomendadas
         </button>
-
-        {/* CTA → Preferencias */}
-        <button
-          type="button"
-          onClick={() => setShowPrefs(true)}
-          className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 transition-colors"
-        >
-          <Sparkles className="w-4 h-4" /> Quiero recomendaciones personalizadas
-        </button>
       </motion.div>
 
       <BottomNav />
-
-      {showPrefs && (
-        <PreferencesModal onClose={() => setShowPrefs(false)} gender={analysis.userData.gender} />
-      )}
 
       {showAddGoal && (
         <AddGoalModal

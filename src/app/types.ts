@@ -111,6 +111,11 @@ export interface UserData {
   cafeteriasFrequency?: number; // veces por semana
   cafeteriasAmount?: number; // gasto por visita
 
+  // Gastos ocasionales (no todos los meses): ropa, regalos, viajes cortos, etc.
+  // everyMonths = cada cuántos meses ocurre; amount = cuánto gastás cada vez.
+  // El analyzer los amortiza a mensual (amount / everyMonths). Opcional.
+  occasionalExpenses?: Array<{ name: string; everyMonths: number; amount: number }>;
+
   // Habits
   knowsLastMonthExpenses: boolean;
   saves: boolean;

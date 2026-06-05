@@ -13,6 +13,11 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
   const monthlyCafeterias = (userData.cafeteriasFrequency || 0) * (userData.cafeteriasAmount || 0) * 4.33;
   const subscriptionsCost = userData.subscriptions.reduce((sum, sub) => sum + sub.cost, 0);
   const installmentsCost = userData.installments.reduce((sum, inst) => sum + inst.monthlyAmount, 0);
+  // Gastos ocasionales amortizados a mensual: cada gasto aporta amount/everyMonths.
+  const monthlyOccasional = (userData.occasionalExpenses ?? []).reduce(
+    (sum, e) => sum + (e.everyMonths > 0 ? e.amount / e.everyMonths : 0),
+    0
+  );
 
   // Calculate total expenses using new fields
   const totalExpenses =
@@ -27,6 +32,7 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
     monthlyEntertainment +
     monthlySupermarket +
     monthlyCafeterias +
+    monthlyOccasional +
     installmentsCost;
     
   const available = totalIncome - totalExpenses;

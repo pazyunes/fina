@@ -151,8 +151,9 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
       specificGoals: parsedGoals,
     });
     
-    // Navigate to AI Reasoning if debug mode is enabled, otherwise go to result
-    if (!editMode) navigate(DEBUG_MODE ? '/ai-reasoning' : '/loading');
+    // PR — Tras objetivos vamos al paso de prioridades (preferencias); desde
+    // ahí se sigue a /loading (o /ai-reasoning en debug).
+    if (!editMode) navigate('/preferencias');
   };
 
   const isValid = selectedGoals.length > 0 || specificGoals.length > 0;

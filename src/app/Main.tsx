@@ -9,6 +9,7 @@ import { ExpensesFixed } from './components/ExpensesFixed';
 import { ExpensesServices } from './components/ExpensesServices';
 import { Habits } from './components/Habits';
 import { Goals } from './components/Goals';
+import { Preferences } from './components/Preferences';
 import { AIReasoning } from './components/AIReasoning';
 import { Result } from './components/Result';
 import { ObjetivosPage } from './components/ObjetivosPage';
@@ -211,6 +212,7 @@ export function Main() {
     supermarketAmount: number;
     cafeteriasFrequency: number;
     cafeteriasAmount: number;
+    occasionalExpenses: Array<{ name: string; everyMonths: number; amount: number }>;
   }) => {
     setUserData(prev => ({ ...prev, ...data }));
   };
@@ -302,6 +304,8 @@ export function Main() {
       return <Habits initial={userData} onComplete={handleHabits} />;
     case '/goals':
       return <Goals initial={userData} onComplete={handleGoals} />;
+    case '/preferencias':
+      return <Preferences initial={userData} />;
     case '/loading':
       return <LoadingScreen />;
     case '/ai-reasoning':

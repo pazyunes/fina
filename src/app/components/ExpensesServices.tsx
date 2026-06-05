@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
 import { Switch } from './ui/switch';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
-import { Zap, UtensilsCrossed, Sparkles, Plus, X, Check, ShoppingCart, Coffee } from 'lucide-react';
+import { Zap, UtensilsCrossed, Sparkles, Plus, X, Check, ShoppingCart, Coffee, CalendarClock } from 'lucide-react';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
 import { StepIntroMessage } from './StepIntroMessage';
@@ -35,6 +35,7 @@ interface ExpensesServicesProps {
     supermarketAmount: number;
     cafeteriasFrequency: number;
     cafeteriasAmount: number;
+    occasionalExpenses: Array<{ name: string; everyMonths: number; amount: number }>;
   }) => void;
 }
 
@@ -88,6 +89,20 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   const [supermarketFrequency, setSupermarketFrequency] = useState(initial?.supermarketFrequency ? String(initial.supermarketFrequency) : '');
   const [supermarketAmount, setSupermarketAmount] = useState(initial?.supermarketAmount ? String(initial.supermarketAmount) : '');
   const [noSupermarket, setNoSupermarket] = useState(false);
+
+  // Gastos ocasionales (no todos los meses). Opcional. Cada fila: qué, cada
+  // cuántos meses, y cuánto. Se guardan los strings y se parsean al submit.
+  const [occasional, setOccasional] = useState<Array<{ name: string; everyMonths: string; amount: string }>>(
+    (initial?.occasionalExpenses ?? []).map((o) => ({
+      name: o.name,
+      everyMonths: String(o.everyMonths),
+      amount: String(o.amount),
+    }))
+  );
+  const addOccasional = () => setOccasional(prev => [...prev, { name: '', everyMonths: '', amount: '' }]);
+  const updateOccasional = (i: number, field: 'name' | 'everyMonths' | 'amount', value: string) =>
+    setOccasional(prev => prev.map((o, idx) => (idx === i ? { ...o, [field]: value } : o)));
+  const removeOccasional = (i: number) => setOccasional(prev => prev.filter((_, idx) => idx !== i));
 
   // Controlled accordion so completed sections collapse automatically while
   // staying reopenable. Suscripciones starts open.
@@ -180,6 +195,13 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
       supermarketAmount: parseInt(supermarketAmount.replace(/\D/g, '') || '0'),
       cafeteriasFrequency: parseFloat(cafeteriasFrequency) || 0,
       cafeteriasAmount: parseInt(cafeteriasAmount.replace(/\D/g, '') || '0'),
+      occasionalExpenses: occasional
+        .map((o) => ({
+          name: o.name.trim(),
+          everyMonths: parseInt(o.everyMonths) || 0,
+          amount: parseInt(o.amount.replace(/\D/g, '')) || 0,
+        }))
+        .filter((o) => o.name && o.everyMonths > 0 && o.amount > 0),
     });
 
     if (!editMode) navigate('/habits');
@@ -271,6 +293,14 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
             </p>
           </div>
 
+          {/* Aviso: hay una sección aparte para gastos que no son mensuales */}
+          <div className="mb-4 flex items-start gap-2.5 bg-[#FFF7E0] border-l-4 border-[#B8860B] rounded-lg px-4 py-3">
+            <span className="text-lg leading-none">📌</span>
+            <p className="text-sm text-[#7A5B00]">
+              Más abajo hay una sección para <strong>gastos que NO son todos los meses</strong> (ropa, regalos, viajes…). No los pongas en las categorías de acá arriba — cargalos ahí.
+            </p>
+          </div>
+
           <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-3">
             {/* Subscriptions Section */}
             <AccordionItem value="subs" className="bg-white rounded-2xl shadow-sm border-0 px-5">
@@ -282,7 +312,10 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                   Apps y plataformas que pagás todos los meses
                 </p>
                 {livesAccompanied && (
-                  <p className="text-xs text-[#7626B3] mb-3">Poné solo lo que pagás vos</p>
+                  <div className="mb-3 flex items-center gap-2 bg-[#FFF7E0] border border-[#E7C200] rounded-lg px-3 py-2">
+                    <span className="text-base">👯</span>
+                    <p className="text-sm font-semibold text-[#7A5B00]">Importante: poné solo lo que pagás <span className="underline">vos</span>.</p>
+                  </div>
                 )}
                 <div className="space-y-3">
                   {PRESET_SUBSCRIPTIONS.map(service => (
@@ -627,7 +660,10 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
               </AccordionTrigger>
               <AccordionContent className="pt-0 pb-5">
                 {livesAccompanied && (
-                  <p className="text-xs text-[#7626B3] mb-3">Poné solo lo que pagás vos</p>
+                  <div className="mb-3 flex items-center gap-2 bg-[#FFF7E0] border border-[#E7C200] rounded-lg px-3 py-2">
+                    <span className="text-base">👯</span>
+                    <p className="text-sm font-semibold text-[#7A5B00]">Importante: poné solo lo que pagás <span className="underline">vos</span>.</p>
+                  </div>
                 )}
                 <div className="flex items-center gap-2 mb-4">
                   <Switch
@@ -701,6 +737,70 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+
+          {/* GASTOS OCASIONALES — no todos los meses (opcional) */}
+          <div className="mt-3 bg-white rounded-2xl shadow-sm border border-[#D7C2EF]/60 p-5">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 rounded-full bg-[#F0E7FA] flex items-center justify-center shrink-0">
+                <CalendarClock className="w-5 h-5 text-[#7626B3]" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-800">Gastos que no son todos los meses</p>
+                <p className="text-xs text-gray-500">Opcional · ropa, regalos, viajes, etc.</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 mb-3">Poné qué es, cada cuántos meses lo gastás y cuánto.</p>
+
+            <div className="space-y-3">
+              {occasional.map((o, i) => (
+                <div key={i} className="rounded-xl border border-gray-200 p-3 pt-8 space-y-2 relative">
+                  <button
+                    type="button"
+                    onClick={() => removeOccasional(i)}
+                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                    aria-label="Quitar gasto ocasional"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <Input
+                    value={o.name}
+                    onChange={(e) => updateOccasional(i, 'name', e.target.value)}
+                    placeholder="¿Qué es? Ej: Ropa"
+                    className="w-full"
+                  />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-500 mb-1">Cada cuántos meses</label>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        value={o.everyMonths}
+                        onChange={(e) => updateOccasional(i, 'everyMonths', e.target.value.replace(/\D/g, ''))}
+                        placeholder="Ej: 3"
+                        className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-500 mb-1">Cuánto</label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={o.amount ? `$${parseInt(o.amount).toLocaleString('es-AR').replace(/,/g, '.')}` : ''}
+                        onChange={(e) => updateOccasional(i, 'amount', e.target.value.replace(/\D/g, ''))}
+                        placeholder="$0"
+                        className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Button variant="outline" onClick={addOccasional} className="w-full mt-3 border-dashed">
+              <Plus className="w-4 h-4 mr-2" /> Agregar gasto ocasional
+            </Button>
+          </div>
         </motion.div>
       </div>
 

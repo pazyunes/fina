@@ -36,6 +36,7 @@ export const router = createBrowserRouter([
     "/expenses-services",
     "/habits",
     "/goals",
+    "/preferencias",
     "/loading",
     "/ai-reasoning",
     "/result",
