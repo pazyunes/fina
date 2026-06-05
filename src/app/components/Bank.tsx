@@ -55,7 +55,7 @@ export function Bank({ initial, onComplete }: BankProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F1E8F8] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -66,7 +66,7 @@ export function Bank({ initial, onComplete }: BankProps) {
 
           <div className="mb-6">
             <h2
-              className="text-3xl mb-2 text-[#7E2EA8]"
+              className="text-3xl mb-2 text-[#7626B3]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               ¿Dónde tenés tu plata?
@@ -83,14 +83,14 @@ export function Bank({ initial, onComplete }: BankProps) {
                 onClick={() => toggleBank(bank)}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                   selectedBanks.includes(bank)
-                    ? 'border-[#7E2EA8] bg-[#F1E8F8]'
-                    : 'border-gray-200 bg-white hover:border-[#7E2EA8]/50'
+                    ? 'border-[#7626B3] bg-[#F0E7FA]'
+                    : 'border-gray-200 bg-white hover:border-[#7626B3]/50'
                 }`}
               >
                 <Checkbox
                   checked={selectedBanks.includes(bank)}
                   onCheckedChange={() => toggleBank(bank)}
-                  className="data-[state=checked]:bg-[#7E2EA8] data-[state=checked]:border-[#7E2EA8]"
+                  className="data-[state=checked]:bg-[#7626B3] data-[state=checked]:border-[#7626B3]"
                 />
                 <span className="text-gray-700">{bank}</span>
               </div>

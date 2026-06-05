@@ -68,13 +68,13 @@ export function Profile() {
           className="w-full"
         >
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl text-[#7E2EA8]" style={{ fontFamily: 'var(--font-serif)' }}>
+            <h1 className="text-2xl text-[#7626B3]" style={{ fontFamily: 'var(--font-serif)' }}>
               Tu perfil
             </h1>
             <button
               type="button"
               onClick={handleSignOut}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#7E2EA8]"
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#7626B3]"
               title="Cerrar sesión"
             >
               <LogOut className="w-4 h-4" />
@@ -85,11 +85,11 @@ export function Profile() {
           <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
           {/* DATOS PERSONALES */}
           <div className="mb-6 lg:mb-0">
-            <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">Datos personales</p>
+            <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Datos personales</p>
             <div className="bg-white rounded-2xl shadow-sm p-5">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-[#F1E8F8] flex items-center justify-center shrink-0">
-                <CircleUserRound className="w-10 h-10 text-[#7E2EA8]" strokeWidth={1.5} />
+              <div className="w-16 h-16 rounded-full bg-[#F0E7FA] flex items-center justify-center shrink-0">
+                <CircleUserRound className="w-10 h-10 text-[#7626B3]" strokeWidth={1.5} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-semibold text-gray-800 truncate">{profile.name || 'Sin nombre'}</p>
@@ -99,7 +99,7 @@ export function Profile() {
                 <button
                   type="button"
                   onClick={startEditing}
-                  className="flex items-center gap-1 text-sm text-[#7E2EA8] border border-[#DCC6EC] rounded-lg px-3 py-1.5 hover:bg-[#F1E8F8] shrink-0"
+                  className="flex items-center gap-1 text-sm text-[#7626B3] border border-[#D7C2EF] rounded-lg px-3 py-1.5 hover:bg-[#F0E7FA] shrink-0"
                 >
                   <Pencil className="w-4 h-4" />
                   Editar
@@ -108,7 +108,7 @@ export function Profile() {
             </div>
 
             {!editing ? (
-              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#DCC6EC]/50 text-sm">
+              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#D7C2EF]/50 text-sm">
                 <div>
                   <p className="text-gray-400">Edad</p>
                   <p className="text-gray-700">{profile.age || '—'}</p>
@@ -152,8 +152,8 @@ export function Profile() {
                         onClick={() => setForm({ ...form, gender: opt.value })}
                         className={`text-left px-4 py-2.5 rounded-xl border-2 transition-all text-sm ${
                           form.gender === opt.value
-                            ? 'border-[#7E2EA8] bg-[#F1E8F8] text-[#7E2EA8]'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-[#7E2EA8]/50'
+                            ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3]'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-[#7626B3]/50'
                         }`}
                       >
                         {opt.label}
@@ -199,11 +199,11 @@ export function Profile() {
 
           {/* PR8 — Sección de edición de datos del informe */}
           <div className="mb-6 lg:mb-0">
-            <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">Mis datos financieros</p>
+            <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Mis datos financieros</p>
             <p className="text-sm text-gray-500 mb-3">
               Actualizá lo que cambió y el informe se recalcula al toque.
             </p>
-            <div className="bg-white rounded-2xl shadow-sm divide-y divide-[#DCC6EC]/50 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm divide-y divide-[#D7C2EF]/50 overflow-hidden">
               <EditRow icon={Wallet} label="Mis ingresos" to="/editar/ingresos" navigate={navigate} />
               <EditRow icon={Home} label="Mis gastos fijos" to="/editar/gastos-fijos" navigate={navigate} />
               <EditRow icon={Coffee} label="Mis gastos variables" to="/editar/gastos-variables" navigate={navigate} />
@@ -242,9 +242,9 @@ function EditRow({
     <button
       type="button"
       onClick={() => navigate(to)}
-      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[#F1E8F8]/40 transition-colors"
+      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[#F0E7FA]/40 transition-colors"
     >
-      <Icon className="w-5 h-5 text-[#7E2EA8]" />
+      <Icon className="w-5 h-5 text-[#7626B3]" />
       <span className="flex-1 text-base font-medium text-gray-700">{label}</span>
       <ChevronRight className="w-4 h-4 text-gray-300" />
     </button>

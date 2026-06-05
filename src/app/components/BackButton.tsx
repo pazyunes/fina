@@ -18,7 +18,7 @@ export function BackButton({ currentPath }: BackButtonProps) {
     <button
       type="button"
       onClick={() => navigate(prevPath)}
-      className="inline-flex items-center gap-1 text-gray-500 hover:text-[#7E2EA8] transition-colors -ml-1 mb-3"
+      className="inline-flex items-center gap-1 text-gray-500 hover:text-[#7626B3] transition-colors -ml-1 mb-3"
       aria-label="Volver al paso anterior"
     >
       <ArrowLeft className="w-5 h-5" />

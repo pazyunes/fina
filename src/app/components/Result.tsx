@@ -71,7 +71,7 @@ function formatKpi(ars: number): string {
 // dar jerarquía, tanto en mobile como en desktop.
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">{children}</p>
+    <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">{children}</p>
   );
 }
 
@@ -101,7 +101,7 @@ export function Result({ analysis }: ResultProps) {
       <TopRightUser />
       <WhatsAppFab />
       {/* Header rosa sticky — solo mobile (en desktop manda el sidebar) */}
-      <div className="lg:hidden bg-[#7E2EA8] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
+      <div className="lg:hidden bg-[#7626B3] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
         <div className="max-w-md lg:max-w-5xl mx-auto">
           <h1 className="text-lg lg:text-2xl font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>Tu informe financiero</h1>
           <p className="text-xs lg:text-sm text-white/80 mt-0.5">
@@ -124,7 +124,7 @@ export function Result({ analysis }: ResultProps) {
           <SectionLabel>Resumen</SectionLabel>
           <div className="grid grid-cols-2 gap-2 lg:gap-4">
             {/* Hero Disponible: gradiente rosa + número gigante para impacto */}
-            <div className="col-span-2 rounded-2xl px-6 py-8 lg:py-12 text-center bg-[#7E2EA8] shadow-lg shadow-[#7E2EA8]/25">
+            <div className="col-span-2 rounded-2xl px-6 py-8 lg:py-12 text-center bg-[#7626B3] shadow-lg shadow-[#7626B3]/25">
               <p className="text-xs lg:text-sm text-white/85 mb-2 uppercase tracking-[0.18em] font-semibold">
                 Te queda disponible
               </p>
@@ -151,7 +151,7 @@ export function Result({ analysis }: ResultProps) {
           {/* POTENCIAL DE AHORRO — stat grande + barra segmentada */}
           <section>
             <SectionLabel>Potencial de ahorro</SectionLabel>
-            <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#DCC6EC]/70 shadow-sm">
+            <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#D7C2EF]/70 shadow-sm">
               <p className="text-base font-semibold mb-3">¿En qué podés recortar?</p>
               <div className="relative h-44 mb-2">
                 <ResponsiveContainer width="100%" height="100%">
@@ -170,23 +170,23 @@ export function Result({ analysis }: ResultProps) {
                       dataKey="value"
                       stroke="none"
                     >
-                      <Cell fill="#7E2EA8" />
-                      <Cell fill="#DCC6EC" />
+                      <Cell fill="#7626B3" />
+                      <Cell fill="#D7C2EF" />
                     </Pie>
                     <Tooltip formatter={(v: number) => `${v}%`} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <p className="text-3xl font-bold text-[#7E2EA8] leading-none">{reducible}%</p>
+                  <p className="text-3xl font-bold text-[#7626B3] leading-none">{reducible}%</p>
                   <p className="text-xs text-gray-500 mt-1">reducible</p>
                 </div>
               </div>
               <div className="flex justify-center gap-4 text-xs text-gray-600 mb-3">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#7E2EA8' }} /> Reducible {reducible}%</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#DCC6EC' }} /> Fijo {fijo}%</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#7626B3' }} /> Reducible {reducible}%</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#D7C2EF' }} /> Fijo {fijo}%</span>
               </div>
-              <div className="bg-[#F1E8F8] rounded-lg px-3 py-2.5 text-sm text-[#4A1C66] border-l-[3px] border-[#7E2EA8]">
-                Aproximadamente el <strong className="text-[#7E2EA8]">{reducible}%</strong> de tus gastos son reducibles con pequeños cambios de hábitos.
+              <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-sm text-[#431C72] border-l-[3px] border-[#7626B3]">
+                Aproximadamente el <strong className="text-[#7626B3]">{reducible}%</strong> de tus gastos son reducibles con pequeños cambios de hábitos.
               </div>
             </div>
           </section>
@@ -194,7 +194,7 @@ export function Result({ analysis }: ResultProps) {
           {/* POTENCIAL DE INVERSIÓN — dona */}
           <section>
             <SectionLabel>Potencial de inversión</SectionLabel>
-            <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#DCC6EC]/70 shadow-sm">
+            <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#D7C2EF]/70 shadow-sm">
               <p className="text-base font-semibold mb-3">¿Cuánto podrías invertir?</p>
               {investRecommended > 0 ? (
                 <>
@@ -215,23 +215,23 @@ export function Result({ analysis }: ResultProps) {
                           dataKey="value"
                           stroke="none"
                         >
-                          <Cell fill="#7E2EA8" />
-                          <Cell fill="#DCC6EC" />
+                          <Cell fill="#7626B3" />
+                          <Cell fill="#D7C2EF" />
                         </Pie>
                         <Tooltip formatter={(v: number) => `${v}%`} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <p className="text-3xl font-bold text-[#7E2EA8] leading-none">{investRecommended}%</p>
+                      <p className="text-3xl font-bold text-[#7626B3] leading-none">{investRecommended}%</p>
                       <p className="text-xs text-gray-500 mt-1">invertible</p>
                     </div>
                   </div>
                   <div className="flex justify-center gap-4 text-xs text-gray-600 mb-3">
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#7E2EA8' }} /> Invertible {investRecommended}%</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#DCC6EC' }} /> Resto {investRest}%</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#7626B3' }} /> Invertible {investRecommended}%</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#D7C2EF' }} /> Resto {investRest}%</span>
                   </div>
-                  <div className="bg-[#F1E8F8] rounded-lg px-3 py-2.5 text-sm text-[#4A1C66] border-l-[3px] border-[#7E2EA8]">
-                    Podrías destinar hasta <strong className="text-[#7E2EA8]">{formatKpi(investAmount)}/mes</strong> a inversión y mantener el resto líquido para gastos e imprevistos. Mirá la pestaña Inversiones para opciones concretas.
+                  <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-sm text-[#431C72] border-l-[3px] border-[#7626B3]">
+                    Podrías destinar hasta <strong className="text-[#7626B3]">{formatKpi(investAmount)}/mes</strong> a inversión y mantener el resto líquido para gastos e imprevistos. Mirá la pestaña Inversiones para opciones concretas.
                   </div>
                 </>
               ) : (
@@ -246,7 +246,7 @@ export function Result({ analysis }: ResultProps) {
           {topCategories.length > 0 && (
             <section>
               <SectionLabel>Categorías de gasto</SectionLabel>
-              <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#DCC6EC]/70 shadow-sm">
+              <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#D7C2EF]/70 shadow-sm">
                 <p className="text-base font-semibold mb-3">¿A dónde va tu plata?</p>
                 <div className="h-44">
                   <ResponsiveContainer width="100%" height="100%">
@@ -261,7 +261,7 @@ export function Result({ analysis }: ResultProps) {
                       <XAxis type="number" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
                       <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={72} axisLine={false} tickLine={false} />
                       <Tooltip formatter={(v: number) => `${v}%`} />
-                      <Bar dataKey="value" radius={[7, 7, 7, 7]} barSize={14} isAnimationActive={false} fill="#7E2EA8" />
+                      <Bar dataKey="value" radius={[7, 7, 7, 7]} barSize={14} isAnimationActive={false} fill="#7626B3" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -275,7 +275,7 @@ export function Result({ analysis }: ResultProps) {
           {/* DESCUENTOS DISPONIBLES PARA VOS (PR8 — placeholder de cupones) */}
           <section>
             <SectionLabel>Descuentos disponibles para vos</SectionLabel>
-            <div className="bg-white rounded-xl px-4 py-5 lg:p-5 border border-[#DCC6EC]/70 shadow-sm text-center">
+            <div className="bg-white rounded-xl px-4 py-5 lg:p-5 border border-[#D7C2EF]/70 shadow-sm text-center">
               <p className="text-2xl mb-2">🎟️</p>
               <p className="text-base font-semibold text-gray-800 mb-1">Próximamente</p>
               <p className="text-sm text-gray-500 leading-relaxed">
@@ -288,9 +288,9 @@ export function Result({ analysis }: ResultProps) {
           {/* TU NIVEL FINANCIERO */}
           <section>
             <SectionLabel>Tu nivel financiero</SectionLabel>
-            <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#DCC6EC]/70 shadow-sm flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-[#F1E8F8] flex items-center justify-center shrink-0">
-                <TrendingUp className="w-5 h-5 text-[#7E2EA8]" />
+            <div className="bg-white rounded-xl p-4 lg:p-5 border border-[#D7C2EF]/70 shadow-sm flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-[#F0E7FA] flex items-center justify-center shrink-0">
+                <TrendingUp className="w-5 h-5 text-[#7626B3]" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-base font-semibold">{analysis.financialLevel}</p>
@@ -319,7 +319,7 @@ export function Result({ analysis }: ResultProps) {
 
 function KpiTile({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-white rounded-xl px-2 py-3 lg:py-4 border border-[#DCC6EC]/70 shadow-sm text-center">
+    <div className="bg-white rounded-xl px-2 py-3 lg:py-4 border border-[#D7C2EF]/70 shadow-sm text-center">
       <p className="text-xs lg:text-xs text-gray-500 mb-1 uppercase tracking-wide font-medium">{label}</p>
       <p className="text-lg lg:text-2xl font-bold" style={{ color }}>{value}</p>
     </div>

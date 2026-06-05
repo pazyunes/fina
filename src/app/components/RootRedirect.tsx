@@ -26,7 +26,7 @@ export function RootRedirect() {
 
 function CenteredLoading() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F1E8F8] to-white flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-[#F0E7FA] to-white flex items-center justify-center">
       <p className="text-gray-500" style={{ fontFamily: 'var(--font-sans)' }}>Cargando…</p>
     </div>
   );

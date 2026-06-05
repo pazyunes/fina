@@ -63,11 +63,11 @@ export function AddGoalModal({ onClose, onAdd, usdRate }: AddGoalModalProps) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto"
       >
-        <div className="sticky top-0 bg-white border-b border-[#DCC6EC]/60 px-5 py-3 flex items-center justify-between">
-          <h2 className="text-base font-medium text-[#7E2EA8]" style={{ fontFamily: 'var(--font-serif)' }}>
+        <div className="sticky top-0 bg-white border-b border-[#D7C2EF]/60 px-5 py-3 flex items-center justify-between">
+          <h2 className="text-base font-medium text-[#7626B3]" style={{ fontFamily: 'var(--font-serif)' }}>
             Nuevo objetivo
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-[#7E2EA8]">
+          <button onClick={onClose} className="text-gray-400 hover:text-[#7626B3]">
             <X className="w-5 h-5" />
           </button>
         </div>

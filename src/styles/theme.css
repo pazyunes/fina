@@ -8,10 +8,10 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #7E2EA8;
+  --primary: #7626B3;
   --primary-foreground: #ffffff;
-  --secondary: #F1E8F8;
-  --secondary-foreground: #7E2EA8;
+  --secondary: #F0E7FA;
+  --secondary-foreground: #7626B3;
   --muted: #ececf0;
   --muted-foreground: #717182;
   --accent: #D85A30;
@@ -25,10 +25,10 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: oklch(0.708 0 0);
-  --chart-1: #7E2EA8;
+  --chart-1: #7626B3;
   --chart-2: #D85A30;
   --chart-3: #3B6D11;
-  --chart-4: #F1E8F8;
+  --chart-4: #F0E7FA;
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
@@ -41,8 +41,8 @@
   --sidebar-ring: oklch(0.708 0 0);
   
   /* FINA Custom Colors */
-  --fina-pink: #7E2EA8;
-  --fina-pink-light: #F1E8F8;
+  --fina-pink: #7626B3;
+  --fina-pink-light: #F0E7FA;
   --fina-coral: #D85A30;
   --fina-green: #3B6D11;
   --fina-neutral: #f5f1ed;

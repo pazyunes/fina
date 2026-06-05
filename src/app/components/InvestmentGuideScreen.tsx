@@ -28,9 +28,9 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
   const back = () => (step === 0 ? onClose() : setStep((s) => s - 1));
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#F1E8F8] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-[#F0E7FA] flex flex-col">
       {/* Header rosa */}
-      <div className="bg-[#7E2EA8] text-white px-5 pt-6 pb-4 shrink-0">
+      <div className="bg-[#7626B3] text-white px-5 pt-6 pb-4 shrink-0">
         <div className="max-w-md mx-auto w-full">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -78,7 +78,7 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
             >
               {step === 0 && (
                 <div>
-                  <h2 className="text-2xl font-bold text-[#7E2EA8] mb-3" style={{ fontFamily: 'var(--font-serif)' }}>
+                  <h2 className="text-2xl font-bold text-[#7626B3] mb-3" style={{ fontFamily: 'var(--font-serif)' }}>
                     ¿Qué es {guide.title}?
                   </h2>
                   <div
@@ -89,7 +89,7 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
                     Riesgo {guide.risk.level.toLowerCase()}
                   </div>
                   <p className="text-base text-gray-700 leading-relaxed">{guide.what}</p>
-                  <div className="bg-white rounded-xl px-4 py-3 mt-4 border-l-[3px] border-[#7E2EA8] text-sm text-[#4A1C66]">
+                  <div className="bg-white rounded-xl px-4 py-3 mt-4 border-l-[3px] border-[#7626B3] text-sm text-[#431C72]">
                     {guide.risk.note}
                   </div>
                 </div>
@@ -97,7 +97,7 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
 
               {step === 1 && (
                 <div>
-                  <h2 className="text-2xl font-bold text-[#7E2EA8] mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
+                  <h2 className="text-2xl font-bold text-[#7626B3] mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
                     ¿Dónde puedo hacerlo?
                   </h2>
                   <p className="text-sm text-gray-500 mb-4">
@@ -107,7 +107,7 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
                     {guide.apps.map((app) => (
                       <div
                         key={app}
-                        className="flex items-center gap-3 bg-white rounded-xl px-4 py-3.5 border border-[#DCC6EC]/50"
+                        className="flex items-center gap-3 bg-white rounded-xl px-4 py-3.5 border border-[#D7C2EF]/50"
                       >
                         <span className="w-6 h-6 rounded-full bg-[#EAF3DE] flex items-center justify-center shrink-0">
                           <Check className="w-3.5 h-3.5 text-[#3B6D11]" />
@@ -121,20 +121,20 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
 
               {step === 2 && (
                 <div>
-                  <h2 className="text-2xl font-bold text-[#7E2EA8] mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
+                  <h2 className="text-2xl font-bold text-[#7626B3] mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
                     Paso a paso
                   </h2>
                   <ol className="space-y-3">
                     {guide.steps.map((s, i) => (
                       <li key={i} className="flex gap-3">
-                        <span className="w-7 h-7 rounded-full bg-[#7E2EA8] text-white text-sm font-bold flex items-center justify-center shrink-0">
+                        <span className="w-7 h-7 rounded-full bg-[#7626B3] text-white text-sm font-bold flex items-center justify-center shrink-0">
                           {i + 1}
                         </span>
                         <span className="text-base text-gray-700 leading-snug pt-0.5">{s}</span>
                       </li>
                     ))}
                   </ol>
-                  <div className="bg-gradient-to-br from-[#7E2EA8] to-[#A95FC8] rounded-2xl px-4 py-4 mt-6 text-white flex gap-3 items-start">
+                  <div className="bg-gradient-to-br from-[#7626B3] to-[#A858CE] rounded-2xl px-4 py-4 mt-6 text-white flex gap-3 items-start">
                     <Sparkles className="w-5 h-5 shrink-0 mt-0.5" />
                     <p className="text-sm font-medium leading-snug">{guide.reassurance}</p>
                   </div>
@@ -146,7 +146,7 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
       </div>
 
       {/* Footer navegación */}
-      <div className="shrink-0 bg-white/70 backdrop-blur border-t border-[#DCC6EC]/50 px-5 py-4">
+      <div className="shrink-0 bg-white/70 backdrop-blur border-t border-[#D7C2EF]/50 px-5 py-4">
         <div className="max-w-md mx-auto w-full flex gap-3">
           <Button
             onClick={back}

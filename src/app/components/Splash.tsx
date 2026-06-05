@@ -10,7 +10,7 @@ export function Splash() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F1E8F8] to-white flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#F0E7FA] to-white flex flex-col items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -23,13 +23,13 @@ export function Splash() {
           transition={{ duration: 0.5, type: 'spring', stiffness: 200 }}
           className="mb-8"
         >
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-[#7E2EA8] rounded-full mb-6">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-[#7626B3] rounded-full mb-6">
             <Heart className="w-12 h-12 text-white fill-white" />
           </div>
         </motion.div>
 
         <h1
-          className="mb-4 text-[#7E2EA8]"
+          className="mb-4 text-[#7626B3]"
           style={{ fontFamily: 'var(--font-serif)', fontSize: '3rem', lineHeight: '1.1' }}
         >
           FINA
@@ -58,7 +58,7 @@ export function Splash() {
           <Button
             onClick={() => navigate('/login', { state: { mode: 'signup' } })}
             variant="outline"
-            className="border-2 border-[#7E2EA8] text-[#7E2EA8] hover:bg-[#F1E8F8] py-6 rounded-full text-lg"
+            className="border-2 border-[#7626B3] text-[#7626B3] hover:bg-[#F0E7FA] py-6 rounded-full text-lg"
             style={{ fontFamily: 'var(--font-sans)' }}
           >
             Crear cuenta

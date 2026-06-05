@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Check, TrendingUp, Sparkles, Clock, Plus } from 'lucide-react';
+import { Check, TrendingUp, Sparkles, Clock, Plus, MessageCircle } from 'lucide-react';
 import { FinancialAnalysis, UserData } from '../types';
 import { formatArs } from '../lib/currency';
 import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
@@ -10,7 +10,7 @@ import { updateReportData } from '../lib/reports';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
-import { WhatsAppFab } from './WhatsAppFab';
+import { WhatsAppFab, WHATSAPP_URL } from './WhatsAppFab';
 import { PreferencesModal } from './PreferencesModal';
 import { AddGoalModal } from './AddGoalModal';
 
@@ -35,7 +35,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_BADGE: Record<string, string> = {
   possible: 'bg-[#EAF3DE] text-[#3B6D11]',
   tight: 'bg-[#FAEEDA] text-[#854F0B]',
-  not_possible: 'bg-[#F1E8F8] text-[#4A1C66]',
+  not_possible: 'bg-[#F0E7FA] text-[#431C72]',
 };
 
 // Emoji por palabra clave del título del objetivo. Si no matchea ninguna,
@@ -90,7 +90,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
       <TopRightUser />
       <WhatsAppFab />
       {/* Header — solo mobile */}
-      <div className="lg:hidden bg-[#7E2EA8] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
+      <div className="lg:hidden bg-[#7626B3] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
         <div className="max-w-md lg:max-w-3xl mx-auto">
           <h1 className="text-xl lg:text-2xl font-semibold" style={{ fontFamily: 'var(--font-sans)' }}>Mis objetivos</h1>
           <p className="text-sm text-white/80 mt-0.5">Seguí tu avance y tus próximos pasos</p>
@@ -112,13 +112,13 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         >
           <Plus className="w-4 h-4" /> {savingGoal ? 'Guardando…' : 'Agregar nuevo objetivo'}
         </button>
-        {errorMsg && <p className="text-xs text-[#7E2EA8] text-center">{errorMsg}</p>}
+        {errorMsg && <p className="text-xs text-[#7626B3] text-center">{errorMsg}</p>}
 
         {/* EN CURSO */}
         <section>
-          <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">En curso</p>
+          <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">En curso</p>
           {goals.length === 0 ? (
-            <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/70 shadow-sm text-sm text-gray-500">
+            <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm text-sm text-gray-500">
               Todavía no cargaste objetivos específicos.
             </div>
           ) : (
@@ -133,13 +133,13 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         {/* ESTRATEGIAS PARA LLEGAR AL OBJETIVO */}
         {strategies.length > 0 && (
           <section>
-            <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">
+            <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">
               Cómo llegar al objetivo — varias opciones
             </p>
             <p className="text-xs text-gray-500 mb-2">
               Marcá las que vas implementando. Cada una suma a la cuota mensual de tu objetivo.
             </p>
-            <div className="bg-white rounded-xl px-4 py-1 border border-[#DCC6EC]/70 shadow-sm">
+            <div className="bg-white rounded-xl px-4 py-1 border border-[#D7C2EF]/70 shadow-sm">
               {strategies.map((s, i) => (
                 <StrategyRow key={i} strategy={s} first={i === 0} />
               ))}
@@ -150,10 +150,10 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         {/* SI CUMPLÍS TODO */}
         {strategies.length > 0 && (
           <section>
-            <p className="text-xs font-bold text-[#7E2EA8] uppercase tracking-wider mb-2">
+            <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">
               Si cumplís todos los accionables
             </p>
-            <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/70 shadow-sm flex items-center gap-3">
+            <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#EAF3DE] flex items-center justify-center shrink-0">
                 <Clock className="w-5 h-5 text-[#3B6D11]" />
               </div>
@@ -170,11 +170,25 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           </section>
         )}
 
+        {/* AVISO — el chatbot registra tus gastos del día a día */}
+        <a
+          href={WHATSAPP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-start gap-2.5 bg-[#F0E7FA] rounded-xl px-4 py-3 text-sm text-[#431C72] hover:bg-[#E9DBF6] transition-colors"
+        >
+          <MessageCircle className="w-5 h-5 shrink-0 mt-0.5 text-[#7626B3]" />
+          <span>
+            <strong>Tip:</strong> registrá tus gastos del día a día desde nuestro{' '}
+            <strong>chatbot de WhatsApp</strong> y tu informe se mantiene actualizado solo.
+          </span>
+        </a>
+
         {/* CTA → Inversiones */}
         <button
           type="button"
           onClick={() => navigate('/inversiones')}
-          className="w-full bg-white border-2 border-[#7E2EA8] text-[#7E2EA8] rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#F1E8F8]/40 transition-colors"
+          className="w-full bg-white border-2 border-[#7626B3] text-[#7626B3] rounded-xl py-3.5 text-base font-semibold flex items-center justify-center gap-2 hover:bg-[#F0E7FA]/40 transition-colors"
         >
           <TrendingUp className="w-4 h-4" /> Ver inversiones recomendadas
         </button>
@@ -210,7 +224,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
 // + monto/plazo + status badge + tip con la cuota mensual sugerida.
 function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-[#DCC6EC]/70 shadow-sm space-y-3">
+    <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-base font-medium truncate">
@@ -243,23 +257,23 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
               stroke="none"
               isAnimationActive={false}
             >
-              <Cell fill="#7E2EA8" />
-              <Cell fill="#DCC6EC" />
+              <Cell fill="#7626B3" />
+              <Cell fill="#D7C2EF" />
             </Pie>
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <p className="text-xl font-bold text-[#7E2EA8]" style={{ fontFamily: 'var(--font-sans)' }}>0%</p>
+          <p className="text-xl font-bold text-[#7626B3]" style={{ fontFamily: 'var(--font-sans)' }}>0%</p>
           <p className="text-xs text-gray-500">recién empezás</p>
         </div>
       </div>
 
       <div className="flex justify-between text-xs">
         <span className="text-gray-500">Total objetivo</span>
-        <span className="font-medium text-[#7E2EA8]">{formatArs(goal.amount)}</span>
+        <span className="font-medium text-[#7626B3]">{formatArs(goal.amount)}</span>
       </div>
 
-      <div className="bg-[#F1E8F8] rounded-lg px-3 py-2.5 text-xs text-[#4A1C66] border-l-[3px] border-[#7E2EA8]">
+      <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-xs text-[#431C72] border-l-[3px] border-[#7626B3]">
         📅 {goal.insight}
       </div>
     </div>
@@ -274,9 +288,9 @@ function StrategyRow({ strategy, first }: { strategy: GoalStrategy; first: boole
   return (
     <div
       onClick={() => setDone(d => !d)}
-      className={`flex items-start gap-3 py-3 cursor-pointer ${first ? '' : 'border-t border-[#DCC6EC]/50'}`}
+      className={`flex items-start gap-3 py-3 cursor-pointer ${first ? '' : 'border-t border-[#D7C2EF]/50'}`}
     >
-      <div className={`w-5 h-5 rounded-full border-2 border-[#7E2EA8] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${done ? 'bg-[#7E2EA8]' : ''}`}>
+      <div className={`w-5 h-5 rounded-full border-2 border-[#7626B3] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${done ? 'bg-[#7626B3]' : ''}`}>
         {done && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
       </div>
       <div className="flex-1 min-w-0">

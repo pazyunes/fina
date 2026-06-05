@@ -46,7 +46,7 @@ export function Habits({ initial, onComplete }: HabitsProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F1E8F8] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -57,7 +57,7 @@ export function Habits({ initial, onComplete }: HabitsProps) {
 
           <div className="mb-6">
             <h2
-              className="text-3xl mb-2 text-[#7E2EA8]"
+              className="text-3xl mb-2 text-[#7626B3]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               Tus hábitos
@@ -76,8 +76,8 @@ export function Habits({ initial, onComplete }: HabitsProps) {
                     onClick={() => setHabits({ ...habits, [key]: true })}
                     className={`flex-1 p-4 rounded-xl border-2 transition-all ${
                       habits[key] === true
-                        ? 'border-[#7E2EA8] bg-[#F1E8F8]'
-                        : 'border-gray-200 bg-white hover:border-[#7E2EA8]/50'
+                        ? 'border-[#7626B3] bg-[#F0E7FA]'
+                        : 'border-gray-200 bg-white hover:border-[#7626B3]/50'
                     }`}
                   >
                     Sí
@@ -86,8 +86,8 @@ export function Habits({ initial, onComplete }: HabitsProps) {
                     onClick={() => setHabits({ ...habits, [key]: false })}
                     className={`flex-1 p-4 rounded-xl border-2 transition-all ${
                       habits[key] === false
-                        ? 'border-[#7E2EA8] bg-[#F1E8F8]'
-                        : 'border-gray-200 bg-white hover:border-[#7E2EA8]/50'
+                        ? 'border-[#7626B3] bg-[#F0E7FA]'
+                        : 'border-gray-200 bg-white hover:border-[#7626B3]/50'
                     }`}
                   >
                     No

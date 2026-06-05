@@ -282,7 +282,7 @@ function generateActionPlan(userData: UserData, insights: string[], goalsAnalysi
 
   // Step 1: Track expenses
   if (!userData.knowsLastMonthExpenses) {
-    plan.push('Anotá todos tus gastos durante 30 días. Usá una app, un Excel, o la nota del celu. Sin esto, no hay plan que funcione.');
+    plan.push('Anotá todos tus gastos durante 30 días. Lo más fácil: registralos al toque desde el chatbot de WhatsApp de FINA y tu informe se mantiene al día solo. Sin esto, no hay plan que funcione.');
   }
 
   // Step 2: Automate savings

@@ -33,7 +33,7 @@ export function BottomNav() {
         type="button"
         onClick={() => navigate(tab.to)}
         className={`flex-1 flex flex-col items-center gap-1 py-2 transition-colors ${
-          active ? 'text-[#7E2EA8]' : 'text-gray-400 hover:text-[#7E2EA8]/70'
+          active ? 'text-[#7626B3]' : 'text-gray-400 hover:text-[#7626B3]/70'
         }`}
         aria-current={active ? 'page' : undefined}
       >
@@ -55,8 +55,8 @@ export function BottomNav() {
           href={WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Chateá con nosotras"
-          className="-mt-7 w-16 h-16 rounded-full bg-[#7E2EA8] text-white flex items-center justify-center shadow-lg shadow-[#7E2EA8]/40 ring-4 ring-[#F1E8F8] active:scale-95 transition-transform"
+          aria-label="Registrá tus gastos diarios por chat"
+          className="-mt-7 w-16 h-16 rounded-full bg-[#7626B3] text-white flex items-center justify-center shadow-lg shadow-[#7626B3]/40 ring-4 ring-[#F0E7FA] active:scale-95 transition-transform"
         >
           <MessageCircle className="w-7 h-7" />
         </a>

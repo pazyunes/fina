@@ -13,10 +13,10 @@ export function TopRightUser() {
     <button
       type="button"
       onClick={() => navigate('/perfil')}
-      className="hidden lg:flex fixed top-4 right-6 z-40 items-center gap-2.5 bg-white border border-[#DCC6EC] rounded-full pl-2 pr-4 py-2 shadow-sm hover:border-[#7E2EA8] transition-colors"
+      className="hidden lg:flex fixed top-4 right-6 z-40 items-center gap-2.5 bg-white border border-[#D7C2EF] rounded-full pl-2 pr-4 py-2 shadow-sm hover:border-[#7626B3] transition-colors"
       title="Ir a tu perfil"
     >
-      <span className="w-11 h-11 rounded-full bg-[#7E2EA8] text-white text-base font-bold flex items-center justify-center">
+      <span className="w-11 h-11 rounded-full bg-[#7626B3] text-white text-base font-bold flex items-center justify-center">
         {initials}
       </span>
       <span className="text-sm font-semibold text-gray-700 max-w-[160px] truncate">

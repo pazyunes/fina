@@ -69,18 +69,18 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F1E8F8] flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#7E2EA8] rounded-full mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#7626B3] rounded-full mb-4">
             <Heart className="w-8 h-8 text-white fill-white" />
           </div>
           <h1
-            className="text-3xl mb-2 text-[#7E2EA8]"
+            className="text-3xl mb-2 text-[#7626B3]"
             style={{ fontFamily: 'var(--font-serif)' }}
           >
             {mode === 'signin' ? 'Iniciá sesión' : 'Creá tu cuenta'}
@@ -120,7 +120,7 @@ export function Login() {
           {mode === 'signup' && (
             <div>
               <Label htmlFor="phone" className="text-gray-700 text-sm">Teléfono (opcional)</Label>
-              <div className="mt-1 flex items-stretch rounded-xl border border-gray-200 focus-within:border-[#7E2EA8] overflow-hidden bg-white">
+              <div className="mt-1 flex items-stretch rounded-xl border border-gray-200 focus-within:border-[#7626B3] overflow-hidden bg-white">
                 <span className="px-3 flex items-center text-sm text-gray-600 bg-gray-50 border-r border-gray-200 select-none">
                   +54
                 </span>
@@ -140,7 +140,7 @@ export function Login() {
                 />
               </div>
               {phoneDigits !== '' && !phoneValid && (
-                <p className="text-xs text-[#7E2EA8] mt-1">
+                <p className="text-xs text-[#7626B3] mt-1">
                   Ingresá entre 8 y 13 dígitos (código de área + número), sin espacios.
                 </p>
               )}
@@ -150,7 +150,7 @@ export function Login() {
             </div>
           )}
 
-          {error && <p className="text-sm text-[#7E2EA8]">{error}</p>}
+          {error && <p className="text-sm text-[#7626B3]">{error}</p>}
           {info && <p className="text-sm text-[#3B6D11]">{info}</p>}
 
           <Button
@@ -165,7 +165,7 @@ export function Login() {
         <button
           type="button"
           onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); setInfo(null); }}
-          className="w-full text-center text-sm text-gray-600 mt-6 hover:text-[#7E2EA8]"
+          className="w-full text-center text-sm text-gray-600 mt-6 hover:text-[#7626B3]"
         >
           {mode === 'signin'
             ? '¿No tenés cuenta? Creá una'

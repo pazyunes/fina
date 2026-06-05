@@ -36,7 +36,7 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F1E8F8] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -47,7 +47,7 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
 
           <div className="mb-6">
             <h2
-              className="text-3xl mb-2 text-[#7E2EA8]"
+              className="text-3xl mb-2 text-[#7626B3]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               Empecemos por conocernos
@@ -69,7 +69,7 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Tu nombre"
                 required
-                className="mt-2 bg-white border-gray-200 focus:border-[#7E2EA8] focus:ring-[#7E2EA8] rounded-xl"
+                className="mt-2 bg-white border-gray-200 focus:border-[#7626B3] focus:ring-[#7626B3] rounded-xl"
               />
             </div>
 
@@ -93,7 +93,7 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
                 required
                 min="18"
                 max="100"
-                className="mt-2 bg-white border-gray-200 focus:border-[#7E2EA8] focus:ring-[#7E2EA8] rounded-xl"
+                className="mt-2 bg-white border-gray-200 focus:border-[#7626B3] focus:ring-[#7626B3] rounded-xl"
               />
             </div>
 
@@ -113,8 +113,8 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
                     onClick={() => setFormData({ ...formData, gender: opt.value })}
                     className={`text-left px-4 py-3 rounded-xl border-2 transition-all ${
                       formData.gender === opt.value
-                        ? 'border-[#7E2EA8] bg-[#F1E8F8] text-[#7E2EA8]'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-[#7E2EA8]/50'
+                        ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3]'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-[#7626B3]/50'
                     }`}
                   >
                     {opt.label}

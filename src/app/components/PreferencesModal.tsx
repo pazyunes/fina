@@ -103,11 +103,11 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto"
       >
-        <div className="sticky top-0 bg-white border-b border-[#DCC6EC]/60 px-5 py-3 flex items-center justify-between">
-          <h2 className="text-base font-medium text-[#7E2EA8]" style={{ fontFamily: 'var(--font-serif)' }}>
+        <div className="sticky top-0 bg-white border-b border-[#D7C2EF]/60 px-5 py-3 flex items-center justify-between">
+          <h2 className="text-base font-medium text-[#7626B3]" style={{ fontFamily: 'var(--font-serif)' }}>
             Recomendaciones personalizadas
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-[#7E2EA8]">
+          <button onClick={onClose} className="text-gray-400 hover:text-[#7626B3]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -133,16 +133,16 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
                     disabled={!picked && ranking.length >= 5}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-sm ${
                       picked
-                        ? 'border-[#7E2EA8] bg-[#F1E8F8] text-[#7E2EA8]'
+                        ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3]'
                         : ranking.length >= 5
                         ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-[#7E2EA8]/50'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-[#7626B3]/50'
                     }`}
                   >
                     <span className="text-base">{cat.emoji}</span>
                     <span className="flex-1 text-left">{cat.label}</span>
                     {picked && (
-                      <span className="w-6 h-6 rounded-full bg-[#7E2EA8] text-white text-xs font-medium flex items-center justify-center">
+                      <span className="w-6 h-6 rounded-full bg-[#7626B3] text-white text-xs font-medium flex items-center justify-center">
                         {pos + 1}
                       </span>
                     )}
@@ -187,13 +187,13 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
                 {spots.map((s, i) => (
                   <span
                     key={`${s}-${i}`}
-                    className="inline-flex items-center gap-1.5 bg-[#F1E8F8] text-[#4A1C66] text-xs rounded-full pl-3 pr-2 py-1"
+                    className="inline-flex items-center gap-1.5 bg-[#F0E7FA] text-[#431C72] text-xs rounded-full pl-3 pr-2 py-1"
                   >
                     {s}
                     <button
                       type="button"
                       onClick={() => removeSpot(i)}
-                      className="text-[#7E2EA8] hover:text-[#4A1C66]"
+                      className="text-[#7626B3] hover:text-[#431C72]"
                       aria-label={`Quitar ${s}`}
                     >
                       <X className="w-3 h-3" />
@@ -206,15 +206,15 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
 
           {/* Preview del ranking guardado */}
           {ranking.length > 0 && (
-            <section className="bg-[#F1E8F8]/60 rounded-xl p-3 border-l-[3px] border-[#7E2EA8]">
-              <p className="text-xs text-[#4A1C66]">
+            <section className="bg-[#F0E7FA]/60 rounded-xl p-3 border-l-[3px] border-[#7626B3]">
+              <p className="text-xs text-[#431C72]">
                 Vamos a usar este orden para priorizar dónde NO sugerir recortes:{' '}
                 {ranking.map((s, i) => `${i + 1}) ${emojiOf(s)} ${labelOf(s)}`).join(' · ')}
               </p>
             </section>
           )}
 
-          {feedback && <p className="text-xs text-[#7E2EA8]">{feedback}</p>}
+          {feedback && <p className="text-xs text-[#7626B3]">{feedback}</p>}
 
           <Button
             onClick={handleSave}
