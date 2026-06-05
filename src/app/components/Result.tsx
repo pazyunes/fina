@@ -67,6 +67,19 @@ function formatKpi(ars: number): string {
   return `$${ars}`;
 }
 
+// Emoji contextual según el título del objetivo (para el recordatorio de ahorro).
+function goalEmoji(title: string): string {
+  const t = title.toLowerCase();
+  if (/viaj|vacacion|playa|sur|r[íi]o|europa|exterior/.test(t)) return '✈️';
+  if (/auto|moto|coche/.test(t)) return '🚗';
+  if (/casa|depto|alquiler|hogar|mudanza/.test(t)) return '🏠';
+  if (/notebook|computadora|laptop|celular|telef/.test(t)) return '💻';
+  if (/curso|estudio|carrera|universidad/.test(t)) return '📚';
+  if (/casamiento|boda|fiesta/.test(t)) return '💍';
+  if (/emergenc/.test(t)) return '🚨';
+  return '🎯';
+}
+
 // Eyebrow de sección reutilizable — un poco más grande y bold que antes para
 // dar jerarquía, tanto en mobile como en desktop.
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -94,6 +107,11 @@ export function Result({ analysis }: ResultProps) {
     : 0;
   const investRest = 100 - investRecommended;
   const investAmount = analysis.available > 0 ? Math.round(analysis.available * 0.7) : 0;
+
+  // Recordatorio de objetivo: tomamos el objetivo más urgente (menor plazo).
+  const topGoal = (analysis.goalsAnalysis ?? [])
+    .filter((g) => g.monthlyRequired > 0)
+    .sort((a, b) => a.timeframe - b.timeframe)[0] ?? null;
 
   return (
     <div className="min-h-screen bg-white pb-24 lg:pb-8 lg:pl-56 flex flex-col">
@@ -272,6 +290,21 @@ export function Result({ analysis }: ResultProps) {
 
         {/* COLUMNA DERECHA / right rail (1/3) */}
         <div className="space-y-5">
+          {/* RECORDATORIO DE OBJETIVO — solo si hay un objetivo cargado */}
+          {topGoal && (
+            <section>
+              <SectionLabel>Tu objetivo</SectionLabel>
+              <div className="bg-[#7626B3] rounded-xl p-4 text-white">
+                <p className="text-2xl mb-1">{goalEmoji(topGoal.title)}</p>
+                <p className="text-sm leading-snug">
+                  Recordá que tenés que ahorrar{' '}
+                  <strong className="font-bold">{formatKpi(topGoal.monthlyRequired)} por mes</strong>{' '}
+                  para llegar a {topGoal.title}.
+                </p>
+              </div>
+            </section>
+          )}
+
           {/* DESCUENTOS DISPONIBLES PARA VOS (PR8 — placeholder de cupones) */}
           <section>
             <SectionLabel>Descuentos disponibles para vos</SectionLabel>

@@ -26,7 +26,7 @@ export function Profile() {
 
   // Edición de datos del perfil.
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: profile.name, age: profile.age, email: user?.email ?? '', gender: profile.gender });
+  const [form, setForm] = useState({ name: profile.name, age: profile.age, email: user?.email ?? '', gender: profile.gender, phoneDigits: (profile.phone || '').replace(/^\+54/, '') });
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -36,15 +36,25 @@ export function Profile() {
   };
 
   const startEditing = () => {
-    setForm({ name: profile.name, age: profile.age, email: user?.email ?? '', gender: profile.gender });
+    setForm({ name: profile.name, age: profile.age, email: user?.email ?? '', gender: profile.gender, phoneDigits: (profile.phone || '').replace(/^\+54/, '') });
     setFeedback(null);
     setEditing(true);
   };
 
+  // Teléfono: 8-13 dígitos o vacío (igual que el signup). Vacío = borrar.
+  const phoneValid = form.phoneDigits === '' || /^[0-9]{8,13}$/.test(form.phoneDigits);
+
   const handleSave = async () => {
     setSaving(true);
     setFeedback(null);
-    const { error, emailChangePending } = await updateProfile(form);
+    const phoneE164 = form.phoneDigits ? `+54${form.phoneDigits}` : '';
+    const { error, emailChangePending } = await updateProfile({
+      name: form.name,
+      age: form.age,
+      email: form.email,
+      gender: form.gender,
+      phone: phoneE164,
+    });
     setSaving(false);
     if (error) {
       setFeedback(error);
@@ -108,14 +118,20 @@ export function Profile() {
             </div>
 
             {!editing ? (
-              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#D7C2EF]/50 text-sm">
-                <div>
-                  <p className="text-gray-400">Edad</p>
-                  <p className="text-gray-700">{profile.age || '—'}</p>
+              <div className="mt-4 pt-4 border-t border-[#D7C2EF]/50">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-gray-400">Edad</p>
+                    <p className="text-gray-700">{profile.age || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Sexo</p>
+                    <p className="text-gray-700">{genderLabel(profile.gender)}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-gray-400">Sexo</p>
-                  <p className="text-gray-700">{genderLabel(profile.gender)}</p>
+                <div className="mt-3 text-sm">
+                  <p className="text-gray-400">Teléfono</p>
+                  <p className="text-gray-700">{profile.phone || '—'}</p>
                 </div>
               </div>
             ) : (
@@ -174,10 +190,29 @@ export function Profile() {
                   <p className="text-xs text-gray-400 mt-1">Cambiar el email pide confirmación por correo.</p>
                 </div>
 
+                <div>
+                  <Label htmlFor="p-phone" className="text-gray-700 text-sm">Teléfono</Label>
+                  <div className="mt-1 flex items-stretch rounded-xl border border-gray-200 focus-within:border-[#7626B3] overflow-hidden bg-white">
+                    <span className="px-3 flex items-center text-sm text-gray-600 bg-gray-50 border-r border-gray-200 select-none">+54</span>
+                    <Input
+                      id="p-phone"
+                      type="tel"
+                      inputMode="numeric"
+                      value={form.phoneDigits}
+                      onChange={(e) => setForm({ ...form, phoneDigits: e.target.value.replace(/\D/g, '').slice(0, 13) })}
+                      placeholder="Ej: 11 1234 5678"
+                      className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none"
+                    />
+                  </div>
+                  {form.phoneDigits !== '' && !phoneValid && (
+                    <p className="text-xs text-[#7626B3] mt-1">Ingresá entre 8 y 13 dígitos (sin el +54).</p>
+                  )}
+                </div>
+
                 <div className="flex gap-2 pt-1">
                   <Button
                     onClick={handleSave}
-                    disabled={saving || !form.name || !form.gender}
+                    disabled={saving || !form.name || !form.gender || !phoneValid}
                     className="flex-1 bg-[#059669] hover:bg-[#047857] text-white rounded-full disabled:opacity-50"
                   >
                     {saving ? 'Guardando…' : 'Guardar'}

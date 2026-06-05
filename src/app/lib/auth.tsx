@@ -9,6 +9,9 @@ export interface Profile {
   name: string;
   age: string;
   gender: 'femenino' | 'masculino' | 'prefiero_no_decir' | '';
+  // Teléfono en E.164 (ej. +54XXXXXXXXXX). Vive en user_metadata.phone y se
+  // espeja a user_profiles.phone.
+  phone: string;
 }
 
 interface AuthContextValue {
@@ -153,15 +156,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: (meta.name as string) ?? '',
     age: (meta.age as string) ?? '',
     gender: (meta.gender as Profile['gender']) ?? '',
+    phone: (meta.phone as string) ?? '',
   };
 
-  const updateProfile: AuthContextValue['updateProfile'] = async ({ name, age, gender, email }) => {
+  const updateProfile: AuthContextValue['updateProfile'] = async ({ name, age, gender, email, phone }) => {
     const payload: Parameters<typeof supabase.auth.updateUser>[0] = {
-      data: { name, age, gender },
+      data: { name, age, gender, ...(phone !== undefined ? { phone } : {}) },
     };
     const emailChanged = !!email && email.trim() !== user?.email;
     if (emailChanged) payload.email = email!.trim();
     const { error } = await supabase.auth.updateUser(payload);
+    // Espejamos el teléfono editado a user_profiles.phone (el effect de copia
+    // solo actúa cuando está null; en una edición hay que escribirlo sí o sí).
+    if (!error && phone !== undefined && user) {
+      const { error: pErr } = await supabase
+        .from('user_profiles')
+        .update({ phone: phone.trim() || null })
+        .eq('id', user.id);
+      if (pErr) {
+        // eslint-disable-next-line no-console
+        console.error('[fina] update user_profiles.phone failed:', pErr.message);
+      }
+    }
     return { error: error?.message ?? null, emailChangePending: emailChanged && !error };
   };
 
