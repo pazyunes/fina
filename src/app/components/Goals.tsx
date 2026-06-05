@@ -440,7 +440,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
             disabled={!isValid}
             className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Ver mi análisis
+            Continuar
           </Button>
 
           <div className="mt-4">

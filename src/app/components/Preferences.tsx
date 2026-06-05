@@ -198,7 +198,7 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
             disabled={saving}
             className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
-            {saving ? 'Guardando…' : 'Continuar'}
+            {saving ? 'Guardando…' : 'Ver mi análisis'}
           </Button>
           <div className="mt-4">
             <OnboardingProgress currentPath={pathname} />
