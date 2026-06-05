@@ -10,6 +10,7 @@ import { updateReportData } from '../lib/reports';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
+import { WhatsAppFab } from './WhatsAppFab';
 import { PreferencesModal } from './PreferencesModal';
 import { AddGoalModal } from './AddGoalModal';
 
@@ -87,6 +88,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
     <div className="min-h-screen bg-white pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
       <TopRightUser />
+      <WhatsAppFab />
       {/* Header — solo mobile */}
       <div className="lg:hidden bg-[#7E2EA8] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
         <div className="max-w-md lg:max-w-3xl mx-auto">

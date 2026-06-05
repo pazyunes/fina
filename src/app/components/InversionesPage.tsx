@@ -8,6 +8,7 @@ import { BottomNav } from './BottomNav';
 import { OpenAccountGuides } from './OpenAccountGuides';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
+import { WhatsAppFab } from './WhatsAppFab';
 import { InvestmentGuideScreen } from './InvestmentGuideScreen';
 import { resolveInvestmentGuide, InvestmentGuide } from '../lib/investmentGuides';
 
@@ -92,6 +93,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
     <div className="min-h-screen bg-white pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
       <TopRightUser />
+      <WhatsAppFab />
       {/* Header — solo mobile */}
       <div className="lg:hidden bg-[#7E2EA8] text-white px-5 pt-6 pb-5 sticky top-0 z-10">
         <div className="max-w-md lg:max-w-3xl mx-auto">

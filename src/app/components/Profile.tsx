@@ -9,6 +9,7 @@ import { useAuth, Profile as ProfileData } from '../lib/auth';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
+import { WhatsAppFab } from './WhatsAppFab';
 
 const GENDER_OPTIONS: { value: ProfileData['gender']; label: string }[] = [
   { value: 'femenino', label: 'Femenino' },
@@ -59,6 +60,7 @@ export function Profile() {
     <div className="min-h-screen bg-white flex flex-col pb-24 lg:pb-8 lg:pl-56">
       <Sidebar />
       <TopRightUser />
+      <WhatsAppFab />
       <div className="flex-1 flex flex-col p-6 lg:pt-20 max-w-md lg:max-w-4xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
