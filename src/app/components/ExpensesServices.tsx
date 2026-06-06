@@ -35,6 +35,8 @@ interface ExpensesServicesProps {
     supermarketAmount: number;
     cafeteriasFrequency: number;
     cafeteriasAmount: number;
+    restaurantsFrequency: number;
+    restaurantsAmount: number;
     occasionalExpenses: Array<{ name: string; everyMonths: number; amount: number }>;
   }) => void;
 }
@@ -80,10 +82,15 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   const [deliveryAmount, setDeliveryAmount] = useState(initial?.deliveryAmount ? String(initial.deliveryAmount) : '');
   const [noDelivery, setNoDelivery] = useState(false);
 
-  // PR6 — Cafeterías y restaurantes
+  // PR6 — Cafeterías
   const [cafeteriasFrequency, setCafeteriasFrequency] = useState(initial?.cafeteriasFrequency ? String(initial.cafeteriasFrequency) : '');
   const [cafeteriasAmount, setCafeteriasAmount] = useState(initial?.cafeteriasAmount ? String(initial.cafeteriasAmount) : '');
   const [noCafeterias, setNoCafeterias] = useState(false);
+
+  // PR — Restaurantes (separado de cafeterías)
+  const [restaurantsFrequency, setRestaurantsFrequency] = useState(initial?.restaurantsFrequency ? String(initial.restaurantsFrequency) : '');
+  const [restaurantsAmount, setRestaurantsAmount] = useState(initial?.restaurantsAmount ? String(initial.restaurantsAmount) : '');
+  const [noRestaurants, setNoRestaurants] = useState(false);
 
   // Supermarket
   const [supermarketFrequency, setSupermarketFrequency] = useState(initial?.supermarketFrequency ? String(initial.supermarketFrequency) : '');
@@ -109,9 +116,9 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   // En edición abrimos todo para que vea sus valores y edite el que quiera; en
   // onboarding arranca solo "Suscripciones".
   const [openItems, setOpenItems] = useState<string[]>(
-    editMode ? ['subs', 'entertainment', 'delivery', 'cafeterias', 'super'] : ['subs']
+    editMode ? ['subs', 'entertainment', 'delivery', 'cafeterias', 'restaurants', 'super'] : ['subs']
   );
-  const SECTION_ORDER = ['subs', 'entertainment', 'delivery', 'cafeterias', 'super'];
+  const SECTION_ORDER = ['subs', 'entertainment', 'delivery', 'cafeterias', 'restaurants', 'super'];
 
   const toggleSubscription = (name: string) => {
     const newSelected = new Set(selectedSubscriptions);
@@ -195,6 +202,8 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
       supermarketAmount: parseInt(supermarketAmount.replace(/\D/g, '') || '0'),
       cafeteriasFrequency: parseFloat(cafeteriasFrequency) || 0,
       cafeteriasAmount: parseInt(cafeteriasAmount.replace(/\D/g, '') || '0'),
+      restaurantsFrequency: parseFloat(restaurantsFrequency) || 0,
+      restaurantsAmount: parseInt(restaurantsAmount.replace(/\D/g, '') || '0'),
       occasionalExpenses: occasional
         .map((o) => ({
           name: o.name.trim(),
@@ -211,6 +220,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   const entertainmentComplete = noEntertainment || (entertainmentFrequency !== '' && entertainmentAmount !== '');
   const deliveryComplete = noDelivery || (deliveryFrequency !== '' && deliveryAmount !== '');
   const cafeteriasComplete = noCafeterias || (cafeteriasFrequency !== '' && cafeteriasAmount !== '');
+  const restaurantsComplete = noRestaurants || (restaurantsFrequency !== '' && restaurantsAmount !== '');
   const supermarketComplete = noSupermarket || (supermarketFrequency !== '' && supermarketAmount !== '');
   const subsCount = selectedSubscriptions.size + customSubscriptions.filter(s => s.confirmed).length;
 
@@ -223,6 +233,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
       entertainment: entertainmentComplete,
       delivery: deliveryComplete,
       cafeterias: cafeteriasComplete,
+      restaurants: restaurantsComplete,
       super: supermarketComplete,
     };
     setOpenItems(prev => {
@@ -243,7 +254,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   // solo lo que cambió. Lo único que validamos es que las suscripciones custom
   // tengan nombre y costo.
   const isValid =
-    (editMode || (entertainmentComplete && deliveryComplete && cafeteriasComplete && supermarketComplete)) &&
+    (editMode || (entertainmentComplete && deliveryComplete && cafeteriasComplete && restaurantsComplete && supermarketComplete)) &&
     customSubscriptions.every(sub => !sub.name || (sub.name && sub.cost));
 
   const TriggerLabel = ({ icon: Icon, color, title, done, badge }: { icon: any; color: string; title: string; done?: boolean; badge?: string }) => (
@@ -573,14 +584,14 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
               </AccordionContent>
             </AccordionItem>
 
-            {/* Cafeterías y restaurantes (PR6) */}
+            {/* Cafeterías (PR6) */}
             <AccordionItem value="cafeterias" className="bg-white rounded-2xl shadow-sm border-0 px-5">
               <AccordionTrigger className="hover:no-underline py-4">
-                <TriggerLabel icon={Coffee} color="#9C7AA5" title="Cafeterías y restaurantes" done={cafeteriasComplete} />
+                <TriggerLabel icon={Coffee} color="#9C7AA5" title="Cafeterías" done={cafeteriasComplete} />
               </AccordionTrigger>
               <AccordionContent className="pt-0 pb-5">
                 <p className="text-xs text-gray-500 mb-3">
-                  Salidas a almorzar / cenar, café en la calle, etc.
+                  Café, desayuno o merienda afuera.
                 </p>
                 <div className="flex items-center gap-2 mb-4">
                   <Switch
@@ -607,7 +618,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                 <div className="space-y-4" style={{ opacity: noCafeterias ? 0.4 : 1, pointerEvents: noCafeterias ? 'none' : 'auto' }}>
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces por semana vas a una cafetería o restaurante?
+                      ¿Cuántas veces por semana vas a una cafetería?
                     </label>
                     <Input
                       type="number"
@@ -647,6 +658,86 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                       className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noCafeterias}
                       style={{ backgroundColor: noCafeterias ? '#f3f3f5' : undefined }}
+                    />
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Restaurantes (separado de cafeterías) */}
+            <AccordionItem value="restaurants" className="bg-white rounded-2xl shadow-sm border-0 px-5">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <TriggerLabel icon={UtensilsCrossed} color="#D85A30" title="Restaurantes" done={restaurantsComplete} />
+              </AccordionTrigger>
+              <AccordionContent className="pt-0 pb-5">
+                <p className="text-xs text-gray-500 mb-3">
+                  Salidas a almorzar o cenar afuera.
+                </p>
+                <div className="flex items-center gap-2 mb-4">
+                  <Switch
+                    checked={noRestaurants}
+                    onCheckedChange={(checked) => {
+                      setNoRestaurants(checked);
+                      if (checked) {
+                        setRestaurantsFrequency('0');
+                        setRestaurantsAmount('0');
+                        advanceFrom('restaurants');
+                      }
+                    }}
+                    className="data-[state=checked]:bg-[#7626B3]"
+                  />
+                  <span className="text-sm text-gray-500">No consumo</span>
+                </div>
+
+                {noRestaurants && (
+                  <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
+                    <span className="text-xs text-gray-600">No aplica</span>
+                  </div>
+                )}
+
+                <div className="space-y-4" style={{ opacity: noRestaurants ? 0.4 : 1, pointerEvents: noRestaurants ? 'none' : 'auto' }}>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuántas veces por semana vas a un restaurante?
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      step="1"
+                      min="0"
+                      value={restaurantsFrequency}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === '' || /^\d+$/.test(v)) {
+                          setRestaurantsFrequency(v);
+                        }
+                      }}
+                      onBlur={() => { if (restaurantsComplete) advanceFrom('restaurants'); }}
+                      placeholder="Ej: 1"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      disabled={noRestaurants}
+                      style={{ backgroundColor: noRestaurants ? '#f3f3f5' : undefined }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-2">
+                      ¿Cuánto gastás aproximadamente por visita?
+                    </label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={formatCurrency(restaurantsAmount)}
+                      onChange={(e) => {
+                        const numbers = e.target.value.replace(/\D/g, '');
+                        setRestaurantsAmount(numbers);
+                      }}
+                      onBlur={() => { if (restaurantsComplete) advanceFrom('restaurants'); }}
+                      placeholder="$0"
+                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      disabled={noRestaurants}
+                      style={{ backgroundColor: noRestaurants ? '#f3f3f5' : undefined }}
                     />
                   </div>
                 </div>

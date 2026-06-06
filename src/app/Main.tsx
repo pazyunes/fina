@@ -212,6 +212,8 @@ export function Main() {
     supermarketAmount: number;
     cafeteriasFrequency: number;
     cafeteriasAmount: number;
+    restaurantsFrequency: number;
+    restaurantsAmount: number;
     occasionalExpenses: Array<{ name: string; everyMonths: number; amount: number }>;
   }) => {
     setUserData(prev => ({ ...prev, ...data }));

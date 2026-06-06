@@ -11,6 +11,7 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
   // PR6 — cafeterías/restaurantes. Opcional para compat con informes pre-PR6
   // (los campos pueden no estar presentes en user_data jsonb antiguo).
   const monthlyCafeterias = (userData.cafeteriasFrequency || 0) * (userData.cafeteriasAmount || 0) * 4.33;
+  const monthlyRestaurants = (userData.restaurantsFrequency || 0) * (userData.restaurantsAmount || 0) * 4.33;
   const subscriptionsCost = userData.subscriptions.reduce((sum, sub) => sum + sub.cost, 0);
   const installmentsCost = userData.installments.reduce((sum, inst) => sum + inst.monthlyAmount, 0);
   // Gastos ocasionales amortizados a mensual: cada gasto aporta amount/everyMonths.
@@ -32,6 +33,7 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
     monthlyEntertainment +
     monthlySupermarket +
     monthlyCafeterias +
+    monthlyRestaurants +
     monthlyOccasional +
     installmentsCost;
     

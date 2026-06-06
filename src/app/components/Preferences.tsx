@@ -23,7 +23,8 @@ interface PreferencesProps {
 
 const CATEGORY_CATALOG: { value: string; label: string; emoji: string }[] = [
   { value: 'entertainment', label: 'Salidas / ocio', emoji: '🎉' },
-  { value: 'cafeterias', label: 'Cafeterías y restaurantes', emoji: '☕' },
+  { value: 'cafeterias', label: 'Cafeterías', emoji: '☕' },
+  { value: 'restaurants', label: 'Restaurantes', emoji: '🍽️' },
   { value: 'delivery', label: 'Delivery', emoji: '🍕' },
   { value: 'supermarket', label: 'Supermercado', emoji: '🛒' },
   { value: 'subscriptions', label: 'Suscripciones', emoji: '📱' },
@@ -40,6 +41,7 @@ function paysCategory(slug: string, u: Partial<UserData>): boolean {
   switch (slug) {
     case 'entertainment': return (u.entertainmentFrequency ?? 0) > 0 && (u.entertainmentAmount ?? 0) > 0;
     case 'cafeterias':    return (u.cafeteriasFrequency ?? 0) > 0 && (u.cafeteriasAmount ?? 0) > 0;
+    case 'restaurants':   return (u.restaurantsFrequency ?? 0) > 0 && (u.restaurantsAmount ?? 0) > 0;
     case 'delivery':      return (u.deliveryFrequency ?? 0) > 0 && (u.deliveryAmount ?? 0) > 0;
     case 'supermarket':   return (u.supermarketFrequency ?? 0) > 0 && (u.supermarketAmount ?? 0) > 0;
     case 'subscriptions': return (u.subscriptions?.length ?? 0) > 0;

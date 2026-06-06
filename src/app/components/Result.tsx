@@ -44,13 +44,14 @@ function buildCategories(analysis: FinancialAnalysis) {
   const monthlyDelivery = u.deliveryFrequency * u.deliveryAmount * 4.33;
   const monthlySupermarket = (u.supermarketFrequency || 0) * (u.supermarketAmount || 0) * 4.33;
   const monthlyCafeterias = (u.cafeteriasFrequency || 0) * (u.cafeteriasAmount || 0) * 4.33;
+  const monthlyRestaurants = (u.restaurantsFrequency || 0) * (u.restaurantsAmount || 0) * 4.33;
   const subs = u.subscriptions.reduce((s, i) => s + i.cost, 0);
   const inst = u.installments.reduce((s, i) => s + i.monthlyAmount, 0);
 
   return [
     { key: 'housing',       label: 'Vivienda',       emoji: '🏠', amount: u.expenses.housing },
     { key: 'transport',     label: 'Transporte',     emoji: '🚗', amount: u.expenses.transport },
-    { key: 'food',          label: 'Comida',         emoji: '🍕', amount: monthlyDelivery + monthlyCafeterias + monthlySupermarket },
+    { key: 'food',          label: 'Comida',         emoji: '🍕', amount: monthlyDelivery + monthlyCafeterias + monthlyRestaurants + monthlySupermarket },
     { key: 'entertainment', label: 'Ocio',           emoji: '🎉', amount: Math.round(monthlyEntertainment) },
     { key: 'beauty',        label: 'Belleza',        emoji: '💅', amount: u.expenses.beauty },
     { key: 'health',        label: 'Salud',          emoji: '❤️', amount: u.expenses.health },

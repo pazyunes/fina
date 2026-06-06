@@ -446,6 +446,8 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
       // 'cafeterias' requiere la migration 0007 aplicada — si no, esta fila
       // falla pero no rompe el resto.
       { cat: 'cafeterias',    freq: userData.cafeteriasFrequency ?? 0,  amt: userData.cafeteriasAmount ?? 0 },
+      // 'restaurants' requiere la migration 0010 aplicada — idem.
+      { cat: 'restaurants',   freq: userData.restaurantsFrequency ?? 0, amt: userData.restaurantsAmount ?? 0 },
     ];
     for (const v of variableMap) {
       if (v.freq > 0) {
