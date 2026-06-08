@@ -8,6 +8,7 @@ import { Switch } from './ui/switch';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import { Zap, UtensilsCrossed, Sparkles, Plus, X, Check, ShoppingCart, Coffee, CalendarClock } from 'lucide-react';
 import { BackButton } from './BackButton';
+import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
 import { StepIntroMessage } from './StepIntroMessage';
 import { CurrencyToggle } from './CurrencyToggle';
@@ -271,7 +272,8 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
+    <div className={`min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col ${editMode ? '' : 'lg:pl-72'}`}>
+      {!editMode && <OnboardingAside currentPath={pathname} />}
       <div className="flex-1 flex flex-col p-6 max-w-md lg:max-w-2xl mx-auto w-full overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -914,7 +916,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
         </motion.div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg">
+      <div className={`fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg ${editMode ? '' : 'lg:left-72'}`}>
         <div className="max-w-md lg:max-w-2xl mx-auto">
           <Button
             onClick={handleSubmit}

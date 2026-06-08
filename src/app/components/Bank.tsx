@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
 import { BackButton } from './BackButton';
+import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
 import { UserData } from '../types';
 
@@ -23,6 +25,7 @@ const BANKS = [
   'Brubank',
   'Ualá',
   'ICBC',
+  'Efectivo',
   'Otro',
   'No uso banco'
 ];
@@ -30,7 +33,13 @@ const BANKS = [
 export function Bank({ initial, onComplete }: BankProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [selectedBanks, setSelectedBanks] = useState<string[]>(initial?.banks ?? []);
+  // Cualquier banco guardado que no esté en la lista es un "Otro" custom.
+  const initialBanks = initial?.banks ?? [];
+  const customInit = initialBanks.find((b) => !BANKS.includes(b));
+  const [selectedBanks, setSelectedBanks] = useState<string[]>(
+    customInit ? [...initialBanks.filter((b) => BANKS.includes(b)), 'Otro'] : initialBanks
+  );
+  const [otherText, setOtherText] = useState(customInit ?? '');
 
   const toggleBank = (bank: string) => {
     if (bank === 'No uso banco') {
@@ -47,15 +56,22 @@ export function Bank({ initial, onComplete }: BankProps) {
     }
   };
 
+  const otherSelected = selectedBanks.includes('Otro');
+  const canContinue = selectedBanks.length > 0 && (!otherSelected || otherText.trim() !== '');
+
   const handleSubmit = () => {
-    if (selectedBanks.length > 0) {
-      onComplete({ banks: selectedBanks });
-      navigate('/expenses-fixed');
-    }
+    if (!canContinue) return;
+    // Reemplazamos 'Otro' por el texto que escribió la usuaria.
+    const banks = otherSelected && otherText.trim()
+      ? [...selectedBanks.filter((b) => b !== 'Otro'), otherText.trim()]
+      : selectedBanks;
+    onComplete({ banks });
+    navigate('/expenses-fixed');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col lg:pl-72">
+      <OnboardingAside currentPath={pathname} />
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md lg:max-w-2xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -97,9 +113,19 @@ export function Bank({ initial, onComplete }: BankProps) {
             ))}
           </div>
 
+          {otherSelected && (
+            <Input
+              value={otherText}
+              onChange={(e) => setOtherText(e.target.value)}
+              placeholder="¿Cuál? Escribilo acá"
+              className="mt-3 rounded-xl"
+              autoFocus
+            />
+          )}
+
           <Button
             onClick={handleSubmit}
-            disabled={selectedBanks.length === 0}
+            disabled={!canContinue}
             className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Continuar

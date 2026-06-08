@@ -9,6 +9,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './
 import { Home, Heart, Sparkles, Brain, Dumbbell, Plus, X, Check } from 'lucide-react';
 import { TransportSelector, isTransportDataValid } from './TransportSelector';
 import { BackButton } from './BackButton';
+import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
 import { StepIntroMessage } from './StepIntroMessage';
 import { CurrencyToggle } from './CurrencyToggle';
@@ -256,7 +257,8 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   const canAddCurrentInstallment = currentInstallment.name && currentInstallment.monthlyAmount && currentInstallment.remainingInstallments;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
+    <div className={`min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col ${editMode ? '' : 'lg:pl-72'}`}>
+      {!editMode && <OnboardingAside currentPath={pathname} />}
       <div className="flex-1 flex flex-col p-6 max-w-md lg:max-w-2xl mx-auto w-full overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -680,7 +682,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
         </motion.div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg">
+      <div className={`fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg ${editMode ? '' : 'lg:left-72'}`}>
         <div className="max-w-md lg:max-w-2xl mx-auto">
           <Button
             onClick={handleSubmit}

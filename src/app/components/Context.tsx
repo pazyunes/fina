@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
 import { BackButton } from './BackButton';
+import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
 import { g, Gender } from '../utils/gender';
 import { UserData } from '../types';
@@ -26,7 +27,8 @@ export function Context({ initial, gender, onComplete }: ContextProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col lg:pl-72">
+      <OnboardingAside currentPath={pathname} />
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md lg:max-w-2xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, MessageCircle } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
 import { fetchMonthlyExpenses, MonthlyExpenses } from '../lib/transactions';
+import { WHATSAPP_URL } from './WhatsAppFab';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
@@ -220,6 +221,17 @@ export function Result({ analysis }: ResultProps) {
               </p>
             )}
           </div>
+
+          {/* Botón → registrar gastos por el chatbot */}
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 flex items-center justify-center gap-2 w-full bg-[#7626B3] hover:bg-[#5F1F94] text-white rounded-xl py-3 text-sm font-medium transition-colors"
+          >
+            <MessageCircle className="w-4 h-4 shrink-0" />
+            <span><span className="underline font-bold">Hacé click acá</span> para registrar tus gastos…</span>
+          </a>
         </section>
 
           {/* POTENCIAL DE AHORRO — stat grande + barra segmentada */}

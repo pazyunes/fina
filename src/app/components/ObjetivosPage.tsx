@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Check, TrendingUp, Clock, Plus, MessageCircle } from 'lucide-react';
+import { Check, TrendingUp, Clock, Plus } from 'lucide-react';
 import { FinancialAnalysis, UserData } from '../types';
 import { formatArs } from '../lib/currency';
 import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
@@ -10,7 +10,7 @@ import { updateReportData } from '../lib/reports';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
-import { WhatsAppFab, WHATSAPP_URL } from './WhatsAppFab';
+import { WhatsAppFab } from './WhatsAppFab';
 import { AddGoalModal } from './AddGoalModal';
 
 interface ObjetivosPageProps {
@@ -167,20 +167,6 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
             </div>
           </section>
         )}
-
-        {/* AVISO — el chatbot registra tus gastos del día a día */}
-        <a
-          href={WHATSAPP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-start gap-2.5 bg-[#F0E7FA] rounded-xl px-4 py-3 text-sm text-[#431C72] hover:bg-[#E9DBF6] transition-colors"
-        >
-          <MessageCircle className="w-5 h-5 shrink-0 mt-0.5 text-[#7626B3]" />
-          <span>
-            <strong>Tip:</strong> registrá tus gastos del día a día desde nuestro{' '}
-            <strong>chatbot de WhatsApp</strong> y tu informe se mantiene actualizado solo.
-          </span>
-        </a>
 
         {/* CTA → Inversiones */}
         <button

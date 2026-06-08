@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { BackButton } from './BackButton';
+import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
 import { StepIntroMessage } from './StepIntroMessage';
 import { CurrencyToggle } from './CurrencyToggle';
@@ -261,7 +262,8 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
+    <div className={`min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col ${editMode ? '' : 'lg:pl-72'}`}>
+      {!editMode && <OnboardingAside currentPath={pathname} />}
       <div className={`flex-1 flex flex-col items-center justify-center p-6 mx-auto w-full ${incomeType === 'both' ? 'max-w-md md:max-w-3xl' : 'max-w-md lg:max-w-2xl'}`}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
