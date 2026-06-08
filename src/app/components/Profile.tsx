@@ -42,12 +42,19 @@ export function Profile() {
   };
 
   // Teléfono: 8-13 dígitos o vacío (igual que el signup). Vacío = borrar.
-  const phoneValid = form.phoneDigits === '' || /^[0-9]{8,13}$/.test(form.phoneDigits);
+  // AR: 10 dígitos (área + número); el 9 de celular es opcional → lo normalizamos.
+  const phoneNormalized = (() => {
+    let n = form.phoneDigits.replace(/\D/g, '');
+    if (n.startsWith('0')) n = n.slice(1);
+    if (n.length === 11 && n.startsWith('9')) n = n.slice(1);
+    return n;
+  })();
+  const phoneValid = form.phoneDigits === '' || phoneNormalized.length === 10;
 
   const handleSave = async () => {
     setSaving(true);
     setFeedback(null);
-    const phoneE164 = form.phoneDigits ? `+54${form.phoneDigits}` : '';
+    const phoneE164 = phoneNormalized.length === 10 ? `+54${phoneNormalized}` : '';
     const { error, emailChangePending } = await updateProfile({
       name: form.name,
       age: form.age,
@@ -199,13 +206,13 @@ export function Profile() {
                       type="tel"
                       inputMode="numeric"
                       value={form.phoneDigits}
-                      onChange={(e) => setForm({ ...form, phoneDigits: e.target.value.replace(/\D/g, '').slice(0, 13) })}
+                      onChange={(e) => setForm({ ...form, phoneDigits: e.target.value.replace(/\D/g, '').slice(0, 11) })}
                       placeholder="Ej: 11 1234 5678"
                       className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none"
                     />
                   </div>
                   {form.phoneDigits !== '' && !phoneValid && (
-                    <p className="text-xs text-[#7626B3] mt-1">Ingresá entre 8 y 13 dígitos (sin el +54).</p>
+                    <p className="text-xs text-[#7626B3] mt-1">Tienen que ser 10 dígitos (área + número). El 9 de celular es opcional.</p>
                   )}
                 </div>
 

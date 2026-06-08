@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useAuth } from '../lib/auth';
+import { supabase } from '../lib/supabase';
 
 type Mode = 'signin' | 'signup';
 
@@ -29,11 +30,20 @@ export function Login() {
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // 8 a 13 dígitos locales — concatenado con "+54" queda dentro del CHECK
-  // de user_profiles.phone (E.164: + país + hasta 14 dígitos).
+  // Argentina: el número local es área + abonado = 10 dígitos. El "9" de celular
+  // es opcional; lo normalizamos para que "11..." y "9 11..." sean EL MISMO
+  // teléfono. También sacamos un 0 inicial (formato local).
+  const phoneNormalized = (() => {
+    let n = phoneDigits.replace(/\D/g, '');
+    if (n.startsWith('0')) n = n.slice(1);
+    if (n.length === 11 && n.startsWith('9')) n = n.slice(1);
+    return n;
+  })();
   const phoneValid =
-    mode === 'signin' || phoneDigits === '' || (/^[0-9]{8,13}$/.test(phoneDigits));
-  const phoneE164 = phoneDigits ? `+54${phoneDigits}` : '';
+    mode === 'signin' || phoneDigits === '' || phoneNormalized.length === 10;
+  // Canónico SIN el 9: +54 + 10 dígitos. Así el índice único de user_profiles
+  // trata con-9 y sin-9 como el mismo número.
+  const phoneE164 = phoneNormalized.length === 10 ? `+54${phoneNormalized}` : '';
 
   // PR6 — Tras autenticar volvemos a `/` y RootRedirect decide adónde:
   // con informe → /result; sin informe → /welcome (mensajito de bienvenida).
@@ -56,6 +66,20 @@ export function Login() {
       if (error) setError(traducirError(error));
       else navigate('/', { replace: true });
     } else {
+      // No permitir dos cuentas con el mismo teléfono (también lo respalda el
+      // índice único de user_profiles). El RPC es security-definer.
+      if (phoneE164) {
+        try {
+          const { data: inUse } = await supabase.rpc('phone_in_use', { p_phone: phoneE164 });
+          if (inUse) {
+            setError('Ese teléfono ya está registrado en otra cuenta.');
+            setSubmitting(false);
+            return;
+          }
+        } catch {
+          // Si el RPC no existe todavía, seguimos: el índice único es el backstop.
+        }
+      }
       const { error, needsConfirmation } = await signUp(email, password, phoneE164 || undefined);
       if (error) setError(traducirError(error));
       else if (needsConfirmation) {
@@ -131,17 +155,17 @@ export function Login() {
                   autoComplete="tel-national"
                   value={phoneDigits}
                   onChange={(e) => {
-                    // Solo dígitos, máximo 13.
-                    const v = e.target.value.replace(/\D/g, '').slice(0, 13);
+                    // Solo dígitos. Máx 11 (10 del número + un 9 opcional de celular).
+                    const v = e.target.value.replace(/\D/g, '').slice(0, 11);
                     setPhoneDigits(v);
                   }}
-                  placeholder="Ej: 15 1111 2222"
+                  placeholder="Ej: 11 1234 5678"
                   className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none"
                 />
               </div>
               {phoneDigits !== '' && !phoneValid && (
                 <p className="text-xs text-[#7626B3] mt-1">
-                  Ingresá entre 8 y 13 dígitos (código de área + número), sin espacios.
+                  Tienen que ser 10 dígitos (código de área + número). El 9 de celular es opcional.
                 </p>
               )}
               <p className="text-xs text-gray-500 mt-1">

@@ -257,7 +257,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
-      <div className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full overflow-y-auto">
+      <div className="flex-1 flex flex-col p-6 max-w-md lg:max-w-2xl mx-auto w-full overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -356,7 +356,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                         }}
                         className="data-[state=checked]:bg-[#7626B3]"
                       />
-                      <span className="text-sm text-gray-500">No lo pago yo</span>
+                      <span className="text-sm font-medium text-gray-600">No lo pago / no consumo</span>
                     </div>
 
                     {isNotPaying && (
@@ -681,7 +681,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md lg:max-w-2xl mx-auto">
           <Button
             onClick={handleSubmit}
             disabled={!isValid}

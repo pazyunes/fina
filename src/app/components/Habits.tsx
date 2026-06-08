@@ -47,7 +47,7 @@ export function Habits({ initial, onComplete }: HabitsProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-md lg:max-w-2xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

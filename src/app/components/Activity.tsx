@@ -262,7 +262,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
-      <div className={`flex-1 flex flex-col items-center justify-center p-6 mx-auto w-full ${incomeType === 'both' ? 'max-w-md md:max-w-3xl' : 'max-w-md'}`}>
+      <div className={`flex-1 flex flex-col items-center justify-center p-6 mx-auto w-full ${incomeType === 'both' ? 'max-w-md md:max-w-3xl' : 'max-w-md lg:max-w-2xl'}`}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

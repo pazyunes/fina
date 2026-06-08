@@ -71,6 +71,8 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
       currency: s.currency ?? 'ARS',
     }))
   );
+  // "No tengo / no pago suscripciones" — limpia y deshabilita la lista.
+  const [noSubs, setNoSubs] = useState(false);
 
   // Entertainment
   const [entertainmentFrequency, setEntertainmentFrequency] = useState(initial?.entertainmentFrequency ? String(initial.entertainmentFrequency) : '');
@@ -270,7 +272,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
-      <div className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full overflow-y-auto">
+      <div className="flex-1 flex flex-col p-6 max-w-md lg:max-w-2xl mx-auto w-full overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -328,7 +330,21 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                     <p className="text-sm font-semibold text-[#7A5B00]">Importante: poné solo lo que pagás <span className="underline">vos</span>.</p>
                   </div>
                 )}
-                <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-4">
+                  <Switch
+                    checked={noSubs}
+                    onCheckedChange={(checked) => {
+                      setNoSubs(checked);
+                      if (checked) {
+                        setSelectedSubscriptions(new Set());
+                        setCustomSubscriptions([]);
+                      }
+                    }}
+                    className="data-[state=checked]:bg-[#7626B3]"
+                  />
+                  <span className="text-sm font-medium text-gray-600">No tengo / no pago suscripciones</span>
+                </div>
+                <div className="space-y-3" style={{ opacity: noSubs ? 0.4 : 1, pointerEvents: noSubs ? 'none' : 'auto' }}>
                   {PRESET_SUBSCRIPTIONS.map(service => (
                     <div key={service.name} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50">
                       <Checkbox
@@ -434,6 +450,9 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                 <TriggerLabel icon={Sparkles} color="#7626B3" title="Salidas y entretenimiento" done={entertainmentComplete} />
               </AccordionTrigger>
               <AccordionContent className="pt-0 pb-5">
+                <p className="text-xs text-gray-500 mb-3">
+                  Entretenimiento: cine, teatro, recitales, salir de fiesta/boliche. (Cafeterías y restaurantes tienen su propia sección.)
+                </p>
                 <div className="flex items-center gap-2 mb-4">
                   <Switch
                     checked={noEntertainment}
@@ -447,7 +466,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                     }}
                     className="data-[state=checked]:bg-[#7626B3]"
                   />
-                  <span className="text-sm text-gray-500">No consumo</span>
+                  <span className="text-sm font-medium text-gray-600">No consumo / no lo pago yo</span>
                 </div>
 
                 {noEntertainment && (
@@ -525,7 +544,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                     }}
                     className="data-[state=checked]:bg-[#7626B3]"
                   />
-                  <span className="text-sm text-gray-500">No consumo</span>
+                  <span className="text-sm font-medium text-gray-600">No consumo / no lo pago yo</span>
                 </div>
 
                 {noDelivery && (
@@ -606,7 +625,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                     }}
                     className="data-[state=checked]:bg-[#7626B3]"
                   />
-                  <span className="text-sm text-gray-500">No consumo</span>
+                  <span className="text-sm font-medium text-gray-600">No consumo / no lo pago yo</span>
                 </div>
 
                 {noCafeterias && (
@@ -686,7 +705,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                     }}
                     className="data-[state=checked]:bg-[#7626B3]"
                   />
-                  <span className="text-sm text-gray-500">No consumo</span>
+                  <span className="text-sm font-medium text-gray-600">No consumo / no lo pago yo</span>
                 </div>
 
                 {noRestaurants && (
@@ -769,7 +788,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                     }}
                     className="data-[state=checked]:bg-[#7626B3]"
                   />
-                  <span className="text-sm text-gray-500">No aplica</span>
+                  <span className="text-sm font-medium text-gray-600">No aplica / no lo pago yo</span>
                 </div>
 
                 {noSupermarket && (
@@ -837,10 +856,10 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
               </div>
               <div>
                 <p className="font-semibold text-gray-800">Gastos que no son todos los meses</p>
-                <p className="text-xs text-gray-500">Opcional · ropa, regalos, viajes, etc.</p>
+                <p className="text-xs text-gray-500">Opcional · ropa, regalos, viajes, gimnasio o seguro anual, etc.</p>
               </div>
             </div>
-            <p className="text-sm text-gray-500 mb-3">Poné qué es, cada cuántos meses lo gastás y cuánto.</p>
+            <p className="text-sm text-gray-500 mb-3">Poné qué es, cada cuántos meses lo gastás y cuánto. Para algo anual, poné 12.</p>
 
             <div className="space-y-3">
               {occasional.map((o, i) => (
@@ -861,7 +880,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                   />
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <label className="block text-xs text-gray-500 mb-1">Cada cuántos meses</label>
+                      <label className="block text-xs text-gray-500 mb-1">Cada cuántos meses (12 = anual)</label>
                       <Input
                         type="number"
                         inputMode="numeric"
@@ -896,7 +915,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md lg:max-w-2xl mx-auto">
           <Button
             onClick={handleSubmit}
             disabled={!isValid}

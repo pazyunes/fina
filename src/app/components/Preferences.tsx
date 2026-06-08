@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { BackButton } from './BackButton';
 import { OnboardingProgress } from './OnboardingProgress';
 import { saveUserPreferences } from '../lib/preferences';
+import { formatArs } from '../lib/currency';
 import { g } from '../utils/gender';
 import { DEBUG_MODE } from '../config';
 import { UserData } from '../types';
@@ -54,6 +55,25 @@ function paysCategory(slug: string, u: Partial<UserData>): boolean {
   }
 }
 
+// Gasto mensual estimado por categoría (para mostrar cuánto ahorraría si la recorta).
+function monthlyOf(slug: string, u: Partial<UserData>): number {
+  const exp = u.expenses;
+  switch (slug) {
+    case 'entertainment': return Math.round((u.entertainmentFrequency ?? 0) * (u.entertainmentAmount ?? 0) * 4.33);
+    case 'cafeterias':    return Math.round((u.cafeteriasFrequency ?? 0) * (u.cafeteriasAmount ?? 0) * 4.33);
+    case 'restaurants':   return Math.round((u.restaurantsFrequency ?? 0) * (u.restaurantsAmount ?? 0) * 4.33);
+    case 'delivery':      return Math.round((u.deliveryFrequency ?? 0) * (u.deliveryAmount ?? 0) * 4.33);
+    case 'supermarket':   return Math.round((u.supermarketFrequency ?? 0) * (u.supermarketAmount ?? 0) * 4.33);
+    case 'subscriptions': return (u.subscriptions ?? []).reduce((s, x) => s + (x.cost || 0), 0);
+    case 'beauty':        return exp?.beauty ?? 0;
+    case 'gym':           return exp?.gym ?? 0;
+    case 'therapy':       return exp?.therapy ?? 0;
+    case 'transport':     return exp?.transport ?? 0;
+    case 'installments':  return (u.installments ?? []).reduce((s, x) => s + (x.monthlyAmount || 0), 0);
+    default:              return 0;
+  }
+}
+
 export function Preferences({ initial, onComplete }: PreferencesProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -93,7 +113,7 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col">
-      <div className="flex-1 flex flex-col p-6 max-w-md mx-auto w-full overflow-y-auto">
+      <div className="flex-1 flex flex-col p-6 max-w-md lg:max-w-2xl mx-auto w-full overflow-y-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full pb-28">
           <BackButton currentPath={pathname} />
 
@@ -139,9 +159,16 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
                       }`}
                     >
                       <span className="text-base">{cat.emoji}</span>
-                      <span className="flex-1 text-left">{cat.label}</span>
+                      <span className="flex-1 text-left">
+                        {cat.label}
+                        {monthlyOf(cat.value, initial ?? {}) > 0 && (
+                          <span className="block text-xs text-[#3B6D11] font-medium">
+                            recortándolo ahorrás ~{formatArs(monthlyOf(cat.value, initial ?? {}))}/mes
+                          </span>
+                        )}
+                      </span>
                       {picked && (
-                        <span className="w-6 h-6 rounded-full bg-[#7626B3] text-white text-xs font-medium flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-full bg-[#7626B3] text-white text-xs font-medium flex items-center justify-center shrink-0">
                           {pos + 1}
                         </span>
                       )}
@@ -194,7 +221,7 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md lg:max-w-2xl mx-auto">
           <Button
             onClick={handleContinue}
             disabled={saving}
