@@ -13,20 +13,30 @@ export interface Txn {
   description: string | null;
 }
 
-// Categorías canónicas del presupuesto (matchean con el onboarding).
+// Categorías canónicas del presupuesto (matchean con el onboarding y con las
+// categorías que escribe el chatbot).
 export type BudgetCat =
-  | 'delivery' | 'cafeterias' | 'restaurants' | 'supermarket'
-  | 'entertainment' | 'transport' | 'other';
+  | 'entertainment' | 'delivery' | 'cafeterias' | 'restaurants' | 'supermarket'
+  | 'housing' | 'health' | 'beauty' | 'therapy' | 'gym' | 'transport'
+  | 'subscriptions' | 'other';
 
-// Mapea la category libre que escribe el bot a una categoría canónica.
+// Mapea la category que escribe el bot (Entretenimiento, Delivery, Cafetería,
+// Restaurantes, Supermercado, Vivienda, Salud, Belleza, Terapia, Gimnasio,
+// Nafta, SUBE, Suscripciones) a una categoría canónica. Nafta + SUBE → transporte.
 export function mapTxnCategory(raw: string | null): BudgetCat {
   const c = (raw || '').toLowerCase();
+  if (/entreten/.test(c)) return 'entertainment';
+  if (/deliver|pedido|rappi/.test(c)) return 'delivery';
   if (/cafe|cafeter/.test(c)) return 'cafeterias';
   if (/restaur/.test(c)) return 'restaurants';
-  if (/deliver|pedido|rappi/.test(c)) return 'delivery';
   if (/super|mercado|almac/.test(c)) return 'supermarket';
-  if (/salid|ocio|fiesta|boliche|cine|teatro|recital|entreten/.test(c)) return 'entertainment';
-  if (/transp|uber|taxi|cabify|sube|nafta|combust/.test(c)) return 'transport';
+  if (/vivienda|alquiler|hogar|expensas/.test(c)) return 'housing';
+  if (/salud|prepaga|m[eé]dic/.test(c)) return 'health';
+  if (/belleza|peluquer|manicur/.test(c)) return 'beauty';
+  if (/terapia|psico/.test(c)) return 'therapy';
+  if (/gimnasio|gym/.test(c)) return 'gym';
+  if (/nafta|combust|sube|transp|colectiv|uber|taxi|cabify/.test(c)) return 'transport';
+  if (/suscrip|streaming/.test(c)) return 'subscriptions';
   return 'other';
 }
 
@@ -50,8 +60,9 @@ export function currentPeriodStart(resetDay: number): Date {
 }
 
 const emptyByCat = (): Record<BudgetCat, number> => ({
-  delivery: 0, cafeterias: 0, restaurants: 0, supermarket: 0,
-  entertainment: 0, transport: 0, other: 0,
+  entertainment: 0, delivery: 0, cafeterias: 0, restaurants: 0, supermarket: 0,
+  housing: 0, health: 0, beauty: 0, therapy: 0, gym: 0, transport: 0,
+  subscriptions: 0, other: 0,
 });
 
 // Egresos del período en curso (type='expense'), agrupados por categoría.

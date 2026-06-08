@@ -12,14 +12,22 @@ interface BudgetTrackerProps {
 // Tope mensual estimado por categoría, a partir del onboarding.
 function budgetsFrom(analysis: FinancialAnalysis): { key: BudgetCat; label: string; emoji: string; budget: number }[] {
   const u = analysis.userData;
+  const e = u.expenses;
   const m = (f?: number, a?: number) => Math.round((f || 0) * (a || 0) * 4.33);
+  const subs = (u.subscriptions ?? []).reduce((s, x) => s + (x.cost || 0), 0);
   return [
-    { key: 'delivery',      label: 'Delivery',      emoji: '🍕', budget: m(u.deliveryFrequency, u.deliveryAmount) },
-    { key: 'cafeterias',    label: 'Cafeterías',    emoji: '☕', budget: m(u.cafeteriasFrequency, u.cafeteriasAmount) },
-    { key: 'restaurants',   label: 'Restaurantes',  emoji: '🍽️', budget: m(u.restaurantsFrequency, u.restaurantsAmount) },
-    { key: 'supermarket',   label: 'Supermercado',  emoji: '🛒', budget: m(u.supermarketFrequency, u.supermarketAmount) },
-    { key: 'entertainment', label: 'Salidas / ocio', emoji: '🎉', budget: m(u.entertainmentFrequency, u.entertainmentAmount) },
-    { key: 'transport',     label: 'Transporte',    emoji: '🚗', budget: u.expenses?.transport || 0 },
+    { key: 'entertainment', label: 'Entretenimiento', emoji: '🎉', budget: m(u.entertainmentFrequency, u.entertainmentAmount) },
+    { key: 'delivery',      label: 'Delivery',        emoji: '🍔', budget: m(u.deliveryFrequency, u.deliveryAmount) },
+    { key: 'cafeterias',    label: 'Cafetería',       emoji: '☕', budget: m(u.cafeteriasFrequency, u.cafeteriasAmount) },
+    { key: 'restaurants',   label: 'Restaurantes',    emoji: '🍽️', budget: m(u.restaurantsFrequency, u.restaurantsAmount) },
+    { key: 'supermarket',   label: 'Supermercado',    emoji: '🛒', budget: m(u.supermarketFrequency, u.supermarketAmount) },
+    { key: 'housing',       label: 'Vivienda',        emoji: '🏠', budget: e?.housing || 0 },
+    { key: 'health',        label: 'Salud',           emoji: '🩺', budget: e?.health || 0 },
+    { key: 'beauty',        label: 'Belleza',         emoji: '💄', budget: e?.beauty || 0 },
+    { key: 'therapy',       label: 'Terapia',         emoji: '🧠', budget: e?.therapy || 0 },
+    { key: 'gym',           label: 'Gimnasio',        emoji: '💪', budget: e?.gym || 0 },
+    { key: 'transport',     label: 'Transporte',      emoji: '🚌', budget: e?.transport || 0 },
+    { key: 'subscriptions', label: 'Suscripciones',   emoji: '📺', budget: subs },
   ].filter((c) => c.budget > 0);
 }
 
