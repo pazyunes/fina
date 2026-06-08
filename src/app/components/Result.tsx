@@ -6,6 +6,7 @@ import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
 import { fetchMonthlyExpenses, MonthlyExpenses } from '../lib/transactions';
 import { WHATSAPP_URL } from './WhatsAppFab';
+import { OpenBankAccountBox } from './OpenBankAccountBox';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
@@ -112,6 +113,8 @@ export function Result({ analysis }: ResultProps) {
   const investRest = 100 - investRecommended;
   const investAmount = analysis.available > 0 ? Math.round(analysis.available * 0.7) : 0;
 
+  // No bancarizada: eligió "No uso banco" en el onboarding.
+  const notBanked = analysis.userData.banks?.includes('No uso banco') ?? false;
   // Recordatorio de objetivo: tomamos el objetivo más urgente (menor plazo).
   const topGoal = (analysis.goalsAnalysis ?? [])
     .filter((g) => g.monthlyRequired > 0)
@@ -402,6 +405,9 @@ export function Result({ analysis }: ResultProps) {
               </span>
             </div>
           </section>
+
+          {/* Abrir cuenta de banco — solo si eligió "No uso banco" */}
+          {notBanked && <OpenBankAccountBox />}
         </div>
        </div>
 
