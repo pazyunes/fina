@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp, MessageCircle } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
-import { fetchMonthlyExpenses, MonthlyExpenses } from '../lib/transactions';
+import { useAuth } from '../lib/auth';
 import { WHATSAPP_URL } from './WhatsAppFab';
 import { OpenBankAccountBox } from './OpenBankAccountBox';
+import { BudgetTracker } from './BudgetTracker';
+import { IncomeResetControl } from './IncomeResetControl';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
@@ -94,6 +95,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function Result({ analysis }: ResultProps) {
+  const { user } = useAuth();
+  const resetDay = Number(user?.user_metadata?.incomeResetDay) || 1;
   const categories = buildCategories(analysis);
   const totalCategories = categories.reduce((s, c) => s + c.amount, 0);
   const reducible = Math.round(analysis.reduciblePercentage);
@@ -119,16 +122,6 @@ export function Result({ analysis }: ResultProps) {
   const topGoal = (analysis.goalsAnalysis ?? [])
     .filter((g) => g.monthlyRequired > 0)
     .sort((a, b) => a.timeframe - b.timeframe)[0] ?? null;
-
-  // Egresos del mes subidos a Fina (chatbot → tabla transactions).
-  const [expenses, setExpenses] = useState<MonthlyExpenses | null>(null);
-  useEffect(() => {
-    let active = true;
-    fetchMonthlyExpenses().then((e) => { if (active) setExpenses(e); });
-    return () => { active = false; };
-  }, []);
-  // Disponible real: lo financiero (disponible) menos lo que ya gastó este mes.
-  const realDisponible = analysis.available - (expenses?.total ?? 0);
 
   return (
     <div className="min-h-screen bg-white pb-24 lg:pb-8 lg:pl-56 flex flex-col">
@@ -182,48 +175,9 @@ export function Result({ analysis }: ResultProps) {
             <KpiTile label="Gastos" value={formatKpi(analysis.totalExpenses)} color="#D85A30" />
           </div>
 
-          {/* EGRESOS SUBIDOS A FINA (chatbot → transactions) + disponible real */}
-          <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm mt-3">
-            <div className="flex items-end justify-between gap-2">
-              <div>
-                <p className="text-xs text-gray-500">Disponible real este mes</p>
-                <p
-                  className="text-2xl font-bold leading-none mt-0.5"
-                  style={{ color: realDisponible >= 0 ? '#3B6D11' : '#D85A30' }}
-                >
-                  {formatKpi(realDisponible)}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">Tu disponible menos lo que ya gastaste</p>
-              </div>
-              {expenses && expenses.count > 0 && (
-                <div className="text-right shrink-0">
-                  <p className="text-xs text-gray-500">~{formatArs(expenses.avgPerDay)}</p>
-                  <p className="text-xs text-gray-400">por día</p>
-                </div>
-              )}
-            </div>
-
-            {expenses && expenses.count > 0 ? (
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-2">
-                  Egresos subidos a Fina: <strong className="text-gray-700">{expenses.count}</strong> este mes ·{' '}
-                  <strong className="text-gray-700">{formatArs(expenses.total)}</strong>
-                </p>
-                <ul className="space-y-1">
-                  {expenses.items.slice(0, 4).map((t) => (
-                    <li key={t.id} className="flex items-center justify-between text-xs text-gray-500">
-                      <span className="truncate pr-2">{t.merchant || t.category || t.description || 'Gasto'}</span>
-                      <span className="shrink-0">- {formatArs(t.amount_ars)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
-                Todavía no registraste egresos. Cargalos por el chatbot de WhatsApp y van a aparecer acá.
-              </p>
-            )}
-          </div>
+          {/* PRESUPUESTO POR CATEGORÍA — tope del onboarding, se llena con los
+              egresos del chatbot (tabla transactions) */}
+          <BudgetTracker analysis={analysis} resetDay={resetDay} />
 
           {/* Botón → registrar gastos por el chatbot */}
           <a
@@ -235,6 +189,9 @@ export function Result({ analysis }: ResultProps) {
             <MessageCircle className="w-4 h-4 shrink-0" />
             <span><span className="underline font-bold">Hacé click acá</span> para registrar tus gastos…</span>
           </a>
+
+          {/* ¿Cuándo se renueva tu ingreso? (reinicia el presupuesto) */}
+          <IncomeResetControl />
         </section>
 
           {/* POTENCIAL DE AHORRO — stat grande + barra segmentada */}
