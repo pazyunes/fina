@@ -230,7 +230,7 @@ export function Result({ analysis }: ResultProps) {
             href={WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 flex items-center justify-center gap-2 w-full bg-[#7626B3] hover:bg-[#5F1F94] text-white rounded-xl py-3 text-sm font-medium transition-colors"
+            className="mt-3 flex items-center justify-center gap-2 w-full bg-[#059669] hover:bg-[#047857] text-white rounded-xl py-3 text-sm font-medium transition-colors"
           >
             <MessageCircle className="w-4 h-4 shrink-0" />
             <span><span className="underline font-bold">Hacé click acá</span> para registrar tus gastos…</span>
