@@ -57,7 +57,25 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
   const [savingGoal, setSavingGoal] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const goals = analysis.goalsAnalysis ?? [];
+  const specificGoals = analysis.userData.specificGoals ?? [];
   const strategies = buildGoalStrategies(analysis);
+
+  // Total ahorrado registrado para el objetivo en la posición i.
+  const savedFor = (i: number) =>
+    (specificGoals[i]?.contributions ?? []).reduce((s, c) => s + (c.amount || 0), 0);
+
+  // Registrar un aporte hacia el objetivo i: lo apila en contributions y persiste.
+  const handleAddContribution = async (i: number, amount: number) => {
+    if (amount <= 0) return;
+    const next = analysis.userData.specificGoals.map((g, idx) =>
+      idx === i
+        ? { ...g, contributions: [...(g.contributions ?? []), { amount, date: new Date().toISOString() }] }
+        : g
+    );
+    const newUserData: UserData = { ...analysis.userData, specificGoals: next };
+    const { analysis: nextAnalysis } = await updateReportData(newUserData);
+    if (nextAnalysis) onAnalysisChange?.(nextAnalysis, newUserData);
+  };
 
   // Add new goal: mergea con userData, llama a updateReportData, propaga.
   const handleAddGoal = async (goal: {
@@ -122,7 +140,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           ) : (
             <div className="space-y-3">
               {goals.map((g, i) => (
-                <GoalCard key={i} goal={g} />
+                <GoalCard key={i} goal={g} saved={savedFor(i)} onAdd={(amount) => handleAddContribution(i, amount)} />
               ))}
             </div>
           )}
@@ -193,7 +211,33 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
 
 // Card por objetivo. Donut con 0% logrado (PR7 v1 no trackea avance real)
 // + monto/plazo + status badge + tip con la cuota mensual sugerida.
-function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }) {
+function GoalCard({
+  goal,
+  saved,
+  onAdd,
+}: {
+  goal: FinancialAnalysis['goalsAnalysis'][number];
+  saved: number;
+  onAdd: (amount: number) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [amountStr, setAmountStr] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const pct = goal.amount > 0 ? Math.min(Math.round((saved / goal.amount) * 100), 100) : 0;
+  const remaining = Math.max(goal.amount - saved, 0);
+  const done = saved >= goal.amount && goal.amount > 0;
+
+  const confirm = async () => {
+    const amt = parseInt(amountStr.replace(/\D/g, '')) || 0;
+    if (amt <= 0) return;
+    setSaving(true);
+    await onAdd(amt);
+    setSaving(false);
+    setAmountStr('');
+    setAdding(false);
+  };
+
   return (
     <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -210,39 +254,72 @@ function GoalCard({ goal }: { goal: FinancialAnalysis['goalsAnalysis'][number] }
         </span>
       </div>
 
-      {/* Donut con texto central — 0% logrado en v1 (anillo finito). */}
+      {/* Donut con progreso real */}
       <div className="relative h-32">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={[
-                { name: 'Logrado', value: 0 },
-                { name: 'Resto', value: 100 },
+                { name: 'Logrado', value: pct },
+                { name: 'Resto', value: 100 - pct },
               ]}
               cx="50%"
               cy="50%"
               innerRadius={50}
               outerRadius={62}
               cornerRadius={6}
+              startAngle={90}
+              endAngle={-270}
               dataKey="value"
               stroke="none"
               isAnimationActive={false}
             >
-              <Cell fill="#7626B3" />
+              <Cell fill={done ? '#059669' : '#7626B3'} />
               <Cell fill="#D7C2EF" />
             </Pie>
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <p className="text-xl font-bold text-[#7626B3]" style={{ fontFamily: 'var(--font-sans)' }}>0%</p>
-          <p className="text-xs text-gray-500">recién empezás</p>
+          <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-sans)', color: done ? '#059669' : '#7626B3' }}>{pct}%</p>
+          <p className="text-xs text-gray-500">{done ? '¡lo lograste! 🎉' : 'logrado'}</p>
         </div>
       </div>
 
       <div className="flex justify-between text-xs">
-        <span className="text-gray-500">Total objetivo</span>
-        <span className="font-medium text-[#7626B3]">{formatArs(goal.amount)}</span>
+        <span className="text-gray-500">Llevás <strong className="text-gray-700">{formatArs(saved)}</strong> de {formatArs(goal.amount)}</span>
+        {!done && <span className="text-gray-500">te falta {formatArs(remaining)}</span>}
       </div>
+
+      {/* Registrar aporte */}
+      {adding ? (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            autoFocus
+            value={amountStr ? `$${parseInt(amountStr).toLocaleString('es-AR').replace(/,/g, '.')}` : ''}
+            onChange={(e) => setAmountStr(e.target.value.replace(/\D/g, ''))}
+            placeholder="¿Cuánto guardaste?"
+            className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#7626B3] focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={confirm}
+            disabled={saving || !amountStr}
+            className="bg-[#059669] hover:bg-[#047857] text-white rounded-xl px-4 text-sm font-semibold disabled:opacity-50"
+          >
+            {saving ? '…' : 'Sumar'}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" /> Registrar aporte
+        </button>
+      )}
 
       <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-xs text-[#431C72] border-l-[3px] border-[#7626B3]">
         📅 {goal.insight}

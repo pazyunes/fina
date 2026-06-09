@@ -140,6 +140,8 @@ export interface UserData {
     timeframe: number; // months
     currency?: Currency;
     originalAmount?: number;
+    // Aportes registrados manualmente hacia este objetivo (progreso).
+    contributions?: Array<{ amount: number; date: string }>; // date ISO
   }>;
 }
 

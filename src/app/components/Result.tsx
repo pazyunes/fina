@@ -4,6 +4,7 @@ import { TrendingUp, MessageCircle } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
 import { formatArs } from '../lib/currency';
 import { useAuth } from '../lib/auth';
+import { currentPeriodStart } from '../lib/transactions';
 import { WHATSAPP_URL } from './WhatsAppFab';
 import { OpenBankAccountBox } from './OpenBankAccountBox';
 import { BudgetTracker } from './BudgetTracker';
@@ -102,19 +103,28 @@ export function Result({ analysis }: ResultProps) {
   const reducible = Math.round(analysis.reduciblePercentage);
   const fijo = 100 - reducible;
   const level = levelToBadge(analysis.financialLevel);
-  const hasSurplus = analysis.available > 0;
+
+  // Ahorro registrado para objetivos en el período en curso → se resta del
+  // disponible (esa plata ya la apartaste).
+  const periodStart = currentPeriodStart(resetDay);
+  const savingsThisPeriod = (analysis.userData.specificGoals ?? [])
+    .flatMap((g) => g.contributions ?? [])
+    .filter((c) => new Date(c.date) >= periodStart)
+    .reduce((s, c) => s + (c.amount || 0), 0);
+  const availableNow = Math.max(analysis.available - savingsThisPeriod, 0);
+  const hasSurplus = availableNow > 0;
 
   // Top 5 para el bar chart horizontal — el HTML muestra 5 barras.
   const topCategories = categories.slice(0, 5);
 
   // PR8 — Potencial de inversión: % de los ingresos que podrían destinarse a
   // inversión recomendada. Asumimos 70% del disponible (resto liquidez/
-  // imprevistos). Si available <= 0 → 0%.
-  const investRecommended = analysis.available > 0 && analysis.totalIncome > 0
-    ? Math.max(0, Math.min(100, Math.round((analysis.available * 0.7 / analysis.totalIncome) * 100)))
+  // imprevistos). Si availableNow <= 0 → 0%.
+  const investRecommended = availableNow > 0 && analysis.totalIncome > 0
+    ? Math.max(0, Math.min(100, Math.round((availableNow * 0.7 / analysis.totalIncome) * 100)))
     : 0;
   const investRest = 100 - investRecommended;
-  const investAmount = analysis.available > 0 ? Math.round(analysis.available * 0.7) : 0;
+  const investAmount = availableNow > 0 ? Math.round(availableNow * 0.7) : 0;
 
   // No bancarizada: eligió "No uso banco" en el onboarding.
   const notBanked = analysis.userData.banks?.includes('No uso banco') ?? false;
@@ -163,7 +173,7 @@ export function Result({ analysis }: ResultProps) {
                   fontSize: 'clamp(3rem, 13vw, 6.5rem)',
                 }}
               >
-                {formatKpi(Math.max(analysis.available, 0))}
+                {formatKpi(availableNow)}
               </p>
               <p className="text-xs lg:text-base text-white/90 mt-3 font-medium">
                 {hasSurplus
