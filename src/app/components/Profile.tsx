@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
-import { LogOut, CircleUserRound, Pencil, Wallet, Home, Coffee, Target, ChevronRight } from 'lucide-react';
+import { LogOut, CircleUserRound, Pencil, Wallet, Home, Coffee, Target, ChevronRight, Ticket } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -10,6 +10,7 @@ import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
 import { WhatsAppFab } from './WhatsAppFab';
+import { CouponsModal } from './CouponsModal';
 
 const GENDER_OPTIONS: { value: ProfileData['gender']; label: string }[] = [
   { value: 'femenino', label: 'Femenino' },
@@ -22,7 +23,14 @@ const genderLabel = (g: ProfileData['gender']) =>
 
 export function Profile() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, profile, signOut, updateProfile } = useAuth();
+
+  // Pop-up "Mis cupones". Se abre desde el cupón del informe (via state) o acá.
+  const [showCoupons, setShowCoupons] = useState(false);
+  useEffect(() => {
+    if ((location.state as { openCoupons?: boolean } | null)?.openCoupons) setShowCoupons(true);
+  }, [location.state]);
 
   // Edición de datos del perfil.
   const [editing, setEditing] = useState(false);
@@ -251,6 +259,16 @@ export function Profile() {
               <EditRow icon={Coffee} label="Mis gastos variables" to="/editar/gastos-variables" navigate={navigate} />
               <EditRow icon={Target} label="Mis objetivos" to="/editar/objetivos" navigate={navigate} />
             </div>
+
+            <button
+              type="button"
+              onClick={() => setShowCoupons(true)}
+              className="mt-3 w-full flex items-center gap-3 bg-white rounded-2xl shadow-sm px-4 py-3.5 hover:bg-[#F0E7FA]/40 transition-colors text-left"
+            >
+              <Ticket className="w-5 h-5 text-[#7626B3]" />
+              <span className="flex-1 text-base font-medium text-gray-700">Mis cupones</span>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
           </div>
 
           </div>
@@ -264,6 +282,8 @@ export function Profile() {
         </motion.div>
       </div>
       <BottomNav />
+
+      {showCoupons && <CouponsModal onClose={() => setShowCoupons(false)} />}
     </div>
   );
 }

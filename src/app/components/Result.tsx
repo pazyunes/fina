@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth';
 import { useMoney, DisplayCurrencyToggle } from '../lib/displayCurrency';
 import { currentPeriodStart } from '../lib/transactions';
 import { updateReportData } from '../lib/reports';
+import { COUPONS } from '../lib/coupons';
 import { MonthEndReview } from './MonthEndReview';
 import { WHATSAPP_URL } from './WhatsAppFab';
 import { OpenBankAccountBox } from './OpenBankAccountBox';
@@ -392,16 +393,33 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
             </section>
           )}
 
-          {/* DESCUENTOS DISPONIBLES PARA VOS (PR8 — placeholder de cupones) */}
+          {/* DESCUENTOS DISPONIBLES PARA VOS — cupones. Tocar → /perfil "Mis cupones". */}
           <section>
             <SectionLabel>Descuentos disponibles para vos</SectionLabel>
-            <div className="bg-white rounded-xl px-4 py-5 lg:p-5 border border-[#D7C2EF]/70 shadow-sm text-center">
-              <p className="text-2xl mb-2">🎟️</p>
-              <p className="text-base font-semibold text-gray-800 mb-1">Próximamente</p>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                Acá van a aparecer cupones de descuento elegidos según tus gustos y categorías de gasto.
-                Estamos trabajando para conseguirlos.
-              </p>
+            <div className="space-y-2">
+              {COUPONS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => navigate('/perfil', { state: { openCoupons: true } })}
+                  className="w-full flex items-center gap-3 bg-white rounded-xl p-3 border border-[#D7C2EF]/70 shadow-sm hover:border-[#7626B3] transition-colors text-left"
+                >
+                  {c.logo ? (
+                    <img src={c.logo} alt={c.brand} className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                  ) : (
+                    <span className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0" style={{ background: c.color }}>
+                      {c.brand[0]}
+                    </span>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800">{c.brand}</p>
+                    <p className="text-xs text-gray-500">Código {c.code}</p>
+                  </div>
+                  <span className="text-sm font-bold px-2.5 py-1 rounded-full text-white" style={{ background: c.color }}>
+                    {c.discount} OFF
+                  </span>
+                </button>
+              ))}
             </div>
           </section>
 
