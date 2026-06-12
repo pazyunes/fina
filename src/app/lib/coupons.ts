@@ -34,6 +34,6 @@ export const COUPONS: Coupon[] = [
     message:
       'Cuidá tu piel con cosmética natural de Cloe y llevate 10% de descuento usando el código FINA10 en el checkout.',
     color: '#534127',
-    logo: '/coupons/cloe.jpeg',
+    logo: '/coupons/cloe.jpeg?v=2',
   },
 ];
