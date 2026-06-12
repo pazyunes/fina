@@ -401,7 +401,7 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => navigate('/perfil', { state: { openCoupons: true } })}
+                  onClick={() => navigate('/perfil', { state: { openCoupons: true, couponId: c.id } })}
                   className="w-full flex items-center gap-3 bg-white rounded-xl p-3 border border-[#D7C2EF]/70 shadow-sm hover:border-[#7626B3] transition-colors text-left"
                 >
                   {c.logo ? (

@@ -28,8 +28,13 @@ export function Profile() {
 
   // Pop-up "Mis cupones". Se abre desde el cupón del informe (via state) o acá.
   const [showCoupons, setShowCoupons] = useState(false);
+  const [couponInitialId, setCouponInitialId] = useState<string | null>(null);
   useEffect(() => {
-    if ((location.state as { openCoupons?: boolean } | null)?.openCoupons) setShowCoupons(true);
+    const st = location.state as { openCoupons?: boolean; couponId?: string } | null;
+    if (st?.openCoupons) {
+      setCouponInitialId(st.couponId ?? null);
+      setShowCoupons(true);
+    }
   }, [location.state]);
 
   // Edición de datos del perfil.
@@ -262,7 +267,7 @@ export function Profile() {
 
             <button
               type="button"
-              onClick={() => setShowCoupons(true)}
+              onClick={() => { setCouponInitialId(null); setShowCoupons(true); }}
               className="mt-3 w-full flex items-center gap-3 bg-white rounded-2xl shadow-sm px-4 py-3.5 hover:bg-[#F0E7FA]/40 transition-colors text-left"
             >
               <Ticket className="w-5 h-5 text-[#7626B3]" />
@@ -283,7 +288,7 @@ export function Profile() {
       </div>
       <BottomNav />
 
-      {showCoupons && <CouponsModal onClose={() => setShowCoupons(false)} />}
+      {showCoupons && <CouponsModal initialId={couponInitialId} onClose={() => setShowCoupons(false)} />}
     </div>
   );
 }

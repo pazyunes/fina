@@ -21,8 +21,8 @@ function CouponLogo({ coupon, size = 'w-10 h-10' }: { coupon: Coupon; size?: str
 // PR — Pop-up "Mis cupones". Lista los cupones; al tocar uno se despliega el
 // mensaje + el código + el link para comprar. Se abre desde el cupón del
 // informe y desde el perfil.
-export function CouponsModal({ onClose }: { onClose: () => void }) {
-  const [openId, setOpenId] = useState<string | null>(COUPONS[0]?.id ?? null);
+export function CouponsModal({ initialId, onClose }: { initialId?: string | null; onClose: () => void }) {
+  const [openId, setOpenId] = useState<string | null>(initialId ?? COUPONS[0]?.id ?? null);
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
