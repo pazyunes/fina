@@ -118,13 +118,16 @@ begin
     left join gastos g on g.cat = vee.category
     where vee.user_id = p_user_id
   )
+  -- Calificamos todo con calc.* para evitar ambigüedad con las columnas OUT del
+  -- RETURNS TABLE (ej: 'restante' existe como columna del CTE y como columna de
+  -- salida). Sin el calc., Postgres tira "column reference is ambiguous".
   select
-    cat,
-    tope,
-    gastado,
-    round(restante::numeric, 2),
-    round(ticket::numeric, 2),
-    greatest(0, floor(restante / nullif(ticket, 0)))::integer
+    calc.cat,
+    calc.tope,
+    calc.gastado,
+    round(calc.restante::numeric, 2),
+    round(calc.ticket::numeric, 2),
+    greatest(0, floor(calc.restante / nullif(calc.ticket, 0)))::integer
   from calc;
 end;
 $$;
