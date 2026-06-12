@@ -121,7 +121,8 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
 
       {remainingTickets.length > 0 && (
         <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-sm text-[#431C72] mb-4">
-          🎟️ Este mes todavía te queda: <strong>{remainingTickets.slice(0, 3).join(', ')}</strong>.
+          🎟️ Según los gastos que fuiste registrando por el chatbot, este mes todavía te queda:{' '}
+          <strong>{remainingTickets.slice(0, 3).join(', ')}</strong>.
         </div>
       )}
 
