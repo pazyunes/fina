@@ -1,10 +1,11 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp, MessageCircle } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
-import { formatArs } from '../lib/currency';
 import { useAuth } from '../lib/auth';
+import { useMoney, DisplayCurrencyToggle } from '../lib/displayCurrency';
 import { currentPeriodStart } from '../lib/transactions';
 import { WHATSAPP_URL } from './WhatsAppFab';
 import { OpenBankAccountBox } from './OpenBankAccountBox';
@@ -67,13 +68,6 @@ function buildCategories(analysis: FinancialAnalysis) {
   ].filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount);
 }
 
-// Formato corto $XXk / $X.XM para los KPI tiles del Resumen — el HTML usa
-// abreviaciones para que entren cómodos en mobile.
-function formatKpi(ars: number): string {
-  if (ars >= 1_000_000) return `$${(ars / 1_000_000).toFixed(ars >= 10_000_000 ? 0 : 1)}M`;
-  if (ars >= 1_000) return `$${Math.round(ars / 1_000)}k`;
-  return `$${ars}`;
-}
 
 // Emoji contextual según el título del objetivo (para el recordatorio de ahorro).
 function goalEmoji(title: string): string {
@@ -99,6 +93,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export function Result({ analysis }: ResultProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { fmt, fmtKpi, setRate } = useMoney();
+  // Cotización para el toggle ARS/USD (snapshot del informe).
+  const rate = analysis.userData.exchangeRate?.rate ?? null;
+  useEffect(() => { setRate(rate); }, [rate, setRate]);
   const resetDay = Number(user?.user_metadata?.incomeResetDay) || 1;
   const categories = buildCategories(analysis);
   const totalCategories = categories.reduce((s, c) => s + c.amount, 0);
@@ -156,6 +154,9 @@ export function Result({ analysis }: ResultProps) {
         transition={{ duration: 0.3 }}
         className="flex-1 p-4 lg:px-8 lg:pt-20 lg:pb-8 max-w-md lg:max-w-6xl mx-auto w-full"
       >
+       <div className="flex justify-end mb-3">
+         <DisplayCurrencyToggle />
+       </div>
        <div className="lg:grid lg:grid-cols-3 lg:gap-5 lg:items-start">
         {/* COLUMNA PRINCIPAL (2/3) */}
         <div className="space-y-5 lg:col-span-2">
@@ -180,7 +181,7 @@ export function Result({ analysis }: ResultProps) {
                   fontSize: 'clamp(3rem, 13vw, 6.5rem)',
                 }}
               >
-                {formatKpi(availableNow)}
+                {fmtKpi(availableNow)}
               </p>
               <p className="text-xs lg:text-base text-white/90 mt-3 font-medium">
                 {hasSurplus
@@ -188,8 +189,8 @@ export function Result({ analysis }: ResultProps) {
                   : 'Este mes tus gastos se comieron todo 😬'}
               </p>
             </div>
-            <KpiTile label="Ingresos" value={formatKpi(analysis.totalIncome)} color="#3B6D11" />
-            <KpiTile label="Gastos" value={formatKpi(analysis.totalExpenses)} color="#D85A30" />
+            <KpiTile label="Ingresos" value={fmtKpi(analysis.totalIncome)} color="#3B6D11" />
+            <KpiTile label="Gastos" value={fmtKpi(analysis.totalExpenses)} color="#D85A30" />
           </div>
 
           {/* PRESUPUESTO POR CATEGORÍA — tope del onboarding, se llena con los
@@ -294,7 +295,7 @@ export function Result({ analysis }: ResultProps) {
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#D7C2EF' }} /> Resto {investRest}%</span>
                   </div>
                   <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-sm text-[#431C72] border-l-[3px] border-[#7626B3]">
-                    Podrías destinar hasta <strong className="text-[#7626B3]">{formatKpi(investAmount)}/mes</strong> a inversión y mantener el resto líquido para gastos e imprevistos. Mirá la pestaña Inversiones para opciones concretas.
+                    Podrías destinar hasta <strong className="text-[#7626B3]">{fmtKpi(investAmount)}/mes</strong> a inversión y mantener el resto líquido para gastos e imprevistos. Mirá la pestaña Inversiones para opciones concretas.
                   </div>
                 </>
               ) : (
@@ -348,7 +349,7 @@ export function Result({ analysis }: ResultProps) {
                 <p className="text-2xl mb-1">{goalEmoji(topGoal.title)}</p>
                 <p className="text-sm leading-snug">
                   Recordá que tenés que ahorrar{' '}
-                  <strong className="font-bold">{formatKpi(topGoal.monthlyRequired)} por mes</strong>{' '}
+                  <strong className="font-bold">{fmtKpi(topGoal.monthlyRequired)} por mes</strong>{' '}
                   para llegar a {topGoal.title}.
                 </p>
               </div>
@@ -393,7 +394,7 @@ export function Result({ analysis }: ResultProps) {
         {/* Deficit warning si available negativo */}
         {analysis.available < 0 && (
           <div className="bg-[#D85A30] rounded-xl p-4 text-white text-sm mt-5">
-            ⚠️ Tus gastos superan tus ingresos por <strong>{formatArs(Math.abs(analysis.available))}</strong> este mes. Mirá la pestaña Objetivos para los próximos pasos.
+            ⚠️ Tus gastos superan tus ingresos por <strong>{fmt(Math.abs(analysis.available))}</strong> este mes. Mirá la pestaña Objetivos para los próximos pasos.
           </div>
         )}
       </motion.div>

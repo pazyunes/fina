@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { FinancialAnalysis, UserData } from '../types';
-import { formatArs } from '../lib/currency';
+import { useMoney } from '../lib/displayCurrency';
 import { fetchPeriodExpenses, PeriodExpenses, BudgetCat, mapTxnCategory } from '../lib/transactions';
 
 interface BudgetTrackerProps {
@@ -50,6 +50,7 @@ const VISIT: Partial<Record<BudgetCat, { ticketBase: (u: UserData) => number; un
 
 export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
   const navigate = useNavigate();
+  const { fmt } = useMoney();
   const [data, setData] = useState<PeriodExpenses | null>(null);
 
   useEffect(() => {
@@ -131,7 +132,7 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
                   <span className="text-base">{c.emoji}</span>{c.label}
                 </span>
                 <span className={`text-sm font-semibold ${over ? 'text-[#D85A30]' : 'text-gray-800'}`}>
-                  {over ? `te pasaste ${formatArs(spent - c.budget)}` : `te queda ${formatArs(remaining)}`}
+                  {over ? `te pasaste ${fmt(spent - c.budget)}` : `te queda ${fmt(remaining)}`}
                 </span>
               </div>
               <div className="h-2.5 rounded-full bg-[#F0E7FA] overflow-hidden">

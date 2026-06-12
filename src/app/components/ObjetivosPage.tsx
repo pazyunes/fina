@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Check, TrendingUp, Clock, Plus } from 'lucide-react';
 import { FinancialAnalysis, UserData } from '../types';
-import { formatArs } from '../lib/currency';
+import { useMoney, DisplayCurrencyToggle } from '../lib/displayCurrency';
 import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
 import { updateReportData } from '../lib/reports';
 import { BottomNav } from './BottomNav';
@@ -53,6 +53,9 @@ function goalEmoji(title: string): string {
 
 export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps) {
   const navigate = useNavigate();
+  const { fmt, setRate } = useMoney();
+  const rate = analysis.userData.exchangeRate?.rate ?? null;
+  useEffect(() => { setRate(rate); }, [rate, setRate]);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -129,6 +132,10 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         transition={{ duration: 0.3 }}
         className="flex-1 p-4 lg:px-8 lg:pt-20 lg:pb-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
       >
+        <div className="flex justify-end">
+          <DisplayCurrencyToggle />
+        </div>
+
         {/* CTA → Agregar objetivo nuevo (arriba de todo) */}
         <button
           type="button"
@@ -230,6 +237,7 @@ function GoalCard({
   saved: number;
   onAdd: (amount: number) => void;
 }) {
+  const { fmt } = useMoney();
   const [adding, setAdding] = useState(false);
   const [amountStr, setAmountStr] = useState('');
   const [saving, setSaving] = useState(false);
@@ -256,7 +264,7 @@ function GoalCard({
             {goalEmoji(goal.title)} {goal.title}
           </p>
           <p className="text-xs text-gray-500 mt-0.5">
-            ~{formatArs(goal.monthlyRequired)}/mes · {goal.timeframe} meses
+            ~{fmt(goal.monthlyRequired)}/mes · {goal.timeframe} meses
           </p>
         </div>
         <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap ${STATUS_BADGE[goal.status]}`}>
@@ -296,8 +304,8 @@ function GoalCard({
       </div>
 
       <div className="flex justify-between text-xs">
-        <span className="text-gray-500">Llevás <strong className="text-gray-700">{formatArs(saved)}</strong> de {formatArs(goal.amount)}</span>
-        {!done && <span className="text-gray-500">te falta {formatArs(remaining)}</span>}
+        <span className="text-gray-500">Llevás <strong className="text-gray-700">{fmt(saved)}</strong> de {fmt(goal.amount)}</span>
+        {!done && <span className="text-gray-500">te falta {fmt(remaining)}</span>}
       </div>
 
       {/* Registrar aporte */}
