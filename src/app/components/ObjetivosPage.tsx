@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
@@ -58,6 +58,16 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const goals = analysis.goalsAnalysis ?? [];
   const specificGoals = analysis.userData.specificGoals ?? [];
+
+  // Si venimos con #hash (desde el informe), scrolleamos a esa sección.
+  useEffect(() => {
+    const id = window.location.hash.replace('#', '');
+    if (!id) return;
+    const t = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+    return () => clearTimeout(t);
+  }, []);
   const strategies = buildGoalStrategies(analysis);
 
   // Total ahorrado registrado para el objetivo en la posición i.
@@ -131,7 +141,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         {errorMsg && <p className="text-xs text-[#7626B3] text-center">{errorMsg}</p>}
 
         {/* EN CURSO */}
-        <section>
+        <section id="en-curso" className="scroll-mt-24">
           <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">En curso</p>
           {goals.length === 0 ? (
             <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm text-sm text-gray-500">
@@ -148,7 +158,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
 
         {/* ESTRATEGIAS PARA LLEGAR AL OBJETIVO */}
         {strategies.length > 0 && (
-          <section>
+          <section id="estrategias" className="scroll-mt-24">
             <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">
               Cómo llegar al objetivo — varias opciones
             </p>

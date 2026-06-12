@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp, MessageCircle } from 'lucide-react';
@@ -96,6 +97,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function Result({ analysis }: ResultProps) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const resetDay = Number(user?.user_metadata?.incomeResetDay) || 1;
   const categories = buildCategories(analysis);
@@ -162,7 +164,12 @@ export function Result({ analysis }: ResultProps) {
           <SectionLabel>Resumen</SectionLabel>
           <div className="grid grid-cols-2 gap-2 lg:gap-4">
             {/* Hero Disponible: gradiente rosa + número gigante para impacto */}
-            <div className="col-span-2 rounded-2xl px-6 py-8 lg:py-12 text-center bg-[#7626B3] shadow-lg shadow-[#7626B3]/25">
+            <div
+              onClick={() => navigate('/objetivos#en-curso')}
+              role="button"
+              title="Ver tus objetivos en curso"
+              className="col-span-2 rounded-2xl px-6 py-8 lg:py-12 text-center bg-[#7626B3] shadow-lg shadow-[#7626B3]/25 cursor-pointer hover:bg-[#5F1F94] transition-colors"
+            >
               <p className="text-xs lg:text-sm text-white/85 mb-2 uppercase tracking-[0.18em] font-semibold">
                 Te queda disponible
               </p>
@@ -332,7 +339,12 @@ export function Result({ analysis }: ResultProps) {
           {topGoal && (
             <section>
               <SectionLabel>Tu objetivo</SectionLabel>
-              <div className="bg-[#7626B3] rounded-xl p-4 text-white">
+              <div
+                onClick={() => navigate('/objetivos#estrategias')}
+                role="button"
+                title="Ver cómo llegar al objetivo"
+                className="bg-[#7626B3] rounded-xl p-4 text-white cursor-pointer hover:bg-[#5F1F94] transition-colors"
+              >
                 <p className="text-2xl mb-1">{goalEmoji(topGoal.title)}</p>
                 <p className="text-sm leading-snug">
                   Recordá que tenés que ahorrar{' '}
