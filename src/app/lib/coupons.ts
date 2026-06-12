@@ -23,6 +23,6 @@ export const COUPONS: Coupon[] = [
     message:
       'Comprá productos saludables y veganos en Nutriveg con 15% de descuento usando el código FINA15 en el checkout.',
     color: '#3B6D11',
-    logo: '/coupons/nutriveg.svg',
+    logo: '/coupons/nutriveg.jpeg',
   },
 ];
