@@ -127,6 +127,19 @@ export interface UserData {
   // Exchange rate snapshot used for any USD amounts in this flow
   exchangeRate?: ExchangeRate | null;
 
+  // Fecha en que la usuaria terminó el onboarding (ISO). Se usa para prorratear
+  // los topes del primer período (si arrancó a mitad de mes).
+  onboardingDate?: string;
+
+  // Cierres de período: respuestas de "¿por qué gastaste menos?" y del check-in
+  // de ahorro. Clave = inicio del período (YYYY-MM-DD). Evita re-preguntar.
+  periodReviews?: Record<string, {
+    done: boolean;
+    saved?: 'yes' | 'no';
+    savedDestination?: string;     // si no ahorró: a dónde fue
+    underspend?: Record<string, string>; // category -> destino de lo no gastado
+  }>;
+
   // Alquiler cargado en USD (2.3): se guarda la moneda y el monto original;
   // expenses.housing queda en ARS para los cálculos.
   housingCurrency?: Currency;

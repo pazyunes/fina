@@ -77,19 +77,6 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
   const savedFor = (i: number) =>
     (specificGoals[i]?.contributions ?? []).reduce((s, c) => s + (c.amount || 0), 0);
 
-  // Registrar un aporte hacia el objetivo i: lo apila en contributions y persiste.
-  const handleAddContribution = async (i: number, amount: number) => {
-    if (amount <= 0) return;
-    const next = analysis.userData.specificGoals.map((g, idx) =>
-      idx === i
-        ? { ...g, contributions: [...(g.contributions ?? []), { amount, date: new Date().toISOString() }] }
-        : g
-    );
-    const newUserData: UserData = { ...analysis.userData, specificGoals: next };
-    const { analysis: nextAnalysis } = await updateReportData(newUserData);
-    if (nextAnalysis) onAnalysisChange?.(nextAnalysis, newUserData);
-  };
-
   // Add new goal: mergea con userData, llama a updateReportData, propaga.
   const handleAddGoal = async (goal: {
     title: string;
@@ -132,7 +119,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         transition={{ duration: 0.3 }}
         className="flex-1 p-4 lg:px-8 lg:pt-20 lg:pb-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
       >
-        <div className="flex justify-end">
+        <div className="flex justify-start">
           <DisplayCurrencyToggle />
         </div>
 
@@ -157,7 +144,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           ) : (
             <div className="space-y-3">
               {goals.map((g, i) => (
-                <GoalCard key={i} goal={g} saved={savedFor(i)} onAdd={(amount) => handleAddContribution(i, amount)} />
+                <GoalCard key={i} goal={g} saved={savedFor(i)} />
               ))}
             </div>
           )}
@@ -231,30 +218,15 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
 function GoalCard({
   goal,
   saved,
-  onAdd,
 }: {
   goal: FinancialAnalysis['goalsAnalysis'][number];
   saved: number;
-  onAdd: (amount: number) => void;
 }) {
   const { fmt } = useMoney();
-  const [adding, setAdding] = useState(false);
-  const [amountStr, setAmountStr] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const pct = goal.amount > 0 ? Math.min(Math.round((saved / goal.amount) * 100), 100) : 0;
   const remaining = Math.max(goal.amount - saved, 0);
   const done = saved >= goal.amount && goal.amount > 0;
-
-  const confirm = async () => {
-    const amt = parseInt(amountStr.replace(/\D/g, '')) || 0;
-    if (amt <= 0) return;
-    setSaving(true);
-    await onAdd(amt);
-    setSaving(false);
-    setAmountStr('');
-    setAdding(false);
-  };
 
   return (
     <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm space-y-3">
@@ -307,37 +279,6 @@ function GoalCard({
         <span className="text-gray-500">Llevás <strong className="text-gray-700">{fmt(saved)}</strong> de {fmt(goal.amount)}</span>
         {!done && <span className="text-gray-500">te falta {fmt(remaining)}</span>}
       </div>
-
-      {/* Registrar aporte */}
-      {adding ? (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            inputMode="numeric"
-            autoFocus
-            value={amountStr ? `$${parseInt(amountStr).toLocaleString('es-AR').replace(/,/g, '.')}` : ''}
-            onChange={(e) => setAmountStr(e.target.value.replace(/\D/g, ''))}
-            placeholder="¿Cuánto guardaste?"
-            className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#7626B3] focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={confirm}
-            disabled={saving || !amountStr}
-            className="bg-[#059669] hover:bg-[#047857] text-white rounded-xl px-4 text-sm font-semibold disabled:opacity-50"
-          >
-            {saving ? '…' : 'Sumar'}
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> Registrar aporte
-        </button>
-      )}
 
       <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-xs text-[#431C72] border-l-[3px] border-[#7626B3]">
         📅 {goal.insight}

@@ -63,6 +63,17 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
   const cats = budgetsFrom(analysis);
   const spentOf = (k: BudgetCat) => data?.byCategory[k] ?? 0;
 
+  // Prorrateo del primer período: si arrancó el onboarding a mitad de período,
+  // descontamos del tope lo que "ya hubiese gastado" antes (budget/30 * díasPrevios).
+  const onboardingDate = u.onboardingDate ? new Date(u.onboardingDate) : null;
+  const proRateFactor = (() => {
+    const ps = data?.periodStart;
+    if (!onboardingDate || !ps || onboardingDate < ps) return 1;
+    const daysElapsed = Math.max(0, Math.floor((onboardingDate.getTime() - ps.getTime()) / 86400000));
+    return Math.max(1 - daysElapsed / 30, 0);
+  })();
+  const budgetOf = (c: Cat) => Math.round(c.budget * proRateFactor);
+
   // Cantidad de transacciones registradas por categoría (para el ticket real).
   const counts: Partial<Record<BudgetCat, number>> = {};
   (data?.items ?? []).forEach((t) => {
@@ -84,14 +95,14 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
     .map((c) => {
       const v = VISIT[c.key];
       if (!v) return null;
-      const remaining = Math.max(c.budget - spentOf(c.key), 0);
+      const remaining = Math.max(budgetOf(c) - spentOf(c.key), 0);
       const ticket = ticketOf(c.key);
       const n = ticket > 0 ? Math.floor(remaining / ticket) : 0;
       return n >= 1 ? `${n} ${v.unit(n)}` : null;
     })
     .filter(Boolean) as string[];
 
-  const overCats = cats.filter((c) => spentOf(c.key) > c.budget);
+  const overCats = cats.filter((c) => spentOf(c.key) > budgetOf(c));
 
   if (cats.length === 0) {
     return (
@@ -117,14 +128,15 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
       <div className="space-y-3.5">
         {cats.map((c) => {
           const spent = spentOf(c.key);
-          const remaining = Math.max(c.budget - spent, 0);
-          const ratio = c.budget > 0 ? remaining / c.budget : 0;
+          const budget = budgetOf(c);
+          const remaining = Math.max(budget - spent, 0);
+          const ratio = budget > 0 ? remaining / budget : 0;
           const pct = Math.round(ratio * 100);
-          const color = spent > c.budget ? '#D85A30' : ratio <= 0.2 ? '#D85A30' : ratio <= 0.4 ? '#B8860B' : '#7626B3';
+          const color = spent > budget ? '#D85A30' : ratio <= 0.2 ? '#D85A30' : ratio <= 0.4 ? '#B8860B' : '#7626B3';
           const v = VISIT[c.key];
           const ticket = ticketOf(c.key);
           const nLeft = v && ticket > 0 ? Math.floor(remaining / ticket) : null;
-          const over = spent > c.budget;
+          const over = spent > budget;
           return (
             <div key={c.key}>
               <div className="flex items-center justify-between mb-1">
@@ -132,7 +144,7 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
                   <span className="text-base">{c.emoji}</span>{c.label}
                 </span>
                 <span className={`text-sm font-semibold ${over ? 'text-[#D85A30]' : 'text-gray-800'}`}>
-                  {over ? `te pasaste ${fmt(spent - c.budget)}` : `te queda ${fmt(remaining)}`}
+                  {over ? `te pasaste ${fmt(spent - budget)}` : `te queda ${fmt(remaining)}`}
                 </span>
               </div>
               <div className="h-2.5 rounded-full bg-[#F0E7FA] overflow-hidden">

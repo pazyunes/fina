@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp, MessageCircle } from 'lucide-react';
-import { FinancialAnalysis } from '../types';
+import { FinancialAnalysis, UserData } from '../types';
 import { useAuth } from '../lib/auth';
 import { useMoney, DisplayCurrencyToggle } from '../lib/displayCurrency';
 import { currentPeriodStart } from '../lib/transactions';
+import { updateReportData } from '../lib/reports';
+import { MonthEndReview } from './MonthEndReview';
 import { WHATSAPP_URL } from './WhatsAppFab';
 import { OpenBankAccountBox } from './OpenBankAccountBox';
 import { BudgetTracker } from './BudgetTracker';
@@ -18,6 +20,17 @@ import { WhatsAppFab } from './WhatsAppFab';
 
 interface ResultProps {
   analysis: FinancialAnalysis;
+  // PR — para persistir el cierre de mes (aportes + respuestas) desde el informe.
+  onAnalysisChange?: (analysis: FinancialAnalysis, userData: UserData) => void;
+}
+
+// Días que faltan para el próximo "día de cobro" (reinicio del período).
+function daysUntilReset(resetDay: number): number {
+  const now = new Date();
+  const d = Math.min(Math.max(resetDay || 1, 1), 28);
+  let next = new Date(now.getFullYear(), now.getMonth(), d);
+  if (now.getDate() >= d) next = new Date(now.getFullYear(), now.getMonth() + 1, d);
+  return Math.ceil((next.getTime() - now.getTime()) / 86_400_000);
 }
 
 // PR7 — Pantalla Home / Informe. Reemplaza el long-scroll viejo por un
@@ -90,7 +103,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Result({ analysis }: ResultProps) {
+export function Result({ analysis, onAnalysisChange }: ResultProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { fmt, fmtKpi, setRate } = useMoney();
@@ -133,6 +146,17 @@ export function Result({ analysis }: ResultProps) {
     .filter((g) => g.monthlyRequired > 0)
     .sort((a, b) => a.timeframe - b.timeframe)[0] ?? null;
 
+  // Cierre de mes: aparece los últimos 3 días del período si todavía no lo hizo.
+  const periodKey = periodStart.toISOString().slice(0, 10);
+  const reviewDone = analysis.userData.periodReviews?.[periodKey]?.done ?? false;
+  const showReview = !!onAnalysisChange && !reviewDone && daysUntilReset(resetDay) <= 3;
+  // Disponible que "debería" ahorrar = ingresos − gastos − lo destinado a invertir (70%).
+  const savingTarget = Math.max(Math.round(analysis.available * 0.3), 0);
+  const submitReview = async (newUserData: UserData) => {
+    const { analysis: next } = await updateReportData(newUserData);
+    if (next) onAnalysisChange?.(next, newUserData);
+  };
+
   return (
     <div className="min-h-screen bg-white pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
@@ -154,9 +178,21 @@ export function Result({ analysis }: ResultProps) {
         transition={{ duration: 0.3 }}
         className="flex-1 p-4 lg:px-8 lg:pt-20 lg:pb-8 max-w-md lg:max-w-6xl mx-auto w-full"
       >
-       <div className="flex justify-end mb-3">
+       <div className="flex justify-start mb-3">
          <DisplayCurrencyToggle />
        </div>
+
+       {showReview && (
+         <MonthEndReview
+           analysis={analysis}
+           resetDay={resetDay}
+           periodKey={periodKey}
+           periodStart={periodStart}
+           savingTarget={savingTarget}
+           onSubmit={submitReview}
+         />
+       )}
+
        <div className="lg:grid lg:grid-cols-3 lg:gap-5 lg:items-start">
         {/* COLUMNA PRINCIPAL (2/3) */}
         <div className="space-y-5 lg:col-span-2">

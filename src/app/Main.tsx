@@ -224,7 +224,7 @@ export function Main() {
   };
 
   const handleGoals = (data: { goals: string[]; specificGoals: UserData['specificGoals'] }) => {
-    const completeData = { ...userData, ...data } as UserData;
+    const completeData = { ...userData, ...data, onboardingDate: userData.onboardingDate ?? new Date().toISOString() } as UserData;
     setUserData(completeData);
 
     // Generate analysis
@@ -313,7 +313,15 @@ export function Main() {
     case '/ai-reasoning':
       return analysis ? <AIReasoning analysis={analysis} /> : <LoadingScreen />;
     case '/result':
-      return analysis ? <Result analysis={analysis} /> : <LoadingScreen />;
+      return analysis ? (
+        <Result
+          analysis={analysis}
+          onAnalysisChange={(next, nextUserData) => {
+            setAnalysis(next);
+            setUserData(nextUserData);
+          }}
+        />
+      ) : <LoadingScreen />;
     case '/objetivos':
       return analysis ? (
         <ObjetivosPage
