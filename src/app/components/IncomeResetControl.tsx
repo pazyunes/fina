@@ -16,7 +16,16 @@ export function IncomeResetControl() {
   const save = async (n: number) => {
     setDay(n);
     setSaving(true);
+    // Guardamos en auth (lo lee la app) y espejamos en user_profiles (lo lee la
+    // función SQL tickets_disponibles del bot, así ambos usan el mismo período).
     await supabase.auth.updateUser({ data: { incomeResetDay: n } });
+    if (user?.id) {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ income_reset_day: n })
+        .eq('id', user.id);
+      if (error) console.error('[fina] mirror income_reset_day:', error.message);
+    }
     setSaving(false);
     setOpen(false);
   };
