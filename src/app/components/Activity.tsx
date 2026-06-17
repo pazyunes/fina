@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Plus, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -30,6 +31,7 @@ interface ActivityProps {
     incomeOriginalAmount: number; // USD si incomeCurrency === 'USD', si no ARS (del bloque fijo)
     incomeType: IncomeType;
     freelanceIncome?: NonNullable<UserData['freelanceIncome']>;
+    additionalIncomes?: NonNullable<UserData['additionalIncomes']>;
   }) => void;
 }
 
@@ -68,6 +70,15 @@ const formatCurrency = (value: string) => {
   if (numValue < 0) return '0';
   return cleanNumbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
+
+// Estado controlado para un ingreso adicional ("Tengo otro ingreso").
+type ExtraIncome = { label: string; amount: string; currency: Currency };
+const initExtras = (saved: UserData['additionalIncomes']): ExtraIncome[] =>
+  (saved ?? []).map((e) => ({
+    label: e.label,
+    amount: e.amount ? String(e.amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '',
+    currency: e.currency,
+  }));
 
 // Estado controlado para cada uno de los 3 meses del bloque freelance.
 type FreelanceMonth = { amount: string; currency: Currency };
@@ -164,6 +175,18 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
   const maxMonth = Math.max(...monthsArs);
   const highVariability = freelanceComplete && minMonth > 0 && maxMonth > 2 * minMonth;
 
+  // ── Ingresos adicionales ("Tengo otro ingreso") ─────────────────────────
+  const [extras, setExtras] = useState<ExtraIncome[]>(initExtras(initial?.additionalIncomes));
+  const addExtra = () => setExtras((xs) => [...xs, { label: '', amount: '', currency: 'ARS' }]);
+  const removeExtra = (i: number) => setExtras((xs) => xs.filter((_, idx) => idx !== i));
+  const updateExtra = (i: number, patch: Partial<ExtraIncome>) =>
+    setExtras((xs) => xs.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const extraArs = (e: ExtraIncome): number => {
+    const digits = parseInt(e.amount.replace(/\D/g, '')) || 0;
+    return e.currency === 'USD' ? (usdRate ? arsFromUsd(digits, usdRate) : 0) : digits;
+  };
+  const extrasArs = extras.reduce((s, e) => s + extraArs(e), 0);
+
   // ── Validación del step ──────────────────────────────────────────────────
   const fixedNeeded = incomeType === 'fixed' || incomeType === 'both';
   const freelanceNeeded = incomeType === 'freelance' || incomeType === 'both';
@@ -200,7 +223,17 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
         }
       : undefined;
 
-    const monthlyIncome = fixedArs + freelanceArs;
+    // Ingresos adicionales — solo los que tienen monto cargado.
+    const additionalIncomes = extras
+      .map((e) => ({
+        label: e.label.trim() || 'Otro ingreso',
+        amount: parseInt(e.amount.replace(/\D/g, '')) || 0,
+        currency: e.currency,
+        ars: extraArs(e),
+      }))
+      .filter((e) => e.ars > 0);
+
+    const monthlyIncome = fixedArs + freelanceArs + extrasArs;
 
     onComplete({
       worksOrStudies: activity,
@@ -210,6 +243,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
       incomeOriginalAmount,
       incomeType,
       freelanceIncome,
+      additionalIncomes,
     });
     if (!editMode) navigate('/bank');
   };
@@ -374,72 +408,89 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
                   <p className="text-xs text-gray-400">USD no disponible ahora</p>
                 )}
 
-                <div className="space-y-2">
-                  {ranges.map((range) => (
-                    <button
-                      key={range.id}
-                      type="button"
-                      onClick={() => {
-                        setIncomeRange(range.id);
-                        setUseExact(false);
-                      }}
-                      className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
-                        !useExact && incomeRange === range.id
-                          ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3]'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-[#7626B3]/50'
-                      }`}
-                    >
-                      {range.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
+                {/* Toggle prominente: va ANTES de los rangos para que sea la
+                    opción principal. ON → monto exacto; OFF → elegir un rango. */}
+                <button
+                  type="button"
+                  onClick={() => setUseExact((v) => !v)}
+                  aria-pressed={useExact}
+                  className={`w-full flex items-center justify-between gap-3 p-4 rounded-2xl border-2 transition-all ${
+                    useExact
+                      ? 'border-[#7626B3] bg-[#F0E7FA]'
+                      : 'border-[#7626B3]/40 bg-white hover:border-[#7626B3]/70'
+                  }`}
+                >
+                  <span className="text-base font-bold text-[#7626B3] tracking-wide text-left">
+                    INGRESAR MONTO ESPECÍFICO
+                  </span>
                   <Switch
                     checked={useExact}
-                    onCheckedChange={(checked) => setUseExact(checked)}
-                    className="data-[state=checked]:bg-[#7626B3]"
+                    className="data-[state=checked]:bg-[#7626B3] scale-125 pointer-events-none shrink-0"
                   />
-                  <span className="text-sm text-gray-600">Quiero una experiencia más personalizada</span>
-                </div>
+                </button>
 
-                {useExact && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                  >
-                    <Label htmlFor="income" className="text-gray-700 text-sm">
-                      Monto exacto por mes
-                    </Label>
-                    <div className="relative mt-2">
-                      <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>
-                        {currency === 'USD' ? 'USD' : '$'}
-                      </span>
-                      <Input
-                        id="income"
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={exactIncome}
-                        onChange={(e) => setExactIncome(formatCurrency(e.target.value))}
-                        placeholder="0"
-                        className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`}
-                      />
-                    </div>
-                    {currency === 'USD' && exactUsdDigits > 0 && usdRate && (
+                <AnimatePresence mode="wait" initial={false}>
+                  {useExact ? (
+                    <motion.div
+                      key="exact"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="relative mt-1">
+                        <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>
+                          {currency === 'USD' ? 'USD' : '$'}
+                        </span>
+                        <Input
+                          id="income"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={exactIncome}
+                          onChange={(e) => setExactIncome(formatCurrency(e.target.value))}
+                          placeholder="0"
+                          className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`}
+                        />
+                      </div>
+                      {currency === 'USD' && exactUsdDigits > 0 && usdRate && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          ≈ {formatArs(exactUsdInArs)} al cambio del día (USD blue {formatArs(usdRate)})
+                        </p>
+                      )}
                       <p className="text-xs text-gray-500 mt-2">
-                        ≈ {formatArs(exactUsdInArs)} al cambio del día (USD blue {formatArs(usdRate)})
+                        {incomeType === 'both'
+                          ? 'Cargá solo tu sueldo fijo. El freelance se carga aparte.'
+                          : activity === 'studies' || activity === 'neither'
+                          ? 'Mesada, beca, ayuda de familia, ahorros que retirás, lo que sea.'
+                          : 'Incluí sueldo, alquiler o cualquier ingreso regular'}
                       </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-2">
-                      {incomeType === 'both'
-                        ? 'Cargá solo tu sueldo fijo. El freelance se carga aparte.'
-                        : activity === 'studies' || activity === 'neither'
-                        ? 'Mesada, beca, ayuda de familia, ahorros que retirás, lo que sea.'
-                        : 'Incluí sueldo, alquiler o cualquier ingreso regular'}
-                    </p>
-                  </motion.div>
-                )}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="ranges"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-2 overflow-hidden"
+                    >
+                      {ranges.map((range) => (
+                        <button
+                          key={range.id}
+                          type="button"
+                          onClick={() => setIncomeRange(range.id)}
+                          className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
+                            incomeRange === range.id
+                              ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3]'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-[#7626B3]/50'
+                          }`}
+                        >
+                          {range.label}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             )}
 
@@ -480,6 +531,76 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
               </motion.div>
             )}
             </div>
+            )}
+
+            {/* Ingresos adicionales — "Tengo otro ingreso". Cada uno es un monto
+                fijo que se suma al total. Aplica a cualquier tipo de ingreso. */}
+            {activity && (fixedNeeded || freelanceNeeded) && (
+              <div className="pt-2 space-y-3">
+                {extras.map((e, i) => {
+                  const digits = parseInt(e.amount.replace(/\D/g, '')) || 0;
+                  const arsPreview = e.currency === 'USD' && usdRate ? arsFromUsd(digits, usdRate) : 0;
+                  return (
+                    <div key={i} className="rounded-xl border-2 border-gray-200 bg-white p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          value={e.label}
+                          onChange={(ev) => updateExtra(i, { label: ev.target.value })}
+                          placeholder="Nombre (ej: alquiler, otro trabajo)"
+                          className="rounded-lg bg-gray-50 border-gray-200 text-sm h-9 flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeExtra(i)}
+                          aria-label="Quitar ingreso"
+                          className="shrink-0 text-gray-400 hover:text-[#D85A30] transition-colors p-1"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${e.currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>
+                            {e.currency === 'USD' ? 'USD' : '$'}
+                          </span>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={e.amount}
+                            onChange={(ev) => updateExtra(i, { amount: formatCurrency(ev.target.value) })}
+                            placeholder="0"
+                            className={`rounded-xl ${e.currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`}
+                          />
+                        </div>
+                        <CurrencyToggle
+                          value={e.currency}
+                          usdEnabled={!!usdRate}
+                          onChange={(c) => updateExtra(i, { currency: c })}
+                        />
+                      </div>
+                      {e.currency === 'USD' && digits > 0 && usdRate && (
+                        <p className="text-xs text-gray-500">≈ {formatArs(arsPreview)}</p>
+                      )}
+                    </div>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={addExtra}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#7626B3]/40 text-[#7626B3] font-medium hover:bg-[#F0E7FA]/40 transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Tengo otro ingreso
+                </button>
+
+                {extrasArs > 0 && (
+                  <p className="text-sm text-gray-700">
+                    Otros ingresos: <span className="text-[#7626B3]">{formatArs(extrasArs)}</span>
+                  </p>
+                )}
+              </div>
             )}
           </div>
 

@@ -340,9 +340,13 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
     await supabase.from('incomes').delete().eq('user_id', userId);
     const incomeRows: Array<Record<string, unknown>> = [];
     const incomeType = userData.incomeType ?? 'fixed';
+    const extras = userData.additionalIncomes ?? [];
+    const extrasArs = extras.reduce((s, e) => s + (e.ars || 0), 0);
     if (incomeType === 'fixed' || incomeType === 'both') {
       const freelanceAvg = userData.freelanceIncome?.monthlyAvgArs ?? 0;
-      const fixedArs = Math.max(userData.monthlyIncome - freelanceAvg, 0);
+      // monthlyIncome = fijo + promedio freelance + extras, así que el sueldo
+      // fijo neto descuenta ambos.
+      const fixedArs = Math.max(userData.monthlyIncome - freelanceAvg - extrasArs, 0);
       if (fixedArs > 0) {
         incomeRows.push({
           user_id: userId,
@@ -370,6 +374,19 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
             });
           }
         }
+      }
+    }
+    // Ingresos adicionales ("Tengo otro ingreso") — una fila fija por cada uno,
+    // con el nombre como source.
+    for (const e of extras) {
+      if ((e.ars || 0) > 0) {
+        incomeRows.push({
+          user_id: userId,
+          type: 'fixed',
+          source: e.label || 'otro ingreso',
+          amount_ars: e.ars,
+          currency: e.currency ?? 'ARS',
+        });
       }
     }
     if (incomeRows.length > 0) {

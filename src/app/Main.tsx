@@ -135,6 +135,7 @@ export function Main() {
     incomeOriginalAmount: number;
     incomeType: 'fixed' | 'freelance' | 'both';
     freelanceIncome?: UserData['freelanceIncome'];
+    additionalIncomes?: UserData['additionalIncomes'];
   }) => {
     setUserData(prev => ({ ...prev, ...data }));
   };
