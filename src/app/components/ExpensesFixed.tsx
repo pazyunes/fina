@@ -17,7 +17,7 @@ import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
 import { TransportData, UserData, Currency } from '../types';
 
-type FixedKey = 'housing' | 'health' | 'beauty' | 'therapy' | 'gym';
+type FixedKey = 'health' | 'beauty' | 'therapy' | 'gym';
 
 interface ExpensesFixedProps {
   initial?: Partial<UserData>;
@@ -30,6 +30,7 @@ interface ExpensesFixedProps {
     beauty: number;
     therapy: number;
     gym: number;
+    housingBreakdown: { alquiler: number; servicios: number; expensas: number };
     housingCurrency: Currency;
     housingOriginalAmount: number;
     therapyDetails: { sessionPrice: number; sessionsPerMonth: number };
@@ -53,7 +54,6 @@ interface ExpenseCategory {
 }
 
 const CATEGORIES: ExpenseCategory[] = [
-  { key: 'housing', label: 'Alquiler', icon: Home, color: '#7626B3', helper: 'Poné solo tu parte, no el total' },
   { key: 'health', label: 'Salud', icon: Heart, color: '#A858CE', helper: 'Nos referimos a la prepaga' },
   { key: 'beauty', label: 'Belleza y cuidado personal', icon: Sparkles, color: '#9C7AA5', helper: 'Cuánto gastás por mes en peluquería, manicura, pedicura, definitiva, etc.' },
   { key: 'therapy', label: 'Psicóloga / terapia', icon: Brain, color: '#3B6D11' },
@@ -79,7 +79,6 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   const { pathname } = useLocation();
 
   const [expenses, setExpenses] = useState<Record<FixedKey, number>>({
-    housing: initial?.expenses?.housing ?? 0,
     health: initial?.expenses?.health ?? 0,
     beauty: initial?.expenses?.beauty ?? 0,
     therapy: initial?.expenses?.therapy ?? 0,
@@ -87,19 +86,34 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   });
 
   const [notPaying, setNotPaying] = useState<Record<FixedKey, boolean>>({
-    housing: false,
     health: false,
     beauty: false,
     therapy: false,
     gym: false,
   });
 
-  // Alquiler en ARS o USD. expenses.housing siempre queda en ARS (convertido).
+  // ── Vivienda — 3 gastos separados (Alquiler / Servicios / Expensas) ──────
+  // expenses.housing (downstream) = suma de los 3 en ARS. Alquiler admite USD.
   const usdRate = initial?.exchangeRate?.rate ?? null;
   const [housingCurrency, setHousingCurrency] = useState<Currency>(initial?.housingCurrency ?? 'ARS');
   const [housingUsd, setHousingUsd] = useState<string>(
     initial?.housingCurrency === 'USD' && initial?.housingOriginalAmount ? String(initial.housingOriginalAmount) : ''
   );
+  const [alquilerArs, setAlquilerArs] = useState<number>(
+    initial?.housingCurrency !== 'USD' ? (initial?.housingBreakdown?.alquiler ?? initial?.expenses?.housing ?? 0) : 0
+  );
+  const [servicios, setServicios] = useState<number>(initial?.housingBreakdown?.servicios ?? 0);
+  const [expensas, setExpensas] = useState<number>(initial?.housingBreakdown?.expensas ?? 0);
+  const [viviendaNotPaying, setViviendaNotPaying] = useState({ alquiler: false, servicios: false, expensas: false });
+
+  // Alquiler en ARS (convierte si está en USD).
+  const alquilerInArs = housingCurrency === 'USD'
+    ? (usdRate ? arsFromUsd(parseInt(housingUsd.replace(/\D/g, '')) || 0, usdRate) : 0)
+    : alquilerArs;
+  const viviendaTotal =
+    (viviendaNotPaying.alquiler ? 0 : alquilerInArs) +
+    (viviendaNotPaying.servicios ? 0 : servicios) +
+    (viviendaNotPaying.expensas ? 0 : expensas);
 
   // Terapia: el usuario carga precio por sesión y frecuencia mensual; el monto
   // mensual (expenses.therapy) se deriva como el producto.
@@ -119,7 +133,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   // reopened. Alquiler (housing) starts open.
   // En edición abrimos todas las categorías para que edite la que quiera.
   const [openItems, setOpenItems] = useState<string[]>(
-    editMode ? CATEGORIES.map(c => c.key) : ['housing']
+    editMode ? ['vivienda', ...CATEGORIES.map(c => c.key)] : ['vivienda']
   );
   const FIXED_ORDER = CATEGORIES.map(c => c.key);
   // Collapse the finished category and open the next one that's still empty.
@@ -185,6 +199,34 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
     return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
+  // Fila ARS de la sección Vivienda (Servicios / Expensas): input + "No lo pago yo".
+  const renderViviendaRow = (
+    label: string,
+    value: number,
+    setValue: (n: number) => void,
+    np: boolean,
+    setNp: (b: boolean) => void,
+  ) => (
+    <div>
+      <label className="text-sm font-medium text-gray-700 block mb-2">{label}</label>
+      <div className="flex items-center gap-2 mb-2">
+        <Switch checked={np} onCheckedChange={setNp} className="data-[state=checked]:bg-[#7626B3]" />
+        <span className="text-sm text-gray-600">No lo pago yo</span>
+      </div>
+      {!np && (
+        <Input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={value > 0 ? formatCurrency(value) : ''}
+          onChange={(e) => setValue(Math.max(0, parseInt(e.target.value.replace(/\D/g, '')) || 0))}
+          placeholder="$0"
+          className={`rounded-xl ${AMOUNT_FIELD_CLASS}`}
+        />
+      )}
+    </div>
+  );
+
   useEffect(() => {
     if (showConfirmation) {
       const timer = setTimeout(() => {
@@ -234,7 +276,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
 
     const housingOriginalAmount = housingCurrency === 'USD'
       ? (parseInt(housingUsd.replace(/\D/g, '')) || 0)
-      : expenses.housing;
+      : (viviendaNotPaying.alquiler ? 0 : alquilerInArs);
 
     const therapyDetails = {
       sessionPrice: parseInt(therapySessionPrice.replace(/\D/g, '')) || 0,
@@ -243,6 +285,12 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
 
     onComplete({
       ...expenses,
+      housing: viviendaTotal,
+      housingBreakdown: {
+        alquiler: viviendaNotPaying.alquiler ? 0 : alquilerInArs,
+        servicios: viviendaNotPaying.servicios ? 0 : servicios,
+        expensas: viviendaNotPaying.expensas ? 0 : expensas,
+      },
       housingCurrency,
       housingOriginalAmount,
       therapyDetails,
@@ -296,6 +344,70 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
 
           {/* Categorías de monto fijo, cada una colapsable (la primera abierta) */}
           <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-3">
+            {/* VIVIENDA — 3 gastos separados (Alquiler / Servicios / Expensas), sin slider. */}
+            <AccordionItem value="vivienda" className="bg-white rounded-2xl shadow-sm border-0 px-5">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#7626B320' }}>
+                    <Home className="w-5 h-5" style={{ color: '#7626B3' }} />
+                  </div>
+                  <span className="text-gray-700 text-left">Vivienda</span>
+                  {viviendaTotal > 0 && (
+                    <span className="ml-auto text-sm text-[#7626B3]">{formatCurrency(viviendaTotal)}</span>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-0 pb-5 space-y-4">
+                <p className="text-sm text-gray-500">Cargá cada gasto por separado. Poné solo tu parte, no el total.</p>
+
+                {/* Alquiler — admite USD */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">Alquiler</label>
+                    <CurrencyToggle value={housingCurrency} usdEnabled={!!usdRate} onChange={setHousingCurrency} />
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Switch
+                      checked={viviendaNotPaying.alquiler}
+                      onCheckedChange={(c) => setViviendaNotPaying(p => ({ ...p, alquiler: c }))}
+                      className="data-[state=checked]:bg-[#7626B3]"
+                    />
+                    <span className="text-sm text-gray-600">No lo pago yo</span>
+                  </div>
+                  {!viviendaNotPaying.alquiler && (housingCurrency === 'USD' ? (
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm z-10">USD</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={housingUsd ? Number(housingUsd).toLocaleString('es-AR').replace(/,/g, '.') : ''}
+                        onChange={(e) => setHousingUsd(e.target.value.replace(/\D/g, ''))}
+                        placeholder="0"
+                        className={`pl-12 rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                      />
+                      {housingUsd && usdRate && (
+                        <p className="text-xs text-gray-500 mt-1">≈ {formatArs(alquilerInArs)} al cambio del día</p>
+                      )}
+                    </div>
+                  ) : (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={alquilerArs > 0 ? formatCurrency(alquilerArs) : ''}
+                      onChange={(e) => setAlquilerArs(Math.max(0, parseInt(e.target.value.replace(/\D/g, '')) || 0))}
+                      placeholder="$0"
+                      className={`rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                    />
+                  ))}
+                </div>
+
+                {renderViviendaRow('Servicios', servicios, setServicios, viviendaNotPaying.servicios, (c) => setViviendaNotPaying(p => ({ ...p, servicios: c })))}
+                {renderViviendaRow('Expensas', expensas, setExpensas, viviendaNotPaying.expensas, (c) => setViviendaNotPaying(p => ({ ...p, expensas: c })))}
+              </AccordionContent>
+            </AccordionItem>
+
             {CATEGORIES.map(category => {
               const Icon = category.icon;
               const isNotPaying = notPaying[category.key];

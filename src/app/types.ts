@@ -70,16 +70,25 @@ export interface UserData {
 
   // Expenses
   expenses: {
-    housing: number; // Alquiler (siempre en ARS, ya convertido si se cargó en USD)
+    housing: number; // Vivienda — SUMA de alquiler + servicios + expensas (ARS). Detalle en housingBreakdown.
     health: number; // Salud
     beauty: number; // Belleza y cuidado personal (peluquería, manicura, etc.)
     therapy: number; // Psicóloga / terapia
     gym: number; // Gimnasio
+    estudios?: number; // Estudios (solo si la usuaria estudia)
     transport: number; // Transporte / movilidad (calculated from transportDetails)
     services: number; // Deprecated - ahora se usa subscriptions
     food: number; // Deprecated - ahora se calcula desde delivery
     entertainment: number; // Deprecated - ahora se calcula desde entretenimiento
     creditCard: number; // Deprecated - ahora se usa installments
+  };
+
+  // Vivienda — desglose en 3 gastos separados. housing (arriba) es la suma.
+  // Cada monto en ARS (alquiler convertido si se cargó en USD).
+  housingBreakdown?: {
+    alquiler: number;
+    servicios: number;
+    expensas: number;
   };
 
   // Therapy details — el monto mensual (expenses.therapy) se calcula como
