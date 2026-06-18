@@ -16,6 +16,7 @@ export interface GoalCategoryConfig {
   kind: 'amount' | 'info';
   emoji?: string;
   prompt?: string;       // texto guía para metas con monto
+  amountLabel?: string;  // pregunta del monto (por defecto "¿Cuánto querés ahorrar?")
   askWhat?: boolean;     // pide "¿qué querés comprar?" (Comprar algo específico)
   whatLabel?: string;
   defaultTitle?: string; // título base del objetivo creado
@@ -110,7 +111,7 @@ export function GoalCategoryModal({
 
             <div>
               <div className="flex items-center justify-between">
-                <Label className="text-gray-700 text-sm">¿Cuánto querés ahorrar?</Label>
+                <Label className="text-gray-700 text-sm">{config.amountLabel ?? '¿Cuánto querés ahorrar?'}</Label>
                 <CurrencyToggle value={currency} usdEnabled={!!usdRate} onChange={setCurrency} />
               </div>
               <div className="relative mt-2">

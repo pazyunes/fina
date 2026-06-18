@@ -66,16 +66,16 @@ const GOAL_OPTIONS = [
 const CATEGORY_CONFIG: Record<string, GoalCategoryConfig> = {
   'Viajar': {
     kind: 'amount', emoji: '✈️', defaultTitle: 'Viaje',
-    prompt: 'Contanos cuánto querés ahorrar para tu viaje y en cuánto tiempo.',
+    amountLabel: '¿Cuánto presupuesto querés para el viaje?',
   },
   'Comprar algo específico': {
     kind: 'amount', emoji: '🛍️', askWhat: true, defaultTitle: 'Compra',
     whatLabel: '¿Qué querés comprar?',
-    prompt: 'Decinos qué querés comprar, cuánto sale y en cuánto tiempo lo querés lograr.',
+    amountLabel: '¿Cuánto sale?',
   },
   'Pagar deudas': {
     kind: 'amount', emoji: '💳', defaultTitle: 'Pagar deudas',
-    prompt: '¿Cuánto necesitás para saldar tu deuda y en cuánto tiempo querés hacerlo?',
+    amountLabel: '¿Cuánto tenés que pagar?',
   },
   'Invertir': {
     kind: 'info', emoji: '📈',
