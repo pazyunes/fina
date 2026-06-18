@@ -14,6 +14,7 @@ import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
 import { UserData, Currency } from '../types';
+import { GoalCategoryModal, GoalCategoryConfig } from './GoalCategoryModal';
 
 interface GoalItem {
   title: string;
@@ -54,11 +55,33 @@ const GOAL_OPTIONS = [
   'Viajar',
   'Comprar algo específico',
   'Pagar deudas',
-  'Independizarme',
   'Invertir',
   CUSTOM_GOAL_OPTION,
   'No tengo'
 ];
+
+// PR #8 — Config del popup por categoría. Las de monto piden cuánto + tiempo;
+// "Invertir" es informativa (no pide monto). "Otro" y "No tengo" tienen su
+// propio flujo inline, así que no están acá.
+const CATEGORY_CONFIG: Record<string, GoalCategoryConfig> = {
+  'Viajar': {
+    kind: 'amount', emoji: '✈️', defaultTitle: 'Viaje',
+    prompt: 'Contanos cuánto querés ahorrar para tu viaje y en cuánto tiempo.',
+  },
+  'Comprar algo específico': {
+    kind: 'amount', emoji: '🛍️', askWhat: true, defaultTitle: 'Compra',
+    whatLabel: '¿Qué querés comprar?',
+    prompt: 'Decinos qué querés comprar, cuánto sale y en cuánto tiempo lo querés lograr.',
+  },
+  'Pagar deudas': {
+    kind: 'amount', emoji: '💳', defaultTitle: 'Pagar deudas',
+    prompt: '¿Cuánto necesitás para saldar tu deuda y en cuánto tiempo querés hacerlo?',
+  },
+  'Invertir': {
+    kind: 'info', emoji: '📈',
+    message: 'En el informe te vamos a presentar un gráfico con qué parte de tu plata conviene destinar a invertir.',
+  },
+};
 
 export function Goals({ initial, onComplete, editMode }: GoalsProps) {
   const navigate = useNavigate();
@@ -82,6 +105,37 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
 
   const [showSavingsGoal, setShowSavingsGoal] = useState(initial?.goals?.includes('No tengo') ?? false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  // PR #8 — categoría cuyo popup está abierto (Viajar / Comprar / Pagar / Invertir).
+  const [modalCategory, setModalCategory] = useState<string | null>(null);
+
+  // Click en una categoría: las que tienen popup (CATEGORY_CONFIG) lo abren;
+  // "Otro" y "No tengo" mantienen su flujo inline (toggle).
+  const handleCategoryClick = (goal: string) => {
+    if (CATEGORY_CONFIG[goal]) {
+      setModalCategory(goal);
+    } else {
+      toggleGoal(goal);
+    }
+  };
+
+  // Confirmar un objetivo con monto desde el popup → lo agrega a la lista y
+  // marca la categoría como elegida.
+  const handleModalAmount = (g: { title: string; amount: string; timeframe: string; currency: Currency }) => {
+    setSpecificGoals((prev) => [...prev, g]);
+    if (modalCategory) {
+      setSelectedGoals((prev) => (prev.includes(modalCategory) ? prev : [...prev.filter(x => x !== 'No tengo'), modalCategory]));
+    }
+    setShowSavingsGoal(false);
+    setShowConfirmation(true);
+  };
+
+  // Confirmar el popup informativo (Invertir) → solo marca la categoría.
+  const handleModalInfo = () => {
+    if (modalCategory) {
+      setSelectedGoals((prev) => (prev.includes(modalCategory) ? prev : [...prev.filter(x => x !== 'No tengo'), modalCategory]));
+    }
+    setShowSavingsGoal(false);
+  };
 
   const toggleGoal = (goal: string) => {
     if (goal === 'No tengo') {
@@ -190,7 +244,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
               {GOAL_OPTIONS.map(goal => (
                 <div
                   key={goal}
-                  onClick={() => toggleGoal(goal)}
+                  onClick={() => handleCategoryClick(goal)}
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     selectedGoals.includes(goal)
                       ? 'border-[#7626B3] bg-[#F0E7FA]'
@@ -199,7 +253,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
                 >
                   <Checkbox
                     checked={selectedGoals.includes(goal)}
-                    onCheckedChange={() => toggleGoal(goal)}
+                    onCheckedChange={() => handleCategoryClick(goal)}
                     className="data-[state=checked]:bg-[#7626B3] data-[state=checked]:border-[#7626B3]"
                   />
                   <span className="text-gray-700">{goal}</span>
@@ -450,6 +504,17 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
           </div>
         </div>
       </div>
+
+      {modalCategory && CATEGORY_CONFIG[modalCategory] && (
+        <GoalCategoryModal
+          category={modalCategory}
+          config={CATEGORY_CONFIG[modalCategory]}
+          usdRate={usdRate}
+          onClose={() => setModalCategory(null)}
+          onConfirmAmount={handleModalAmount}
+          onConfirmInfo={handleModalInfo}
+        />
+      )}
     </div>
   );
 }
