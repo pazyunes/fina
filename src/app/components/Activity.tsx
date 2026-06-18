@@ -554,7 +554,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
                           type="button"
                           onClick={() => removeExtra(i)}
                           aria-label="Quitar ingreso"
-                          className="shrink-0 text-gray-400 hover:text-[#D85A30] transition-colors p-1"
+                          className="shrink-0 text-gray-400 hover:text-[#7626B3] transition-colors p-1"
                         >
                           <X className="w-5 h-5" />
                         </button>

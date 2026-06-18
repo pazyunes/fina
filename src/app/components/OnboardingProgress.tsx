@@ -15,7 +15,7 @@ export function OnboardingProgress({ currentPath }: OnboardingProgressProps) {
 
   return (
     <div
-      className="flex justify-center items-center gap-1.5"
+      className="flex justify-center items-center gap-2"
       role="progressbar"
       aria-valuemin={1}
       aria-valuemax={ONBOARDING_STEPS.length}
@@ -25,12 +25,12 @@ export function OnboardingProgress({ currentPath }: OnboardingProgressProps) {
       {ONBOARDING_STEPS.map((step, index) => (
         <div
           key={step.path}
-          className={`h-2 rounded-full transition-all duration-300 ${
+          className={`h-3 rounded-full transition-all duration-300 ${
             index === currentIndex
-              ? 'w-6 bg-[#7626B3]'
+              ? 'w-10 bg-[#7626B3]'
               : index < currentIndex
-                ? 'w-2 bg-[#7626B3]'
-                : 'w-2 bg-gray-300'
+                ? 'w-3 bg-[#7626B3]'
+                : 'w-3 bg-gray-300'
           }`}
         />
       ))}

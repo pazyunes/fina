@@ -423,7 +423,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                             variant="ghost"
                             size="icon"
                             onClick={() => removeCustomSubscription(index)}
-                            className={`text-red-500 hover:text-red-700 transition-opacity ${
+                            className={`text-gray-400 hover:text-[#7626B3] transition-opacity ${
                               sub.confirmed ? 'opacity-30' : 'opacity-100'
                             }`}
                           >
@@ -869,7 +869,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                   <button
                     type="button"
                     onClick={() => removeOccasional(i)}
-                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                    className="absolute top-2 right-2 text-gray-400 hover:text-[#7626B3]"
                     aria-label="Quitar gasto ocasional"
                   >
                     <X className="w-4 h-4" />
