@@ -12,6 +12,7 @@ import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
 import { WhatsAppFab } from './WhatsAppFab';
 import { AddGoalModal } from './AddGoalModal';
+import { StrategyContributionModal } from './StrategyContributionModal';
 
 interface ObjetivosPageProps {
   analysis: FinancialAnalysis;
@@ -59,6 +60,10 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Estrategia tildada (abre el modal "¿cuánto ahorraste?") + set de las ya
+  // confirmadas (control visual del tilde).
+  const [contribStrategy, setContribStrategy] = useState<{ strategy: GoalStrategy; index: number } | null>(null);
+  const [doneStrategies, setDoneStrategies] = useState<Set<number>>(new Set());
   const goals = analysis.goalsAnalysis ?? [];
   const specificGoals = analysis.userData.specificGoals ?? [];
 
@@ -97,6 +102,40 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
       setErrorMsg(error ?? 'No se pudo guardar el objetivo.');
       return;
     }
+    onAnalysisChange?.(nextAnalysis, newUserData);
+  };
+
+  // Click en una estrategia. Si ya estaba confirmada → la destildamos. Si no →
+  // abrimos el modal para registrar cuánto ahorró y a qué objetivo sumarlo.
+  const handleStrategyClick = (strategy: GoalStrategy, index: number) => {
+    if (doneStrategies.has(index)) {
+      setDoneStrategies((prev) => {
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
+      return;
+    }
+    setContribStrategy({ strategy, index });
+  };
+
+  // Confirma el aporte: lo suma como contribution al objetivo elegido y persiste.
+  const handleStrategyContribution = async (goalIndex: number, amountArs: number) => {
+    const idx = contribStrategy?.index;
+    const newUserData: UserData = {
+      ...analysis.userData,
+      specificGoals: (analysis.userData.specificGoals ?? []).map((g, i) =>
+        i === goalIndex
+          ? { ...g, contributions: [...(g.contributions ?? []), { amount: amountArs, date: new Date().toISOString() }] }
+          : g
+      ),
+    };
+    const { error, analysis: nextAnalysis } = await updateReportData(newUserData);
+    if (error || !nextAnalysis) {
+      setErrorMsg(error ?? 'No se pudo guardar el aporte.');
+      return;
+    }
+    if (idx !== undefined) setDoneStrategies((prev) => new Set(prev).add(idx));
     onAnalysisChange?.(nextAnalysis, newUserData);
   };
 
@@ -157,11 +196,17 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
               Cómo llegar al objetivo — varias opciones
             </p>
             <p className="text-xs text-gray-500 mb-2">
-              Marcá las que vas implementando. Cada una suma a la cuota mensual de tu objetivo.
+              Tildá una cuando la implementes y te preguntamos cuánto ahorraste para sumarlo al objetivo que elijas.
             </p>
             <div className="bg-white rounded-xl px-4 py-1 border border-[#D7C2EF]/70 shadow-sm">
               {strategies.map((s, i) => (
-                <StrategyRow key={i} strategy={s} first={i === 0} />
+                <StrategyRow
+                  key={i}
+                  strategy={s}
+                  first={i === 0}
+                  done={doneStrategies.has(i)}
+                  onClick={() => handleStrategyClick(s, i)}
+                />
               ))}
             </div>
           </section>
@@ -207,6 +252,15 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           usdRate={analysis.userData.exchangeRate?.rate ?? null}
           onClose={() => setShowAddGoal(false)}
           onAdd={handleAddGoal}
+        />
+      )}
+
+      {contribStrategy && (
+        <StrategyContributionModal
+          strategy={contribStrategy.strategy}
+          goals={specificGoals}
+          onClose={() => setContribStrategy(null)}
+          onConfirm={handleStrategyContribution}
         />
       )}
     </div>
@@ -289,12 +343,21 @@ function GoalCard({
 
 // Row del listado de estrategias. Layout del HTML de referencia: checkbox a la
 // izquierda, título + subtítulo en el medio, badge de impacto verde a la
-// derecha. El estado "done" es solo visual (no se persiste todavía).
-function StrategyRow({ strategy, first }: { strategy: GoalStrategy; first: boolean }) {
-  const [done, setDone] = useState(false);
+// derecha. Al tildar, el padre abre el modal para registrar el aporte al objetivo.
+function StrategyRow({
+  strategy,
+  first,
+  done,
+  onClick,
+}: {
+  strategy: GoalStrategy;
+  first: boolean;
+  done: boolean;
+  onClick: () => void;
+}) {
   return (
     <div
-      onClick={() => setDone(d => !d)}
+      onClick={onClick}
       className={`flex items-start gap-3 py-3 cursor-pointer ${first ? '' : 'border-t border-[#D7C2EF]/50'}`}
     >
       <div className={`w-5 h-5 rounded-full border-2 border-[#7626B3] flex items-center justify-center shrink-0 mt-0.5 transition-colors ${done ? 'bg-[#7626B3]' : ''}`}>
