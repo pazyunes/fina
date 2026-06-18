@@ -70,7 +70,7 @@ export function SupermarketSection({
 
         <div className="space-y-4" style={{ opacity: noSupermarket ? 0.4 : 1, pointerEvents: noSupermarket ? 'none' : 'auto' }}>
           <div>
-            <label className="block text-sm text-gray-600 mb-2">¿Cuántas compras en el súper hacés por mes?</label>
+            <label className="block text-sm text-gray-600 mb-2">¿Cuántas compras en el súper hacés <span className="text-base font-bold text-[#7626B3]">por mes</span>?</label>
             <Input
               type="number"
               inputMode="numeric"
@@ -84,7 +84,7 @@ export function SupermarketSection({
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-2">¿Cuánto gastás aproximadamente por compra?</label>
+            <label className="block text-sm text-gray-600 mb-2">¿Cuánto gastás aproximadamente <span className="text-base font-bold text-[#7626B3]">por compra</span>?</label>
             <Input
               type="text"
               inputMode="numeric"

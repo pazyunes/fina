@@ -244,7 +244,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                 <div className="space-y-4" style={{ opacity: noEntertainment ? 0.4 : 1, pointerEvents: noEntertainment ? 'none' : 'auto' }}>
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas salidas hacés por mes?
+                      ¿Cuántas salidas hacés <span className="text-base font-bold text-[#7626B3]">por mes</span>?
                     </label>
                     <Input
                       type="number"
@@ -269,7 +269,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuánto gastás aproximadamente por salida?
+                      ¿Cuánto gastás aproximadamente <span className="text-base font-bold text-[#7626B3]">por salida</span>?
                     </label>
                     <Input
                       type="text"
@@ -322,7 +322,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                 <div className="space-y-4" style={{ opacity: noDelivery ? 0.4 : 1, pointerEvents: noDelivery ? 'none' : 'auto' }}>
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces pedís delivery por semana aproximadamente?
+                      ¿Cuántas veces pedís delivery <span className="text-base font-bold text-[#7626B3]">por semana</span> aproximadamente?
                     </label>
                     <Input
                       type="number"
@@ -347,7 +347,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuánto gastás aproximadamente por pedido?
+                      ¿Cuánto gastás aproximadamente <span className="text-base font-bold text-[#7626B3]">por pedido</span>?
                     </label>
                     <Input
                       type="text"
@@ -403,7 +403,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                 <div className="space-y-4" style={{ opacity: noCafeterias ? 0.4 : 1, pointerEvents: noCafeterias ? 'none' : 'auto' }}>
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces por semana vas a una cafetería?
+                      ¿Cuántas veces <span className="text-base font-bold text-[#7626B3]">por semana</span> vas a una cafetería?
                     </label>
                     <Input
                       type="number"
@@ -427,7 +427,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuánto gastás aproximadamente por visita?
+                      ¿Cuánto gastás aproximadamente <span className="text-base font-bold text-[#7626B3]">por visita</span>?
                     </label>
                     <Input
                       type="text"
@@ -483,7 +483,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                 <div className="space-y-4" style={{ opacity: noRestaurants ? 0.4 : 1, pointerEvents: noRestaurants ? 'none' : 'auto' }}>
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces por semana vas a un restaurante?
+                      ¿Cuántas veces <span className="text-base font-bold text-[#7626B3]">por semana</span> vas a un restaurante?
                     </label>
                     <Input
                       type="number"
@@ -507,7 +507,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuánto gastás aproximadamente por visita?
+                      ¿Cuánto gastás aproximadamente <span className="text-base font-bold text-[#7626B3]">por visita</span>?
                     </label>
                     <Input
                       type="text"

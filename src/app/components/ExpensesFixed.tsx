@@ -515,7 +515,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                       <div className="space-y-3" style={{ opacity: isNotPaying ? 0.4 : 1, pointerEvents: isNotPaying ? 'none' : 'auto' }}>
                         <div>
                           <label className="block text-sm text-gray-600 mb-2">
-                            ¿Cuánto pagás por sesión?
+                            ¿Cuánto pagás <span className="text-base font-bold text-[#7626B3]">por sesión</span>?
                           </label>
                           <Input
                             type="text"
@@ -535,7 +535,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                         </div>
                         <div>
                           <label className="block text-sm text-gray-600 mb-2">
-                            Frecuencia por mes
+                            Frecuencia <span className="text-base font-bold text-[#7626B3]">por mes</span>
                           </label>
                           <Input
                             type="number"
@@ -591,7 +591,10 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-center justify-end gap-3 mb-3">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <span className="text-sm text-gray-600">
+                            Monto <span className="text-base font-bold text-[#7626B3]">por mes</span>
+                          </span>
                           <Input
                             type="text"
                             inputMode="numeric"
