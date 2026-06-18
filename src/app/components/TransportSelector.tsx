@@ -273,8 +273,8 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                 htmlFor="transport-apps"
                 className="flex items-center gap-3 cursor-pointer flex-1"
               >
-                <div className="w-10 h-10 rounded-full bg-[#D85A30]/20 flex items-center justify-center">
-                  <Smartphone className="w-5 h-5 text-[#D85A30]" />
+                <div className="w-10 h-10 rounded-full bg-[#7626B3]/15 flex items-center justify-center">
+                  <Smartphone className="w-5 h-5 text-[#7626B3]" />
                 </div>
                 <span className="text-gray-700 font-medium">Remis o app (Uber, Cabify, etc.)</span>
               </label>

@@ -54,10 +54,10 @@ interface ExpenseCategory {
 
 const CATEGORIES: ExpenseCategory[] = [
   { key: 'housing', label: 'Alquiler', icon: Home, color: '#7626B3', helper: 'Poné solo tu parte, no el total' },
-  { key: 'health', label: 'Salud', icon: Heart, color: '#D85A30', helper: 'Nos referimos a la prepaga' },
+  { key: 'health', label: 'Salud', icon: Heart, color: '#A858CE', helper: 'Nos referimos a la prepaga' },
   { key: 'beauty', label: 'Belleza y cuidado personal', icon: Sparkles, color: '#9C7AA5', helper: 'Cuánto gastás por mes en peluquería, manicura, pedicura, definitiva, etc.' },
   { key: 'therapy', label: 'Psicóloga / terapia', icon: Brain, color: '#3B6D11' },
-  { key: 'gym', label: 'Gimnasio', icon: Dumbbell, color: '#D85A30', helper: 'La cuota del gym o tu actividad física' },
+  { key: 'gym', label: 'Gimnasio', icon: Dumbbell, color: '#431C72', helper: 'La cuota del gym o tu actividad física' },
 ];
 
 const DEFAULT_TRANSPORT: TransportData = {

@@ -320,7 +320,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
             {/* Subscriptions Section */}
             <AccordionItem value="subs" className="bg-white rounded-2xl shadow-sm border-0 px-5">
               <AccordionTrigger className="hover:no-underline py-4">
-                <TriggerLabel icon={Zap} color="#D85A30" title="Suscripciones y servicios" badge={subsCount > 0 ? `${subsCount}` : undefined} done={subsCount > 0} />
+                <TriggerLabel icon={Zap} color="#7626B3" title="Suscripciones y servicios" badge={subsCount > 0 ? `${subsCount}` : undefined} done={subsCount > 0} />
               </AccordionTrigger>
               <AccordionContent className="pt-0 pb-5">
                 <p className="text-xs text-gray-500 mb-3">
@@ -688,7 +688,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
             {/* Restaurantes (separado de cafeterías) */}
             <AccordionItem value="restaurants" className="bg-white rounded-2xl shadow-sm border-0 px-5">
               <AccordionTrigger className="hover:no-underline py-4">
-                <TriggerLabel icon={UtensilsCrossed} color="#D85A30" title="Restaurantes" done={restaurantsComplete} />
+                <TriggerLabel icon={UtensilsCrossed} color="#A858CE" title="Restaurantes" done={restaurantsComplete} />
               </AccordionTrigger>
               <AccordionContent className="pt-0 pb-5">
                 <p className="text-xs text-gray-500 mb-3">
