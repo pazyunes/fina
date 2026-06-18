@@ -8,6 +8,8 @@ import { Switch } from './ui/switch';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import { Home, Heart, Sparkles, Brain, Dumbbell, GraduationCap, Plus, X, Check } from 'lucide-react';
 import { TransportSelector, isTransportDataValid } from './TransportSelector';
+import { SupermarketSection } from './SupermarketSection';
+import { SubscriptionsSection } from './SubscriptionsSection';
 import { BackButton } from './BackButton';
 import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
@@ -34,6 +36,9 @@ interface ExpensesFixedProps {
     housingBreakdown: { alquiler: number; servicios: number; expensas: number };
     housingCurrency: Currency;
     housingOriginalAmount: number;
+    subscriptions: UserData['subscriptions'];
+    supermarketFrequency: number;
+    supermarketAmount: number;
     therapyDetails: { sessionPrice: number; sessionsPerMonth: number };
     transportDetails: TransportData;
     installments: Array<{
@@ -104,6 +109,15 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   // Estudios solo aplica si la usuaria estudia.
   const isStudying = initial?.worksOrStudies === 'studies' || initial?.worksOrStudies === 'both';
   const categories: ExpenseCategory[] = isStudying ? [...CATEGORIES, ESTUDIOS_CATEGORY] : CATEGORIES;
+
+  // PR #5 — Supermercado y Suscripciones, movidos a este paso (gastos mensuales).
+  // Cada sección maneja su estado y nos avisa su valor por onChange.
+  const livesAccompanied = initial?.livesAlone === false;
+  const [subscriptions, setSubscriptions] = useState<UserData['subscriptions']>(initial?.subscriptions ?? []);
+  const [superData, setSuperData] = useState({
+    supermarketFrequency: initial?.supermarketFrequency ?? 0,
+    supermarketAmount: initial?.supermarketAmount ?? 0,
+  });
 
   // ── Vivienda — 3 gastos separados (Alquiler / Servicios / Expensas) ──────
   // expenses.housing (downstream) = suma de los 3 en ARS. Alquiler admite USD.
@@ -306,6 +320,9 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
       },
       housingCurrency,
       housingOriginalAmount,
+      subscriptions,
+      supermarketFrequency: superData.supermarketFrequency,
+      supermarketAmount: superData.supermarketAmount,
       therapyDetails,
       transportDetails: transportData,
       installments: validInstallments,
@@ -615,6 +632,19 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                 </AccordionItem>
               );
             })}
+
+            {/* PR #5 — Supermercado y Suscripciones, movidos a este paso. */}
+            <SupermarketSection
+              initial={initial}
+              livesAccompanied={livesAccompanied}
+              onChange={setSuperData}
+            />
+            <SubscriptionsSection
+              initial={initial}
+              usdRate={usdRate}
+              livesAccompanied={livesAccompanied}
+              onChange={setSubscriptions}
+            />
           </Accordion>
 
           <div className="space-y-4 mt-4">

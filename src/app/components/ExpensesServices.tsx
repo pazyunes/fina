@@ -21,19 +21,10 @@ interface ExpensesServicesProps {
   // PR8 — edit mode skips the internal navigate('/habits').
   editMode?: boolean;
   onComplete: (data: {
-    subscriptions: Array<{
-      name: string;
-      cost: number;
-      isCustom: boolean;
-      currency?: Currency;
-      originalCost?: number;
-    }>;
     entertainmentFrequency: number;
     entertainmentAmount: number;
     deliveryFrequency: number;
     deliveryAmount: number;
-    supermarketFrequency: number;
-    supermarketAmount: number;
     cafeteriasFrequency: number;
     cafeteriasAmount: number;
     restaurantsFrequency: number;
@@ -42,14 +33,6 @@ interface ExpensesServicesProps {
   }) => void;
 }
 
-const PRESET_SUBSCRIPTIONS = [
-  { name: 'IA', price: 32000 },
-  { name: 'Spotify', price: 4000 },
-  { name: 'Netflix', price: 15000 },
-  { name: 'Disney+', price: 12000 },
-  { name: 'Prime Video', price: 6000 },
-];
-
 export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServicesProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -57,23 +40,6 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   // Vive acompañado → recordatorio de cargar solo su parte en gastos compartibles
   const livesAccompanied = initial?.livesAlone === false;
   const usdRate = initial?.exchangeRate?.rate ?? null;
-
-  const initialSubs = initial?.subscriptions ?? [];
-
-  // Subscriptions
-  const [selectedSubscriptions, setSelectedSubscriptions] = useState<Set<string>>(
-    new Set(initialSubs.filter((s) => !s.isCustom).map((s) => s.name))
-  );
-  const [customSubscriptions, setCustomSubscriptions] = useState<Array<{ name: string; cost: string; confirmed: boolean; currency: Currency }>>(
-    initialSubs.filter((s) => s.isCustom).map((s) => ({
-      name: s.name,
-      cost: String(s.currency === 'USD' ? (s.originalCost ?? '') : s.cost),
-      confirmed: true,
-      currency: s.currency ?? 'ARS',
-    }))
-  );
-  // "No tengo / no pago suscripciones" — limpia y deshabilita la lista.
-  const [noSubs, setNoSubs] = useState(false);
 
   // Entertainment
   // Salidas: la usuaria ingresa la frecuencia POR MES, pero el resto del sistema
@@ -100,11 +66,6 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   const [restaurantsAmount, setRestaurantsAmount] = useState(initial?.restaurantsAmount ? String(initial.restaurantsAmount) : '');
   const [noRestaurants, setNoRestaurants] = useState(false);
 
-  // Supermarket
-  const [supermarketFrequency, setSupermarketFrequency] = useState(initial?.supermarketFrequency ? String(initial.supermarketFrequency) : '');
-  const [supermarketAmount, setSupermarketAmount] = useState(initial?.supermarketAmount ? String(initial.supermarketAmount) : '');
-  const [noSupermarket, setNoSupermarket] = useState(false);
-
   // Gastos ocasionales (no todos los meses). Opcional. Cada fila: qué, cada
   // cuántos meses, y cuánto. Se guardan los strings y se parsean al submit.
   const [occasional, setOccasional] = useState<Array<{ name: string; everyMonths: string; amount: string }>>(
@@ -124,51 +85,9 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   // En edición abrimos todo para que vea sus valores y edite el que quiera; en
   // onboarding arranca solo "Suscripciones".
   const [openItems, setOpenItems] = useState<string[]>(
-    editMode ? ['subs', 'entertainment', 'delivery', 'cafeterias', 'restaurants', 'super'] : ['subs']
+    editMode ? ['entertainment', 'delivery', 'cafeterias', 'restaurants'] : ['entertainment']
   );
-  const SECTION_ORDER = ['subs', 'entertainment', 'delivery', 'cafeterias', 'restaurants', 'super'];
-
-  const toggleSubscription = (name: string) => {
-    const newSelected = new Set(selectedSubscriptions);
-    if (newSelected.has(name)) {
-      newSelected.delete(name);
-    } else {
-      newSelected.add(name);
-    }
-    setSelectedSubscriptions(newSelected);
-  };
-
-  const addCustomSubscription = () => {
-    setCustomSubscriptions(prev => [...prev, { name: '', cost: '', confirmed: false, currency: 'ARS' }]);
-  };
-
-  const setCustomSubCurrency = (index: number, currency: Currency) => {
-    setCustomSubscriptions(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], currency };
-      return updated;
-    });
-  };
-
-  const updateCustomSubscription = (index: number, field: 'name' | 'cost', value: string) => {
-    setCustomSubscriptions(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  };
-
-  const toggleConfirmSubscription = (index: number) => {
-    setCustomSubscriptions(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], confirmed: !updated[index].confirmed };
-      return updated;
-    });
-  };
-
-  const removeCustomSubscription = (index: number) => {
-    setCustomSubscriptions(prev => prev.filter((_, i) => i !== index));
-  };
+  const SECTION_ORDER = ['entertainment', 'delivery', 'cafeterias', 'restaurants'];
 
   const formatCurrency = (value: string) => {
     const num = parseInt(value.replace(/\D/g, '')) || 0;
@@ -178,36 +97,11 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   };
 
   const handleSubmit = () => {
-    // Build subscriptions array
-    const subscriptions: Array<{ name: string; cost: number; isCustom: boolean; currency?: Currency; originalCost?: number }> = [];
-
-    // Add selected preset subscriptions with their predefined prices
-    selectedSubscriptions.forEach(name => {
-      const preset = PRESET_SUBSCRIPTIONS.find(s => s.name === name);
-      if (preset) {
-        subscriptions.push({ name: preset.name, cost: preset.price, isCustom: false });
-      }
-    });
-
-    // Add custom subscriptions
-    customSubscriptions.forEach(sub => {
-      if (sub.name && sub.cost) {
-        const typed = parseInt(sub.cost.replace(/\D/g, '') || '0');
-        if (typed > 0) {
-          const cost = sub.currency === 'USD' && usdRate ? arsFromUsd(typed, usdRate) : typed;
-          subscriptions.push({ name: sub.name, cost, isCustom: true, currency: sub.currency, originalCost: typed });
-        }
-      }
-    });
-
     onComplete({
-      subscriptions,
       entertainmentFrequency: (parseFloat(entertainmentFrequency) || 0) / 4.33,
       entertainmentAmount: parseInt(entertainmentAmount.replace(/\D/g, '') || '0'),
       deliveryFrequency: parseFloat(deliveryFrequency) || 0,
       deliveryAmount: parseInt(deliveryAmount.replace(/\D/g, '') || '0'),
-      supermarketFrequency: parseFloat(supermarketFrequency) || 0,
-      supermarketAmount: parseInt(supermarketAmount.replace(/\D/g, '') || '0'),
       cafeteriasFrequency: parseFloat(cafeteriasFrequency) || 0,
       cafeteriasAmount: parseInt(cafeteriasAmount.replace(/\D/g, '') || '0'),
       restaurantsFrequency: parseFloat(restaurantsFrequency) || 0,
@@ -229,20 +123,16 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   const deliveryComplete = noDelivery || (deliveryFrequency !== '' && deliveryAmount !== '');
   const cafeteriasComplete = noCafeterias || (cafeteriasFrequency !== '' && cafeteriasAmount !== '');
   const restaurantsComplete = noRestaurants || (restaurantsFrequency !== '' && restaurantsAmount !== '');
-  const supermarketComplete = noSupermarket || (supermarketFrequency !== '' && supermarketAmount !== '');
-  const subsCount = selectedSubscriptions.size + customSubscriptions.filter(s => s.confirmed).length;
 
   // Collapse a finished section and open the next one that's still incomplete.
   // Only called when the section itself is already complete (all its fields).
   const advanceFrom = (key: string) => {
     if (editMode) return; // en edición no auto-colapsamos: editás lo que querés
     const sectionComplete: Record<string, boolean> = {
-      subs: subsCount > 0,
       entertainment: entertainmentComplete,
       delivery: deliveryComplete,
       cafeterias: cafeteriasComplete,
       restaurants: restaurantsComplete,
-      super: supermarketComplete,
     };
     setOpenItems(prev => {
       const without = prev.filter(k => k !== key);
@@ -259,11 +149,9 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   };
 
   // En edición no exigimos completar todas las categorías: la usuaria actualiza
-  // solo lo que cambió. Lo único que validamos es que las suscripciones custom
-  // tengan nombre y costo.
+  // solo lo que cambió.
   const isValid =
-    (editMode || (entertainmentComplete && deliveryComplete && cafeteriasComplete && restaurantsComplete && supermarketComplete)) &&
-    customSubscriptions.every(sub => !sub.name || (sub.name && sub.cost));
+    editMode || (entertainmentComplete && deliveryComplete && cafeteriasComplete && restaurantsComplete);
 
   const TriggerLabel = ({ icon: Icon, color, title, done, badge }: { icon: any; color: string; title: string; done?: boolean; badge?: string }) => (
     <div className="flex items-center gap-3 flex-1">
@@ -322,135 +210,6 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
           </div>
 
           <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-3">
-            {/* Subscriptions Section */}
-            <AccordionItem value="subs" className="bg-white rounded-2xl shadow-sm border-0 px-5">
-              <AccordionTrigger className="hover:no-underline py-4">
-                <TriggerLabel icon={Zap} color="#7626B3" title="Suscripciones y servicios" badge={subsCount > 0 ? `${subsCount}` : undefined} done={subsCount > 0} />
-              </AccordionTrigger>
-              <AccordionContent className="pt-0 pb-5">
-                <p className="text-xs text-gray-500 mb-3">
-                  Apps y plataformas que pagás todos los meses
-                </p>
-                {livesAccompanied && (
-                  <div className="mb-3 flex items-center gap-2 bg-[#FFF7E0] border border-[#E7C200] rounded-lg px-3 py-2">
-                    <span className="text-base">👯</span>
-                    <p className="text-sm font-semibold text-[#7A5B00]">Importante: poné solo lo que pagás <span className="underline">vos</span>.</p>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 mb-4">
-                  <Switch
-                    checked={noSubs}
-                    onCheckedChange={(checked) => {
-                      setNoSubs(checked);
-                      if (checked) {
-                        setSelectedSubscriptions(new Set());
-                        setCustomSubscriptions([]);
-                      }
-                    }}
-                    className="data-[state=checked]:bg-[#7626B3]"
-                  />
-                  <span className="text-sm font-medium text-gray-600">No tengo / no pago suscripciones</span>
-                </div>
-                <div className="space-y-3" style={{ opacity: noSubs ? 0.4 : 1, pointerEvents: noSubs ? 'none' : 'auto' }}>
-                  {PRESET_SUBSCRIPTIONS.map(service => (
-                    <div key={service.name} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50">
-                      <Checkbox
-                        id={`sub-${service.name}`}
-                        checked={selectedSubscriptions.has(service.name)}
-                        onCheckedChange={() => toggleSubscription(service.name)}
-                      />
-                      <label
-                        htmlFor={`sub-${service.name}`}
-                        className="flex-1 text-gray-700 cursor-pointer"
-                      >
-                        {service.name}
-                      </label>
-                    </div>
-                  ))}
-
-                  {/* Custom subscriptions */}
-                  {customSubscriptions.map((sub, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className={`space-y-2 pt-3 border-t rounded-lg p-3 transition-colors ${
-                        sub.confirmed ? 'bg-[#F0FAF4]' : ''
-                      }`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 space-y-2">
-                          <Input
-                            type="text"
-                            value={sub.name}
-                            onChange={(e) => updateCustomSubscription(index, 'name', e.target.value)}
-                            placeholder="Nombre del servicio"
-                            className="w-full"
-                          />
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs text-gray-500">Costo</span>
-                            <CurrencyToggle
-                              value={sub.currency}
-                              usdEnabled={!!usdRate}
-                              onChange={(c) => setCustomSubCurrency(index, c)}
-                            />
-                          </div>
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={sub.cost ? `${sub.currency === 'USD' ? 'USD ' : '$'}${parseInt(sub.cost).toLocaleString('es-AR').replace(/,/g, '.')}` : ''}
-                            onChange={(e) => updateCustomSubscription(index, 'cost', e.target.value.replace(/\D/g, ''))}
-                            placeholder={sub.currency === 'USD' ? 'USD 0' : '¿Cuánto cuesta?'}
-                            className={`w-full ${AMOUNT_FIELD_CLASS}`}
-                          />
-                          {sub.currency === 'USD' && sub.cost && usdRate && (
-                            <p className="text-xs text-gray-500">
-                              ≈ {formatArs(arsFromUsd(parseInt(sub.cost) || 0, usdRate))} al cambio del día
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => toggleConfirmSubscription(index)}
-                            className={`${
-                              sub.confirmed
-                                ? 'text-green-600 hover:text-green-700 bg-green-100'
-                                : 'text-gray-400 hover:text-green-600'
-                            } transition-colors`}
-                            disabled={!sub.name || !sub.cost}
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeCustomSubscription(index)}
-                            className={`text-gray-400 hover:text-[#7626B3] transition-opacity ${
-                              sub.confirmed ? 'opacity-30' : 'opacity-100'
-                            }`}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-
-                  <Button
-                    variant="outline"
-                    onClick={addCustomSubscription}
-                    className="w-full mt-3 border-dashed"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar otro servicio
-                  </Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
             {/* Entertainment Section */}
             <AccordionItem value="entertainment" className="bg-white rounded-2xl shadow-sm border-0 px-5">
               <AccordionTrigger className="hover:no-underline py-4">
@@ -770,89 +529,6 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
               </AccordionContent>
             </AccordionItem>
 
-            {/* Supermarket Section */}
-            <AccordionItem value="super" className="bg-white rounded-2xl shadow-sm border-0 px-5">
-              <AccordionTrigger className="hover:no-underline py-4">
-                <TriggerLabel icon={ShoppingCart} color="#7626B3" title="Supermercado" done={supermarketComplete} />
-              </AccordionTrigger>
-              <AccordionContent className="pt-0 pb-5">
-                {livesAccompanied && (
-                  <div className="mb-3 flex items-center gap-2 bg-[#FFF7E0] border border-[#E7C200] rounded-lg px-3 py-2">
-                    <span className="text-base">👯</span>
-                    <p className="text-sm font-semibold text-[#7A5B00]">Importante: poné solo lo que pagás <span className="underline">vos</span>.</p>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 mb-4">
-                  <Switch
-                    checked={noSupermarket}
-                    onCheckedChange={(checked) => {
-                      setNoSupermarket(checked);
-                      if (checked) {
-                        setSupermarketFrequency('0');
-                        setSupermarketAmount('0');
-                        advanceFrom('super');
-                      }
-                    }}
-                    className="data-[state=checked]:bg-[#7626B3]"
-                  />
-                  <span className="text-sm font-medium text-gray-600">No aplica / no lo pago yo</span>
-                </div>
-
-                {noSupermarket && (
-                  <div className="mb-3 px-3 py-1.5 bg-gray-100 rounded-lg inline-block">
-                    <span className="text-xs text-gray-600">No aplica</span>
-                  </div>
-                )}
-
-                <div className="space-y-4" style={{ opacity: noSupermarket ? 0.4 : 1, pointerEvents: noSupermarket ? 'none' : 'auto' }}>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces por semana hacés compras en el súper?
-                    </label>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      step="1"
-                      min="0"
-                      value={supermarketFrequency}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (v === '' || /^\d+$/.test(v)) {
-                          setSupermarketFrequency(v);
-                        }
-                      }}
-                      onBlur={() => { if (supermarketComplete) advanceFrom('super'); }}
-                      placeholder="Ej: 1"
-                      min="0"
-                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
-                      disabled={noSupermarket}
-                      style={{ backgroundColor: noSupermarket ? '#f3f3f5' : undefined }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuánto gastás aproximadamente por compra?
-                    </label>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={formatCurrency(supermarketAmount)}
-                      onChange={(e) => {
-                        const numbers = e.target.value.replace(/\D/g, '');
-                        setSupermarketAmount(numbers);
-                      }}
-                      onBlur={() => { if (supermarketComplete) advanceFrom('super'); }}
-                      placeholder="$0"
-                      className={`w-full ${AMOUNT_FIELD_CLASS}`}
-                      disabled={noSupermarket}
-                      style={{ backgroundColor: noSupermarket ? '#f3f3f5' : undefined }}
-                    />
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
           </Accordion>
 
           {/* GASTOS OCASIONALES — no todos los meses (opcional) */}

@@ -151,6 +151,9 @@ export function Main() {
     housingBreakdown: { alquiler: number; servicios: number; expensas: number };
     housingCurrency: 'ARS' | 'USD';
     housingOriginalAmount: number;
+    subscriptions: UserData['subscriptions'];
+    supermarketFrequency: number;
+    supermarketAmount: number;
     therapyDetails: { sessionPrice: number; sessionsPerMonth: number };
     transportDetails: TransportData;
     installments: Array<{
@@ -194,6 +197,9 @@ export function Main() {
       housingBreakdown: data.housingBreakdown,
       housingCurrency: data.housingCurrency,
       housingOriginalAmount: data.housingOriginalAmount,
+      subscriptions: data.subscriptions,
+      supermarketFrequency: data.supermarketFrequency,
+      supermarketAmount: data.supermarketAmount,
       therapyDetails: data.therapyDetails,
       transportDetails: data.transportDetails,
       installments: data.installments,
@@ -201,17 +207,10 @@ export function Main() {
   };
 
   const handleExpensesServices = (data: {
-    subscriptions: Array<{
-      name: string;
-      cost: number;
-      isCustom: boolean;
-    }>;
     entertainmentFrequency: number;
     entertainmentAmount: number;
     deliveryFrequency: number;
     deliveryAmount: number;
-    supermarketFrequency: number;
-    supermarketAmount: number;
     cafeteriasFrequency: number;
     cafeteriasAmount: number;
     restaurantsFrequency: number;
