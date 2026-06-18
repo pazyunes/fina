@@ -76,7 +76,12 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   const [noSubs, setNoSubs] = useState(false);
 
   // Entertainment
-  const [entertainmentFrequency, setEntertainmentFrequency] = useState(initial?.entertainmentFrequency ? String(initial.entertainmentFrequency) : '');
+  // Salidas: la usuaria ingresa la frecuencia POR MES, pero el resto del sistema
+  // (analyzer, tracker, bot) usa frecuencia semanal × 4.33. Convertimos: al
+  // mostrar, semanal × 4.33 → mensual; al guardar, mensual ÷ 4.33 → semanal.
+  const [entertainmentFrequency, setEntertainmentFrequency] = useState(
+    initial?.entertainmentFrequency ? String(Math.round(initial.entertainmentFrequency * 4.33)) : ''
+  );
   const [entertainmentAmount, setEntertainmentAmount] = useState(initial?.entertainmentAmount ? String(initial.entertainmentAmount) : '');
   const [noEntertainment, setNoEntertainment] = useState(false);
 
@@ -197,7 +202,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
     onComplete({
       subscriptions,
-      entertainmentFrequency: parseFloat(entertainmentFrequency) || 0,
+      entertainmentFrequency: (parseFloat(entertainmentFrequency) || 0) / 4.33,
       entertainmentAmount: parseInt(entertainmentAmount.replace(/\D/g, '') || '0'),
       deliveryFrequency: parseFloat(deliveryFrequency) || 0,
       deliveryAmount: parseInt(deliveryAmount.replace(/\D/g, '') || '0'),
@@ -480,7 +485,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                 <div className="space-y-4" style={{ opacity: noEntertainment ? 0.4 : 1, pointerEvents: noEntertainment ? 'none' : 'auto' }}>
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces salís por semana aproximadamente?
+                      ¿Cuántas salidas hacés por mes?
                     </label>
                     <Input
                       type="number"
@@ -495,7 +500,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                         }
                       }}
                       onBlur={() => { if (entertainmentComplete) advanceFrom('entertainment'); }}
-                      placeholder="Ej: 2"
+                      placeholder="Ej: 8"
                       min="0"
                       className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noEntertainment}
