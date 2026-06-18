@@ -375,21 +375,23 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                     <span className="text-sm text-gray-600">No lo pago yo</span>
                   </div>
                   {!viviendaNotPaying.alquiler && (housingCurrency === 'USD' ? (
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm z-10">USD</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={housingUsd ? Number(housingUsd).toLocaleString('es-AR').replace(/,/g, '.') : ''}
-                        onChange={(e) => setHousingUsd(e.target.value.replace(/\D/g, ''))}
-                        placeholder="0"
-                        className={`pl-12 rounded-xl ${AMOUNT_FIELD_CLASS}`}
-                      />
+                    <>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm z-10">USD</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={housingUsd ? Number(housingUsd).toLocaleString('es-AR').replace(/,/g, '.') : ''}
+                          onChange={(e) => setHousingUsd(e.target.value.replace(/\D/g, ''))}
+                          placeholder="0"
+                          className={`pl-12 rounded-xl ${AMOUNT_FIELD_CLASS}`}
+                        />
+                      </div>
                       {housingUsd && usdRate && (
                         <p className="text-xs text-gray-500 mt-1">≈ {formatArs(alquilerInArs)} al cambio del día</p>
                       )}
-                    </div>
+                    </>
                   ) : (
                     <Input
                       type="text"
