@@ -233,10 +233,17 @@ export function Main() {
     const financialAnalysis = analyzeFinances(completeData);
     setAnalysis(financialAnalysis);
 
-    // Silently persist the finished flow to Supabase. PR6: marca hasReport=true
-    // localmente para que OnboardingGate empiece a redirigir las rutas de
-    // onboarding sin esperar al próximo refetch.
-    void saveReport(completeData, financialAnalysis).then(() => markHasReport());
+    // Persistimos el informe en Supabase, pero NO marcamos hasReport todavía:
+    // si lo hiciéramos acá, OnboardingGate empezaría a redirigir /goals a
+    // /result y el botón "Atrás" de recortar (/preferencias) rebotaría al
+    // informe. markHasReport se llama al terminar el último paso (preferencias).
+    void saveReport(completeData, financialAnalysis);
+  };
+
+  // Último paso del onboarding (recortar/prioridades). Recién acá marcamos el
+  // informe como listo, para que el back de /preferencias → /goals funcione.
+  const handlePreferencesDone = () => {
+    markHasReport();
   };
 
   // PR6 — Hidratación de /result desde DB. Si el usuario aterriza acá tras
@@ -309,7 +316,7 @@ export function Main() {
     case '/goals':
       return <Goals initial={userData} onComplete={handleGoals} />;
     case '/preferencias':
-      return <Preferences initial={userData} />;
+      return <Preferences initial={userData} onComplete={handlePreferencesDone} />;
     case '/loading':
       return <LoadingScreen />;
     case '/ai-reasoning':

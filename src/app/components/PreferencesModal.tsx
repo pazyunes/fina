@@ -41,6 +41,9 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
   // Ranking: array ordenado de slugs. ranking[0] = #1 (la que MENOS está
   // dispuesta a recortar); ranking[4] = #5 (la que más). Máx 5.
   const [ranking, setRanking] = useState<string[]>([]);
+  // Disposición a recortar (modelo nuevo). Acá la preservamos tal cual para no
+  // pisarla al guardar desde este modal legacy.
+  const [cutWillingness, setCutWillingness] = useState<Record<string, number>>({});
   const [spots, setSpots] = useState<string[]>([]);
   const [newSpot, setNewSpot] = useState('');
   const [saving, setSaving] = useState(false);
@@ -52,6 +55,7 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
     fetchUserPreferences().then((prefs) => {
       if (!active) return;
       setRanking(prefs.topUnwilling.slice(0, 5));
+      setCutWillingness(prefs.cutWillingness ?? {});
       setSpots(prefs.frequentSpots);
     });
     return () => { active = false; };
@@ -84,6 +88,7 @@ export function PreferencesModal({ onClose, gender }: PreferencesModalProps) {
     setFeedback(null);
     const { error } = await saveUserPreferences({
       topUnwilling: ranking,
+      cutWillingness,
       frequentSpots: spots,
     });
     setSaving(false);

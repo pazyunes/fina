@@ -4,15 +4,17 @@ import { supabase, isSupabaseConfigured } from './supabase';
 // Persisten en la tabla `user_preferences` (ver migration 0006).
 
 export interface UserPreferences {
-  // Ranking de 5 categorías (slugs internos) que NO querés recortar.
-  // posición 0 = la que MENOS estás dispuesta a recortar; posición 4 = la que más.
-  // Si la usuaria no completó el form todavía, el array está vacío.
+  // Ranking de 5 categorías (slugs) que NO querés recortar. (Legacy —
+  // reemplazado por cutWillingness; se mantiene por compat con datos viejos.)
   topUnwilling: string[];
+  // Disposición a recortar por categoría: slug → 1..5 (5 = re dispuesta a
+  // recortar; 1 = no está dispuesta). Modelo nuevo del paso de prioridades.
+  cutWillingness: Record<string, number>;
   // Texto libre con los lugares que la usuaria frecuenta (cafés/restaurantes).
   frequentSpots: string[];
 }
 
-const EMPTY: UserPreferences = { topUnwilling: [], frequentSpots: [] };
+const EMPTY: UserPreferences = { topUnwilling: [], cutWillingness: {}, frequentSpots: [] };
 
 // Devuelve las preferencias del usuario logueado, o EMPTY si todavía no las
 // guardó. RLS garantiza que solo se devuelven las propias.
@@ -20,7 +22,7 @@ export async function fetchUserPreferences(): Promise<UserPreferences> {
   if (!isSupabaseConfigured) return EMPTY;
   const { data, error } = await supabase
     .from('user_preferences')
-    .select('top_unwilling, frequent_spots')
+    .select('top_unwilling, cut_willingness, frequent_spots')
     .maybeSingle();
   if (error) {
     // eslint-disable-next-line no-console
@@ -30,6 +32,7 @@ export async function fetchUserPreferences(): Promise<UserPreferences> {
   if (!data) return EMPTY;
   return {
     topUnwilling: (data.top_unwilling as string[] | null) ?? [],
+    cutWillingness: (data.cut_willingness as Record<string, number> | null) ?? {},
     frequentSpots: (data.frequent_spots as string[] | null) ?? [],
   };
 }
@@ -46,6 +49,7 @@ export async function saveUserPreferences(prefs: UserPreferences): Promise<{ err
       {
         user_id: session.user.id,
         top_unwilling: prefs.topUnwilling,
+        cut_willingness: prefs.cutWillingness,
         frequent_spots: prefs.frequentSpots,
       },
       { onConflict: 'user_id' }

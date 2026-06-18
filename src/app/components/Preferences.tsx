@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Plus, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Slider } from './ui/slider';
 import { BackButton } from './BackButton';
 import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
@@ -83,18 +84,17 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
   // Solo las categorías que efectivamente paga.
   const available = CATEGORY_CATALOG.filter((c) => paysCategory(c.value, initial ?? {}));
 
-  const [ranking, setRanking] = useState<string[]>([]);
+  // Disposición a recortar por categoría: 1 (no estoy dispuesta) … 5 (re dispuesta).
+  // Arranca en 3 (neutral) para cada categoría que paga.
+  const [willingness, setWillingness] = useState<Record<string, number>>(() =>
+    Object.fromEntries(available.map((c) => [c.value, 3]))
+  );
+  const setWill = (slug: string, n: number) =>
+    setWillingness((prev) => ({ ...prev, [slug]: n }));
+
   const [spots, setSpots] = useState<string[]>([]);
   const [newSpot, setNewSpot] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const toggle = (slug: string) => {
-    setRanking((prev) => {
-      if (prev.includes(slug)) return prev.filter((s) => s !== slug);
-      if (prev.length >= 5) return prev;
-      return [...prev, slug];
-    });
-  };
 
   const addSpot = () => {
     const v = newSpot.trim();
@@ -106,7 +106,7 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
 
   const handleContinue = async () => {
     setSaving(true);
-    await saveUserPreferences({ topUnwilling: ranking, frequentSpots: spots });
+    await saveUserPreferences({ topUnwilling: [], cutWillingness: willingness, frequentSpots: spots });
     setSaving(false);
     onComplete?.();
     navigate(DEBUG_MODE ? '/ai-reasoning' : '/loading');
@@ -124,17 +124,17 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
               Para lograr estos objetivos
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Contanos qué NO querés resignar, así las recomendaciones respetan lo que más te importa.
+              Marcá del 1 al 5 cuánto estás {g(gender, 'dispuesta', 'dispuesto')} a recortar cada gasto, así las recomendaciones respetan lo que más te importa.
             </p>
           </div>
 
-          {/* Ranking de categorías que paga */}
+          {/* Disposición a recortar por categoría (slider 1-5) */}
           <section className="mb-8">
             <p className="text-base font-semibold text-gray-800 mb-1">
-              ¿Qué gastos NO estás {g(gender, 'dispuesta', 'dispuesto')} a recortar?
+              ¿Qué gastos estás {g(gender, 'dispuesta', 'dispuesto')} a recortar?
             </p>
-            <p className="text-sm text-gray-500 mb-3">
-              Tocá hasta 5 en orden. El <strong>#1</strong> es lo que menos recortarías; el <strong>#5</strong>, lo que más.
+            <p className="text-sm text-gray-500 mb-4">
+              <strong>1</strong> = no lo querés tocar · <strong>5</strong> = lo recortás sin problema.
             </p>
 
             {available.length === 0 ? (
@@ -142,39 +142,44 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
                 No cargaste gastos variables, así que por ahora no hay categorías para priorizar. Podés continuar igual.
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {available.map((cat) => {
-                  const pos = ranking.indexOf(cat.value);
-                  const picked = pos !== -1;
+                  const val = willingness[cat.value] ?? 3;
+                  const monthly = monthlyOf(cat.value, initial ?? {});
                   return (
-                    <button
-                      key={cat.value}
-                      type="button"
-                      onClick={() => toggle(cat.value)}
-                      disabled={!picked && ranking.length >= 5}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-sm ${
-                        picked
-                          ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3]'
-                          : ranking.length >= 5
-                          ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-[#7626B3]/50'
-                      }`}
-                    >
-                      <span className="text-base">{cat.emoji}</span>
-                      <span className="flex-1 text-left">
-                        {cat.label}
-                        {monthlyOf(cat.value, initial ?? {}) > 0 && (
-                          <span className="block text-xs text-[#3B6D11] font-medium">
-                            recortándolo ahorrás ~{formatArs(monthlyOf(cat.value, initial ?? {}))}/mes
-                          </span>
-                        )}
-                      </span>
-                      {picked && (
-                        <span className="w-6 h-6 rounded-full bg-[#7626B3] text-white text-xs font-medium flex items-center justify-center shrink-0">
-                          {pos + 1}
+                    <div key={cat.value} className="bg-white rounded-xl border-2 border-gray-200 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-base">{cat.emoji}</span>
+                        <span className="flex-1 text-sm font-medium text-gray-800">
+                          {cat.label}
+                          {monthly > 0 && (
+                            <span className="block text-xs text-[#3B6D11] font-medium">
+                              recortándolo ahorrás ~{formatArs(monthly)}/mes
+                            </span>
+                          )}
                         </span>
-                      )}
-                    </button>
+                        <span className="w-7 h-7 rounded-full bg-[#7626B3] text-white text-sm font-bold flex items-center justify-center shrink-0">
+                          {val}
+                        </span>
+                      </div>
+                      <Slider
+                        value={[val]}
+                        min={1}
+                        max={5}
+                        step={1}
+                        onValueChange={(v) => setWill(cat.value, v[0])}
+                      />
+                      {/* Topes fijos 1..5 */}
+                      <div className="flex justify-between text-xs text-gray-400 mt-1.5 px-0.5">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <span key={n} className={n === val ? 'text-[#7626B3] font-bold' : ''}>{n}</span>
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-[11px] text-gray-400 mt-0.5">
+                        <span>No lo recorto</span>
+                        <span>Lo recorto fácil</span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>

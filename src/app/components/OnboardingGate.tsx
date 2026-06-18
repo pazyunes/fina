@@ -22,6 +22,7 @@ const ONBOARDING_FAMILY = [
   '/expenses-services',
   '/habits',
   '/goals',
+  '/preferencias',
 ];
 
 const REPORT_FAMILY = [
