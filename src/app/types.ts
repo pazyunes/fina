@@ -47,7 +47,14 @@ export interface UserData {
   // Ingresos adicionales — fuentes extra que la usuaria suma con "Tengo otro
   // ingreso" (ej: alquiler, segundo trabajo). Cada uno es un monto fijo. Se
   // suman a monthlyIncome (en ARS) y se guardan como filas aparte en incomes.
+  // (Legacy — reemplazado por incomeSources.)
   additionalIncomes?: Array<{ label: string; amount: number; currency: Currency; ars: number }>;
+
+  // Fuentes de ingreso (nuevo modelo). Cada una: nombre + monto + moneda +
+  // si es fijo o variable. monthlyIncome = suma de los `ars`. incomeType se
+  // deriva de los `kind` (todos fixed → 'fixed', todos variable → 'freelance',
+  // mezcla → 'both').
+  incomeSources?: Array<{ label: string; amount: number; currency: Currency; ars: number; kind: 'fixed' | 'variable' }>;
 
   // Detalle del ingreso freelance (PR4) — 3 últimos meses, mes1 = más reciente.
   // El exchange_rate_id se reusa del snapshot global del informe (userData.exchangeRate.id).

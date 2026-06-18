@@ -130,12 +130,9 @@ export function Main() {
   const handleActivity = (data: {
     worksOrStudies: 'works' | 'studies' | 'both' | 'neither';
     monthlyIncome: number;
-    incomeRange?: string;
-    incomeCurrency: 'ARS' | 'USD';
-    incomeOriginalAmount: number;
     incomeType: 'fixed' | 'freelance' | 'both';
-    freelanceIncome?: UserData['freelanceIncome'];
-    additionalIncomes?: UserData['additionalIncomes'];
+    incomeCurrency: 'ARS' | 'USD';
+    incomeSources: UserData['incomeSources'];
   }) => {
     setUserData(prev => ({ ...prev, ...data }));
   };

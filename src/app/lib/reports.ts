@@ -334,60 +334,33 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
   }
 
   // ── incomes ──
-  // Replace por simplicidad. Fixed = 1 fila (salario neto = monthlyIncome -
-  // promedio freelance). Freelance = hasta 3 filas (month1/2/3).
+  // Replace por simplicidad. Una fila por cada fuente de ingreso (incomeSources):
+  // type 'fixed' o 'freelance' según el kind, source = nombre de la fuente.
   try {
     await supabase.from('incomes').delete().eq('user_id', userId);
     const incomeRows: Array<Record<string, unknown>> = [];
-    const incomeType = userData.incomeType ?? 'fixed';
-    const extras = userData.additionalIncomes ?? [];
-    const extrasArs = extras.reduce((s, e) => s + (e.ars || 0), 0);
-    if (incomeType === 'fixed' || incomeType === 'both') {
-      const freelanceAvg = userData.freelanceIncome?.monthlyAvgArs ?? 0;
-      // monthlyIncome = fijo + promedio freelance + extras, así que el sueldo
-      // fijo neto descuenta ambos.
-      const fixedArs = Math.max(userData.monthlyIncome - freelanceAvg - extrasArs, 0);
-      if (fixedArs > 0) {
-        incomeRows.push({
-          user_id: userId,
-          type: 'fixed',
-          source: 'sueldo',
-          amount_ars: fixedArs,
-          currency: userData.incomeCurrency ?? 'ARS',
-          range_label: userData.incomeRange ?? null,
-        });
-      }
-    }
-    if (incomeType === 'freelance' || incomeType === 'both') {
-      const fi = userData.freelanceIncome;
-      if (fi) {
-        for (const period of ['month1', 'month2', 'month3'] as const) {
-          const m = fi[period];
-          if (m && m.ars > 0) {
-            incomeRows.push({
-              user_id: userId,
-              type: 'freelance',
-              source: 'freelance',
-              period,
-              amount_ars: m.ars,
-              currency: m.currency,
-            });
-          }
+    const srcs = userData.incomeSources ?? [];
+    if (srcs.length > 0) {
+      for (const s of srcs) {
+        if ((s.ars || 0) > 0) {
+          incomeRows.push({
+            user_id: userId,
+            type: s.kind === 'variable' ? 'freelance' : 'fixed',
+            source: s.label || 'ingreso',
+            amount_ars: s.ars,
+            currency: s.currency ?? 'ARS',
+          });
         }
       }
-    }
-    // Ingresos adicionales ("Tengo otro ingreso") — una fila fija por cada uno,
-    // con el nombre como source.
-    for (const e of extras) {
-      if ((e.ars || 0) > 0) {
-        incomeRows.push({
-          user_id: userId,
-          type: 'fixed',
-          source: e.label || 'otro ingreso',
-          amount_ars: e.ars,
-          currency: e.currency ?? 'ARS',
-        });
-      }
+    } else if (userData.monthlyIncome > 0) {
+      // Compat con reportes viejos sin incomeSources.
+      incomeRows.push({
+        user_id: userId,
+        type: 'fixed',
+        source: 'sueldo',
+        amount_ars: userData.monthlyIncome,
+        currency: userData.incomeCurrency ?? 'ARS',
+      });
     }
     if (incomeRows.length > 0) {
       const { error } = await supabase.from('incomes').insert(incomeRows);

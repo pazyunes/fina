@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { Plus, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Switch } from './ui/switch';
 import { BackButton } from './BackButton';
 import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
@@ -17,6 +15,7 @@ import { Currency, UserData } from '../types';
 
 type Activity = 'works' | 'studies' | 'both' | 'neither';
 type IncomeType = 'fixed' | 'freelance' | 'both';
+type IncomeKind = 'fixed' | 'variable';
 
 interface ActivityProps {
   initial?: Partial<UserData>;
@@ -25,43 +24,12 @@ interface ActivityProps {
   editMode?: boolean;
   onComplete: (data: {
     worksOrStudies: Activity;
-    monthlyIncome: number; // siempre en ARS (suma de fijo + promedio freelance, según corresponda)
-    incomeRange?: string;
-    incomeCurrency: Currency;
-    incomeOriginalAmount: number; // USD si incomeCurrency === 'USD', si no ARS (del bloque fijo)
-    incomeType: IncomeType;
-    freelanceIncome?: NonNullable<UserData['freelanceIncome']>;
-    additionalIncomes?: NonNullable<UserData['additionalIncomes']>;
+    monthlyIncome: number; // siempre en ARS (suma de todas las fuentes)
+    incomeType: IncomeType; // derivado de los kind de las fuentes
+    incomeCurrency: Currency; // moneda de la primera fuente (compat)
+    incomeSources: NonNullable<UserData['incomeSources']>;
   }) => void;
 }
-
-interface IncomeRange {
-  id: string;
-  label: string;
-  value: number; // punto medio (o piso para el último tramo) en la moneda del tramo
-}
-
-// Tramos de ingreso en ARS. `value` es el punto medio usado para cálculos;
-// para "Más de $4.000.000" se usa $4.000.000 como piso (no hay techo).
-const INCOME_RANGES_ARS: IncomeRange[] = [
-  { id: 'ars-lt500', label: 'Menos de $500.000', value: 250000 },
-  { id: 'ars-500-1000', label: '$500.000 – $1.000.000', value: 750000 },
-  { id: 'ars-1000-1500', label: '$1.000.000 – $1.500.000', value: 1250000 },
-  { id: 'ars-1500-2500', label: '$1.500.000 – $2.500.000', value: 2000000 },
-  { id: 'ars-2500-4000', label: '$2.500.000 – $4.000.000', value: 3250000 },
-  { id: 'ars-gt4000', label: 'Más de $4.000.000', value: 4000000 },
-];
-
-// Tramos equivalentes en USD para quien cobra en dólares. `value` es el punto
-// medio en USD; se convierte a ARS al cambio del día para los cálculos.
-const INCOME_RANGES_USD: IncomeRange[] = [
-  { id: 'usd-lt500', label: 'Menos de USD 500', value: 250 },
-  { id: 'usd-500-1000', label: 'USD 500 – 1.000', value: 750 },
-  { id: 'usd-1000-2000', label: 'USD 1.000 – 2.000', value: 1500 },
-  { id: 'usd-2000-3000', label: 'USD 2.000 – 3.000', value: 2500 },
-  { id: 'usd-3000-5000', label: 'USD 3.000 – 5.000', value: 4000 },
-  { id: 'usd-gt5000', label: 'Más de USD 5.000', value: 5000 },
-];
 
 const formatCurrency = (value: string) => {
   const numbers = value.replace(/\D/g, '');
@@ -71,24 +39,32 @@ const formatCurrency = (value: string) => {
   return cleanNumbers.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 };
 
-// Estado controlado para un ingreso adicional ("Tengo otro ingreso").
-type ExtraIncome = { label: string; amount: string; currency: Currency };
-const initExtras = (saved: UserData['additionalIncomes']): ExtraIncome[] =>
-  (saved ?? []).map((e) => ({
-    label: e.label,
-    amount: e.amount ? String(e.amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '',
-    currency: e.currency,
-  }));
+// Estado controlado de una fuente de ingreso (nombre + monto + moneda + tipo).
+type IncomeSource = { label: string; amount: string; currency: Currency; kind: IncomeKind };
+const emptySource = (): IncomeSource => ({ label: '', amount: '', currency: 'ARS', kind: 'fixed' });
 
-// Estado controlado para cada uno de los 3 meses del bloque freelance.
-type FreelanceMonth = { amount: string; currency: Currency };
-const emptyMonth = (currency: Currency = 'USD'): FreelanceMonth => ({ amount: '', currency });
-
-const initMonth = (
-  saved: NonNullable<UserData['freelanceIncome']>['month1'] | undefined
-): FreelanceMonth => {
-  if (!saved || !saved.amount) return emptyMonth();
-  return { amount: formatCurrency(String(saved.amount)), currency: saved.currency };
+// Inicializa las fuentes desde lo guardado. Para reportes viejos (sin
+// incomeSources pero con monthlyIncome) sembramos una fuente con esos datos.
+const initSources = (initial?: Partial<UserData>): IncomeSource[] => {
+  const saved = initial?.incomeSources;
+  if (saved && saved.length > 0) {
+    return saved.map((s) => ({
+      label: s.label,
+      amount: s.amount ? formatCurrency(String(s.amount)) : '',
+      currency: s.currency,
+      kind: s.kind,
+    }));
+  }
+  if (initial?.monthlyIncome) {
+    const orig = initial.incomeOriginalAmount ?? initial.monthlyIncome;
+    return [{
+      label: 'Sueldo',
+      amount: formatCurrency(String(orig)),
+      currency: initial.incomeCurrency ?? 'ARS',
+      kind: initial.incomeType === 'freelance' ? 'variable' : 'fixed',
+    }];
+  }
+  return [emptySource()];
 };
 
 export function Activity({ initial, onComplete, editMode }: ActivityProps) {
@@ -96,209 +72,59 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
   const { pathname } = useLocation();
   const [activity, setActivity] = useState<Activity | null>(initial?.worksOrStudies ?? null);
 
-  // Tipo de ingreso (PR4). Default 'fixed' para preservar el flujo viejo: si el
-  // initial trae monthlyIncome pero no incomeType, asumimos que era sueldo fijo.
-  const [incomeType, setIncomeType] = useState<IncomeType | null>(
-    initial?.incomeType ?? (initial?.monthlyIncome ? 'fixed' : null)
-  );
-
-  // PR7b — Si la usuaria seleccionó "studies" o "neither" no le mostramos el
-  // selector de tipo de ingreso (no aplica sueldo/freelance) y forzamos
-  // incomeType='fixed' bajo el capó. La pregunta de monto pasa a ser
-  // "¿Cuánta plata disponible tenés por mes?" con el mismo selector de rango
-  // / monto exacto que ya teníamos.
-  const showIncomeTypeSelector = activity === 'works' || activity === 'both';
-  useEffect(() => {
-    if (!activity) return;
-    if (!showIncomeTypeSelector && incomeType !== 'fixed') {
-      setIncomeType('fixed');
-    }
-  }, [activity, showIncomeTypeSelector, incomeType]);
-
   // Cotización del blue para convertir ingresos cargados en USD a ARS.
   const usdRate = initial?.exchangeRate?.rate ?? null;
-  const [currency, setCurrency] = useState<Currency>(initial?.incomeCurrency ?? 'ARS');
 
-  const ranges = currency === 'USD' ? INCOME_RANGES_USD : INCOME_RANGES_ARS;
-
-  // ── Bloque fijo (idéntico al flujo histórico) ────────────────────────────
-  const initCurrency = initial?.incomeCurrency ?? 'ARS';
-  const initRanges = initCurrency === 'USD' ? INCOME_RANGES_USD : INCOME_RANGES_ARS;
-  const initOriginal = initCurrency === 'USD'
-    ? (initial?.incomeOriginalAmount ?? 0)
-    : (initial?.incomeOriginalAmount ?? initial?.monthlyIncome ?? 0);
-  const matchedRange = initRanges.find(
-    (r) => r.value === initOriginal && initial?.incomeRange !== 'Monto exacto'
-  );
-  const [incomeRange, setIncomeRange] = useState<string>(matchedRange?.id ?? '');
-  const [useExact, setUseExact] = useState<boolean>(!matchedRange && !!initial?.monthlyIncome);
-  const [exactIncome, setExactIncome] = useState<string>(
-    !matchedRange && initOriginal ? formatCurrency(String(initOriginal)) : ''
-  );
-  const selectedRange = ranges.find((r) => r.id === incomeRange);
-  const fixedFilled = incomeRange !== '' || (useExact && exactIncome !== '');
-
-  // Al cambiar de moneda los tramos dejan de aplicar (están en otra escala),
-  // así que reseteo la selección y el monto exacto para evitar mezclas.
-  const handleCurrencyChange = (next: Currency) => {
-    if (next === currency) return;
-    setCurrency(next);
-    setIncomeRange('');
-    setExactIncome('');
+  // ── Fuentes de ingreso (nuevo modelo) ───────────────────────────────────
+  const [sources, setSources] = useState<IncomeSource[]>(initSources(initial));
+  const addSource = () => setSources((xs) => [...xs, emptySource()]);
+  const removeSource = (i: number) => setSources((xs) => (xs.length <= 1 ? xs : xs.filter((_, idx) => idx !== i)));
+  const updateSource = (i: number, patch: Partial<IncomeSource>) =>
+    setSources((xs) => xs.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const sourceArs = (s: IncomeSource): number => {
+    const digits = parseInt(s.amount.replace(/\D/g, '')) || 0;
+    return s.currency === 'USD' ? (usdRate ? arsFromUsd(digits, usdRate) : 0) : digits;
   };
-
-  // Vista previa en ARS del monto exacto cargado en USD.
-  const exactUsdDigits = parseInt(exactIncome.replace(/\D/g, '')) || 0;
-  const exactUsdInArs = currency === 'USD' && usdRate ? arsFromUsd(exactUsdDigits, usdRate) : 0;
-
-  // ── Bloque freelance (PR4) ───────────────────────────────────────────────
-  const [m1, setM1] = useState<FreelanceMonth>(initMonth(initial?.freelanceIncome?.month1));
-  const [m2, setM2] = useState<FreelanceMonth>(initMonth(initial?.freelanceIncome?.month2));
-  const [m3, setM3] = useState<FreelanceMonth>(initMonth(initial?.freelanceIncome?.month3));
-
-  // Convierte el monto cargado de un mes a ARS aplicando la cotización si es USD.
-  const monthAmountArs = (m: FreelanceMonth): number => {
-    const digits = parseInt(m.amount.replace(/\D/g, '')) || 0;
-    if (m.currency === 'USD') {
-      return usdRate ? arsFromUsd(digits, usdRate) : 0;
-    }
-    return digits;
-  };
-  const m1Ars = monthAmountArs(m1);
-  const m2Ars = monthAmountArs(m2);
-  const m3Ars = monthAmountArs(m3);
-  const freelanceComplete = m1.amount !== '' && m2.amount !== '' && m3.amount !== '';
-  const freelanceAvg = freelanceComplete ? Math.round((m1Ars + m2Ars + m3Ars) / 3) : 0;
-  // Helper de variabilidad: el mayor supera al doble del menor.
-  const monthsArs = [m1Ars, m2Ars, m3Ars];
-  const minMonth = Math.min(...monthsArs);
-  const maxMonth = Math.max(...monthsArs);
-  const highVariability = freelanceComplete && minMonth > 0 && maxMonth > 2 * minMonth;
-
-  // ── Ingresos adicionales ("Tengo otro ingreso") ─────────────────────────
-  const [extras, setExtras] = useState<ExtraIncome[]>(initExtras(initial?.additionalIncomes));
-  const addExtra = () => setExtras((xs) => [...xs, { label: '', amount: '', currency: 'ARS' }]);
-  const removeExtra = (i: number) => setExtras((xs) => xs.filter((_, idx) => idx !== i));
-  const updateExtra = (i: number, patch: Partial<ExtraIncome>) =>
-    setExtras((xs) => xs.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
-  const extraArs = (e: ExtraIncome): number => {
-    const digits = parseInt(e.amount.replace(/\D/g, '')) || 0;
-    return e.currency === 'USD' ? (usdRate ? arsFromUsd(digits, usdRate) : 0) : digits;
-  };
-  const extrasArs = extras.reduce((s, e) => s + extraArs(e), 0);
+  const totalArs = sources.reduce((sum, s) => sum + sourceArs(s), 0);
 
   // ── Validación del step ──────────────────────────────────────────────────
-  const fixedNeeded = incomeType === 'fixed' || incomeType === 'both';
-  const freelanceNeeded = incomeType === 'freelance' || incomeType === 'both';
-  const incomeValid =
-    incomeType !== null &&
-    (!fixedNeeded || fixedFilled) &&
-    (!freelanceNeeded || freelanceComplete);
+  const incomeValid = sources.some((s) => sourceArs(s) > 0);
 
   const handleSubmit = () => {
-    if (!activity || !incomeValid || !incomeType) return;
+    if (!activity || !incomeValid) return;
 
-    // Bloque fijo (en ARS) — replica la lógica que existía antes.
-    let fixedArs = 0;
-    let incomeRangeLabel: string | undefined;
-    let incomeOriginalAmount = 0;
-    if (fixedNeeded) {
-      const exactValue = parseInt(exactIncome.replace(/\D/g, '')) || 0;
-      const useExactValue = useExact && exactValue > 0;
-      incomeOriginalAmount = useExactValue ? exactValue : (selectedRange?.value ?? 0);
-      fixedArs = currency === 'USD'
-        ? (usdRate ? arsFromUsd(incomeOriginalAmount, usdRate) : 0)
-        : incomeOriginalAmount;
-      incomeRangeLabel = useExactValue ? 'Monto exacto' : selectedRange?.label;
-    }
-
-    // Bloque freelance — promedio en ARS.
-    const freelanceArs = freelanceNeeded ? freelanceAvg : 0;
-    const freelanceIncome = freelanceNeeded
-      ? {
-          month1: { amount: parseInt(m1.amount.replace(/\D/g, '')) || 0, currency: m1.currency, ars: m1Ars },
-          month2: { amount: parseInt(m2.amount.replace(/\D/g, '')) || 0, currency: m2.currency, ars: m2Ars },
-          month3: { amount: parseInt(m3.amount.replace(/\D/g, '')) || 0, currency: m3.currency, ars: m3Ars },
-          monthlyAvgArs: freelanceAvg,
-        }
-      : undefined;
-
-    // Ingresos adicionales — solo los que tienen monto cargado.
-    const additionalIncomes = extras
-      .map((e) => ({
-        label: e.label.trim() || 'Otro ingreso',
-        amount: parseInt(e.amount.replace(/\D/g, '')) || 0,
-        currency: e.currency,
-        ars: extraArs(e),
+    const incomeSources = sources
+      .map((s) => ({
+        label: s.label.trim() || 'Ingreso',
+        amount: parseInt(s.amount.replace(/\D/g, '')) || 0,
+        currency: s.currency,
+        ars: sourceArs(s),
+        kind: s.kind,
       }))
-      .filter((e) => e.ars > 0);
+      .filter((s) => s.ars > 0);
 
-    const monthlyIncome = fixedArs + freelanceArs + extrasArs;
+    // incomeType derivado de los kind (compat con analyzer / tabla incomes).
+    const kinds = new Set(incomeSources.map((s) => s.kind));
+    const incomeType: IncomeType = kinds.has('fixed') && kinds.has('variable')
+      ? 'both'
+      : kinds.has('variable')
+        ? 'freelance'
+        : 'fixed';
 
     onComplete({
       worksOrStudies: activity,
-      monthlyIncome,
-      incomeRange: incomeRangeLabel,
-      incomeCurrency: currency,
-      incomeOriginalAmount,
+      monthlyIncome: totalArs,
       incomeType,
-      freelanceIncome,
-      additionalIncomes,
+      incomeCurrency: incomeSources[0]?.currency ?? 'ARS',
+      incomeSources,
     });
     if (!editMode) navigate('/bank');
-  };
-
-  const getFixedLabel = () => {
-    if (incomeType === 'both') return '¿Cuánto ganás de sueldo por mes?';
-    if (activity === 'works') return '¿Cuánto cobrás por mes aproximadamente?';
-    // PR7b — para estudiantes / sin trabajo la pregunta no habla de sueldo.
-    if (activity === 'studies' || activity === 'neither') return '¿Cuánta plata disponible tenés por mes?';
-    return '¿Cuánto recibís por mes aproximadamente?';
-  };
-
-  // Render de un mes del bloque freelance.
-  const renderMonth = (
-    label: string,
-    month: FreelanceMonth,
-    setMonth: (m: FreelanceMonth) => void
-  ) => {
-    const digits = parseInt(month.amount.replace(/\D/g, '')) || 0;
-    const arsPreview = month.currency === 'USD' && usdRate ? arsFromUsd(digits, usdRate) : 0;
-    return (
-      <div>
-        <Label className="text-gray-700 text-sm">{label}</Label>
-        <div className="flex items-center gap-2 mt-1">
-          <div className="relative flex-1">
-            <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${month.currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>
-              {month.currency === 'USD' ? 'USD' : '$'}
-            </span>
-            <Input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={month.amount}
-              onChange={(e) => setMonth({ ...month, amount: formatCurrency(e.target.value) })}
-              placeholder="0"
-              className={`rounded-xl ${month.currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`}
-            />
-          </div>
-          <CurrencyToggle
-            value={month.currency}
-            usdEnabled={!!usdRate}
-            onChange={(c) => setMonth({ ...month, currency: c })}
-          />
-        </div>
-        {month.currency === 'USD' && digits > 0 && usdRate && (
-          <p className="text-xs text-gray-500 mt-1">≈ {formatArs(arsPreview)}</p>
-        )}
-      </div>
-    );
   };
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col ${editMode ? '' : 'lg:pl-72'}`}>
       {!editMode && <OnboardingAside currentPath={pathname} />}
-      <div className={`flex-1 flex flex-col items-center justify-center p-6 mx-auto w-full ${incomeType === 'both' ? 'max-w-md md:max-w-3xl' : 'max-w-md lg:max-w-2xl'}`}>
+      <div className="flex-1 flex flex-col items-center justify-center p-6 mx-auto w-full max-w-md lg:max-w-2xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -309,7 +135,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
           {!editMode && (
             <StepIntroMessage
               title="Ahora hablemos de plata 💰"
-              body="Vamos a entender cuánto te entra cada mes. Si tenés freelance o más de una fuente de ingresos, también lo vamos a contemplar."
+              body="Vamos a entender cuánto te entra cada mes. Si tenés más de una fuente de ingresos, podés sumarlas todas."
             />
           )}
 
@@ -351,256 +177,109 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
               </div>
             </div>
 
-            {/* Selector de tipo de ingreso (PR4). Oculto para studies/neither
-                (PR7b): para esos perfiles forzamos incomeType='fixed' bajo el
-                capó y mostramos el bloque con la pregunta "plata disponible"
-                directamente. */}
-            {activity && showIncomeTypeSelector && (
+            {/* INGRESO/S — lista de fuentes: nombre + monto + fijo/variable. */}
+            {activity && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 className="pt-2"
               >
-                <p className="text-lg mb-3 text-gray-700">¿Cómo es tu ingreso?</p>
-                <div className="space-y-2">
-                  {([
-                    { value: 'fixed', label: 'Tengo un sueldo fijo' },
-                    { value: 'freelance', label: 'Trabajo freelance' },
-                    { value: 'both', label: 'Tengo sueldo + hago freelance' },
-                  ] as { value: IncomeType; label: string }[]).map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setIncomeType(opt.value)}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                        incomeType === opt.value
-                          ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3]'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-[#7626B3]/50'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* Bloques de ingreso. En modo 'both', en md+ se renderizan en dos columnas
-                (fijo a la izquierda, freelance a la derecha) para reducir scrolling. En
-                mobile o en los modos de un solo bloque, se apilan como antes. */}
-            {activity && (fixedNeeded || freelanceNeeded) && (
-            <div className={incomeType === 'both' ? 'space-y-5 md:space-y-0 md:grid md:grid-cols-2 md:gap-5 md:items-start' : ''}>
-            {fixedNeeded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="pt-2 space-y-3"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-gray-700">{getFixedLabel()}</Label>
-                  <CurrencyToggle
-                    value={currency}
-                    usdEnabled={!!usdRate}
-                    onChange={handleCurrencyChange}
-                  />
-                </div>
-                {currency === 'USD' && !usdRate && (
-                  <p className="text-xs text-gray-400">USD no disponible ahora</p>
-                )}
-
-                {/* Toggle prominente: va ANTES de los rangos para que sea la
-                    opción principal. ON → monto exacto; OFF → elegir un rango. */}
-                <button
-                  type="button"
-                  onClick={() => setUseExact((v) => !v)}
-                  aria-pressed={useExact}
-                  className={`w-full flex items-center justify-between gap-3 p-4 rounded-2xl border-2 transition-all ${
-                    useExact
-                      ? 'border-[#7626B3] bg-[#F0E7FA]'
-                      : 'border-[#7626B3]/40 bg-white hover:border-[#7626B3]/70'
-                  }`}
-                >
-                  <span className="text-base font-bold text-[#7626B3] tracking-wide text-left">
-                    INGRESAR MONTO ESPECÍFICO
-                  </span>
-                  <Switch
-                    checked={useExact}
-                    className="data-[state=checked]:bg-[#7626B3] scale-125 pointer-events-none shrink-0"
-                  />
-                </button>
-
-                <AnimatePresence mode="wait" initial={false}>
-                  {useExact ? (
-                    <motion.div
-                      key="exact"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="relative mt-1">
-                        <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>
-                          {currency === 'USD' ? 'USD' : '$'}
-                        </span>
-                        <Input
-                          id="income"
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={exactIncome}
-                          onChange={(e) => setExactIncome(formatCurrency(e.target.value))}
-                          placeholder="0"
-                          className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`}
-                        />
-                      </div>
-                      {currency === 'USD' && exactUsdDigits > 0 && usdRate && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          ≈ {formatArs(exactUsdInArs)} al cambio del día (USD blue {formatArs(usdRate)})
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-500 mt-2">
-                        {incomeType === 'both'
-                          ? 'Cargá solo tu sueldo fijo. El freelance se carga aparte.'
-                          : activity === 'studies' || activity === 'neither'
-                          ? 'Mesada, beca, ayuda de familia, ahorros que retirás, lo que sea.'
-                          : 'Incluí sueldo, alquiler o cualquier ingreso regular'}
-                      </p>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="ranges"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="space-y-2 overflow-hidden"
-                    >
-                      {ranges.map((range) => (
-                        <button
-                          key={range.id}
-                          type="button"
-                          onClick={() => setIncomeRange(range.id)}
-                          className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
-                            incomeRange === range.id
-                              ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3]'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-[#7626B3]/50'
-                          }`}
-                        >
-                          {range.label}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )}
-
-            {/* Bloque ingreso freelance (PR4) */}
-            {freelanceNeeded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="pt-2 space-y-3"
-              >
-                <Label className="text-gray-700">
-                  ¿Cuánto ganaste por freelance en los últimos 3 meses?
-                </Label>
+                <p className="text-lg mb-1 text-gray-700">Ingreso/s</p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Podés poner tu ingreso exacto o aproximado, según lo que te sientas más cómoda. Si tenés varios, sumalos con “Agregar ingreso”.
+                </p>
 
                 <div className="space-y-3">
-                  {renderMonth('Mes 1 (más reciente)', m1, setM1)}
-                  {renderMonth('Mes 2', m2, setM2)}
-                  {renderMonth('Mes 3', m3, setM3)}
-                </div>
+                  {sources.map((s, i) => {
+                    const digits = parseInt(s.amount.replace(/\D/g, '')) || 0;
+                    const arsPreview = s.currency === 'USD' && usdRate ? arsFromUsd(digits, usdRate) : 0;
+                    return (
+                      <div key={i} className="rounded-xl border-2 border-gray-200 bg-white p-3 space-y-2.5">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="text"
+                            value={s.label}
+                            onChange={(ev) => updateSource(i, { label: ev.target.value })}
+                            placeholder="Nombre (ej: sueldo, alquiler)"
+                            className="rounded-lg bg-gray-50 border-gray-200 text-sm h-9 flex-1"
+                          />
+                          {sources.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeSource(i)}
+                              aria-label="Quitar ingreso"
+                              className="shrink-0 text-gray-400 hover:text-[#7626B3] transition-colors p-1"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          )}
+                        </div>
 
-                <div className="border-t border-gray-200 pt-3">
-                  {freelanceComplete ? (
-                    <>
-                      <p className="text-sm text-gray-700">
-                        Promedio mensual: <span className="text-[#7626B3]">{formatArs(freelanceAvg)}</span>
-                      </p>
-                      {highVariability && (
-                        <p className="text-xs text-gray-500 mt-2 italic">
-                          Tu ingreso varía bastante mes a mes. En el informe vas a ver
-                          recomendaciones para manejarlo.
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-500">Completá los 3 meses para ver el promedio</p>
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${s.currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>
+                              {s.currency === 'USD' ? 'USD' : '$'}
+                            </span>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={s.amount}
+                              onChange={(ev) => updateSource(i, { amount: formatCurrency(ev.target.value) })}
+                              placeholder="0"
+                              className={`rounded-xl ${s.currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`}
+                            />
+                          </div>
+                          <CurrencyToggle
+                            value={s.currency}
+                            usdEnabled={!!usdRate}
+                            onChange={(c) => updateSource(i, { currency: c })}
+                          />
+                        </div>
+
+                        {s.currency === 'USD' && digits > 0 && usdRate && (
+                          <p className="text-xs text-gray-500">≈ {formatArs(arsPreview)}</p>
+                        )}
+
+                        {/* Fijo / Variable */}
+                        <div className="grid grid-cols-2 gap-2 pt-0.5">
+                          {([
+                            { value: 'fixed', label: 'Fijo' },
+                            { value: 'variable', label: 'Variable' },
+                          ] as { value: IncomeKind; label: string }[]).map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => updateSource(i, { kind: opt.value })}
+                              className={`py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                                s.kind === opt.value
+                                  ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3]'
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-[#7626B3]/50'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={addSource}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#7626B3]/40 text-[#7626B3] font-medium hover:bg-[#F0E7FA]/40 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> Agregar ingreso
+                  </button>
+
+                  {totalArs > 0 && (
+                    <p className="text-sm text-gray-700">
+                      Total mensual: <span className="text-[#7626B3] font-semibold">{formatArs(totalArs)}</span>
+                    </p>
                   )}
                 </div>
               </motion.div>
-            )}
-            </div>
-            )}
-
-            {/* Ingresos adicionales — "Tengo otro ingreso". Cada uno es un monto
-                fijo que se suma al total. Aplica a cualquier tipo de ingreso. */}
-            {activity && (fixedNeeded || freelanceNeeded) && (
-              <div className="pt-2 space-y-3">
-                {extras.map((e, i) => {
-                  const digits = parseInt(e.amount.replace(/\D/g, '')) || 0;
-                  const arsPreview = e.currency === 'USD' && usdRate ? arsFromUsd(digits, usdRate) : 0;
-                  return (
-                    <div key={i} className="rounded-xl border-2 border-gray-200 bg-white p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="text"
-                          value={e.label}
-                          onChange={(ev) => updateExtra(i, { label: ev.target.value })}
-                          placeholder="Nombre (ej: alquiler, otro trabajo)"
-                          className="rounded-lg bg-gray-50 border-gray-200 text-sm h-9 flex-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeExtra(i)}
-                          aria-label="Quitar ingreso"
-                          className="shrink-0 text-gray-400 hover:text-[#7626B3] transition-colors p-1"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="relative flex-1">
-                          <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${e.currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>
-                            {e.currency === 'USD' ? 'USD' : '$'}
-                          </span>
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={e.amount}
-                            onChange={(ev) => updateExtra(i, { amount: formatCurrency(ev.target.value) })}
-                            placeholder="0"
-                            className={`rounded-xl ${e.currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`}
-                          />
-                        </div>
-                        <CurrencyToggle
-                          value={e.currency}
-                          usdEnabled={!!usdRate}
-                          onChange={(c) => updateExtra(i, { currency: c })}
-                        />
-                      </div>
-                      {e.currency === 'USD' && digits > 0 && usdRate && (
-                        <p className="text-xs text-gray-500">≈ {formatArs(arsPreview)}</p>
-                      )}
-                    </div>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  onClick={addExtra}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#7626B3]/40 text-[#7626B3] font-medium hover:bg-[#F0E7FA]/40 transition-colors"
-                >
-                  <Plus className="w-4 h-4" /> Tengo otro ingreso
-                </button>
-
-                {extrasArs > 0 && (
-                  <p className="text-sm text-gray-700">
-                    Otros ingresos: <span className="text-[#7626B3]">{formatArs(extrasArs)}</span>
-                  </p>
-                )}
-              </div>
             )}
           </div>
 
