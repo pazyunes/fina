@@ -77,6 +77,7 @@ function buildCategories(analysis: FinancialAnalysis) {
     { key: 'health',        label: 'Salud',          emoji: '❤️', amount: u.expenses.health },
     { key: 'therapy',       label: 'Terapia',        emoji: '🧘', amount: u.expenses.therapy },
     { key: 'gym',           label: 'Gimnasio',       emoji: '🏋️', amount: u.expenses.gym },
+    { key: 'estudios',      label: 'Estudios',       emoji: '🎓', amount: u.expenses.estudios ?? 0 },
     { key: 'subscriptions', label: 'Suscripciones',  emoji: '📱', amount: subs },
     { key: 'installments',  label: 'Cuotas',         emoji: '💳', amount: inst },
   ].filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount);

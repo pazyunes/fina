@@ -147,6 +147,7 @@ export function Main() {
     beauty: number;
     therapy: number;
     gym: number;
+    estudios?: number;
     housingBreakdown: { alquiler: number; servicios: number; expensas: number };
     housingCurrency: 'ARS' | 'USD';
     housingOriginalAmount: number;
@@ -187,6 +188,7 @@ export function Main() {
         beauty: data.beauty,
         therapy: data.therapy,
         gym: data.gym,
+        estudios: data.estudios ?? 0,
         transport: totalTransportCost,
       },
       housingBreakdown: data.housingBreakdown,

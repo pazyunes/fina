@@ -6,7 +6,7 @@ import { Slider } from './ui/slider';
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
-import { Home, Heart, Sparkles, Brain, Dumbbell, Plus, X, Check } from 'lucide-react';
+import { Home, Heart, Sparkles, Brain, Dumbbell, GraduationCap, Plus, X, Check } from 'lucide-react';
 import { TransportSelector, isTransportDataValid } from './TransportSelector';
 import { BackButton } from './BackButton';
 import { OnboardingAside } from './OnboardingAside';
@@ -17,7 +17,7 @@ import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
 import { TransportData, UserData, Currency } from '../types';
 
-type FixedKey = 'health' | 'beauty' | 'therapy' | 'gym';
+type FixedKey = 'health' | 'beauty' | 'therapy' | 'gym' | 'estudios';
 
 interface ExpensesFixedProps {
   initial?: Partial<UserData>;
@@ -30,6 +30,7 @@ interface ExpensesFixedProps {
     beauty: number;
     therapy: number;
     gym: number;
+    estudios?: number;
     housingBreakdown: { alquiler: number; servicios: number; expensas: number };
     housingCurrency: Currency;
     housingOriginalAmount: number;
@@ -60,6 +61,12 @@ const CATEGORIES: ExpenseCategory[] = [
   { key: 'gym', label: 'Gimnasio', icon: Dumbbell, color: '#431C72', helper: 'La cuota del gym o tu actividad física' },
 ];
 
+// Estudios — se agrega solo si la usuaria estudia (worksOrStudies studies/both).
+const ESTUDIOS_CATEGORY: ExpenseCategory = {
+  key: 'estudios', label: 'Estudios', icon: GraduationCap, color: '#7626B3',
+  helper: 'Cuota de facultad, curso o posgrado, materiales de estudio',
+};
+
 const DEFAULT_TRANSPORT: TransportData = {
   hasCar: false,
   insurance: 0,
@@ -83,6 +90,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
     beauty: initial?.expenses?.beauty ?? 0,
     therapy: initial?.expenses?.therapy ?? 0,
     gym: initial?.expenses?.gym ?? 0,
+    estudios: initial?.expenses?.estudios ?? 0,
   });
 
   const [notPaying, setNotPaying] = useState<Record<FixedKey, boolean>>({
@@ -90,7 +98,12 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
     beauty: false,
     therapy: false,
     gym: false,
+    estudios: false,
   });
+
+  // Estudios solo aplica si la usuaria estudia.
+  const isStudying = initial?.worksOrStudies === 'studies' || initial?.worksOrStudies === 'both';
+  const categories: ExpenseCategory[] = isStudying ? [...CATEGORIES, ESTUDIOS_CATEGORY] : CATEGORIES;
 
   // ── Vivienda — 3 gastos separados (Alquiler / Servicios / Expensas) ──────
   // expenses.housing (downstream) = suma de los 3 en ARS. Alquiler admite USD.
@@ -133,9 +146,9 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   // reopened. Alquiler (housing) starts open.
   // En edición abrimos todas las categorías para que edite la que quiera.
   const [openItems, setOpenItems] = useState<string[]>(
-    editMode ? ['vivienda', ...CATEGORIES.map(c => c.key)] : ['vivienda']
+    editMode ? ['vivienda', ...categories.map(c => c.key)] : ['vivienda']
   );
-  const FIXED_ORDER = CATEGORIES.map(c => c.key);
+  const FIXED_ORDER = categories.map(c => c.key);
   // Collapse the finished category and open the next one that's still empty.
   // Only called once the category is complete (amount entered or "no lo pago yo").
   const advanceFrom = (key: FixedKey) => {
@@ -410,7 +423,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
               </AccordionContent>
             </AccordionItem>
 
-            {CATEGORIES.map(category => {
+            {categories.map(category => {
               const Icon = category.icon;
               const isNotPaying = notPaying[category.key];
               const value = expenses[category.key];

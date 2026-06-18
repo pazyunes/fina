@@ -27,6 +27,7 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
     userData.expenses.beauty +
     userData.expenses.therapy +
     userData.expenses.gym +
+    (userData.expenses.estudios ?? 0) +
     userData.expenses.transport +
     subscriptionsCost +
     monthlyDelivery +
