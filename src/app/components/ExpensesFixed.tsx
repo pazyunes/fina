@@ -312,13 +312,9 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
     setInstallments(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
-    // Check transport validation first (en edición no bloqueamos por esto)
-    if (!editMode && !isTransportDataValid(transportData)) {
-      setShowTransportValidation(true);
-      return;
-    }
-
+  // Commit del estado actual a userData (sin navegar ni validar transporte).
+  // Lo usan "Continuar" y "Atrás", para no perder lo cargado al volver.
+  const commit = () => {
     const validInstallments = installments
       .filter(inst => inst.name && inst.monthlyAmount && inst.remainingInstallments)
       .map(inst => ({
@@ -355,6 +351,15 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
       transportDetails: transportData,
       installments: validInstallments,
     });
+  };
+
+  const handleSubmit = () => {
+    // Check transport validation first (en edición no bloqueamos por esto)
+    if (!editMode && !isTransportDataValid(transportData)) {
+      setShowTransportValidation(true);
+      return;
+    }
+    commit();
     if (!editMode) navigate('/expenses-services');
   };
 
@@ -371,7 +376,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
           animate={{ opacity: 1, y: 0 }}
           className="w-full pb-24"
         >
-          <BackButton currentPath={pathname} />
+          <BackButton currentPath={pathname} onBeforeBack={commit} />
 
           {!editMode && (
             <StepIntroMessage
@@ -690,9 +695,12 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
 
             {/* Installments section */}
             <div className="bg-white p-6 rounded-2xl shadow-sm">
-              <h3 className="text-lg mb-4 text-[#7626B3]" style={{ fontFamily: 'var(--font-sans)' }}>
+              <h3 className="text-lg mb-1 text-[#7626B3]" style={{ fontFamily: 'var(--font-sans)' }}>
                 ¿Estás pagando algo en cuotas?
               </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Una compra que pagás de a poco cada mes. Ej: una notebook de $600.000 en 12 cuotas de $50.000 → cargás <strong>$50.000/mes</strong> y <strong>12 cuotas</strong> restantes. También el celular, electrodomésticos, un viaje financiado, etc.
+              </p>
 
               <div className="flex gap-3 mb-4">
                 <Button

@@ -4,11 +4,14 @@ import { getPrevStepPath } from '../onboarding/steps';
 
 interface BackButtonProps {
   currentPath: string;
+  // PR — Commit del estado del paso actual ANTES de navegar atrás, para que lo
+  // que la usuaria cargó no se pierda si vuelve sin tocar "Continuar".
+  onBeforeBack?: () => void;
 }
 
 // Navigates to the previous onboarding step. Hidden on the first step. State
 // lives in Main and survives the route change, so going back keeps the data.
-export function BackButton({ currentPath }: BackButtonProps) {
+export function BackButton({ currentPath, onBeforeBack }: BackButtonProps) {
   const navigate = useNavigate();
   const prevPath = getPrevStepPath(currentPath);
 
@@ -17,7 +20,7 @@ export function BackButton({ currentPath }: BackButtonProps) {
   return (
     <button
       type="button"
-      onClick={() => navigate(prevPath)}
+      onClick={() => { onBeforeBack?.(); navigate(prevPath); }}
       className="inline-flex items-center gap-1 text-gray-500 hover:text-[#7626B3] transition-colors -ml-1 mb-3"
       aria-label="Volver al paso anterior"
     >

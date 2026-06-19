@@ -90,9 +90,10 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
   // ── Validación del step ──────────────────────────────────────────────────
   const incomeValid = sources.some((s) => sourceArs(s) > 0);
 
-  const handleSubmit = () => {
-    if (!activity || !incomeValid) return;
-
+  // Commit del estado actual a userData (sin navegar). Lo usan "Continuar" y
+  // "Atrás", para no perder lo cargado al volver.
+  const commit = () => {
+    if (!activity) return;
     const incomeSources = sources
       .map((s) => ({
         label: s.label.trim() || 'Ingreso',
@@ -118,6 +119,11 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
       incomeCurrency: incomeSources[0]?.currency ?? 'ARS',
       incomeSources,
     });
+  };
+
+  const handleSubmit = () => {
+    if (!activity || !incomeValid) return;
+    commit();
     if (!editMode) navigate('/bank');
   };
 
@@ -130,7 +136,7 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <BackButton currentPath={pathname} />
+          <BackButton currentPath={pathname} onBeforeBack={commit} />
 
           {!editMode && (
             <StepIntroMessage
@@ -188,6 +194,11 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
                 <p className="text-xs text-gray-500 mb-3">
                   Podés poner tu ingreso exacto o aproximado, según lo que te sientas más cómoda. Si tenés varios, sumalos con “Agregar ingreso”.
                 </p>
+
+                <div className="bg-[#F0E7FA]/60 border border-[#D7C2EF] rounded-xl px-3 py-2.5 mb-3 text-xs text-[#431C72] leading-relaxed">
+                  <p><strong>Fijo</strong>: te entra lo mismo todos los meses (ej: sueldo en relación de dependencia, una jubilación, un alquiler que cobrás).</p>
+                  <p className="mt-1"><strong>Variable</strong>: cambia mes a mes (ej: freelance, propinas, ventas, comisiones).</p>
+                </div>
 
                 <div className="space-y-3">
                   {sources.map((s, i) => {

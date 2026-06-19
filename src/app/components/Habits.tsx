@@ -29,13 +29,17 @@ export function Habits({ initial, onComplete }: HabitsProps) {
                      habits.saves !== null &&
                      habits.invests !== null;
 
+  // Commit parcial (solo lo respondido) para no perder respuestas al volver.
+  const commit = () => {
+    const data: Record<string, boolean> = {};
+    if (habits.knowsLastMonthExpenses !== null) data.knowsLastMonthExpenses = habits.knowsLastMonthExpenses;
+    if (habits.saves !== null) data.saves = habits.saves;
+    if (habits.invests !== null) data.invests = habits.invests;
+    onComplete(data as { knowsLastMonthExpenses: boolean; saves: boolean; invests: boolean });
+  };
   const handleSubmit = () => {
     if (isComplete) {
-      onComplete({
-        knowsLastMonthExpenses: habits.knowsLastMonthExpenses!,
-        saves: habits.saves!,
-        invests: habits.invests!,
-      });
+      commit();
       navigate('/goals');
     }
   };
@@ -55,7 +59,7 @@ export function Habits({ initial, onComplete }: HabitsProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <BackButton currentPath={pathname} />
+          <BackButton currentPath={pathname} onBeforeBack={commit} />
 
           <div className="mb-6">
             <h2

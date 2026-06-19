@@ -59,13 +59,16 @@ export function Bank({ initial, onComplete }: BankProps) {
   const otherSelected = selectedBanks.includes('Otro');
   const canContinue = selectedBanks.length > 0 && (!otherSelected || otherText.trim() !== '');
 
-  const handleSubmit = () => {
-    if (!canContinue) return;
+  const commit = () => {
     // Reemplazamos 'Otro' por el texto que escribió la usuaria.
     const banks = otherSelected && otherText.trim()
       ? [...selectedBanks.filter((b) => b !== 'Otro'), otherText.trim()]
       : selectedBanks;
     onComplete({ banks });
+  };
+  const handleSubmit = () => {
+    if (!canContinue) return;
+    commit();
     navigate('/expenses-fixed');
   };
 
@@ -78,7 +81,7 @@ export function Bank({ initial, onComplete }: BankProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <BackButton currentPath={pathname} />
+          <BackButton currentPath={pathname} onBeforeBack={commit} />
 
           <div className="mb-6">
             <h2

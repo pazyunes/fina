@@ -96,7 +96,9 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
     return validNum > 0 ? `$${validNum.toLocaleString('es-AR').replace(/,/g, '.')}` : '';
   };
 
-  const handleSubmit = () => {
+  // Commit del estado actual a userData (sin navegar). Lo usan "Continuar" y
+  // "Atrás", para no perder lo cargado al volver.
+  const commit = () => {
     onComplete({
       entertainmentFrequency: (parseFloat(entertainmentFrequency) || 0) / 4.33,
       entertainmentAmount: parseInt(entertainmentAmount.replace(/\D/g, '') || '0'),
@@ -114,7 +116,10 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
         }))
         .filter((o) => o.name && o.everyMonths > 0 && o.amount > 0),
     });
+  };
 
+  const handleSubmit = () => {
+    commit();
     if (!editMode) navigate('/habits');
   };
 
@@ -173,15 +178,15 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
           animate={{ opacity: 1, y: 0 }}
           className="w-full pb-24"
         >
-          <BackButton currentPath={pathname} />
+          <BackButton currentPath={pathname} onBeforeBack={commit} />
 
           {!editMode && (
             <StepIntroMessage
               title="Última parte."
               body={
                 <>
-                  Ahora los <strong>gastos que cambian mes a mes</strong>: salidas, supermercado,
-                  regalitos, todo lo que no es fijo.
+                  Ahora los <strong>gastos que cambian mes a mes</strong>: salidas, delivery,
+                  cafeterías y restaurantes, todo lo que no es fijo.
                 </>
               }
             />
@@ -197,7 +202,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
               {editMode
                 ? 'Actualizá solo lo que cambió. No hace falta tocar todas las categorías.'
-                : 'Salidas, delivery, súper y suscripciones: lo que varía según el mes. Tocá cada categoría para completarla'}
+                : 'Salidas, delivery, cafeterías y restaurantes: lo que varía según el mes. Tocá cada categoría para completarla'}
             </p>
           </div>
 

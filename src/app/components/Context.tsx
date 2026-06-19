@@ -19,9 +19,12 @@ export function Context({ initial, gender, onComplete }: ContextProps) {
   const { pathname } = useLocation();
   const [livesAlone, setLivesAlone] = useState<boolean | null>(initial?.livesAlone ?? null);
 
+  const commit = () => {
+    if (livesAlone !== null) onComplete({ livesAlone });
+  };
   const handleSubmit = () => {
     if (livesAlone !== null) {
-      onComplete({ livesAlone });
+      commit();
       navigate('/activity');
     }
   };
@@ -35,7 +38,7 @@ export function Context({ initial, gender, onComplete }: ContextProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full"
         >
-          <BackButton currentPath={pathname} />
+          <BackButton currentPath={pathname} onBeforeBack={commit} />
 
           <div className="mb-6">
             <h2
