@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Zap, Plus, X, Check } from 'lucide-react';
 import { Button } from './ui/button';
@@ -27,11 +27,13 @@ export function SubscriptionsSection({
   usdRate,
   livesAccompanied,
   onChange,
+  onCompleted,
 }: {
   initial?: Partial<UserData>;
   usdRate: number | null;
   livesAccompanied?: boolean;
   onChange: (subs: Sub[]) => void;
+  onCompleted?: () => void;
 }) {
   const initialSubs = initial?.subscriptions ?? [];
   const [selected, setSelected] = useState<Set<string>>(
@@ -82,6 +84,14 @@ export function SubscriptionsSection({
     });
     onChange(subs);
   }, [selected, custom, noSubs, usdRate]);
+
+  // Avisar "completo" una sola vez (al elegir algo o marcar "no tengo") para
+  // que la sección se cierre automáticamente. Reabrir permite seguir editando.
+  const fired = useRef(false);
+  useEffect(() => {
+    const complete = noSubs || selected.size > 0 || custom.some((c) => c.name && c.cost);
+    if (complete && !fired.current) { fired.current = true; onCompleted?.(); }
+  }, [noSubs, selected, custom]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const count = (noSubs ? 0 : selected.size + custom.filter((c) => c.name && c.cost).length);
 

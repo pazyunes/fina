@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Switch } from './ui/switch';
 import { Input } from './ui/input';
 import { AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
@@ -14,10 +14,12 @@ export function SupermarketSection({
   initial,
   livesAccompanied,
   onChange,
+  onCompleted,
 }: {
   initial?: Partial<UserData>;
   livesAccompanied?: boolean;
   onChange: (v: { supermarketFrequency: number; supermarketAmount: number }) => void;
+  onCompleted?: () => void;
 }) {
   // Mostramos la frecuencia mensual (semanal guardado × 4.33).
   const [frequency, setFrequency] = useState(
@@ -44,6 +46,9 @@ export function SupermarketSection({
   }, [frequency, amount, noSupermarket]);
 
   const complete = noSupermarket || (frequency !== '' && amount !== '');
+  // Avisar "completo" una sola vez (al perder foco / togglear), para cerrarla.
+  const fired = useRef(false);
+  const fireIfComplete = () => { if (!fired.current && complete) { fired.current = true; onCompleted?.(); } };
 
   return (
     <AccordionItem value="super" className="bg-white rounded-2xl shadow-sm border-0 px-5">
@@ -64,7 +69,7 @@ export function SupermarketSection({
           </div>
         )}
         <div className="flex items-center gap-2 mb-4">
-          <Switch checked={noSupermarket} onCheckedChange={setNoSupermarket} className="data-[state=checked]:bg-[#7626B3]" />
+          <Switch checked={noSupermarket} onCheckedChange={(c) => { setNoSupermarket(c); if (c && !fired.current) { fired.current = true; onCompleted?.(); } }} className="data-[state=checked]:bg-[#7626B3]" />
           <span className="text-sm font-medium text-gray-600">No aplica / no lo pago yo</span>
         </div>
 
@@ -78,6 +83,7 @@ export function SupermarketSection({
               min="0"
               value={frequency}
               onChange={(e) => { const v = e.target.value; if (v === '' || /^\d+$/.test(v)) setFrequency(v); }}
+              onBlur={fireIfComplete}
               placeholder="Ej: 4"
               className={`w-full ${AMOUNT_FIELD_CLASS}`}
               disabled={noSupermarket}
@@ -91,6 +97,7 @@ export function SupermarketSection({
               pattern="[0-9]*"
               value={fmt(amount)}
               onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
+              onBlur={fireIfComplete}
               placeholder="$0"
               className={`w-full ${AMOUNT_FIELD_CLASS}`}
               disabled={noSupermarket}

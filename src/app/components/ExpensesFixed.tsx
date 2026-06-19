@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
@@ -170,16 +170,44 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
     setOpenItems(prev => {
       const without = prev.filter(k => k !== key);
       const startIdx = FIXED_ORDER.indexOf(key);
+      let openedNext = false;
       for (let i = startIdx + 1; i < FIXED_ORDER.length; i++) {
         const next = FIXED_ORDER[i];
         if (!(expenses[next] > 0 || notPaying[next])) {
           if (!without.includes(next)) without.push(next);
+          openedNext = true;
           break;
         }
       }
+      // Terminó la última categoría (ej. Estudios) → abrir Supermercado.
+      if (!openedNext && !without.includes('super')) without.push('super');
       return without;
     });
   };
+
+  // Cierra una sección y opcionalmente abre otra (encadenado del acordeón).
+  const collapseOpen = (close: string, open?: string) => {
+    if (editMode) return;
+    setOpenItems(prev => {
+      let next = prev.filter(k => k !== close);
+      if (open && !next.includes(open)) next = [...next, open];
+      return next;
+    });
+  };
+
+  // Vivienda: completa cuando los 3 gastos están resueltos (con monto o "no lo
+  // pago yo"). Al completarse se cierra y abre la primera categoría.
+  const viviendaComplete =
+    (viviendaNotPaying.alquiler || alquilerInArs > 0) &&
+    (viviendaNotPaying.servicios || servicios > 0) &&
+    (viviendaNotPaying.expensas || expensas > 0);
+  const prevViviendaComplete = useRef(false);
+  useEffect(() => {
+    if (!editMode && viviendaComplete && !prevViviendaComplete.current) {
+      collapseOpen('vivienda', FIXED_ORDER[0]);
+    }
+    prevViviendaComplete.current = viviendaComplete;
+  }, [viviendaComplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [transportData, setTransportData] = useState<TransportData>(
     initial?.transportDetails ?? DEFAULT_TRANSPORT
@@ -641,12 +669,14 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
               initial={initial}
               livesAccompanied={livesAccompanied}
               onChange={setSuperData}
+              onCompleted={() => collapseOpen('super', 'subs')}
             />
             <SubscriptionsSection
               initial={initial}
               usdRate={usdRate}
               livesAccompanied={livesAccompanied}
               onChange={setSubscriptions}
+              onCompleted={() => collapseOpen('subs')}
             />
           </Accordion>
 

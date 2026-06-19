@@ -91,7 +91,7 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
   // Disposición a recortar por categoría: 1 (no estoy dispuesta) … 5 (re dispuesta).
   // Arranca en 3 (neutral) para cada categoría que paga.
   const [willingness, setWillingness] = useState<Record<string, number>>(() =>
-    Object.fromEntries(available.map((c) => [c.value, 3]))
+    Object.fromEntries(available.map((c) => [c.value, 2]))
   );
   const setWill = (slug: string, n: number) =>
     setWillingness((prev) => ({ ...prev, [slug]: n }));
@@ -138,7 +138,7 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
               ¿Qué gastos estás {g(gender, 'dispuesta', 'dispuesto')} a ajustar?
             </p>
             <p className="text-sm text-gray-500 mb-4">
-              <strong>1</strong> = no lo querés tocar · <strong>5</strong> = lo ajustás sin problema.
+              <strong>1</strong> = no lo querés tocar · <strong>4</strong> = lo ajustás sin problema.
             </p>
 
             {available.length === 0 ? (
@@ -169,13 +169,13 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
                       <Slider
                         value={[val]}
                         min={1}
-                        max={5}
+                        max={4}
                         step={1}
                         onValueChange={(v) => setWill(cat.value, v[0])}
                       />
                       {/* Topes fijos 1..5 */}
                       <div className="flex justify-between text-xs text-gray-400 mt-1.5 px-0.5">
-                        {[1, 2, 3, 4, 5].map((n) => (
+                        {[1, 2, 3, 4].map((n) => (
                           <span key={n} className={n === val ? 'text-[#7626B3] font-bold' : ''}>{n}</span>
                         ))}
                       </div>
