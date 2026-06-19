@@ -174,6 +174,9 @@ export interface UserData {
     timeframe: number; // months
     currency?: Currency;
     originalAmount?: number;
+    // Desglose opcional dentro de un mismo objetivo (ej. viaje = pasajes +
+    // presupuesto). Montos en ARS; la suma = amount.
+    parts?: Array<{ label: string; amount: number }>;
     // Aportes registrados manualmente hacia este objetivo (progreso).
     contributions?: Array<{ amount: number; date: string }>; // date ISO
   }>;

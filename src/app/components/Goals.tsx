@@ -22,6 +22,8 @@ interface GoalItem {
   amount: string;
   timeframe: string;
   currency: Currency;
+  // Desglose opcional (ej. viaje = pasajes + presupuesto). Montos en ARS.
+  parts?: Array<{ label: string; amount: number }>;
 }
 
 interface GoalsProps {
@@ -110,6 +112,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
       amount: formatGoalAmount(String(goal.currency === 'USD' ? (goal.originalAmount ?? 0) : goal.amount)),
       timeframe: String(goal.timeframe),
       currency: goal.currency ?? 'ARS',
+      parts: goal.parts,
     }))
   );
   const [currentGoal, setCurrentGoal] = useState<GoalItem>({
@@ -206,6 +209,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
         timeframe: parseInt(goal.timeframe),
         currency: goal.currency,
         originalAmount: typed,
+        parts: goal.parts, // ya en ARS
       };
     });
 

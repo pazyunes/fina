@@ -29,7 +29,14 @@ export interface GoalCategoryConfig {
   message?: string;
 }
 
-export type GoalDraft = { title: string; amount: string; timeframe: string; currency: Currency };
+export type GoalDraft = {
+  title: string;
+  amount: string;
+  timeframe: string;
+  currency: Currency;
+  // Desglose opcional (ej. viaje = pasajes + presupuesto). Montos en ARS.
+  parts?: Array<{ label: string; amount: number }>;
+};
 
 const fmtInput = (v: string) => {
   const n = v.replace(/\D/g, '').replace(/^0+/, '');
@@ -98,10 +105,15 @@ export function GoalCategoryModal({
     const tf = String(months);
     const goals: GoalDraft[] = [];
     if (config.kind === 'travel') {
+      // Un solo objetivo "Viaje a X" con el desglose adentro (pasajes + presupuesto),
+      // así la página de objetivos no se llena de donas.
       const dest = what.trim();
       const base = dest ? `Viaje a ${dest}` : (config.defaultTitle || 'Viaje');
-      if (digitsOf(amount) > 0) goals.push({ title: `${base} – pasajes y hospedaje`, amount, timeframe: tf, currency });
-      if (digitsOf(amount2) > 0) goals.push({ title: `${base} – presupuesto del viaje`, amount: amount2, timeframe: tf, currency });
+      const parts: Array<{ label: string; amount: number }> = [];
+      if (digitsOf(amount) > 0) parts.push({ label: 'Pasajes y hospedaje', amount: toArs(digitsOf(amount)) });
+      if (digitsOf(amount2) > 0) parts.push({ label: 'Presupuesto del viaje', amount: toArs(digitsOf(amount2)) });
+      const totalDisplay = digitsOf(amount) + digitsOf(amount2);
+      goals.push({ title: base, amount: fmtInput(String(totalDisplay)), timeframe: tf, currency, parts });
     } else if (config.kind === 'percent') {
       const pct = parseInt(percent) || 0;
       const total = Math.round(monthlyIncome * pct / 100) * (parseInt(timeframe) || 0);

@@ -183,7 +183,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           ) : (
             <div className="space-y-3">
               {goals.map((g, i) => (
-                <GoalCard key={i} goal={g} saved={savedFor(i)} />
+                <GoalCard key={i} goal={g} saved={savedFor(i)} parts={specificGoals[i]?.parts} />
               ))}
             </div>
           )}
@@ -272,9 +272,11 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
 function GoalCard({
   goal,
   saved,
+  parts,
 }: {
   goal: FinancialAnalysis['goalsAnalysis'][number];
   saved: number;
+  parts?: Array<{ label: string; amount: number }>;
 }) {
   const { fmt } = useMoney();
 
@@ -333,6 +335,18 @@ function GoalCard({
         <span className="text-gray-500">Llevás <strong className="text-gray-700">{fmt(saved)}</strong> de {fmt(goal.amount)}</span>
         {!done && <span className="text-gray-500">te falta {fmt(remaining)}</span>}
       </div>
+
+      {/* Desglose interno (ej. viaje = pasajes + presupuesto) — un solo objetivo. */}
+      {parts && parts.length > 1 && (
+        <div className="border-t border-[#D7C2EF]/50 pt-2 space-y-1">
+          {parts.map((p, i) => (
+            <div key={i} className="flex justify-between text-xs text-gray-500">
+              <span>{p.label}</span>
+              <span className="font-medium text-gray-700">{fmt(p.amount)}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-xs text-[#431C72] border-l-[3px] border-[#7626B3]">
         📅 {goal.insight}
