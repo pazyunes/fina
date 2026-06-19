@@ -14,7 +14,8 @@ import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
 import { UserData, Currency } from '../types';
-import { GoalCategoryModal, GoalCategoryConfig } from './GoalCategoryModal';
+import { GoalCategoryModal, GoalCategoryConfig, GoalDraft } from './GoalCategoryModal';
+import { analyzeFinances } from '../utils/financialAnalyzer';
 
 interface GoalItem {
   title: string;
@@ -65,8 +66,8 @@ const GOAL_OPTIONS = [
 // propio flujo inline, así que no están acá.
 const CATEGORY_CONFIG: Record<string, GoalCategoryConfig> = {
   'Viajar': {
-    kind: 'amount', emoji: '✈️', defaultTitle: 'Viaje',
-    amountLabel: '¿Cuánto presupuesto querés para el viaje?',
+    kind: 'travel', emoji: '✈️', defaultTitle: 'Viaje',
+    prompt: 'Armamos dos metas: una para pasajes/hospedaje y otra para los gastos del viaje.',
   },
   'Comprar algo específico': {
     kind: 'amount', emoji: '🛍️', askWhat: true, defaultTitle: 'Compra',
@@ -81,12 +82,27 @@ const CATEGORY_CONFIG: Record<string, GoalCategoryConfig> = {
     kind: 'info', emoji: '📈',
     message: 'En el informe te vamos a presentar un gráfico con qué parte de tu plata conviene destinar a invertir.',
   },
+  'No tengo': {
+    kind: 'percent', emoji: '🐷',
+    prompt: 'Aunque no tengas un objetivo puntual, ahorrar un % fijo de tu sueldo cada mes es la forma más simple de empezar.',
+  },
 };
 
 export function Goals({ initial, onComplete, editMode }: GoalsProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const usdRate = initial?.exchangeRate?.rate ?? null;
+  // Para "lo antes posible" y el feedback SMART: cuánto puede destinar por mes
+  // a objetivos (≈ 80% de su disponible, igual criterio que el analyzer).
+  const monthlyIncome = initial?.monthlyIncome ?? 0;
+  const monthlyForGoals = (() => {
+    try {
+      const a = analyzeFinances(initial as UserData);
+      return Math.max(0, Math.round((a.available ?? 0) * 0.8));
+    } catch {
+      return 0;
+    }
+  })();
   const [selectedGoals, setSelectedGoals] = useState<string[]>(initial?.goals ?? []);
   const [specificGoals, setSpecificGoals] = useState<GoalItem[]>(
     (initial?.specificGoals ?? []).map((goal) => ({
@@ -103,7 +119,9 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
     currency: 'ARS',
   });
 
-  const [showSavingsGoal, setShowSavingsGoal] = useState(initial?.goals?.includes('No tengo') ?? false);
+  // "No tengo" ahora abre el popup de % del sueldo; el form inline viejo queda
+  // desactivado (showSavingsGoal nunca se prende).
+  const [showSavingsGoal] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   // PR #8 — categoría cuyo popup está abierto (Viajar / Comprar / Pagar / Invertir).
   const [modalCategory, setModalCategory] = useState<string | null>(null);
@@ -123,41 +141,29 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
     }
   };
 
-  // Confirmar un objetivo con monto desde el popup → lo agrega a la lista y
-  // marca la categoría como elegida.
-  const handleModalAmount = (g: { title: string; amount: string; timeframe: string; currency: Currency }) => {
-    setSpecificGoals((prev) => [...prev, g]);
+  // Confirmar objetivos desde el popup → los agrega a la lista (puede ser más
+  // de uno, ej. viaje = pasajes + presupuesto) y marca la categoría elegida.
+  // Permite agregar varios objetivos en la misma categoría (se acumulan).
+  const handleModalGoals = (goals: GoalDraft[]) => {
+    setSpecificGoals((prev) => [...prev, ...goals]);
     if (modalCategory) {
-      setSelectedGoals((prev) => (prev.includes(modalCategory) ? prev : [...prev.filter(x => x !== 'No tengo'), modalCategory]));
+      setSelectedGoals((prev) => (prev.includes(modalCategory) ? prev : [...prev, modalCategory]));
     }
-    setShowSavingsGoal(false);
     setShowConfirmation(true);
   };
 
   // Confirmar el popup informativo (Invertir) → solo marca la categoría.
   const handleModalInfo = () => {
     if (modalCategory) {
-      setSelectedGoals((prev) => (prev.includes(modalCategory) ? prev : [...prev.filter(x => x !== 'No tengo'), modalCategory]));
+      setSelectedGoals((prev) => (prev.includes(modalCategory) ? prev : [...prev, modalCategory]));
     }
-    setShowSavingsGoal(false);
   };
 
+  // Toggle simple para categorías sin popup (ej. "Otro / Agregar objetivo").
   const toggleGoal = (goal: string) => {
-    if (goal === 'No tengo') {
-      const wasSelected = selectedGoals.includes(goal);
-      setSelectedGoals(wasSelected ? [] : [goal]);
-      setShowSavingsGoal(!wasSelected);
-    } else {
-      setSelectedGoals(prev => {
-        const filtered = prev.filter(g => g !== 'No tengo');
-        if (prev.includes(goal)) {
-          return filtered.filter(g => g !== goal);
-        } else {
-          return [...filtered, goal];
-        }
-      });
-      setShowSavingsGoal(false);
-    }
+    setSelectedGoals((prev) =>
+      prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
+    );
   };
 
   const formatCurrency = (value: string) => {
@@ -337,7 +343,6 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
                 onClick={() => {
                   if (currentGoal.amount && currentGoal.timeframe) {
                     addGoal();
-                    setShowSavingsGoal(false);
                   }
                 }}
                 disabled={!currentGoal.amount || !currentGoal.timeframe}
@@ -515,8 +520,10 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
           category={modalCategory}
           config={CATEGORY_CONFIG[modalCategory]}
           usdRate={usdRate}
+          monthlyForGoals={monthlyForGoals}
+          monthlyIncome={monthlyIncome}
           onClose={() => setModalCategory(null)}
-          onConfirmAmount={handleModalAmount}
+          onConfirmGoals={handleModalGoals}
           onConfirmInfo={handleModalInfo}
         />
       )}
