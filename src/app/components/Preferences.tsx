@@ -81,8 +81,12 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
   const { pathname } = useLocation();
   const gender = initial?.gender;
 
-  // Solo las categorías que efectivamente paga.
-  const available = CATEGORY_CATALOG.filter((c) => paysCategory(c.value, initial ?? {}));
+  // Solo las categorías que efectivamente paga, ordenadas de mayor a menor
+  // gasto mensual: las de más impacto arriba (donde hay más para ganar al
+  // ajustar). Benchmark: las apps que mejor funcionan resaltan la oportunidad.
+  const available = CATEGORY_CATALOG
+    .filter((c) => paysCategory(c.value, initial ?? {}))
+    .sort((a, b) => monthlyOf(b.value, initial ?? {}) - monthlyOf(a.value, initial ?? {}));
 
   // Disposición a recortar por categoría: 1 (no estoy dispuesta) … 5 (re dispuesta).
   // Arranca en 3 (neutral) para cada categoría que paga.
