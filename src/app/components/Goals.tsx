@@ -111,6 +111,11 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
   // Click en una categoría: las que tienen popup (CATEGORY_CONFIG) lo abren;
   // "Otro" y "No tengo" mantienen su flujo inline (toggle).
   const handleCategoryClick = (goal: string) => {
+    // Invertir es un toggle: si ya está elegido, al tocarlo se deselecciona.
+    if (goal === 'Invertir' && selectedGoals.includes('Invertir')) {
+      setSelectedGoals((prev) => prev.filter((x) => x !== 'Invertir'));
+      return;
+    }
     if (CATEGORY_CONFIG[goal]) {
       setModalCategory(goal);
     } else {

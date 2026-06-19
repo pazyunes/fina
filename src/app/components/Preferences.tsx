@@ -124,17 +124,17 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
               Para lograr estos objetivos
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Marcá del 1 al 5 cuánto estás {g(gender, 'dispuesta', 'dispuesto')} a recortar cada gasto, así las recomendaciones respetan lo que más te importa.
+              Marcá del 1 al 5 cuánto estás {g(gender, 'dispuesta', 'dispuesto')} a ajustar cada gasto, así las recomendaciones respetan lo que más te importa.
             </p>
           </div>
 
           {/* Disposición a recortar por categoría (slider 1-5) */}
           <section className="mb-8">
             <p className="text-base font-semibold text-gray-800 mb-1">
-              ¿Qué gastos estás {g(gender, 'dispuesta', 'dispuesto')} a recortar?
+              ¿Qué gastos estás {g(gender, 'dispuesta', 'dispuesto')} a ajustar?
             </p>
             <p className="text-sm text-gray-500 mb-4">
-              <strong>1</strong> = no lo querés tocar · <strong>5</strong> = lo recortás sin problema.
+              <strong>1</strong> = no lo querés tocar · <strong>5</strong> = lo ajustás sin problema.
             </p>
 
             {available.length === 0 ? (
@@ -154,7 +154,7 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
                           {cat.label}
                           {monthly > 0 && (
                             <span className="block text-xs text-[#3B6D11] font-medium">
-                              recortándolo ahorrás ~{formatArs(monthly)}/mes
+                              ajustándolo ahorrás ~{formatArs(monthly)}/mes
                             </span>
                           )}
                         </span>
@@ -176,8 +176,8 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
                         ))}
                       </div>
                       <div className="flex justify-between text-[11px] text-gray-400 mt-0.5">
-                        <span>No lo recorto</span>
-                        <span>Lo recorto fácil</span>
+                        <span>No lo ajusto</span>
+                        <span>Lo ajusto fácil</span>
                       </div>
                     </div>
                   );

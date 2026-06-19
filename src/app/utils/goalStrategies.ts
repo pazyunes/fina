@@ -35,7 +35,7 @@ export function buildGoalStrategies(analysis: FinancialAnalysis): GoalStrategy[]
     const save = Math.round(monthlyDelivery * 0.3);
     strategies.push({
       emoji: '🍕',
-      title: 'Recortar gastos en delivery',
+      title: 'Ajustar gastos en delivery',
       subtitle: `Hoy pedís ~${formatArs(Math.round(monthlyDelivery))}/mes. Cocinar 2 veces por semana en lugar de pedir te libera plata.`,
       impact: `+${formatArs(save)}/mes`,
     });
@@ -46,7 +46,7 @@ export function buildGoalStrategies(analysis: FinancialAnalysis): GoalStrategy[]
     const save = Math.round(monthlyCafeterias * 0.3);
     strategies.push({
       emoji: '☕',
-      title: 'Recortar gastos en cafeterías y restaurantes',
+      title: 'Ajustar gastos en cafeterías y restaurantes',
       subtitle: `Hoy gastás ~${formatArs(Math.round(monthlyCafeterias))}/mes. Llevarte un termo o juntarte en casa unas veces hace una diferencia real.`,
       impact: `+${formatArs(save)}/mes`,
     });
@@ -57,7 +57,7 @@ export function buildGoalStrategies(analysis: FinancialAnalysis): GoalStrategy[]
     const save = Math.round(monthlyEntertainment * 0.3);
     strategies.push({
       emoji: '🎉',
-      title: 'Recortar gastos en salidas / ocio',
+      title: 'Ajustar gastos en salidas / ocio',
       subtitle: 'Alterná salidas pagas con planes gratis (casa de amigos, parque, ciclos abiertos). Una salida menos por mes ya pesa.',
       impact: `+${formatArs(save)}/mes`,
     });
