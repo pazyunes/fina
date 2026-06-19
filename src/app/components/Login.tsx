@@ -143,7 +143,7 @@ export function Login() {
 
           {mode === 'signup' && (
             <div>
-              <Label htmlFor="phone" className="text-gray-700 text-sm">Teléfono (opcional)</Label>
+              <Label htmlFor="phone" className="text-gray-700 text-sm">Teléfono</Label>
               <div className="mt-1 flex items-stretch rounded-xl border border-gray-200 focus-within:border-[#7626B3] overflow-hidden bg-white">
                 <span className="px-3 flex items-center text-sm text-gray-600 bg-gray-50 border-r border-gray-200 select-none">
                   +54
