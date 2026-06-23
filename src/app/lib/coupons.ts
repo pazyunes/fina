@@ -19,7 +19,7 @@ export const COUPONS: Coupon[] = [
     brand: 'Nutriveg',
     discount: '15%',
     code: 'FINA15',
-    url: 'https://nutriveg.com.ar/',
+    url: 'https://nutriveg.mitiendanube.com/',
     message:
       'Comprá productos saludables y veganos en Nutriveg con 15% de descuento usando el código FINA15 en el checkout.',
     color: '#3B6D11',
