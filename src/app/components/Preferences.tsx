@@ -88,10 +88,11 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
     .filter((c) => paysCategory(c.value, initial ?? {}))
     .sort((a, b) => monthlyOf(b.value, initial ?? {}) - monthlyOf(a.value, initial ?? {}));
 
-  // Disposición a recortar por categoría: 1 (no estoy dispuesta) … 5 (re dispuesta).
-  // Arranca en 3 (neutral) para cada categoría que paga.
+  // Disposición a ajustar por categoría: 1 (no estoy dispuesta) … 4 (re dispuesta).
+  // Arranca en 1 a propósito: que la usuaria suba activamente lo que sí ajustaría
+  // (si arrancara en un valor cómodo, por fiaca dejaría todo como está).
   const [willingness, setWillingness] = useState<Record<string, number>>(() =>
-    Object.fromEntries(available.map((c) => [c.value, 2]))
+    Object.fromEntries(available.map((c) => [c.value, 1]))
   );
   const setWill = (slug: string, n: number) =>
     setWillingness((prev) => ({ ...prev, [slug]: n }));
