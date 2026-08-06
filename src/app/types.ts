@@ -148,6 +148,8 @@ export interface UserData {
   knowsLastMonthExpenses: boolean;
   saves: boolean;
   invests: boolean;
+  savingsAmount?: number;   // cuánto tiene ahorrado (ARS) — solo si saves
+  investedAmount?: number;  // cuánto tiene invertido (ARS) — solo si invests
 
   // Exchange rate snapshot used for any USD amounts in this flow
   exchangeRate?: ExchangeRate | null;

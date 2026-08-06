@@ -35,6 +35,7 @@ const REPORT_FAMILY = [
   '/editar/gastos-fijos',
   '/editar/gastos-variables',
   '/editar/objetivos',
+  '/editar/finanzas',
 ];
 
 export function OnboardingGate({ children }: { children: ReactNode }) {

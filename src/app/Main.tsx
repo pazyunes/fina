@@ -220,7 +220,7 @@ export function Main() {
     setUserData(prev => ({ ...prev, ...data }));
   };
 
-  const handleHabits = (data: { knowsLastMonthExpenses: boolean; saves: boolean; invests: boolean }) => {
+  const handleHabits = (data: { knowsLastMonthExpenses: boolean; saves: boolean; invests: boolean; savingsAmount?: number; investedAmount?: number }) => {
     setUserData(prev => ({ ...prev, ...data }));
   };
 
@@ -398,6 +398,17 @@ export function Main() {
     case '/editar/objetivos':
       return (
         <Goals
+          initial={userData}
+          editMode
+          onComplete={async (data) => {
+            const merged: UserData = { ...(userData as UserData), ...data };
+            await persistEdit(merged);
+          }}
+        />
+      );
+    case '/editar/finanzas':
+      return (
+        <Habits
           initial={userData}
           editMode
           onComplete={async (data) => {
