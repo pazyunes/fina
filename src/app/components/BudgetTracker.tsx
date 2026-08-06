@@ -16,26 +16,30 @@ interface Cat {
   budget: number;
 }
 
+// Gastos VARIABLES: los que se registran por el bot de WhatsApp y se muestran
+// como barras en el informe (arrancan llenas y se descuentan con cada gasto).
+// El resto (vivienda, salud, gimnasio, suscripciones, cuotas) son FIJOS: se
+// descuentan del disponible el día que entra la plata y NO se trackean acá.
+const VARIABLE_CATS = new Set<BudgetCat>([
+  'entertainment', 'delivery', 'cafeterias', 'restaurants', 'supermarket',
+  'beauty', 'therapy', 'transport',
+]);
+
 // Tope mensual estimado por categoría, a partir del onboarding.
 function budgetsFrom(analysis: FinancialAnalysis): Cat[] {
   const u = analysis.userData;
   const e = u.expenses;
   const m = (f?: number, a?: number) => Math.round((f || 0) * (a || 0) * 4.33);
-  const subs = (u.subscriptions ?? []).reduce((s, x) => s + (x.cost || 0), 0);
   return [
     { key: 'entertainment', label: 'Entretenimiento', emoji: '🎉', budget: m(u.entertainmentFrequency, u.entertainmentAmount) },
     { key: 'delivery',      label: 'Delivery',        emoji: '🍔', budget: m(u.deliveryFrequency, u.deliveryAmount) },
     { key: 'cafeterias',    label: 'Cafetería',       emoji: '☕', budget: m(u.cafeteriasFrequency, u.cafeteriasAmount) },
     { key: 'restaurants',   label: 'Restaurantes',    emoji: '🍽️', budget: m(u.restaurantsFrequency, u.restaurantsAmount) },
     { key: 'supermarket',   label: 'Supermercado',    emoji: '🛒', budget: m(u.supermarketFrequency, u.supermarketAmount) },
-    { key: 'housing',       label: 'Vivienda',        emoji: '🏠', budget: e?.housing || 0 },
-    { key: 'health',        label: 'Salud',           emoji: '🩺', budget: e?.health || 0 },
     { key: 'beauty',        label: 'Belleza',         emoji: '💄', budget: e?.beauty || 0 },
     { key: 'therapy',       label: 'Terapia',         emoji: '🧠', budget: e?.therapy || 0 },
-    { key: 'gym',           label: 'Gimnasio',        emoji: '💪', budget: e?.gym || 0 },
     { key: 'transport',     label: 'Transporte',      emoji: '🚌', budget: e?.transport || 0 },
-    { key: 'subscriptions', label: 'Suscripciones',   emoji: '📺', budget: subs },
-  ].filter((c) => c.budget > 0);
+  ].filter((c) => VARIABLE_CATS.has(c.key) && c.budget > 0);
 }
 
 // Categorías "por visita": tienen ticket promedio y unidad para decir
