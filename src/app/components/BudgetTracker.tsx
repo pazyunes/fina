@@ -141,10 +141,11 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
           const budget = budgetOf(c);
           const remaining = Math.max(budget - spent, 0);
           const ratio = budget > 0 ? remaining / budget : 0;
-          // La barra ahora se LLENA con el gasto real (bot) desde la izquierda.
-          const spentPct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
-          // Tramo de referencia (violeta clarito) pegado a la derecha: ≈ lo que
-          // se hubiese gastado hasta el día del onboarding. No descuenta.
+          // La barra ARRANCA LLENA (violeta oscuro = te queda) y baja con el
+          // gasto real del bot.
+          const remainingPct = budget > 0 ? Math.min((remaining / budget) * 100, 100) : 0;
+          // Tramo de referencia (violeta clarito) FIJO a la derecha: ≈ lo que se
+          // hubiese gastado hasta el día del onboarding. No descuenta; queda ahí.
           const refPct = budget > 0 ? Math.min((referenceOf(c) / budget) * 100, 100) : 0;
           const color = spent > budget ? '#D85A30' : ratio <= 0.2 ? '#D85A30' : ratio <= 0.4 ? '#B8860B' : '#7626B3';
           const v = VISIT[c.key];
@@ -162,10 +163,12 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
                 </span>
               </div>
               <div className="relative h-2.5 rounded-full bg-[#F0E7FA] overflow-hidden">
+                {/* Te queda (violeta oscuro), desde la izquierda: baja con el bot. */}
+                <div className="absolute left-0 top-0 h-full transition-all" style={{ width: `${remainingPct}%`, background: color }} />
+                {/* Referencia (violeta clarito), fija a la derecha, por encima. */}
                 {refPct > 0 && (
                   <div className="absolute right-0 top-0 h-full bg-[#C6A6E6]" style={{ width: `${refPct}%` }} />
                 )}
-                <div className="absolute left-0 top-0 h-full transition-all" style={{ width: `${spentPct}%`, background: color }} />
               </div>
               {nLeft !== null && !over && (
                 <p className="text-xs text-gray-400 mt-0.5">
