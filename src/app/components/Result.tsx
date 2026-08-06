@@ -13,6 +13,7 @@ import { MonthEndReview } from './MonthEndReview';
 import { WHATSAPP_URL } from './WhatsAppFab';
 import { OpenBankAccountBox } from './OpenBankAccountBox';
 import { BudgetTracker } from './BudgetTracker';
+import { ReserveControl } from './ReserveControl';
 import { IncomeResetControl } from './IncomeResetControl';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
@@ -160,6 +161,14 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
     if (next) onAnalysisChange?.(next, newUserData);
   };
 
+  // Reserva general: plata que la usuaria aparta del disponible.
+  const reserve = analysis.userData.reserveArs ?? 0;
+  const saveReserve = async (reserveArs: number) => {
+    const newUserData: UserData = { ...analysis.userData, reserveArs };
+    const { analysis: next } = await updateReportData(newUserData);
+    if (next) onAnalysisChange?.(next, newUserData);
+  };
+
   return (
     <div className="min-h-screen bg-white pb-24 lg:pb-8 lg:pl-56 flex flex-col">
       <Sidebar />
@@ -231,6 +240,11 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
             <KpiTile label="Ingresos" value={fmtKpi(analysis.totalIncome)} color="#3B6D11" />
             <KpiTile label="Gastos" value={fmtKpi(analysis.totalExpenses)} color="#D85A30" />
           </div>
+
+          {/* RESERVA GENERAL — apartar plata del disponible; el bot avisa si se toca. */}
+          {onAnalysisChange && (
+            <ReserveControl reserve={reserve} available={availableNow} onSave={saveReserve} />
+          )}
 
           {/* PRESUPUESTO POR CATEGORÍA — tope del onboarding, se llena con los
               egresos del chatbot (tabla transactions) */}

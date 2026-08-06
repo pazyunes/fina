@@ -56,6 +56,10 @@ export interface UserData {
   // mezcla → 'both').
   incomeSources?: Array<{ label: string; amount: number; currency: Currency; ars: number; kind: 'fixed' | 'variable' }>;
 
+  // Reserva general (ARS): plata que la usuaria decide apartar de su disponible.
+  // No está atada a objetivos; el bot avisa si los gastos se comen la reserva.
+  reserveArs?: number;
+
   // Detalle del ingreso freelance (PR4) — 3 últimos meses, mes1 = más reciente.
   // El exchange_rate_id se reusa del snapshot global del informe (userData.exchangeRate.id).
   freelanceIncome?: {
