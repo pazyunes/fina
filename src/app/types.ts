@@ -177,8 +177,9 @@ export interface UserData {
     // Desglose opcional dentro de un mismo objetivo (ej. viaje = pasajes +
     // presupuesto). Montos en ARS; la suma = amount.
     parts?: Array<{ label: string; amount: number }>;
-    // Aportes registrados manualmente hacia este objetivo (progreso).
-    contributions?: Array<{ amount: number; date: string }>; // date ISO
+    // Aportes hacia este objetivo (progreso — llenan el donut). Cada uno es
+    // plata ya pagada ('paid', ej. el pasaje) o ya separada/ahorrada ('saved').
+    contributions?: Array<{ amount: number; date: string; kind?: 'paid' | 'saved'; label?: string }>; // date ISO
   }>;
 }
 

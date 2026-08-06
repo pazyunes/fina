@@ -24,6 +24,8 @@ interface GoalItem {
   currency: Currency;
   // Desglose opcional (ej. viaje = pasajes + presupuesto). Montos en ARS.
   parts?: Array<{ label: string; amount: number }>;
+  // Progreso inicial (llena el donut). Montos en ARS.
+  contributions?: Array<{ amount: number; date: string; kind?: 'paid' | 'saved'; label?: string }>;
 }
 
 interface GoalsProps {
@@ -113,6 +115,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
       timeframe: String(goal.timeframe),
       currency: goal.currency ?? 'ARS',
       parts: goal.parts,
+      contributions: goal.contributions,
     }))
   );
   const [currentGoal, setCurrentGoal] = useState<GoalItem>({
@@ -210,6 +213,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
         currency: goal.currency,
         originalAmount: typed,
         parts: goal.parts, // ya en ARS
+        contributions: goal.contributions, // ya en ARS
       };
     });
 

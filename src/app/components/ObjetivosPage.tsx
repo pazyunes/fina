@@ -13,6 +13,7 @@ import { TopRightUser } from './TopRightUser';
 import { WhatsAppFab } from './WhatsAppFab';
 import { AddGoalModal } from './AddGoalModal';
 import { StrategyContributionModal } from './StrategyContributionModal';
+import { GoalEditModal } from './GoalEditModal';
 
 interface ObjetivosPageProps {
   analysis: FinancialAnalysis;
@@ -60,6 +61,8 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Objetivo abierto para editar/sumar aportes (índice en specificGoals).
+  const [editGoalIndex, setEditGoalIndex] = useState<number | null>(null);
   // Estrategia tildada (abre el modal "¿cuánto ahorraste?") + set de las ya
   // confirmadas (control visual del tilde).
   const [contribStrategy, setContribStrategy] = useState<{ strategy: GoalStrategy; index: number } | null>(null);
@@ -100,6 +103,22 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
     setSavingGoal(false);
     if (error || !nextAnalysis) {
       setErrorMsg(error ?? 'No se pudo guardar el objetivo.');
+      return;
+    }
+    onAnalysisChange?.(nextAnalysis, newUserData);
+  };
+
+  // Guardar los aportes editados de un objetivo (llena el donut) y persistir.
+  const handleSaveContributions = async (index: number, contributions: Array<{ amount: number; date: string; kind?: 'paid' | 'saved'; label?: string }>) => {
+    const newUserData: UserData = {
+      ...analysis.userData,
+      specificGoals: (analysis.userData.specificGoals ?? []).map((g, i) =>
+        i === index ? { ...g, contributions } : g
+      ),
+    };
+    const { error, analysis: nextAnalysis } = await updateReportData(newUserData);
+    if (error || !nextAnalysis) {
+      setErrorMsg(error ?? 'No se pudieron guardar los aportes.');
       return;
     }
     onAnalysisChange?.(nextAnalysis, newUserData);
@@ -183,7 +202,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           ) : (
             <div className="space-y-3">
               {goals.map((g, i) => (
-                <GoalCard key={i} goal={g} saved={savedFor(i)} parts={specificGoals[i]?.parts} />
+                <GoalCard key={i} goal={g} saved={savedFor(i)} parts={specificGoals[i]?.parts} onClick={() => setEditGoalIndex(i)} />
               ))}
             </div>
           )}
@@ -263,6 +282,16 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           onConfirm={handleStrategyContribution}
         />
       )}
+
+      {editGoalIndex !== null && specificGoals[editGoalIndex] && (
+        <GoalEditModal
+          title={specificGoals[editGoalIndex].title}
+          amount={specificGoals[editGoalIndex].amount}
+          initialContributions={specificGoals[editGoalIndex].contributions ?? []}
+          onClose={() => setEditGoalIndex(null)}
+          onSave={(contribs) => handleSaveContributions(editGoalIndex, contribs)}
+        />
+      )}
     </div>
   );
 }
@@ -273,10 +302,12 @@ function GoalCard({
   goal,
   saved,
   parts,
+  onClick,
 }: {
   goal: FinancialAnalysis['goalsAnalysis'][number];
   saved: number;
   parts?: Array<{ label: string; amount: number }>;
+  onClick?: () => void;
 }) {
   const { fmt } = useMoney();
 
@@ -285,7 +316,10 @@ function GoalCard({
   const done = saved >= goal.amount && goal.amount > 0;
 
   return (
-    <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm space-y-3">
+    <div
+      onClick={onClick}
+      className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm space-y-3 cursor-pointer hover:border-[#7626B3] transition-colors"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-base font-medium truncate">

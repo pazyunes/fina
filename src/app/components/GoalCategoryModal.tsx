@@ -36,6 +36,8 @@ export type GoalDraft = {
   currency: Currency;
   // Desglose opcional (ej. viaje = pasajes + presupuesto). Montos en ARS.
   parts?: Array<{ label: string; amount: number }>;
+  // Progreso inicial (llena el donut): lo que ya pagó / ya separó al crearlo.
+  contributions?: Array<{ amount: number; date: string; kind: 'paid' | 'saved'; label?: string }>;
 };
 
 const fmtInput = (v: string) => {
@@ -70,6 +72,11 @@ export function GoalCategoryModal({
   const [timeframe, setTimeframe] = useState('');
   const [asap, setAsap] = useState(false);
   const [currency, setCurrency] = useState<Currency>('ARS');
+  // Progreso inicial (llena el donut).
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
+  const [paidWhat, setPaidWhat] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
+  const [savedAmount, setSavedAmount] = useState('');
 
   const canAsap = monthlyForGoals > 0;
   const toArs = (digits: number) => (currency === 'USD' ? (usdRate ? arsFromUsd(digits, usdRate) : 0) : digits);
@@ -122,6 +129,16 @@ export function GoalCategoryModal({
       const title = config.askWhat ? (what.trim() || config.defaultTitle || category) : (config.defaultTitle || category);
       goals.push({ title, amount, timeframe: tf, currency });
     }
+
+    // Progreso inicial (llena el donut): lo ya pagado + lo ya separado. En ARS.
+    const initialContribs: NonNullable<GoalDraft['contributions']> = [];
+    const paid = toArs(digitsOf(paidAmount));
+    const saved = toArs(digitsOf(savedAmount));
+    const now = new Date().toISOString();
+    if (alreadyPaid && paid > 0) initialContribs.push({ amount: paid, date: now, kind: 'paid', label: paidWhat.trim() || 'Pago' });
+    if (saved > 0) initialContribs.push({ amount: saved, date: now, kind: 'saved', label: 'Ya separado' });
+    if (initialContribs.length > 0 && goals[0]) goals[0].contributions = initialContribs;
+
     onConfirmGoals(goals);
     onClose();
   };
@@ -245,6 +262,31 @@ export function GoalCategoryModal({
                   : ` Es más que tu disponible (~${formatArs(monthlyForGoals)}/mes); quizás necesites más tiempo.`)}
               </div>
             )}
+
+            {/* Progreso inicial: ya pagué / ya separé (llena el donut). */}
+            <div className="border-t border-gray-100 pt-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-gray-700 text-sm">¿Ya pagaste algo de esto?</Label>
+                <Switch checked={alreadyPaid} onCheckedChange={setAlreadyPaid} className="data-[state=checked]:bg-[#7626B3]" />
+              </div>
+              {alreadyPaid && (
+                <div className="space-y-2">
+                  <Input type="text" value={paidWhat} onChange={(e) => setPaidWhat(e.target.value)} placeholder="¿Qué pagaste? Ej: pasajes" className="rounded-xl" />
+                  <div className="relative">
+                    <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>{currency === 'USD' ? 'USD' : '$'}</span>
+                    <Input type="text" inputMode="numeric" pattern="[0-9]*" value={paidAmount} onChange={(e) => setPaidAmount(fmtInput(e.target.value))} placeholder="¿Cuánto?" className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`} />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-gray-700 text-sm">¿Ya separaste plata para esto? (opcional)</Label>
+                <div className="relative mt-2">
+                  <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>{currency === 'USD' ? 'USD' : '$'}</span>
+                  <Input type="text" inputMode="numeric" pattern="[0-9]*" value={savedAmount} onChange={(e) => setSavedAmount(fmtInput(e.target.value))} placeholder="¿Cuánto tenés separado?" className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`} />
+                </div>
+              </div>
+            </div>
 
             <Button onClick={handleSave} disabled={!canSave} className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-xl gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
               <Check className="w-4 h-4" /> Guardar objetivo
