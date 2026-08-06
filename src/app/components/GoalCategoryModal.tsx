@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Check, TrendingUp } from 'lucide-react';
+import { X, Check, TrendingUp, Plus } from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Button } from './ui/button';
@@ -72,10 +72,13 @@ export function GoalCategoryModal({
   const [timeframe, setTimeframe] = useState('');
   const [asap, setAsap] = useState(false);
   const [currency, setCurrency] = useState<Currency>('ARS');
-  // Progreso inicial (llena el donut).
+  // Progreso inicial (llena el donut). "ya pagué" admite varios ítems.
   const [alreadyPaid, setAlreadyPaid] = useState(false);
-  const [paidWhat, setPaidWhat] = useState('');
-  const [paidAmount, setPaidAmount] = useState('');
+  const [paidItems, setPaidItems] = useState<Array<{ what: string; amount: string }>>([{ what: '', amount: '' }]);
+  const addPaid = () => setPaidItems((p) => [...p, { what: '', amount: '' }]);
+  const updatePaid = (i: number, patch: Partial<{ what: string; amount: string }>) =>
+    setPaidItems((p) => p.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const removePaid = (i: number) => setPaidItems((p) => (p.length <= 1 ? p : p.filter((_, idx) => idx !== i)));
   const [savedAmount, setSavedAmount] = useState('');
 
   const canAsap = monthlyForGoals > 0;
@@ -130,12 +133,16 @@ export function GoalCategoryModal({
       goals.push({ title, amount, timeframe: tf, currency });
     }
 
-    // Progreso inicial (llena el donut): lo ya pagado + lo ya separado. En ARS.
+    // Progreso inicial (llena el donut): lo ya pagado (varios) + lo ya separado. En ARS.
     const initialContribs: NonNullable<GoalDraft['contributions']> = [];
-    const paid = toArs(digitsOf(paidAmount));
-    const saved = toArs(digitsOf(savedAmount));
     const now = new Date().toISOString();
-    if (alreadyPaid && paid > 0) initialContribs.push({ amount: paid, date: now, kind: 'paid', label: paidWhat.trim() || 'Pago' });
+    if (alreadyPaid) {
+      paidItems.forEach((it) => {
+        const a = toArs(digitsOf(it.amount));
+        if (a > 0) initialContribs.push({ amount: a, date: now, kind: 'paid', label: it.what.trim() || 'Pago' });
+      });
+    }
+    const saved = toArs(digitsOf(savedAmount));
     if (saved > 0) initialContribs.push({ amount: saved, date: now, kind: 'saved', label: 'Ya separado' });
     if (initialContribs.length > 0 && goals[0]) goals[0].contributions = initialContribs;
 
@@ -270,12 +277,24 @@ export function GoalCategoryModal({
                 <Switch checked={alreadyPaid} onCheckedChange={setAlreadyPaid} className="data-[state=checked]:bg-[#7626B3]" />
               </div>
               {alreadyPaid && (
-                <div className="space-y-2">
-                  <Input type="text" value={paidWhat} onChange={(e) => setPaidWhat(e.target.value)} placeholder="¿Qué pagaste? Ej: pasajes" className="rounded-xl" />
-                  <div className="relative">
-                    <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>{currency === 'USD' ? 'USD' : '$'}</span>
-                    <Input type="text" inputMode="numeric" pattern="[0-9]*" value={paidAmount} onChange={(e) => setPaidAmount(fmtInput(e.target.value))} placeholder="¿Cuánto?" className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`} />
-                  </div>
+                <div className="space-y-3">
+                  {paidItems.map((it, i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input type="text" value={it.what} onChange={(e) => updatePaid(i, { what: e.target.value })} placeholder="¿Qué pagaste? Ej: pasajes" className="rounded-xl flex-1" />
+                        {paidItems.length > 1 && (
+                          <button type="button" onClick={() => removePaid(i)} aria-label="Quitar pago" className="shrink-0 text-gray-400 hover:text-[#7626B3] p-1"><X className="w-5 h-5" /></button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>{currency === 'USD' ? 'USD' : '$'}</span>
+                        <Input type="text" inputMode="numeric" pattern="[0-9]*" value={it.amount} onChange={(e) => updatePaid(i, { amount: fmtInput(e.target.value) })} placeholder="¿Cuánto?" className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`} />
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" onClick={addPaid} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border-2 border-dashed border-[#7626B3]/40 text-[#7626B3] text-sm font-medium hover:bg-[#F0E7FA]/40 transition-colors">
+                    <Plus className="w-4 h-4" /> Agregar otro pago
+                  </button>
                 </div>
               )}
 

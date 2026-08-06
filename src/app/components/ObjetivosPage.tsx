@@ -92,6 +92,7 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
     timeframe: number;
     currency: 'ARS' | 'USD';
     originalAmount: number;
+    contributions?: Array<{ amount: number; date: string; kind?: 'paid' | 'saved'; label?: string }>;
   }) => {
     setSavingGoal(true);
     setErrorMsg(null);

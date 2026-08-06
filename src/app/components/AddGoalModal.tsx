@@ -21,6 +21,8 @@ interface AddGoalModalProps {
     timeframe: number;    // meses
     currency: Currency;
     originalAmount: number;
+    // Progreso inicial (llena el donut): lo que ya tiene ahorrado. ARS.
+    contributions?: Array<{ amount: number; date: string; kind?: 'paid' | 'saved'; label?: string }>;
   }) => void;
   usdRate?: number | null;
 }
@@ -36,6 +38,7 @@ export function AddGoalModal({ onClose, onAdd, usdRate }: AddGoalModalProps) {
   const [amount, setAmount] = useState('');
   const [timeframe, setTimeframe] = useState('');
   const [currency, setCurrency] = useState<Currency>('ARS');
+  const [saved, setSaved] = useState('');
 
   const typedAmount = parseInt(amount.replace(/\D/g, '')) || 0;
   const months = parseInt(timeframe) || 0;
@@ -43,13 +46,18 @@ export function AddGoalModal({ onClose, onAdd, usdRate }: AddGoalModalProps) {
 
   const handleSave = () => {
     if (!canSave) return;
-    const amountArs = currency === 'USD' && usdRate ? arsFromUsd(typedAmount, usdRate) : typedAmount;
+    const toArs = (n: number) => (currency === 'USD' && usdRate ? arsFromUsd(n, usdRate) : n);
+    const amountArs = toArs(typedAmount);
+    const savedArs = toArs(parseInt(saved.replace(/\D/g, '')) || 0);
     onAdd({
       title: title.trim(),
       amount: amountArs,
       timeframe: months,
       currency,
       originalAmount: typedAmount,
+      contributions: savedArs > 0
+        ? [{ amount: savedArs, date: new Date().toISOString(), kind: 'saved', label: 'Ya ahorrado' }]
+        : undefined,
     });
     onClose();
   };
@@ -126,6 +134,25 @@ export function AddGoalModal({ onClose, onAdd, usdRate }: AddGoalModalProps) {
               placeholder="Ej: 6"
               className="mt-1 rounded-xl"
             />
+          </div>
+
+          <div>
+            <Label htmlFor="goal-saved" className="text-gray-700 text-sm">¿Cuánto ya tenés ahorrado? (opcional)</Label>
+            <div className="relative mt-1">
+              <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>
+                {currency === 'USD' ? 'USD' : '$'}
+              </span>
+              <Input
+                id="goal-saved"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={formatThousands(saved)}
+                onChange={(e) => setSaved(e.target.value.replace(/\D/g, ''))}
+                placeholder="0"
+                className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'}`}
+              />
+            </div>
           </div>
 
           <Button
