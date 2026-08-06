@@ -6,8 +6,10 @@ import { Input } from './ui/input';
 import { BackButton } from './BackButton';
 import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
+import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
-import { UserData } from '../types';
+import { arsFromUsd, formatArs } from '../lib/currency';
+import { Currency, UserData } from '../types';
 
 interface HabitsProps {
   initial?: Partial<UserData>;
@@ -18,45 +20,70 @@ interface HabitsProps {
     knowsLastMonthExpenses: boolean;
     saves: boolean;
     invests: boolean;
-    savingsAmount?: number;   // cuánto tiene ahorrado (ARS)
-    investedAmount?: number;  // cuánto tiene invertido (ARS)
+    savingsAmount?: number;
+    savingsCurrency?: Currency;
+    savingsOriginalAmount?: number;
+    investedAmount?: number;
+    investedCurrency?: Currency;
+    investedOriginalAmount?: number;
   }) => void;
 }
 
 const fmtMoney = (v: string) => {
   const n = v.replace(/\D/g, '').replace(/^0+/, '');
-  return n ? `$${n.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}` : '';
+  return n ? n.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
 };
 
 export function Habits({ initial, onComplete, editMode }: HabitsProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const usdRate = initial?.exchangeRate?.rate ?? null;
+
   const [habits, setHabits] = useState({
     knowsLastMonthExpenses: initial?.knowsLastMonthExpenses ?? null as boolean | null,
     saves: initial?.saves ?? null as boolean | null,
     invests: initial?.invests ?? null as boolean | null,
   });
-  const [savingsAmount, setSavingsAmount] = useState(initial?.savingsAmount ? String(initial.savingsAmount) : '');
-  const [investedAmount, setInvestedAmount] = useState(initial?.investedAmount ? String(initial.investedAmount) : '');
+
+  // Ahorro e inversión: monto (string) + moneda. Se muestra el original si se
+  // cargó en USD; el ARS convertido se calcula al guardar.
+  const [savingsCurrency, setSavingsCurrency] = useState<Currency>(initial?.savingsCurrency ?? 'ARS');
+  const [savingsInput, setSavingsInput] = useState(() =>
+    initial?.savingsCurrency === 'USD'
+      ? (initial?.savingsOriginalAmount ? String(initial.savingsOriginalAmount) : '')
+      : (initial?.savingsAmount ? String(initial.savingsAmount) : '')
+  );
+  const [investedCurrency, setInvestedCurrency] = useState<Currency>(initial?.investedCurrency ?? 'ARS');
+  const [investedInput, setInvestedInput] = useState(() =>
+    initial?.investedCurrency === 'USD'
+      ? (initial?.investedOriginalAmount ? String(initial.investedOriginalAmount) : '')
+      : (initial?.investedAmount ? String(initial.investedAmount) : '')
+  );
+
+  const toArs = (digits: number, cur: Currency) => (cur === 'USD' ? (usdRate ? arsFromUsd(digits, usdRate) : 0) : digits);
 
   const isComplete = habits.knowsLastMonthExpenses !== null &&
                      habits.saves !== null &&
                      habits.invests !== null;
 
-  // Commit parcial (solo lo respondido) para no perder respuestas al volver.
   const commit = () => {
-    const data: Record<string, boolean | number> = {};
+    const data: Record<string, unknown> = {};
     if (habits.knowsLastMonthExpenses !== null) data.knowsLastMonthExpenses = habits.knowsLastMonthExpenses;
     if (habits.saves !== null) {
       data.saves = habits.saves;
-      // Si ahorra, guardamos el monto; si no, lo dejamos en 0.
-      data.savingsAmount = habits.saves ? (parseInt(savingsAmount.replace(/\D/g, '')) || 0) : 0;
+      const d = habits.saves ? (parseInt(savingsInput.replace(/\D/g, '')) || 0) : 0;
+      data.savingsAmount = toArs(d, savingsCurrency);
+      data.savingsCurrency = savingsCurrency;
+      data.savingsOriginalAmount = d;
     }
     if (habits.invests !== null) {
       data.invests = habits.invests;
-      data.investedAmount = habits.invests ? (parseInt(investedAmount.replace(/\D/g, '')) || 0) : 0;
+      const d = habits.invests ? (parseInt(investedInput.replace(/\D/g, '')) || 0) : 0;
+      data.investedAmount = toArs(d, investedCurrency);
+      data.investedCurrency = investedCurrency;
+      data.investedOriginalAmount = d;
     }
-    onComplete(data as { knowsLastMonthExpenses: boolean; saves: boolean; invests: boolean; savingsAmount?: number; investedAmount?: number });
+    onComplete(data as Parameters<HabitsProps['onComplete']>[0]);
   };
   const handleSubmit = () => {
     if (isComplete) {
@@ -65,10 +92,46 @@ export function Habits({ initial, onComplete, editMode }: HabitsProps) {
     }
   };
 
-  const QUESTIONS: Array<{ key: 'knowsLastMonthExpenses' | 'saves' | 'invests'; text: string; amountLabel?: string; amountValue?: string; setAmount?: (v: string) => void }> = [
+  // Campo de monto con toggle de moneda (ahorro / inversión).
+  const renderAmount = (
+    label: string,
+    input: string,
+    setInput: (v: string) => void,
+    currency: Currency,
+    setCurrency: (c: Currency) => void,
+  ) => {
+    const digits = parseInt(input.replace(/\D/g, '')) || 0;
+    return (
+      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3">
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm text-gray-600">{label}</label>
+          <CurrencyToggle value={currency} usdEnabled={!!usdRate} onChange={setCurrency} />
+        </div>
+        <div className="relative">
+          <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>
+            {currency === 'USD' ? 'USD' : '$'}
+          </span>
+          <Input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={fmtMoney(input)}
+            onChange={(e) => setInput(e.target.value.replace(/\D/g, ''))}
+            placeholder="0"
+            className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`}
+          />
+        </div>
+        {currency === 'USD' && digits > 0 && usdRate && (
+          <p className="text-xs text-gray-500 mt-1">≈ {formatArs(arsFromUsd(digits, usdRate))} al cambio del día</p>
+        )}
+      </motion.div>
+    );
+  };
+
+  const QUESTIONS: Array<{ key: 'knowsLastMonthExpenses' | 'saves' | 'invests'; text: string }> = [
     { key: 'knowsLastMonthExpenses', text: '¿Sabés cuánto gastaste el mes pasado?' },
-    { key: 'saves', text: '¿Ahorrás regularmente?', amountLabel: '¿Cuánto tenés ahorrado?', amountValue: savingsAmount, setAmount: setSavingsAmount },
-    { key: 'invests', text: '¿Invertís tu dinero?', amountLabel: '¿Cuánto tenés invertido?', amountValue: investedAmount, setAmount: setInvestedAmount },
+    { key: 'saves', text: '¿Ahorrás regularmente?' },
+    { key: 'invests', text: '¿Invertís tu dinero?' },
   ];
 
   return (
@@ -95,7 +158,7 @@ export function Habits({ initial, onComplete, editMode }: HabitsProps) {
           </div>
 
           <div className="space-y-6">
-            {QUESTIONS.map(({ key, text, amountLabel, amountValue, setAmount }) => (
+            {QUESTIONS.map(({ key, text }) => (
               <div key={key}>
                 <p className="text-lg mb-3 text-gray-700">{text}</p>
                 <div className="flex gap-3">
@@ -121,21 +184,10 @@ export function Habits({ initial, onComplete, editMode }: HabitsProps) {
                   </button>
                 </div>
 
-                {/* Monto: aparece si respondió "Sí" (solo ahorro/inversión). */}
-                {amountLabel && habits[key] === true && setAmount && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3">
-                    <label className="block text-sm text-gray-600 mb-2">{amountLabel}</label>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={fmtMoney(amountValue ?? '')}
-                      onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
-                      placeholder="$0"
-                      className={`rounded-xl ${AMOUNT_FIELD_CLASS}`}
-                    />
-                  </motion.div>
-                )}
+                {key === 'saves' && habits.saves === true &&
+                  renderAmount('¿Cuánto tenés ahorrado?', savingsInput, setSavingsInput, savingsCurrency, setSavingsCurrency)}
+                {key === 'invests' && habits.invests === true &&
+                  renderAmount('¿Cuánto tenés invertido?', investedInput, setInvestedInput, investedCurrency, setInvestedCurrency)}
               </div>
             ))}
           </div>

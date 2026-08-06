@@ -149,7 +149,11 @@ export interface UserData {
   saves: boolean;
   invests: boolean;
   savingsAmount?: number;   // cuánto tiene ahorrado (ARS) — solo si saves
+  savingsCurrency?: Currency;
+  savingsOriginalAmount?: number;  // monto original (USD si savingsCurrency === 'USD')
   investedAmount?: number;  // cuánto tiene invertido (ARS) — solo si invests
+  investedCurrency?: Currency;
+  investedOriginalAmount?: number;
 
   // Exchange rate snapshot used for any USD amounts in this flow
   exchangeRate?: ExchangeRate | null;

@@ -220,7 +220,7 @@ export function Main() {
     setUserData(prev => ({ ...prev, ...data }));
   };
 
-  const handleHabits = (data: { knowsLastMonthExpenses: boolean; saves: boolean; invests: boolean; savingsAmount?: number; investedAmount?: number }) => {
+  const handleHabits = (data: { knowsLastMonthExpenses: boolean; saves: boolean; invests: boolean; savingsAmount?: number; savingsCurrency?: 'ARS' | 'USD'; savingsOriginalAmount?: number; investedAmount?: number; investedCurrency?: 'ARS' | 'USD'; investedOriginalAmount?: number }) => {
     setUserData(prev => ({ ...prev, ...data }));
   };
 
