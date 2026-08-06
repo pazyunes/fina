@@ -18,6 +18,7 @@ import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
 import { WhatsAppFab } from './WhatsAppFab';
+import { FeedbackTrigger } from './FeedbackModal';
 
 interface ResultProps {
   analysis: FinancialAnalysis;
@@ -455,6 +456,13 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
       </motion.div>
 
       <BottomNav />
+
+      <FeedbackTrigger
+        context="onboarding"
+        title="¡Terminaste tu perfil! 💜"
+        question="¿Qué te pareció armar tu perfil y ver tu informe? ¿Fue fácil de completar?"
+        delayMs={9000}
+      />
     </div>
   );
 }

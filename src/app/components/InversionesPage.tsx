@@ -10,6 +10,7 @@ import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
 import { WhatsAppFab } from './WhatsAppFab';
 import { InvestmentGuideScreen } from './InvestmentGuideScreen';
+import { FeedbackTrigger } from './FeedbackModal';
 import { resolveInvestmentGuide, InvestmentGuide } from '../lib/investmentGuides';
 
 interface InversionesPageProps {
@@ -213,6 +214,11 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
       {activeGuide && (
         <InvestmentGuideScreen guide={activeGuide} onClose={() => setActiveGuide(null)} />
       )}
+
+      <FeedbackTrigger
+        context="inversiones"
+        question="¿Qué te pareció la sección de Inversiones? ¿Te quedó claro por dónde empezar?"
+      />
     </div>
   );
 }
