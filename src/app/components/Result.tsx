@@ -237,8 +237,8 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
                   : 'Este mes tus gastos se comieron todo 😬'}
               </p>
             </div>
-            <KpiTile label="Ingresos" value={fmtKpi(analysis.totalIncome)} color="#3B6D11" />
-            <KpiTile label="Gastos" value={fmtKpi(analysis.totalExpenses)} color="#D85A30" />
+            <KpiTile label="Ingresos" value={fmtKpi(analysis.totalIncome)} color="#3B6D11" onClick={() => navigate('/editar/ingresos')} />
+            <KpiTile label="Gastos" value={fmtKpi(analysis.totalExpenses)} color="#D85A30" onClick={() => navigate('/editar/gastos-fijos')} />
           </div>
 
           {/* RESERVA GENERAL — apartar plata del disponible; el bot avisa si se toca. */}
@@ -480,9 +480,13 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
   );
 }
 
-function KpiTile({ label, value, color }: { label: string; value: string; color: string }) {
+function KpiTile({ label, value, color, onClick }: { label: string; value: string; color: string; onClick?: () => void }) {
   return (
-    <div className="bg-white rounded-xl px-2 py-3 lg:py-4 border border-[#D7C2EF]/70 shadow-sm text-center">
+    <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      className={`bg-white rounded-xl px-2 py-3 lg:py-4 border border-[#D7C2EF]/70 shadow-sm text-center ${onClick ? 'cursor-pointer hover:border-[#7626B3] transition-colors' : ''}`}
+    >
       <p className="text-xs lg:text-xs text-gray-500 mb-1 uppercase tracking-wide font-medium">{label}</p>
       <p className="text-lg lg:text-2xl font-bold" style={{ color }}>{value}</p>
     </div>
