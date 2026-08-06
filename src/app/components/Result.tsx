@@ -461,7 +461,6 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
         context="onboarding"
         title="¡Terminaste tu perfil! 💜"
         question="¿Qué te pareció armar tu perfil y ver tu informe? ¿Fue fácil de completar?"
-        delayMs={9000}
       />
     </div>
   );
