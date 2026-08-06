@@ -67,16 +67,21 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
   const cats = budgetsFrom(analysis);
   const spentOf = (k: BudgetCat) => data?.byCategory[k] ?? 0;
 
-  // Prorrateo del primer período: si arrancó el onboarding a mitad de período,
-  // descontamos del tope lo que "ya hubiese gastado" antes (budget/30 * díasPrevios).
+  // El tope SIEMPRE es el total del mes cargado en el onboarding (no se
+  // prorratea). Lo único que descuenta es lo que registra el bot.
+  const budgetOf = (c: Cat) => c.budget;
+
+  // Referencia (solo primer período): si arrancó el onboarding a mitad de mes,
+  // calculamos ≈ lo que se hubiese gastado hasta ese día (budget/30 × díasPrevios).
+  // Se muestra como un tramo violeta-clarito; NO descuenta del "te queda".
   const onboardingDate = u.onboardingDate ? new Date(u.onboardingDate) : null;
-  const proRateFactor = (() => {
+  const referenceFactor = (() => {
     const ps = data?.periodStart;
-    if (!onboardingDate || !ps || onboardingDate < ps) return 1;
+    if (!onboardingDate || !ps || onboardingDate < ps) return 0;
     const daysElapsed = Math.max(0, Math.floor((onboardingDate.getTime() - ps.getTime()) / 86400000));
-    return Math.max(1 - daysElapsed / 30, 0);
+    return Math.min(daysElapsed / 30, 1);
   })();
-  const budgetOf = (c: Cat) => Math.round(c.budget * proRateFactor);
+  const referenceOf = (c: Cat) => Math.round(c.budget * referenceFactor);
 
   // Cantidad de transacciones registradas por categoría (para el ticket real).
   const counts: Partial<Record<BudgetCat, number>> = {};
@@ -136,7 +141,11 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
           const budget = budgetOf(c);
           const remaining = Math.max(budget - spent, 0);
           const ratio = budget > 0 ? remaining / budget : 0;
-          const pct = Math.round(ratio * 100);
+          // La barra ahora se LLENA con el gasto real (bot) desde la izquierda.
+          const spentPct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+          // Tramo de referencia (violeta clarito) pegado a la derecha: ≈ lo que
+          // se hubiese gastado hasta el día del onboarding. No descuenta.
+          const refPct = budget > 0 ? Math.min((referenceOf(c) / budget) * 100, 100) : 0;
           const color = spent > budget ? '#D85A30' : ratio <= 0.2 ? '#D85A30' : ratio <= 0.4 ? '#B8860B' : '#7626B3';
           const v = VISIT[c.key];
           const ticket = ticketOf(c.key);
@@ -149,11 +158,14 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
                   <span className="text-base">{c.emoji}</span>{c.label}
                 </span>
                 <span className={`text-sm font-semibold ${over ? 'text-[#D85A30]' : 'text-gray-800'}`}>
-                  {over ? `te pasaste ${fmt(spent - budget)}` : `te queda ${fmt(remaining)}`}
+                  {over ? `te pasaste ${fmt(spent - budget)}` : `te queda ${fmt(remaining)} de ${fmt(budget)}`}
                 </span>
               </div>
-              <div className="h-2.5 rounded-full bg-[#F0E7FA] overflow-hidden">
-                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+              <div className="relative h-2.5 rounded-full bg-[#F0E7FA] overflow-hidden">
+                {refPct > 0 && (
+                  <div className="absolute right-0 top-0 h-full bg-[#C6A6E6]" style={{ width: `${refPct}%` }} />
+                )}
+                <div className="absolute left-0 top-0 h-full transition-all" style={{ width: `${spentPct}%`, background: color }} />
               </div>
               {nLeft !== null && !over && (
                 <p className="text-xs text-gray-400 mt-0.5">
@@ -164,6 +176,14 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
           );
         })}
       </div>
+
+      {/* Leyenda del tramo de referencia — solo el primer mes (onboarding a mitad de mes). */}
+      {referenceFactor > 0 && (
+        <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+          <span className="inline-block w-3 h-2.5 rounded-full bg-[#C6A6E6] shrink-0" />
+          <span>El tramo clarito es ≈ lo que se hubiese gastado hasta que empezaste. Es solo referencia — no se descuenta, solo baja lo que registrás por el bot.</span>
+        </div>
+      )}
 
       {/* Aviso de exceso */}
       {overCats.length > 0 && (
