@@ -13,7 +13,6 @@ import { TopRightUser } from './TopRightUser';
 import { WhatsAppFab } from './WhatsAppFab';
 import { AddGoalModal } from './AddGoalModal';
 import { StrategyContributionModal } from './StrategyContributionModal';
-import { FeedbackTrigger } from './FeedbackModal';
 
 interface ObjetivosPageProps {
   analysis: FinancialAnalysis;
@@ -264,11 +263,6 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           onConfirm={handleStrategyContribution}
         />
       )}
-
-      <FeedbackTrigger
-        context="objetivos"
-        question="¿Qué te pareció la pantalla de Objetivos? ¿Te ayuda a saber cómo llegar a lo que querés?"
-      />
     </div>
   );
 }

@@ -1,10 +1,23 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Outlet } from "react-router";
 import { Main } from "./Main";
 import { Login } from "./components/Login";
 import { Profile } from "./components/Profile";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RootRedirect } from "./components/RootRedirect";
 import { OnboardingGate } from "./components/OnboardingGate";
+import { FeedbackController } from "./components/FeedbackModal";
+
+// Layout que persiste entre las rutas de onboarding/informe: renderiza la
+// pantalla (Outlet) + el controlador de encuestas, que detecta cuándo salís de
+// una pantalla (Objetivos/Inversiones) y dispara el pop-up.
+function FeedbackLayout() {
+  return (
+    <>
+      <Outlet />
+      <FeedbackController />
+    </>
+  );
+}
 
 export const router = createBrowserRouter([
   {
@@ -27,35 +40,42 @@ export const router = createBrowserRouter([
   // Onboarding + informe: requieren sesión Y, además, OnboardingGate
   // redirige a /result si ya hay informe (excepto la propia /result y
   // /ai-reasoning, que es debug-only). El onboarding es one-shot por PR6.
-  ...[
-    "/personal-data",
-    "/context",
-    "/activity",
-    "/bank",
-    "/expenses-fixed",
-    "/expenses-services",
-    "/habits",
-    "/goals",
-    "/preferencias",
-    "/loading",
-    "/ai-reasoning",
-    "/result",
-    // PR7 — pestañas adicionales del informe (Bottom Nav).
-    "/objetivos",
-    "/inversiones",
-    // PR8 — Edición de datos desde /perfil.
-    "/editar/ingresos",
-    "/editar/gastos-fijos",
-    "/editar/gastos-variables",
-    "/editar/objetivos",
-  ].map((path) => ({
-    path,
+  {
+    // Layout persistente (FeedbackController vive acá y sobrevive a los cambios
+    // de ruta para detectar cuándo salís de Objetivos/Inversiones).
     element: (
       <ProtectedRoute>
+        <FeedbackLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      "/personal-data",
+      "/context",
+      "/activity",
+      "/bank",
+      "/expenses-fixed",
+      "/expenses-services",
+      "/habits",
+      "/goals",
+      "/preferencias",
+      "/loading",
+      "/ai-reasoning",
+      "/result",
+      // PR7 — pestañas adicionales del informe (Bottom Nav).
+      "/objetivos",
+      "/inversiones",
+      // PR8 — Edición de datos desde /perfil.
+      "/editar/ingresos",
+      "/editar/gastos-fijos",
+      "/editar/gastos-variables",
+      "/editar/objetivos",
+    ].map((path) => ({
+      path,
+      element: (
         <OnboardingGate>
           <Main />
         </OnboardingGate>
-      </ProtectedRoute>
-    ),
-  })),
+      ),
+    })),
+  },
 ]);

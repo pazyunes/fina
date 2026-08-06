@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { saveFeedback, hasAnsweredFeedback, markFeedbackAnswered } from '../lib/feedback';
 
@@ -123,4 +124,38 @@ export function FeedbackTrigger({
 
   if (!show) return null;
   return <FeedbackModal context={context} title={title} question={question} onClose={() => setShow(false)} />;
+}
+
+// Pantallas cuyo feedback se pide AL SALIR de ellas. Vive en un layout que
+// persiste entre rutas, así detecta la salida y muestra el pop-up sobre la
+// pantalla siguiente.
+const ON_LEAVE_SCREENS: Record<string, { context: string; question: string }> = {
+  '/objetivos': {
+    context: 'objetivos',
+    question: '¿Qué te pareció la pantalla de Objetivos? ¿Te ayuda a saber cómo llegar a lo que querés?',
+  },
+  '/inversiones': {
+    context: 'inversiones',
+    question: '¿Qué te pareció la sección de Inversiones? ¿Te quedó claro por dónde empezar?',
+  },
+};
+
+export function FeedbackController() {
+  const { pathname } = useLocation();
+  const prev = useRef(pathname);
+  const [active, setActive] = useState<{ context: string; question: string } | null>(null);
+
+  useEffect(() => {
+    const from = prev.current;
+    if (from !== pathname) {
+      const screen = ON_LEAVE_SCREENS[from];
+      if (screen && !hasAnsweredFeedback(screen.context) && !active) {
+        setActive(screen);
+      }
+      prev.current = pathname;
+    }
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!active) return null;
+  return <FeedbackModal context={active.context} question={active.question} onClose={() => setActive(null)} />;
 }
