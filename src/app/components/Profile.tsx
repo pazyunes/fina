@@ -89,9 +89,8 @@ export function Profile() {
   return (
     <div className="min-h-screen bg-white flex flex-col pb-24 lg:pb-8 lg:pl-56">
       <Sidebar />
-      <TopRightUser />
       <WhatsAppFab />
-      <div className="flex-1 flex flex-col p-6 lg:pt-20 max-w-md lg:max-w-4xl mx-auto w-full">
+      <div className="flex-1 flex flex-col p-6 lg:pt-16 max-w-md lg:max-w-xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -112,9 +111,9 @@ export function Profile() {
             </button>
           </div>
 
-          <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+          <div className="space-y-6">
           {/* DATOS PERSONALES */}
-          <div className="mb-6 lg:mb-0">
+          <div>
             <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Datos personales</p>
             <div className="bg-white rounded-2xl shadow-sm p-5">
             <div className="flex items-center gap-4">
@@ -123,7 +122,7 @@ export function Profile() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-semibold text-gray-800 truncate">{profile.name || 'Sin nombre'}</p>
-                <p className="text-sm text-gray-500 break-all">{user?.email}</p>
+                <p className="text-sm text-gray-500 truncate" title={user?.email}>{user?.email}</p>
               </div>
               {!editing && (
                 <button
@@ -253,7 +252,7 @@ export function Profile() {
           </div>
 
           {/* PR8 — Sección de edición de datos del informe */}
-          <div className="mb-6 lg:mb-0">
+          <div>
             <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Mis datos financieros</p>
             <p className="text-sm text-gray-500 mb-3">
               Actualizá lo que cambió y el informe se recalcula al toque.
@@ -264,24 +263,23 @@ export function Profile() {
               <EditRow icon={Coffee} label="Mis gastos variables" to="/editar/gastos-variables" navigate={navigate} />
               <EditRow icon={PiggyBank} label="Ahorro e inversión" to="/editar/finanzas" navigate={navigate} />
               <EditRow icon={Target} label="Mis objetivos" to="/editar/objetivos" navigate={navigate} />
+              <button
+                type="button"
+                onClick={() => { setCouponInitialId(null); setShowCoupons(true); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[#F0E7FA]/40 transition-colors"
+              >
+                <Ticket className="w-5 h-5 text-[#7626B3]" />
+                <span className="flex-1 text-base font-medium text-gray-700">Mis cupones</span>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => { setCouponInitialId(null); setShowCoupons(true); }}
-              className="mt-3 w-full flex items-center gap-3 bg-white rounded-2xl shadow-sm px-4 py-3.5 hover:bg-[#F0E7FA]/40 transition-colors text-left"
-            >
-              <Ticket className="w-5 h-5 text-[#7626B3]" />
-              <span className="flex-1 text-base font-medium text-gray-700">Mis cupones</span>
-              <ChevronRight className="w-4 h-4 text-gray-300" />
-            </button>
           </div>
 
           </div>
 
           <Button
             onClick={() => navigate('/result')}
-            className="w-full lg:w-auto lg:self-start lg:px-10 bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2 lg:mt-6"
+            className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg flex items-center justify-center gap-2 mt-8"
           >
             Volver al informe
           </Button>
