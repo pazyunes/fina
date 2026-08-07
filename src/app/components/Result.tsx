@@ -369,14 +369,14 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={topCategories.map((c) => ({
-                        label: c.label.slice(0, 8),
+                        label: c.label,
                         value: totalCategories > 0 ? Math.round((c.amount / totalCategories) * 100) : 0,
                       }))}
                       layout="vertical"
                       margin={{ top: 5, right: 10, bottom: 5, left: 0 }}
                     >
                       <XAxis type="number" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={72} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={100} axisLine={false} tickLine={false} interval={0} />
                       <Tooltip formatter={(v: number) => `${v}%`} />
                       <Bar dataKey="value" radius={[7, 7, 7, 7]} barSize={14} isAnimationActive={false} fill="#7626B3" />
                     </BarChart>
