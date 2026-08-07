@@ -37,6 +37,10 @@ interface AuthContextValue {
   // user_profiles.phone cuando aparece la sesión (cubre el caso confirmación).
   signUp: (email: string, password: string, phone?: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
+  // Envía el mail de recuperación de contraseña (link → /reset-password).
+  sendPasswordReset: (email: string) => Promise<{ error: string | null }>;
+  // Setea la contraseña nueva (durante la sesión de recovery).
+  updatePassword: (password: string) => Promise<{ error: string | null }>;
   // Actualiza nombre/edad/sexo (metadata) y, si cambió, el email de acceso.
   // emailChangePending: true si el cambio de email espera confirmación.
   updateProfile: (data: Partial<Profile> & { email?: string }) => Promise<{ error: string | null; emailChangePending: boolean }>;
@@ -150,6 +154,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const sendPasswordReset: AuthContextValue['sendPasswordReset'] = async (email) => {
+    const redirectTo = `${window.location.origin}/reset-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    return { error: error?.message ?? null };
+  };
+
+  const updatePassword: AuthContextValue['updatePassword'] = async (password) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    return { error: error?.message ?? null };
+  };
+
   const user = session?.user ?? null;
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const profile: Profile = {
@@ -183,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, hasReport, markHasReport, cachedReport, setCachedReport, signIn, signUp, signOut, updateProfile }}
+      value={{ session, user, profile, loading, hasReport, markHasReport, cachedReport, setCachedReport, signIn, signUp, signOut, sendPasswordReset, updatePassword, updateProfile }}
     >
       {children}
     </AuthContext.Provider>

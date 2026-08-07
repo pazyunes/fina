@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet } from "react-router";
 import { Main } from "./Main";
 import { Login } from "./components/Login";
+import { ResetPassword } from "./components/ResetPassword";
 import { Profile } from "./components/Profile";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RootRedirect } from "./components/RootRedirect";
@@ -28,6 +29,11 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    // Pública: llega desde el link del mail de recuperación (sesión de recovery).
+    path: "/reset-password",
+    element: <ResetPassword />,
   },
   {
     path: "/perfil",

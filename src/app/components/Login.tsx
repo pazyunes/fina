@@ -8,12 +8,12 @@ import { Label } from './ui/label';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
-type Mode = 'signin' | 'signup';
+type Mode = 'signin' | 'signup' | 'forgot';
 
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { session, signIn, signUp } = useAuth();
+  const { session, signIn, signUp, sendPasswordReset } = useAuth();
 
   // Splash pasa state.mode para abrir directo en signin o signup. Si la ruta
   // se carga directo sin state (link compartido), arrancamos en signin.
@@ -52,7 +52,9 @@ export function Login() {
     if (session) navigate('/', { replace: true });
   }, [session]);
 
-  const valid = email.trim() !== '' && password.length >= 6 && phoneValid;
+  const valid = mode === 'forgot'
+    ? email.trim() !== ''
+    : email.trim() !== '' && password.length >= 6 && phoneValid;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +62,14 @@ export function Login() {
     setSubmitting(true);
     setError(null);
     setInfo(null);
+
+    if (mode === 'forgot') {
+      await sendPasswordReset(email);
+      // Por seguridad no revelamos si el email existe.
+      setInfo('Si el email está registrado, te mandamos un link para restablecer tu contraseña. Revisá tu casilla (y el spam).');
+      setSubmitting(false);
+      return;
+    }
 
     if (mode === 'signin') {
       const { error } = await signIn(email, password);
@@ -107,10 +117,12 @@ export function Login() {
             className="text-3xl mb-2 text-[#7626B3]"
             style={{ fontFamily: 'var(--font-serif)' }}
           >
-            {mode === 'signin' ? 'Iniciá sesión' : 'Creá tu cuenta'}
+            {mode === 'signin' ? 'Iniciá sesión' : mode === 'signup' ? 'Creá tu cuenta' : 'Recuperá tu contraseña'}
           </h1>
           <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-            Para ver tu perfil y el historial de tus informes
+            {mode === 'forgot'
+              ? 'Ponés tu email y te mandamos un link para crear una nueva.'
+              : 'Para ver tu perfil y el historial de tus informes'}
           </p>
         </div>
 
@@ -128,18 +140,29 @@ export function Login() {
             />
           </div>
 
-          <div>
-            <Label htmlFor="password" className="text-gray-700 text-sm">Contraseña</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-              className="mt-1 rounded-xl"
-            />
-          </div>
+          {mode !== 'forgot' && (
+            <div>
+              <Label htmlFor="password" className="text-gray-700 text-sm">Contraseña</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                className="mt-1 rounded-xl"
+              />
+              {mode === 'signin' && (
+                <button
+                  type="button"
+                  onClick={() => { setMode('forgot'); setError(null); setInfo(null); }}
+                  className="mt-1.5 text-xs text-[#7626B3] hover:text-[#682690]"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              )}
+            </div>
+          )}
 
           {mode === 'signup' && (
             <div>
@@ -182,18 +205,23 @@ export function Login() {
             disabled={!valid || submitting}
             className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? 'Un momento…' : mode === 'signin' ? 'Iniciar sesión' : 'Crear cuenta'}
+            {submitting ? 'Un momento…' : mode === 'signin' ? 'Iniciar sesión' : mode === 'signup' ? 'Crear cuenta' : 'Enviar link'}
           </Button>
         </form>
 
         <button
           type="button"
-          onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); setInfo(null); }}
+          onClick={() => {
+            setMode(mode === 'signin' ? 'signup' : 'signin');
+            setError(null); setInfo(null);
+          }}
           className="w-full text-center text-sm text-gray-600 mt-6 hover:text-[#7626B3]"
         >
           {mode === 'signin'
             ? '¿No tenés cuenta? Creá una'
-            : '¿Ya tenés cuenta? Iniciá sesión'}
+            : mode === 'signup'
+            ? '¿Ya tenés cuenta? Iniciá sesión'
+            : '← Volver a iniciar sesión'}
         </button>
       </motion.div>
     </div>
