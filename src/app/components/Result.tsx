@@ -243,7 +243,9 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
 
           {/* RESERVA GENERAL — apartar plata del disponible; el bot avisa si se toca. */}
           {onAnalysisChange && (
-            <ReserveControl reserve={reserve} available={availableNow} onSave={saveReserve} />
+            <div className="mt-4">
+              <ReserveControl reserve={reserve} available={availableNow} onSave={saveReserve} />
+            </div>
           )}
 
           {/* PRESUPUESTO POR CATEGORÍA — tope del onboarding, se llena con los
