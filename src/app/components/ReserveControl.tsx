@@ -57,7 +57,7 @@ export function ReserveControl({
             <p className="text-lg font-bold text-[#7626B3]">{fmt(reserve)}</p>
           </div>
           <div className="bg-gray-50 rounded-xl px-4 py-3">
-            <p className="text-xs text-gray-500">Disponible libre</p>
+            <p className="text-xs text-gray-500">Te quedaría disponible</p>
             <p className="text-lg font-bold text-gray-800">{fmt(free)}</p>
           </div>
         </div>
