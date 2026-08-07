@@ -51,12 +51,12 @@ export function ReserveControl({
       </div>
 
       {reserve > 0 ? (
-        <div className="mt-3 grid grid-cols-2 divide-x divide-[#D7C2EF]/50">
-          <div className="pr-3">
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="bg-[#F0E7FA]/50 rounded-xl px-4 py-3">
             <p className="text-xs text-gray-500">En reserva</p>
             <p className="text-lg font-bold text-[#7626B3]">{fmt(reserve)}</p>
           </div>
-          <div className="pl-3">
+          <div className="bg-gray-50 rounded-xl px-4 py-3">
             <p className="text-xs text-gray-500">Disponible libre</p>
             <p className="text-lg font-bold text-gray-800">{fmt(free)}</p>
           </div>
