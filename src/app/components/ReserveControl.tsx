@@ -40,19 +40,7 @@ export function ReserveControl({
         <div className="w-9 h-9 rounded-full bg-[#F0E7FA] flex items-center justify-center shrink-0">
           <Lock className="w-4 h-4 text-[#7626B3]" />
         </div>
-        <div className="flex-1 min-w-0">
-          {reserve > 0 ? (
-            <>
-              <p className="text-sm font-medium text-gray-800">En reserva: {fmt(reserve)}</p>
-              <p className="text-xs text-gray-500">Disponible libre: {fmt(free)}</p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-gray-800">Poné plata en reserva</p>
-              <p className="text-xs text-gray-500">Apartá un monto para no gastarlo. El bot te avisa si lo tocás.</p>
-            </>
-          )}
-        </div>
+        <p className="flex-1 text-sm font-semibold text-gray-800">Reserva</p>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -61,6 +49,21 @@ export function ReserveControl({
           {reserve > 0 ? 'Editar' : 'Reservar'}
         </button>
       </div>
+
+      {reserve > 0 ? (
+        <div className="mt-3 grid grid-cols-2 divide-x divide-[#D7C2EF]/50">
+          <div className="pr-3">
+            <p className="text-xs text-gray-500">En reserva</p>
+            <p className="text-lg font-bold text-[#7626B3]">{fmt(reserve)}</p>
+          </div>
+          <div className="pl-3">
+            <p className="text-xs text-gray-500">Disponible libre</p>
+            <p className="text-lg font-bold text-gray-800">{fmt(free)}</p>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-gray-500">Apartá un monto para no gastarlo. El bot te avisa si empezás a usarlo.</p>
+      )}
 
       {open && (
         <div className="mt-3 pt-3 border-t border-[#D7C2EF]/50">
