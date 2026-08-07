@@ -7,7 +7,7 @@ import { useAuth } from '../lib/auth';
 export function TopRightUser() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const initials = (profile.name || user?.email || '?').slice(0, 2).toUpperCase();
+  const initials = (profile.name || user?.email || '?').trim().charAt(0).toUpperCase();
 
   return (
     <button
