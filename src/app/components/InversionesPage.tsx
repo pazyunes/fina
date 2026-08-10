@@ -53,15 +53,17 @@ const BADGE_COLOR: Record<string, string> = {
 
 // Catálogo corto con descripción + TNA aproximada para cada instrumento que
 // el analyzer recomienda. Si llega uno desconocido se renderiza con desc vacío.
-const INSTRUMENT_INFO: Record<string, { desc: string; tasa: string; liquidez: string }> = {
-  'Cuenta remunerada':                  { desc: 'MP, Ualá, Brubank · retiro inmediato',         tasa: '~80% TNA', liquidez: 'muy líquido' },
-  'Plazo fijo tradicional':             { desc: 'Banco · 30 días mínimo',                       tasa: '~90% TNA', liquidez: '30 días' },
-  'Plazo fijo UVA':                     { desc: 'Se ajusta a inflación · 90 días mín.',         tasa: 'inflación +1%', liquidez: '90 días' },
-  'Fondo común de inversión Money Market': { desc: 'FCI · liquidez diaria',                     tasa: '~85% TNA', liquidez: 'bajo riesgo' },
-  'Fondo común de inversión mixto':     { desc: 'FCI mixto · bonos + acciones',                 tasa: 'variable',     liquidez: 'medio' },
-  'Fondo común de inversión acciones':  { desc: 'FCI 100% acciones · horizonte largo',          tasa: 'variable',     liquidez: 'medio-alto' },
-  'CEDEARs diversificados':             { desc: 'Acciones extranjeras en ARS · cobertura USD',  tasa: 'variable',     liquidez: 'medio' },
-  'Bonos CER':                          { desc: 'Bonos atados a inflación',                     tasa: 'inflación +X%', liquidez: 'medio' },
+// `rinde` = descripción cualitativa (NO una TNA fija, que se desactualiza y
+// pierde credibilidad). Igual que lo comunican los neobancos.
+const INSTRUMENT_INFO: Record<string, { desc: string; rinde: string; liquidez: string }> = {
+  'Cuenta remunerada':                  { desc: 'MP, Ualá, Brubank · sin mínimo',               rinde: 'rinde todos los días', liquidez: 'retiro inmediato' },
+  'Plazo fijo tradicional':             { desc: 'Banco · 30 días mínimo',                       rinde: 'tasa fija',            liquidez: '30 días' },
+  'Plazo fijo UVA':                     { desc: 'Se ajusta a inflación · 90 días mín.',         rinde: 'sigue la inflación',   liquidez: '90 días' },
+  'Fondo común de inversión Money Market': { desc: 'FCI · liquidez diaria',                     rinde: '≈ le gana a la inflación', liquidez: 'retiro inmediato' },
+  'Fondo común de inversión mixto':     { desc: 'FCI mixto · bonos + acciones',                 rinde: 'variable',             liquidez: 'medio' },
+  'Fondo común de inversión acciones':  { desc: 'FCI 100% acciones · horizonte largo',          rinde: 'variable · largo plazo', liquidez: 'medio-alto' },
+  'CEDEARs diversificados':             { desc: 'Acciones extranjeras en ARS · cobertura USD',  rinde: 'atado al dólar',       liquidez: 'medio' },
+  'Bonos CER':                          { desc: 'Bonos atados a inflación',                     rinde: 'sigue la inflación',   liquidez: 'medio' },
 };
 
 // Inflación anual estimada (ilustrativa). Se usa para el mensaje de "plata
@@ -207,7 +209,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
             <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Opciones recomendadas</p>
             <div className="bg-white rounded-xl p-3 border border-[#D7C2EF]/70 shadow-sm space-y-2">
               {recommendations.map((name, i) => {
-                const info = INSTRUMENT_INFO[name] ?? { desc: '', tasa: '', liquidez: '' };
+                const info = INSTRUMENT_INFO[name] ?? { desc: '', rinde: '', liquidez: '' };
                 return (
                   <div key={i} className="p-2.5 bg-[#F0E7FA]/60 rounded-lg">
                     <div className="flex items-center gap-2.5">
@@ -219,7 +221,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                         {info.desc && <p className="text-xs text-gray-500">{info.desc}</p>}
                       </div>
                       <div className="text-right shrink-0">
-                        {info.tasa && <p className="text-xs font-medium text-[#3B6D11]">{info.tasa}</p>}
+                        {info.rinde && <p className="text-xs font-medium text-[#3B6D11]">{info.rinde}</p>}
                         {info.liquidez && <p className="text-xs text-gray-500">{info.liquidez}</p>}
                       </div>
                     </div>
