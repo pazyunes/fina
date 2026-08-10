@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ShieldHalf } from 'lucide-react';
+import { ShieldHalf, ChevronDown } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
 import { useMoney, DisplayCurrencyToggle } from '../lib/displayCurrency';
 import { g } from '../utils/gender';
@@ -107,6 +107,8 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
   const extraVsBase = rows[2].value - rows[0].value; // FCI vs sin invertir
   // Instructivo "¿Cómo lo hago?" abierto (null = ninguno).
   const [activeGuide, setActiveGuide] = useState<InvestmentGuide | null>(null);
+  // Explicador "¿Nunca invertiste?" para bajar el miedo (arranca abierto).
+  const [showBasics, setShowBasics] = useState(true);
 
   return (
     <div className="min-h-screen bg-white pb-24 lg:pb-8 lg:pl-56 flex flex-col">
@@ -202,6 +204,28 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
             </div>
           </section>
         )}
+
+        {/* EXPLICADOR PARA PRINCIPIANTES — baja el miedo y desmitifica. */}
+        <section>
+          <button
+            type="button"
+            onClick={() => setShowBasics((s) => !s)}
+            className="w-full flex items-center justify-between bg-[#F0E7FA] rounded-xl px-4 py-3 text-left"
+            aria-expanded={showBasics}
+          >
+            <span className="text-sm font-semibold text-[#431C72]">💡 ¿Nunca invertiste? Empezá por acá</span>
+            <ChevronDown className={`w-4 h-4 text-[#7626B3] shrink-0 transition-transform ${showBasics ? 'rotate-180' : ''}`} />
+          </button>
+          {showBasics && (
+            <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm mt-2 space-y-2.5 text-sm text-gray-600">
+              <p>💚 <strong>No necesitás mucha plata.</strong> Con <strong>$1.000</strong> ya podés arrancar. Lo importante no es el monto — es aprender <strong>cómo</strong>. Después escalás.</p>
+              <p>🧺 <strong>¿Qué es un FCI (fondo común)?</strong> Es como una canasta de inversiones que maneja un profesional por vos. Ponés tu plata, rinde todos los días, y en los más comunes la sacás cuando querés (al toque).</p>
+              <p>💧 <strong>Liquidez</strong> = qué tan rápido podés sacar tu plata. "Retiro inmediato" = ya, sin esperar.</p>
+              <p>🔒 <strong>Plazo fijo</strong> = dejás la plata quieta un tiempo (ej. 30 días) a cambio de una tasa fija.</p>
+              <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">Estos instrumentos están en apps y bancos <strong>regulados por la CNV</strong>. FINA no toca ni mueve tu plata — solo te muestra el camino.</p>
+            </div>
+          )}
+        </section>
 
         {/* OPCIONES RECOMENDADAS */}
         {recommendations.length > 0 && (
