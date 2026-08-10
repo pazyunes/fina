@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ShieldHalf } from 'lucide-react';
 import { FinancialAnalysis } from '../types';
-import { formatArs } from '../lib/currency';
+import { useMoney, DisplayCurrencyToggle } from '../lib/displayCurrency';
 import { g } from '../utils/gender';
 import { BottomNav } from './BottomNav';
 import { OpenAccountGuides } from './OpenAccountGuides';
@@ -84,6 +84,9 @@ function projection(available: number, invested: number) {
 }
 
 export function InversionesPage({ analysis }: InversionesPageProps) {
+  const { fmt, setRate } = useMoney();
+  const rate = analysis.userData.exchangeRate?.rate ?? null;
+  useEffect(() => { setRate(rate); }, [rate, setRate]);
   const profile = riskProfile(analysis.financialLevel, analysis.userData.gender);
   // No bancarizada: eligió "No uso banco" en el onboarding. En ese caso, antes
   // que recomendar instrumentos, le mostramos cómo abrir su primera cuenta.
@@ -118,6 +121,10 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         transition={{ duration: 0.3 }}
         className="flex-1 p-4 lg:px-8 lg:pt-20 lg:pb-8 max-w-md lg:max-w-3xl mx-auto w-full space-y-5"
       >
+        <div className="flex justify-start">
+          <DisplayCurrencyToggle />
+        </div>
+
         {/* GUÍAS PARA ABRIR CUENTA — solo si no está bancarizada. Va primero
             porque es el paso previo a cualquier inversión. */}
         {notBanked && <OpenAccountGuides />}
@@ -145,15 +152,15 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
             <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Tu plata parada</p>
             <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm">
               {invested > 0 && (
-                <p className="text-xs text-[#3B6D11] font-medium mb-2">Ya tenés {formatArs(invested)} invertido 👏</p>
+                <p className="text-xs text-[#3B6D11] font-medium mb-2">Ya tenés {fmt(invested)} invertido 👏</p>
               )}
-              <p className="text-base font-semibold mb-1">{invested > 0 ? 'Pero tenés' : 'Tenés'} {formatArs(savings)} ahorrados sin invertir</p>
+              <p className="text-base font-semibold mb-1">{invested > 0 ? 'Pero tenés' : 'Tenés'} {fmt(savings)} ahorrados sin invertir</p>
               <p className="text-sm text-gray-600">
                 Contra la inflación (~30% al año, estimado), en 12 meses pierden ≈{' '}
-                <strong className="text-[#D85A30]">{formatArs(idleLoss)}</strong> de poder de compra.
+                <strong className="text-[#D85A30]">{fmt(idleLoss)}</strong> de poder de compra.
               </p>
               <div className="bg-[#EAF3DE] rounded-lg px-3 py-2.5 text-xs text-[#3B6D11] border-l-[3px] border-[#3B6D11] mt-3">
-                💡 Si esos {formatArs(savings)} los ponés en un <strong>FCI</strong> (rinde ≈ inflación, retiro inmediato), en vez de perderlos los mantenés. Mirá las opciones de acá abajo.
+                💡 Si esos {fmt(savings)} los ponés en un <strong>FCI</strong> (rinde ≈ inflación, retiro inmediato), en vez de perderlos los mantenés. Mirá las opciones de acá abajo.
               </div>
             </div>
           </section>
@@ -205,7 +212,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
               <p className="text-base font-semibold mb-1">¿Cuánto podrías tener en un año?</p>
               {invested > 0 && (
                 <p className="text-xs text-gray-500 mb-4">
-                  Arranca desde tus <strong>{formatArs(invested)}</strong> ya invertidos + tu disponible mensual.
+                  Arranca desde tus <strong>{fmt(invested)}</strong> ya invertidos + tu disponible mensual.
                 </p>
               )}
               {invested === 0 && <div className="mb-4" />}
@@ -223,14 +230,14 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                       />
                     </div>
                     <span className="text-xs font-medium w-16 text-right" style={{ color: r.valColor }}>
-                      {formatArs(r.value)}
+                      {fmt(r.value)}
                     </span>
                   </div>
                 ))}
               </div>
               {extraVsBase > 0 && (
                 <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-xs text-[#431C72] border-l-[3px] border-[#7626B3] mt-4">
-                  💡 Poniendo tu plata en un FCI, en un año tendrías ~{formatArs(extraVsBase)} más que dejándola quieta — sin hacer nada.
+                  💡 Poniendo tu plata en un FCI, en un año tendrías ~{fmt(extraVsBase)} más que dejándola quieta — sin hacer nada.
                 </div>
               )}
             </div>
