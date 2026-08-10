@@ -1,8 +1,21 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ArrowLeft, ArrowRight, Check, ShieldCheck, Sparkles } from 'lucide-react';
+import { X, ArrowLeft, ArrowRight, Check, ShieldCheck, Sparkles, ExternalLink } from 'lucide-react';
 import { Button } from './ui/button';
 import { InvestmentGuide } from '../lib/investmentGuides';
+
+// Link para "abrir" cada app (sitio oficial — funciona en cualquier dispositivo).
+const APP_LINKS: Record<string, string> = {
+  'Mercado Pago': 'https://www.mercadopago.com.ar/',
+  'Ualá': 'https://www.uala.com.ar/',
+  'Brubank': 'https://www.brubank.com/',
+  'Naranja X': 'https://www.naranjax.com/',
+  'Personal Pay': 'https://www.personalpay.com.ar/',
+  'Cocos Capital': 'https://cocos.capital/',
+  'Balanz': 'https://balanz.com/',
+  'IOL Invertir Online': 'https://www.invertironline.com/',
+  'Bull Market': 'https://www.bullmarketbrokers.com/',
+};
 
 interface InvestmentGuideScreenProps {
   guide: InvestmentGuide;
@@ -129,11 +142,9 @@ export function InvestmentGuideScreen({ guide, userBanks, onClose }: InvestmentG
                   <div className="space-y-2.5">
                     {orderedApps.map((app) => {
                       const mine = myApps.includes(app);
-                      return (
-                        <div
-                          key={app}
-                          className={`flex items-center gap-3 rounded-xl px-4 py-3.5 border ${mine ? 'border-[#7626B3] bg-[#F0E7FA]' : 'border-[#D7C2EF]/50 bg-white'}`}
-                        >
+                      const link = APP_LINKS[app];
+                      const inner = (
+                        <>
                           <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${mine ? 'bg-[#7626B3]' : 'bg-[#EAF3DE]'}`}>
                             <Check className={`w-3.5 h-3.5 ${mine ? 'text-white' : 'text-[#3B6D11]'}`} />
                           </span>
@@ -143,7 +154,18 @@ export function InvestmentGuideScreen({ guide, userBanks, onClose }: InvestmentG
                               Ya la usás
                             </span>
                           )}
-                        </div>
+                          {link && (
+                            <span className="flex items-center gap-1 text-xs font-semibold text-[#7626B3] shrink-0">
+                              Abrir <ExternalLink className="w-3.5 h-3.5" />
+                            </span>
+                          )}
+                        </>
+                      );
+                      const cls = `flex items-center gap-3 rounded-xl px-4 py-3.5 border transition-colors ${mine ? 'border-[#7626B3] bg-[#F0E7FA]' : 'border-[#D7C2EF]/50 bg-white'} ${link ? 'hover:border-[#7626B3]' : ''}`;
+                      return link ? (
+                        <a key={app} href={link} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
+                      ) : (
+                        <div key={app} className={cls}>{inner}</div>
                       );
                     })}
                   </div>

@@ -238,6 +238,9 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
             <div className="bg-white rounded-xl p-3 border border-[#D7C2EF]/70 shadow-sm space-y-2">
               {recommendations.map((name, i) => {
                 const info = INSTRUMENT_INFO[name] ?? { desc: '', rinde: '', liquidez: '' };
+                // Coherencia: ¿alguna app que la persona ya usa sirve para esto?
+                const guideApps = resolveInvestmentGuide(name).apps;
+                const userApp = (analysis.userData.banks ?? []).find((b) => guideApps.includes(b));
                 return (
                   <div key={i} className="p-2.5 bg-[#F0E7FA]/60 rounded-lg">
                     <div className="flex items-center gap-2.5">
@@ -246,7 +249,11 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold">{name}</p>
-                        {info.desc && <p className="text-xs text-gray-500">{info.desc}</p>}
+                        {userApp ? (
+                          <p className="text-xs font-semibold text-[#3B6D11]">✓ Desde tu {userApp}</p>
+                        ) : (
+                          info.desc && <p className="text-xs text-gray-500">{info.desc}</p>
+                        )}
                       </div>
                       <div className="text-right shrink-0">
                         {info.rinde && <p className="text-xs font-medium text-[#3B6D11]">{info.rinde}</p>}
@@ -258,7 +265,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                       onClick={() => setActiveGuide(resolveInvestmentGuide(name))}
                       className="mt-2.5 w-full text-xs font-semibold text-[#7626B3] bg-white border border-[#7626B3]/40 rounded-full py-2 hover:bg-[#7626B3] hover:text-white transition-colors"
                     >
-                      ¿Cómo lo hago? →
+                      {userApp ? `¿Cómo lo hago desde ${userApp}? →` : '¿Cómo lo hago? →'}
                     </button>
                   </div>
                 );
