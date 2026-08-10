@@ -97,6 +97,8 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
   // Datos autoreportados en "hábitos": cuánto tiene ahorrado (parado) e invertido.
   const invested = analysis.userData.investedAmount ?? 0;
   const savings = analysis.userData.savingsAmount ?? 0;
+  // Ya invierte (respondió "Sí" en hábitos) → no le mostramos el explicador básico.
+  const alreadyInvests = analysis.userData.invests === true;
   // Poder de compra que pierde en un año la plata parada (ahorrada sin invertir).
   const idleLoss = Math.round(savings * ANNUAL_INFLATION / (1 + ANNUAL_INFLATION));
   // Patrimonio hoy = ahorrado + invertido, y qué % está invertido vs parado.
@@ -205,7 +207,8 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
           </section>
         )}
 
-        {/* EXPLICADOR PARA PRINCIPIANTES — baja el miedo y desmitifica. */}
+        {/* EXPLICADOR PARA PRINCIPIANTES — solo si NO invierte todavía. */}
+        {!alreadyInvests && (
         <section>
           <button
             type="button"
@@ -226,6 +229,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
             </div>
           )}
         </section>
+        )}
 
         {/* OPCIONES RECOMENDADAS */}
         {recommendations.length > 0 && (
