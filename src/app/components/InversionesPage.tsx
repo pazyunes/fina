@@ -97,6 +97,10 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
   const savings = analysis.userData.savingsAmount ?? 0;
   // Poder de compra que pierde en un año la plata parada (ahorrada sin invertir).
   const idleLoss = Math.round(savings * ANNUAL_INFLATION / (1 + ANNUAL_INFLATION));
+  // Patrimonio hoy = ahorrado + invertido, y qué % está invertido vs parado.
+  const patrimonio = savings + invested;
+  const investedPct = patrimonio > 0 ? Math.round((invested / patrimonio) * 100) : 0;
+  const savingsPct = 100 - investedPct;
   const rows = projection(analysis.available, invested);
   const extraVsBase = rows[2].value - rows[0].value; // FCI vs sin invertir
   // Instructivo "¿Cómo lo hago?" abierto (null = ninguno).
@@ -145,6 +149,37 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
             </span>
           </div>
         </section>
+
+        {/* TU PLATA HOY — patrimonio (ahorrado + invertido) + % de asignación. */}
+        {patrimonio > 0 && (
+          <section>
+            <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Tu plata hoy</p>
+            <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm">
+              <p className="text-sm text-gray-500">Ahorrado + invertido</p>
+              <p className="text-2xl font-bold text-[#7626B3]">{fmt(patrimonio)}</p>
+
+              {/* Barra de asignación: invertido vs parado */}
+              <div className="flex h-3 rounded-full overflow-hidden mt-3 bg-[#F0E7FA]">
+                {investedPct > 0 && <div className="bg-[#7626B3] h-full" style={{ width: `${investedPct}%` }} />}
+                {savingsPct > 0 && <div className="bg-[#C6A6E6] h-full" style={{ width: `${savingsPct}%` }} />}
+              </div>
+              <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 mt-2.5 text-xs">
+                <span className="flex items-center gap-1.5 text-gray-600">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#7626B3]" /> Invertido {fmt(invested)} · <strong>{investedPct}%</strong>
+                </span>
+                <span className="flex items-center gap-1.5 text-gray-600">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#C6A6E6]" /> Sin invertir {fmt(savings)} · <strong>{savingsPct}%</strong>
+                </span>
+              </div>
+
+              {savingsPct >= 50 && savings > 0 && (
+                <div className="bg-[#FAEEDA] rounded-lg px-3 py-2 text-xs text-[#854F0B] mt-3">
+                  Tenés más de la mitad de tu plata sin invertir. Movete a poner una parte a trabajar.
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* TU PLATA PARADA — nudge usando lo ahorrado sin invertir (autoreportado). */}
         {savings > 0 && (
