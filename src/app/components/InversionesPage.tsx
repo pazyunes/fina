@@ -144,23 +144,17 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
           <section>
             <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Tu plata parada</p>
             <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm">
-              {invested >= savings && invested > 0 ? (
-                <p className="text-sm text-gray-700">
-                  Ya tenés <strong>{formatArs(invested)}</strong> invertido 👏 Buenísimo — lo importante ahora es
-                  que sigas sumando y no dejes plata parada perdiendo contra la inflación.
-                </p>
-              ) : (
-                <>
-                  <p className="text-base font-semibold mb-1">Tenés {formatArs(savings)} ahorrados sin invertir</p>
-                  <p className="text-sm text-gray-600">
-                    Contra la inflación (~30% al año, estimado), en 12 meses pierden ≈{' '}
-                    <strong className="text-[#D85A30]">{formatArs(idleLoss)}</strong> de poder de compra.
-                  </p>
-                  <div className="bg-[#EAF3DE] rounded-lg px-3 py-2.5 text-xs text-[#3B6D11] border-l-[3px] border-[#3B6D11] mt-3">
-                    💡 Si los ponés en un <strong>FCI</strong> (rinde ≈ inflación, retiro inmediato), en vez de perderlos los mantenés. Mirá las opciones de acá abajo.
-                  </div>
-                </>
+              {invested > 0 && (
+                <p className="text-xs text-[#3B6D11] font-medium mb-2">Ya tenés {formatArs(invested)} invertido 👏</p>
               )}
+              <p className="text-base font-semibold mb-1">{invested > 0 ? 'Pero tenés' : 'Tenés'} {formatArs(savings)} ahorrados sin invertir</p>
+              <p className="text-sm text-gray-600">
+                Contra la inflación (~30% al año, estimado), en 12 meses pierden ≈{' '}
+                <strong className="text-[#D85A30]">{formatArs(idleLoss)}</strong> de poder de compra.
+              </p>
+              <div className="bg-[#EAF3DE] rounded-lg px-3 py-2.5 text-xs text-[#3B6D11] border-l-[3px] border-[#3B6D11] mt-3">
+                💡 Si esos {formatArs(savings)} los ponés en un <strong>FCI</strong> (rinde ≈ inflación, retiro inmediato), en vez de perderlos los mantenés. Mirá las opciones de acá abajo.
+              </div>
             </div>
           </section>
         )}
