@@ -319,7 +319,11 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
 
       {/* Instructivo full-screen "¿Cómo lo hago?" */}
       {activeGuide && (
-        <InvestmentGuideScreen guide={activeGuide} onClose={() => setActiveGuide(null)} />
+        <InvestmentGuideScreen
+          guide={activeGuide}
+          userBanks={analysis.userData.banks ?? []}
+          onClose={() => setActiveGuide(null)}
+        />
       )}
     </div>
   );

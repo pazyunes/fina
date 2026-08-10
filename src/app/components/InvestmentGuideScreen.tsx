@@ -6,6 +6,9 @@ import { InvestmentGuide } from '../lib/investmentGuides';
 
 interface InvestmentGuideScreenProps {
   guide: InvestmentGuide;
+  // Bancos/apps que la usuaria dijo usar (onboarding). Se usa para destacar la
+  // que ya tiene y que todo sea coherente con sus datos.
+  userBanks?: string[];
   onClose: () => void;
 }
 
@@ -19,10 +22,17 @@ const STEP_LABELS = ['¿Qué es?', 'Apps disponibles', 'Paso a paso'];
 
 // PR — Pantalla full-screen con el instructivo de 3 pasos de una inversión.
 // Se abre desde el botón "¿Cómo lo hago?" de cada recomendación en Inversiones.
-export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenProps) {
+export function InvestmentGuideScreen({ guide, userBanks, onClose }: InvestmentGuideScreenProps) {
   const [step, setStep] = useState(0);
   const isLast = step === 2;
   const risk = RISK_STYLE[guide.risk.level];
+
+  // Coherencia con los datos: apps que la usuaria ya tiene y sirven para esto.
+  const banks = userBanks ?? [];
+  const myApps = guide.apps.filter((a) => banks.includes(a));
+  // Apps ordenadas: primero las que ya usa, después el resto.
+  const orderedApps = [...myApps, ...guide.apps.filter((a) => !myApps.includes(a))];
+  const noneMatch = myApps.length === 0 && banks.length > 0 && !banks.includes('No uso banco');
 
   const next = () => (isLast ? onClose() : setStep((s) => s + 1));
   const back = () => (step === 0 ? onClose() : setStep((s) => s - 1));
@@ -100,21 +110,42 @@ export function InvestmentGuideScreen({ guide, onClose }: InvestmentGuideScreenP
                   <h2 className="text-2xl font-bold text-[#7626B3] mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
                     ¿Dónde puedo hacerlo?
                   </h2>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Podés invertir en {guide.title} desde cualquiera de estas plataformas. Elegí la que más te guste:
-                  </p>
+
+                  {/* Coherente con lo que la persona usa. */}
+                  {myApps.length > 0 ? (
+                    <div className="bg-[#EAF3DE] rounded-xl px-4 py-3 mb-4 text-sm text-[#3B6D11] border-l-[3px] border-[#3B6D11]">
+                      🎯 <strong>{myApps.join(' y ')}</strong> — que ya usás — te sirve para esto. Hacelo directo desde ahí, sin instalar nada nuevo.
+                    </div>
+                  ) : noneMatch ? (
+                    <p className="text-sm text-gray-500 mb-4">
+                      Ninguna de las apps que cargaste hace esto directo, así que vas a tener que abrir una nueva. Es <strong>gratis y rápido</strong> — elegí la que más te guste:
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 mb-4">
+                      Podés hacerlo desde cualquiera de estas plataformas. Elegí la que más te guste:
+                    </p>
+                  )}
+
                   <div className="space-y-2.5">
-                    {guide.apps.map((app) => (
-                      <div
-                        key={app}
-                        className="flex items-center gap-3 bg-white rounded-xl px-4 py-3.5 border border-[#D7C2EF]/50"
-                      >
-                        <span className="w-6 h-6 rounded-full bg-[#EAF3DE] flex items-center justify-center shrink-0">
-                          <Check className="w-3.5 h-3.5 text-[#3B6D11]" />
-                        </span>
-                        <span className="text-sm font-medium text-gray-800">{app}</span>
-                      </div>
-                    ))}
+                    {orderedApps.map((app) => {
+                      const mine = myApps.includes(app);
+                      return (
+                        <div
+                          key={app}
+                          className={`flex items-center gap-3 rounded-xl px-4 py-3.5 border ${mine ? 'border-[#7626B3] bg-[#F0E7FA]' : 'border-[#D7C2EF]/50 bg-white'}`}
+                        >
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${mine ? 'bg-[#7626B3]' : 'bg-[#EAF3DE]'}`}>
+                            <Check className={`w-3.5 h-3.5 ${mine ? 'text-white' : 'text-[#3B6D11]'}`} />
+                          </span>
+                          <span className="text-sm font-medium text-gray-800 flex-1">{app}</span>
+                          {mine && (
+                            <span className="text-[10px] font-semibold text-[#7626B3] bg-white border border-[#7626B3]/30 px-2 py-0.5 rounded-full shrink-0">
+                              Ya la usás
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
