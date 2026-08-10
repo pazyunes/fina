@@ -64,17 +64,22 @@ const INSTRUMENT_INFO: Record<string, { desc: string; tasa: string; liquidez: st
   'Bonos CER':                          { desc: 'Bonos atados a inflación',                     tasa: 'inflación +X%', liquidez: 'medio' },
 };
 
-// Proyección simple a 5 meses ahorrando `available` por mes. Es ilustrativa —
-// los multiplicadores aproximan rendimientos reales sin entrar en el detalle
-// de compounding mensual; el disclaimer cubre el resto.
-function projection(available: number) {
-  const months = 5;
-  const base = Math.max(available, 0) * months;
+// Inflación anual estimada (ilustrativa). Se usa para el mensaje de "plata
+// parada" y como referencia de que un FCI ≈ le empata/gana.
+const ANNUAL_INFLATION = 0.30;
+
+// Proyección a 12 meses partiendo de lo que YA tiene invertido + su disponible
+// mensual como aporte. Es ilustrativa — los multiplicadores aproximan un año de
+// rendimiento sin entrar en compounding fino; el disclaimer cubre el resto.
+function projection(available: number, invested: number) {
+  const months = 12;
+  // Base = lo que ya tiene invertido + un año de aportes de su disponible.
+  const base = Math.max(invested, 0) + Math.max(available, 0) * months;
   return [
-    { label: 'Sin invertir',     value: base,                   pct: 60,  color: '#CCC',     valColor: '#999' },
-    { label: 'Cta. remunerada',  value: Math.round(base * 1.09), pct: 75,  color: '#7626B3', valColor: '#7626B3' },
-    { label: 'FCI Money Mkt',    value: Math.round(base * 1.13), pct: 85,  color: '#7626B3', valColor: '#7626B3' },
-    { label: 'Plazo fijo UVA',   value: Math.round(base * 1.17), pct: 100, color: '#7626B3', valColor: '#7626B3' },
+    { label: 'Sin invertir',     value: base,                    pct: 62,  color: '#CCC',     valColor: '#999' },
+    { label: 'Cta. remunerada',  value: Math.round(base * 1.22), pct: 78,  color: '#7626B3', valColor: '#7626B3' },
+    { label: 'FCI Money Mkt',    value: Math.round(base * 1.27), pct: 88,  color: '#7626B3', valColor: '#7626B3' },
+    { label: 'Plazo fijo UVA',   value: Math.round(base * 1.32), pct: 100, color: '#7626B3', valColor: '#7626B3' },
   ];
 }
 
@@ -84,7 +89,12 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
   // que recomendar instrumentos, le mostramos cómo abrir su primera cuenta.
   const notBanked = analysis.userData.banks?.includes('No uso banco') ?? false;
   const recommendations = (analysis.recommendedInvestments ?? []).slice(0, 3);
-  const rows = projection(analysis.available);
+  // Datos autoreportados en "hábitos": cuánto tiene ahorrado (parado) e invertido.
+  const invested = analysis.userData.investedAmount ?? 0;
+  const savings = analysis.userData.savingsAmount ?? 0;
+  // Poder de compra que pierde en un año la plata parada (ahorrada sin invertir).
+  const idleLoss = Math.round(savings * ANNUAL_INFLATION / (1 + ANNUAL_INFLATION));
+  const rows = projection(analysis.available, invested);
   const extraVsBase = rows[2].value - rows[0].value; // FCI vs sin invertir
   // Instructivo "¿Cómo lo hago?" abierto (null = ninguno).
   const [activeGuide, setActiveGuide] = useState<InvestmentGuide | null>(null);
@@ -129,6 +139,32 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
           </div>
         </section>
 
+        {/* TU PLATA PARADA — nudge usando lo ahorrado sin invertir (autoreportado). */}
+        {savings > 0 && (
+          <section>
+            <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Tu plata parada</p>
+            <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm">
+              {invested >= savings && invested > 0 ? (
+                <p className="text-sm text-gray-700">
+                  Ya tenés <strong>{formatArs(invested)}</strong> invertido 👏 Buenísimo — lo importante ahora es
+                  que sigas sumando y no dejes plata parada perdiendo contra la inflación.
+                </p>
+              ) : (
+                <>
+                  <p className="text-base font-semibold mb-1">Tenés {formatArs(savings)} ahorrados sin invertir</p>
+                  <p className="text-sm text-gray-600">
+                    Contra la inflación (~30% al año, estimado), en 12 meses pierden ≈{' '}
+                    <strong className="text-[#D85A30]">{formatArs(idleLoss)}</strong> de poder de compra.
+                  </p>
+                  <div className="bg-[#EAF3DE] rounded-lg px-3 py-2.5 text-xs text-[#3B6D11] border-l-[3px] border-[#3B6D11] mt-3">
+                    💡 Si los ponés en un <strong>FCI</strong> (rinde ≈ inflación, retiro inmediato), en vez de perderlos los mantenés. Mirá las opciones de acá abajo.
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* OPCIONES RECOMENDADAS */}
         {recommendations.length > 0 && (
           <section>
@@ -166,13 +202,19 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         )}
 
         {/* TASA DE MEJORA */}
-        {analysis.available > 0 && (
+        {(analysis.available > 0 || invested > 0) && (
           <section>
             <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">
               Tasa de mejora — si invertís tu disponible
             </p>
             <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm">
-              <p className="text-base font-semibold mb-4">¿Cuánto más podrías tener en 5 meses?</p>
+              <p className="text-base font-semibold mb-1">¿Cuánto podrías tener en un año?</p>
+              {invested > 0 && (
+                <p className="text-xs text-gray-500 mb-4">
+                  Arranca desde tus <strong>{formatArs(invested)}</strong> ya invertidos + tu disponible mensual.
+                </p>
+              )}
+              {invested === 0 && <div className="mb-4" />}
               <div className="space-y-2.5">
                 {rows.map((r) => (
                   <div key={r.label} className="flex items-center gap-2">
@@ -194,7 +236,7 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
               </div>
               {extraVsBase > 0 && (
                 <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-xs text-[#431C72] border-l-[3px] border-[#7626B3] mt-4">
-                  💡 Invertir tu ahorro en un FCI te genera ~{formatArs(extraVsBase)} extra — sin hacer nada.
+                  💡 Poniendo tu plata en un FCI, en un año tendrías ~{formatArs(extraVsBase)} más que dejándola quieta — sin hacer nada.
                 </div>
               )}
             </div>
