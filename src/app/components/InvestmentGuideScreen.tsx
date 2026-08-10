@@ -46,6 +46,9 @@ export function InvestmentGuideScreen({ guide, userBanks, onClose }: InvestmentG
   // Apps ordenadas: primero las que ya usa, después el resto.
   const orderedApps = [...myApps, ...guide.apps.filter((a) => !myApps.includes(a))];
   const noneMatch = myApps.length === 0 && banks.length > 0 && !banks.includes('No uso banco');
+  // App principal para el botón final "Abrir" (la que ya usa, o la primera con link).
+  const primaryApp = myApps.find((a) => APP_LINKS[a]) ?? orderedApps.find((a) => APP_LINKS[a]);
+  const primaryLink = primaryApp ? APP_LINKS[primaryApp] : undefined;
 
   const next = () => (isLast ? onClose() : setStep((s) => s + 1));
   const back = () => (step === 0 ? onClose() : setStep((s) => s - 1));
@@ -142,9 +145,11 @@ export function InvestmentGuideScreen({ guide, userBanks, onClose }: InvestmentG
                   <div className="space-y-2.5">
                     {orderedApps.map((app) => {
                       const mine = myApps.includes(app);
-                      const link = APP_LINKS[app];
-                      const inner = (
-                        <>
+                      return (
+                        <div
+                          key={app}
+                          className={`flex items-center gap-3 rounded-xl px-4 py-3.5 border ${mine ? 'border-[#7626B3] bg-[#F0E7FA]' : 'border-[#D7C2EF]/50 bg-white'}`}
+                        >
                           <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${mine ? 'bg-[#7626B3]' : 'bg-[#EAF3DE]'}`}>
                             <Check className={`w-3.5 h-3.5 ${mine ? 'text-white' : 'text-[#3B6D11]'}`} />
                           </span>
@@ -154,21 +159,13 @@ export function InvestmentGuideScreen({ guide, userBanks, onClose }: InvestmentG
                               Ya la usás
                             </span>
                           )}
-                          {link && (
-                            <span className="flex items-center gap-1 text-xs font-semibold text-[#7626B3] shrink-0">
-                              Abrir <ExternalLink className="w-3.5 h-3.5" />
-                            </span>
-                          )}
-                        </>
-                      );
-                      const cls = `flex items-center gap-3 rounded-xl px-4 py-3.5 border transition-colors ${mine ? 'border-[#7626B3] bg-[#F0E7FA]' : 'border-[#D7C2EF]/50 bg-white'} ${link ? 'hover:border-[#7626B3]' : ''}`;
-                      return link ? (
-                        <a key={app} href={link} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
-                      ) : (
-                        <div key={app} className={cls}>{inner}</div>
+                        </div>
                       );
                     })}
                   </div>
+                  <p className="text-xs text-gray-400 mt-3 text-center">
+                    En el último paso vas a poder abrir la app, ya con las instrucciones a mano.
+                  </p>
                 </div>
               )}
 
@@ -191,6 +188,24 @@ export function InvestmentGuideScreen({ guide, userBanks, onClose }: InvestmentG
                     <Sparkles className="w-5 h-5 shrink-0 mt-0.5" />
                     <p className="text-sm font-medium leading-snug">{guide.reassurance}</p>
                   </div>
+
+                  {/* Recién ahora — con los pasos ya leídos — abrimos la app. */}
+                  {primaryLink && (
+                    <div className="mt-5">
+                      <p className="text-sm text-gray-600 mb-2">
+                        Ya sabés qué hacer. Abrí {primaryApp} y seguí los pasos de arriba 👆
+                      </p>
+                      <a
+                        href={primaryLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full bg-[#059669] hover:bg-[#047857] text-white font-semibold rounded-full py-3.5 transition-colors"
+                      >
+                        Abrir {primaryApp}
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>
