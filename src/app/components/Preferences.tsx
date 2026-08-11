@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { Plus, X } from 'lucide-react';
@@ -8,7 +8,7 @@ import { Slider } from './ui/slider';
 import { BackButton } from './BackButton';
 import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
-import { saveUserPreferences } from '../lib/preferences';
+import { saveUserPreferences, fetchUserPreferences } from '../lib/preferences';
 import { formatArs } from '../lib/currency';
 import { g } from '../utils/gender';
 import { DEBUG_MODE } from '../config';
@@ -21,6 +21,10 @@ import { UserData } from '../types';
 
 interface PreferencesProps {
   initial?: Partial<UserData>;
+  // PR — editMode: se reusa desde el perfil (/editar/preferencias) para modificar
+  // la disposición a recortar y los lugares frecuentes. Prellena con lo guardado
+  // y vuelve a /perfil al guardar (en vez de seguir al análisis).
+  editMode?: boolean;
   onComplete?: () => void;
 }
 
@@ -76,7 +80,7 @@ function monthlyOf(slug: string, u: Partial<UserData>): number {
   }
 }
 
-export function Preferences({ initial, onComplete }: PreferencesProps) {
+export function Preferences({ initial, onComplete, editMode }: PreferencesProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const gender = initial?.gender;
@@ -101,6 +105,20 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
   const [newSpot, setNewSpot] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // En modo edición prellenamos con lo que la usuaria ya guardó (otra tabla).
+  useEffect(() => {
+    if (!editMode) return;
+    let active = true;
+    fetchUserPreferences().then((p) => {
+      if (!active) return;
+      if (p.cutWillingness && Object.keys(p.cutWillingness).length > 0) {
+        setWillingness((prev) => ({ ...prev, ...p.cutWillingness }));
+      }
+      if (p.frequentSpots?.length) setSpots(p.frequentSpots);
+    });
+    return () => { active = false; };
+  }, [editMode]);
+
   const addSpot = () => {
     const v = newSpot.trim();
     if (!v || spots.length >= 20) return;
@@ -114,22 +132,24 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
     await saveUserPreferences({ topUnwilling: [], cutWillingness: willingness, frequentSpots: spots });
     setSaving(false);
     onComplete?.();
-    navigate(DEBUG_MODE ? '/ai-reasoning' : '/loading');
+    navigate(editMode ? '/perfil' : (DEBUG_MODE ? '/ai-reasoning' : '/loading'));
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col lg:pl-72">
-      <OnboardingAside currentPath={pathname} />
+    <div className={`min-h-screen bg-gradient-to-br from-white to-[#F0E7FA] flex flex-col ${editMode ? '' : 'lg:pl-72'}`}>
+      {!editMode && <OnboardingAside currentPath={pathname} />}
       <div className="flex-1 flex flex-col p-6 max-w-md lg:max-w-2xl mx-auto w-full overflow-y-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full pb-28">
           <BackButton currentPath={pathname} />
 
           <div className="mb-6">
             <h2 className="text-3xl mb-2 text-[#7626B3]" style={{ fontFamily: 'var(--font-serif)' }}>
-              Para lograr estos objetivos
+              {editMode ? 'Preferencias para recortar gastos' : 'Para lograr estos objetivos'}
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
-              Marcá del 1 al 5 cuánto estás {g(gender, 'dispuesta', 'dispuesto')} a ajustar cada gasto, así las recomendaciones respetan lo que más te importa.
+              {editMode
+                ? `Cambiá cuánto estás ${g(gender, 'dispuesta', 'dispuesto')} a recortar cada gasto y tus lugares frecuentes. El informe se recalcula.`
+                : `Marcá del 1 al 5 cuánto estás ${g(gender, 'dispuesta', 'dispuesto')} a ajustar cada gasto, así las recomendaciones respetan lo que más te importa.`}
             </p>
           </div>
 
@@ -232,18 +252,20 @@ export function Preferences({ initial, onComplete }: PreferencesProps) {
         </motion.div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 lg:left-72 bg-white border-t p-4 shadow-lg">
+      <div className={`fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg ${editMode ? '' : 'lg:left-72'}`}>
         <div className="max-w-md lg:max-w-2xl mx-auto">
           <Button
             onClick={handleContinue}
             disabled={saving}
             className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg disabled:opacity-50"
           >
-            {saving ? 'Guardando…' : 'Ver mi análisis'}
+            {saving ? 'Guardando…' : editMode ? 'Guardar cambios' : 'Ver mi análisis'}
           </Button>
-          <div className="mt-4">
-            <OnboardingProgress currentPath={pathname} />
-          </div>
+          {!editMode && (
+            <div className="mt-4">
+              <OnboardingProgress currentPath={pathname} />
+            </div>
+          )}
         </div>
       </div>
     </div>

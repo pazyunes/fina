@@ -76,6 +76,7 @@ export const router = createBrowserRouter([
       "/editar/gastos-variables",
       "/editar/objetivos",
       "/editar/finanzas",
+      "/editar/preferencias",
     ].map((path) => ({
       path,
       element: (

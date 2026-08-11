@@ -417,6 +417,10 @@ export function Main() {
           }}
         />
       );
+    case '/editar/preferencias':
+      // Preferences persiste en su propia tabla (user_preferences) y navega
+      // solo a /perfil; no pasa por persistEdit.
+      return <Preferences initial={userData} editMode />;
     default:
       return <LoadingScreen />;
   }

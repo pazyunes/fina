@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'motion/react';
-import { LogOut, CircleUserRound, Pencil, Wallet, Home, Coffee, Target, ChevronRight, Ticket, PiggyBank } from 'lucide-react';
+import { LogOut, CircleUserRound, Pencil, Wallet, Home, Coffee, Target, ChevronRight, Ticket, PiggyBank, Scissors } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -263,6 +263,7 @@ export function Profile() {
               <EditRow icon={Coffee} label="Mis gastos variables" to="/editar/gastos-variables" navigate={navigate} />
               <EditRow icon={PiggyBank} label="Ahorro e inversión" to="/editar/finanzas" navigate={navigate} />
               <EditRow icon={Target} label="Mis objetivos" to="/editar/objetivos" navigate={navigate} />
+              <EditRow icon={Scissors} label="Preferencias para recortar gastos" to="/editar/preferencias" navigate={navigate} />
               <button
                 type="button"
                 onClick={() => { setCouponInitialId(null); setShowCoupons(true); }}
