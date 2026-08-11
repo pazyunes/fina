@@ -14,8 +14,9 @@ App web de finanzas personales para mujeres en Argentina. Deployada en Vercel:
 - La app te arma un **informe financiero** a partir de un onboarding, te muestra
   un **presupuesto por categoría**, **objetivos de ahorro**, una sección de
   **inversiones** y un **perfil** editable.
-- Hay (aparte, todavía en construcción) un **chatbot de WhatsApp** que registra
-  gastos e ingresos en tiempo real y escribe en la misma base de datos (Supabase).
+- Hay (aparte, ya funcionando) un **chatbot de WhatsApp** que registra gastos e
+  ingresos en tiempo real y escribe en la misma base de datos (Supabase). Vive en
+  un server/repo aparte y se conecta con la `service_role` key (saltea RLS).
 
 ---
 
