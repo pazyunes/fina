@@ -16,11 +16,15 @@ const FACES = [
 export function FeedbackModal({
   context,
   title,
+  screen,
   question,
   onClose,
 }: {
   context: string;
   title?: string;
+  // Nombre de la pantalla que se está evaluando (ej. "Objetivos"). Se muestra
+  // resaltado para que cada encuesta se vea distinta y no parezca "siempre lo mismo".
+  screen?: string;
   question: string;
   onClose: () => void;
 }) {
@@ -60,6 +64,14 @@ export function FeedbackModal({
           </div>
         ) : (
           <div className="px-5 py-4 space-y-4">
+            {screen && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Tu opinión sobre</span>
+                <span className="text-xs font-bold text-[#7626B3] bg-[#F0E7FA] px-2.5 py-1 rounded-full uppercase tracking-wide">
+                  {screen}
+                </span>
+              </div>
+            )}
             <p className="text-sm text-gray-700">{question}</p>
 
             <div className="flex justify-between">
@@ -108,11 +120,13 @@ export function FeedbackTrigger({
   context,
   question,
   title,
+  screen,
   delayMs = 0,
 }: {
   context: string;
   question: string;
   title?: string;
+  screen?: string;
   delayMs?: number;
 }) {
   const [show, setShow] = useState(false);
@@ -123,19 +137,21 @@ export function FeedbackTrigger({
   }, [context, delayMs]);
 
   if (!show) return null;
-  return <FeedbackModal context={context} title={title} question={question} onClose={() => setShow(false)} />;
+  return <FeedbackModal context={context} title={title} screen={screen} question={question} onClose={() => setShow(false)} />;
 }
 
 // Pantallas cuyo feedback se pide AL SALIR de ellas. Vive en un layout que
 // persiste entre rutas, así detecta la salida y muestra el pop-up sobre la
 // pantalla siguiente.
-const ON_LEAVE_SCREENS: Record<string, { context: string; question: string }> = {
+const ON_LEAVE_SCREENS: Record<string, { context: string; screen: string; question: string }> = {
   '/objetivos': {
     context: 'objetivos',
+    screen: 'Objetivos',
     question: '¿Qué te pareció la pantalla de Objetivos? ¿Te ayuda a saber cómo llegar a lo que querés?',
   },
   '/inversiones': {
     context: 'inversiones',
+    screen: 'Inversiones',
     question: '¿Qué te pareció la sección de Inversiones? ¿Te quedó claro por dónde empezar?',
   },
 };
@@ -143,7 +159,7 @@ const ON_LEAVE_SCREENS: Record<string, { context: string; question: string }> = 
 export function FeedbackController() {
   const { pathname } = useLocation();
   const prev = useRef(pathname);
-  const [active, setActive] = useState<{ context: string; question: string } | null>(null);
+  const [active, setActive] = useState<{ context: string; screen: string; question: string } | null>(null);
 
   useEffect(() => {
     const from = prev.current;
@@ -157,5 +173,5 @@ export function FeedbackController() {
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!active) return null;
-  return <FeedbackModal context={active.context} question={active.question} onClose={() => setActive(null)} />;
+  return <FeedbackModal context={active.context} screen={active.screen} question={active.question} onClose={() => setActive(null)} />;
 }

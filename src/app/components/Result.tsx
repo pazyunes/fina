@@ -476,6 +476,7 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
       <FeedbackTrigger
         context="onboarding"
         title="¡Terminaste tu perfil! 💜"
+        screen="Armar tu perfil"
         question="¿Qué te pareció armar tu perfil y ver tu informe? ¿Fue fácil de completar?"
       />
     </div>
