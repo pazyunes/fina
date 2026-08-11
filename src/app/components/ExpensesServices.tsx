@@ -52,7 +52,10 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   const [noEntertainment, setNoEntertainment] = useState(false);
 
   // Delivery
-  const [deliveryFrequency, setDeliveryFrequency] = useState(initial?.deliveryFrequency ? String(initial.deliveryFrequency) : '');
+  // Delivery se INGRESA en mensual (mucha gente no pide todas las semanas) pero
+  // se GUARDA en semanal (÷4.33), igual que entretenimiento, así el resto del
+  // sistema (analyzer/tracker/bot) sigue usando la frecuencia semanal sin cambios.
+  const [deliveryFrequency, setDeliveryFrequency] = useState(initial?.deliveryFrequency ? String(Math.round(initial.deliveryFrequency * 4.33)) : '');
   const [deliveryAmount, setDeliveryAmount] = useState(initial?.deliveryAmount ? String(initial.deliveryAmount) : '');
   const [noDelivery, setNoDelivery] = useState(false);
 
@@ -102,7 +105,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
     onComplete({
       entertainmentFrequency: (parseFloat(entertainmentFrequency) || 0) / 4.33,
       entertainmentAmount: parseInt(entertainmentAmount.replace(/\D/g, '') || '0'),
-      deliveryFrequency: parseFloat(deliveryFrequency) || 0,
+      deliveryFrequency: (parseFloat(deliveryFrequency) || 0) / 4.33,
       deliveryAmount: parseInt(deliveryAmount.replace(/\D/g, '') || '0'),
       cafeteriasFrequency: parseFloat(cafeteriasFrequency) || 0,
       cafeteriasAmount: parseInt(cafeteriasAmount.replace(/\D/g, '') || '0'),
@@ -327,7 +330,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                 <div className="space-y-4" style={{ opacity: noDelivery ? 0.4 : 1, pointerEvents: noDelivery ? 'none' : 'auto' }}>
                   <div>
                     <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces pedís delivery <span className="text-base font-bold text-[#7626B3]">por semana</span> aproximadamente?
+                      ¿Cuántas veces pedís delivery <span className="text-base font-bold text-[#7626B3]">por mes</span> aproximadamente?
                     </label>
                     <Input
                       type="number"
@@ -342,7 +345,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                         }
                       }}
                       onBlur={() => { if (deliveryComplete) advanceFrom('delivery'); }}
-                      placeholder="Ej: 3"
+                      placeholder="Ej: 4"
                       min="0"
                       className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noDelivery}
@@ -457,7 +460,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
             {/* Restaurantes (separado de cafeterías) */}
             <AccordionItem value="restaurants" className="bg-white rounded-2xl shadow-sm border-0 px-5">
               <AccordionTrigger className="hover:no-underline py-4">
-                <TriggerLabel icon={UtensilsCrossed} color="#A858CE" title="Restaurantes" done={restaurantsComplete} />
+                <TriggerLabel icon={UtensilsCrossed} color="#A858CE" title="Restaurantes / comidas" done={restaurantsComplete} />
               </AccordionTrigger>
               <AccordionContent className="pt-0 pb-5">
                 <p className="text-xs text-gray-500 mb-3">

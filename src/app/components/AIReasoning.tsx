@@ -227,7 +227,7 @@ export function AIReasoning({ analysis }: AIReasoningProps) {
                   <p>• Transporte / movilidad: ${userData.expenses.transport.toLocaleString('es-AR').replace(/,/g, '.')}</p>
                   <p>• Suscripciones: {userData.subscriptions.length} servicios</p>
                   <p>• Entretenimiento/ocio: {userData.entertainmentFrequency}x/semana × ${userData.entertainmentAmount.toLocaleString('es-AR').replace(/,/g, '.')}</p>
-                  <p>• Delivery: {userData.deliveryFrequency}x/semana × ${userData.deliveryAmount.toLocaleString('es-AR').replace(/,/g, '.')}</p>
+                  <p>• Delivery: {Math.round(userData.deliveryFrequency * 4.33)}x/mes × ${userData.deliveryAmount.toLocaleString('es-AR').replace(/,/g, '.')}</p>
                   {userData.installments.length > 0 && (
                     <>
                       <p className="mt-2 text-gray-400">• Cuotas ({userData.installments.length}):</p>
