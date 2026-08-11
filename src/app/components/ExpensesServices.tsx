@@ -200,7 +200,7 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
               className="text-3xl mb-2 text-[#7626B3]"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
-              Gastos que cambian mes a mes
+              Gastos variables
             </h2>
             <p className="text-gray-600" style={{ fontFamily: 'var(--font-sans)' }}>
               {editMode
