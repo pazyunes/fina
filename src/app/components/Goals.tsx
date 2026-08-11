@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { X, Plus, Check } from 'lucide-react';
+import { X, Plus, Check, Pencil } from 'lucide-react';
 import { DEBUG_MODE } from '../config';
 import { BackButton } from './BackButton';
 import { OnboardingAside } from './OnboardingAside';
@@ -15,6 +15,7 @@ import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
 import { UserData, Currency } from '../types';
 import { GoalCategoryModal, GoalCategoryConfig, GoalDraft } from './GoalCategoryModal';
+import { GoalDetailsEditModal } from './GoalDetailsEditModal';
 import { analyzeFinances } from '../utils/financialAnalyzer';
 
 interface GoalItem {
@@ -202,6 +203,12 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
     setSpecificGoals(specificGoals.filter((_, i) => i !== index));
   };
 
+  // Índice del objetivo que se está editando (lápiz) — abre GoalDetailsEditModal.
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const applyGoalEdit = (index: number, updated: GoalItem) => {
+    setSpecificGoals((prev) => prev.map((g, i) => (i === index ? { ...g, ...updated } : g)));
+  };
+
   const handleSubmit = () => {
     const parsedGoals = specificGoals.map(goal => {
       const typed = parseFloat(goal.amount.replace(/\./g, '')) || 0;
@@ -386,12 +393,22 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
                           {goal.currency === 'USD' ? `USD ${goal.amount}` : `$${formatCurrency(goal.amount)}`} en {goal.timeframe} meses
                         </p>
                       </div>
-                      <button
-                        onClick={() => removeGoal(index)}
-                        className="text-gray-400 hover:text-[#7626B3] p-1"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => setEditIndex(index)}
+                          aria-label="Editar objetivo"
+                          className="text-gray-400 hover:text-[#7626B3] p-1"
+                        >
+                          <Pencil className="w-[18px] h-[18px]" />
+                        </button>
+                        <button
+                          onClick={() => removeGoal(index)}
+                          aria-label="Quitar objetivo"
+                          className="text-gray-400 hover:text-[#7626B3] p-1"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
                     </motion.div>
                   ))}
                 </div>
@@ -533,6 +550,15 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
           onClose={() => setModalCategory(null)}
           onConfirmGoals={handleModalGoals}
           onConfirmInfo={handleModalInfo}
+        />
+      )}
+
+      {editIndex !== null && specificGoals[editIndex] && (
+        <GoalDetailsEditModal
+          goal={specificGoals[editIndex]}
+          usdRate={usdRate}
+          onSave={(updated) => applyGoalEdit(editIndex, updated as GoalItem)}
+          onClose={() => setEditIndex(null)}
         />
       )}
     </div>
