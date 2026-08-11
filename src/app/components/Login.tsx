@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Heart } from 'lucide-react';
+import { Heart, Lock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -223,6 +223,12 @@ export function Login() {
             ? '¿Ya tenés cuenta? Iniciá sesión'
             : '← Volver a iniciar sesión'}
         </button>
+
+        {/* Privacidad — genera confianza antes de cargar datos sensibles. */}
+        <div className="flex items-start gap-2 mt-6 pt-4 border-t border-gray-100 text-xs text-gray-500">
+          <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#7626B3]" />
+          <span>Tus datos son <strong>privados y solo tuyos</strong>. Viajan cifrados y nadie más que vos puede verlos.</span>
+        </div>
       </motion.div>
     </div>
   );
