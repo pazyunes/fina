@@ -163,6 +163,13 @@ export function Main() {
       currency: 'ARS' | 'USD';
       originalAmount: number;
     }>;
+    recurringFixed: Array<{
+      name: string;
+      amount: number;
+      timesPerMonth: number;
+      currency: 'ARS' | 'USD';
+      originalAmount: number;
+    }>;
   }) => {
     // Calculate total transport cost from transportDetails
     const publicTransportMonthlyCost = Math.round(
@@ -203,6 +210,7 @@ export function Main() {
       therapyDetails: data.therapyDetails,
       transportDetails: data.transportDetails,
       installments: data.installments,
+      recurringFixed: data.recurringFixed,
     }));
   };
 

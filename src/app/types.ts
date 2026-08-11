@@ -144,6 +144,11 @@ export interface UserData {
   // El analyzer los amortiza a mensual (amount / everyMonths). Opcional.
   occasionalExpenses?: Array<{ name: string; everyMonths: number; amount: number }>;
 
+  // Otros gastos fijos que se repiten VARIAS VECES por mes, todos los meses
+  // (ej: "tercer tiempo del club" 2 veces/mes). Total mensual = amount ×
+  // timesPerMonth. amount en ARS (convertido si se cargó en USD).
+  recurringFixed?: Array<{ name: string; amount: number; timesPerMonth: number; currency: Currency; originalAmount: number }>;
+
   // Habits
   knowsLastMonthExpenses: boolean;
   saves: boolean;

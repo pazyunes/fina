@@ -48,6 +48,13 @@ interface ExpensesFixedProps {
       currency: Currency;
       originalAmount: number;
     }>;
+    recurringFixed: Array<{
+      name: string;
+      amount: number;
+      timesPerMonth: number;
+      currency: Currency;
+      originalAmount: number;
+    }>;
   }) => void;
 }
 
@@ -228,6 +235,24 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   const [currentInstallment, setCurrentInstallment] = useState({ name: '', monthlyAmount: '', remainingInstallments: '' });
   const [currentInstallmentCurrency, setCurrentInstallmentCurrency] = useState<Currency>('ARS');
   const [showInstallmentForm, setShowInstallmentForm] = useState(false);
+
+  // Otros gastos fijos que se repiten varias veces por mes (ej: club 2x/mes).
+  // amount se guarda en ARS (convertido); originalAmount = lo tipeado.
+  const [recurringFixed, setRecurringFixed] = useState<Array<{ name: string; amount: string; timesPerMonth: string; currency: Currency; originalAmount: number }>>(
+    (initial?.recurringFixed ?? []).map((r) => ({
+      name: r.name,
+      amount: String(r.amount),
+      timesPerMonth: String(r.timesPerMonth),
+      currency: r.currency ?? 'ARS',
+      originalAmount: r.originalAmount ?? r.amount,
+    }))
+  );
+  const [hasRecurringFixed, setHasRecurringFixed] = useState<boolean | null>(
+    (initial?.recurringFixed?.length ?? 0) > 0 ? true : null
+  );
+  const [currentRecurring, setCurrentRecurring] = useState({ name: '', amount: '', timesPerMonth: '' });
+  const [currentRecurringCurrency, setCurrentRecurringCurrency] = useState<Currency>('ARS');
+  const [showRecurringForm, setShowRecurringForm] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showTransportValidation, setShowTransportValidation] = useState(false);
 
@@ -312,6 +337,27 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
     setInstallments(prev => prev.filter((_, i) => i !== index));
   };
 
+  const addRecurring = () => {
+    if (currentRecurring.name && currentRecurring.amount && currentRecurring.timesPerMonth) {
+      const typed = parseInt(currentRecurring.amount.replace(/\D/g, '')) || 0;
+      const arsAmount = currentRecurringCurrency === 'USD' && usdRate ? arsFromUsd(typed, usdRate) : typed;
+      setRecurringFixed([...recurringFixed, {
+        name: currentRecurring.name,
+        amount: String(arsAmount),
+        timesPerMonth: currentRecurring.timesPerMonth,
+        currency: currentRecurringCurrency,
+        originalAmount: typed,
+      }]);
+      setCurrentRecurring({ name: '', amount: '', timesPerMonth: '' });
+      setCurrentRecurringCurrency('ARS');
+      setShowConfirmation(true);
+    }
+  };
+  const removeRecurring = (index: number) => {
+    setRecurringFixed(prev => prev.filter((_, i) => i !== index));
+  };
+  const canAddCurrentRecurring = currentRecurring.name && currentRecurring.amount && currentRecurring.timesPerMonth;
+
   // Commit del estado actual a userData (sin navegar ni validar transporte).
   // Lo usan "Continuar" y "Atrás", para no perder lo cargado al volver.
   const commit = () => {
@@ -323,6 +369,16 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
         remainingInstallments: parseInt(inst.remainingInstallments) || 0,
         currency: inst.currency,
         originalAmount: inst.originalAmount,
+      }));
+
+    const validRecurring = recurringFixed
+      .filter(r => r.name && r.amount && r.timesPerMonth)
+      .map(r => ({
+        name: r.name,
+        amount: parseInt(r.amount.replace(/\D/g, '')) || 0,
+        timesPerMonth: parseInt(r.timesPerMonth) || 0,
+        currency: r.currency,
+        originalAmount: r.originalAmount,
       }));
 
     const housingOriginalAmount = housingCurrency === 'USD'
@@ -350,6 +406,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
       therapyDetails,
       transportDetails: transportData,
       installments: validInstallments,
+      recurringFixed: validRecurring,
     });
   };
 
@@ -872,6 +929,146 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                         </motion.div>
                       )}
                     </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Otros gastos fijos que se repiten varias veces por mes */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm">
+              <h3 className="text-lg mb-1 text-[#7626B3]" style={{ fontFamily: 'var(--font-sans)' }}>
+                Otros gastos fijos (varias veces al mes)
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Algo que pagás todos los meses pero <strong>varias veces por mes</strong>. Ej: el tercer tiempo del club 2 veces al mes. Cargás el <strong>monto por vez</strong> y <strong>cuántas veces</strong>, y calculamos el total mensual.
+              </p>
+
+              <div className="flex gap-3 mb-4">
+                <Button
+                  onClick={() => { setHasRecurringFixed(true); setShowRecurringForm(true); }}
+                  variant={hasRecurringFixed === true ? 'default' : 'outline'}
+                  className={`flex-1 ${hasRecurringFixed === true ? 'bg-[#059669] hover:bg-[#047857]' : ''}`}
+                >
+                  Sí
+                </Button>
+                <Button
+                  onClick={() => {
+                    setHasRecurringFixed(false);
+                    setRecurringFixed([]);
+                    setShowRecurringForm(false);
+                    setCurrentRecurring({ name: '', amount: '', timesPerMonth: '' });
+                  }}
+                  variant={hasRecurringFixed === false ? 'default' : 'outline'}
+                  className={`flex-1 ${hasRecurringFixed === false ? 'bg-[#059669] hover:bg-[#047857]' : ''}`}
+                >
+                  No
+                </Button>
+              </div>
+
+              {/* Lista creada */}
+              <AnimatePresence>
+                {recurringFixed.length > 0 && (
+                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Gastos creados</h4>
+                    <div className="space-y-3">
+                      {recurringFixed.map((r, index) => {
+                        const totalMes = (parseInt(r.amount.replace(/\D/g, '')) || 0) * (parseInt(r.timesPerMonth) || 0);
+                        return (
+                          <motion.div key={index} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+                            className="bg-white p-4 rounded-xl border-2 border-[#7626B3] flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium text-[#7626B3] mb-1">{r.name}</p>
+                              <p className="text-sm text-gray-600">
+                                ${formatThousands(r.amount)} × {r.timesPerMonth} veces/mes = <strong>${formatThousands(String(totalMes))}/mes</strong>
+                              </p>
+                              {r.currency === 'USD' && (
+                                <p className="text-xs text-gray-400">Cargado en USD {r.originalAmount.toLocaleString('es-AR').replace(/,/g, '.')}</p>
+                              )}
+                            </div>
+                            <button onClick={() => removeRecurring(index)} className="text-gray-400 hover:text-[#7626B3] p-1">
+                              <X className="w-5 h-5" />
+                            </button>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {hasRecurringFixed && !showRecurringForm && (
+                <Button variant="outline" onClick={() => setShowRecurringForm(true)} className="w-full mb-4 border-dashed">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Agregar gasto
+                </Button>
+              )}
+
+              {hasRecurringFixed && showRecurringForm && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4 mt-4">
+                  <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-2">Nombre / en qué es</label>
+                      <Input
+                        type="text"
+                        value={currentRecurring.name}
+                        onChange={(e) => setCurrentRecurring({ ...currentRecurring, name: e.target.value })}
+                        placeholder="Ej: tercer tiempo del club"
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm text-gray-600">Monto por vez</label>
+                        <CurrencyToggle value={currentRecurringCurrency} usdEnabled={!!usdRate} onChange={setCurrentRecurringCurrency} />
+                      </div>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={currentRecurring.amount ? `${currentRecurringCurrency === 'USD' ? 'USD ' : '$'}${formatThousands(currentRecurring.amount)}` : ''}
+                        onChange={(e) => setCurrentRecurring({ ...currentRecurring, amount: e.target.value.replace(/\D/g, '') })}
+                        placeholder={currentRecurringCurrency === 'USD' ? 'USD 0' : '$0'}
+                        className={`w-full ${AMOUNT_FIELD_CLASS}`}
+                      />
+                      {currentRecurringCurrency === 'USD' && currentRecurring.amount && usdRate && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          ≈ {formatArs(arsFromUsd(parseInt(currentRecurring.amount.replace(/\D/g, '')) || 0, usdRate))} al cambio del día
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-2">¿Cuántas veces por mes?</label>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={currentRecurring.timesPerMonth}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (val >= 0 || e.target.value === '') setCurrentRecurring({ ...currentRecurring, timesPerMonth: e.target.value });
+                        }}
+                        placeholder="Ej: 2"
+                        min="1"
+                        className="w-full"
+                      />
+                    </div>
+
+                    {currentRecurring.amount && currentRecurring.timesPerMonth && (
+                      <p className="text-sm text-[#431C72] bg-[#F0E7FA] rounded-lg px-3 py-2">
+                        Total mensual: <strong>{formatArs((currentRecurringCurrency === 'USD' && usdRate ? arsFromUsd(parseInt(currentRecurring.amount.replace(/\D/g, '')) || 0, usdRate) : (parseInt(currentRecurring.amount.replace(/\D/g, '')) || 0)) * (parseInt(currentRecurring.timesPerMonth) || 0))}</strong>
+                      </p>
+                    )}
+
+                    <Button
+                      onClick={addRecurring}
+                      disabled={!canAddCurrentRecurring}
+                      className="w-full bg-[#059669] hover:bg-[#047857] text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Check className="w-4 h-4" />
+                      Guardar gasto
+                    </Button>
                   </div>
                 </motion.div>
               )}

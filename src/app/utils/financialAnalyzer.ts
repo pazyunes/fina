@@ -19,6 +19,11 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
     (sum, e) => sum + (e.everyMonths > 0 ? e.amount / e.everyMonths : 0),
     0
   );
+  // Otros gastos fijos que ocurren varias veces por mes: amount × timesPerMonth.
+  const monthlyRecurringFixed = (userData.recurringFixed ?? []).reduce(
+    (sum, e) => sum + (e.amount || 0) * (e.timesPerMonth || 0),
+    0
+  );
 
   // Calculate total expenses using new fields
   const totalExpenses =
@@ -36,6 +41,7 @@ export function analyzeFinances(userData: UserData): FinancialAnalysis {
     monthlyCafeterias +
     monthlyRestaurants +
     monthlyOccasional +
+    monthlyRecurringFixed +
     installmentsCost;
     
   const available = totalIncome - totalExpenses;
