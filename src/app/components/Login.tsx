@@ -227,7 +227,7 @@ export function Login() {
         {/* Privacidad — genera confianza antes de cargar datos sensibles. */}
         <div className="flex items-start gap-2 mt-6 pt-4 border-t border-gray-100 text-xs text-gray-500">
           <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#7626B3]" />
-          <span>Tus datos son <strong>privados y solo tuyos</strong>. Viajan cifrados y nadie más que vos puede verlos.</span>
+          <span>Tus datos son <strong>privados y solo tuyos</strong>. Viajan y se guardan cifrados, y solo vos podés verlos desde tu cuenta.</span>
         </div>
       </motion.div>
     </div>
