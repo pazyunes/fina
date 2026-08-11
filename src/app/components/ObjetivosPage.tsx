@@ -316,6 +316,18 @@ function GoalCard({
   const remaining = Math.max(goal.amount - saved, 0);
   const done = saved >= goal.amount && goal.amount > 0;
 
+  // Recuadro generado EN VIVO: pasa por fmt (respeta el toggle ARS/USD) y se
+  // calcula sobre lo que FALTA (tiene en cuenta lo que ya separaste). No usamos
+  // goal.insight porque es un texto congelado en ARS del onboarding.
+  const monthsLeft = goal.timeframe > 0 ? goal.timeframe : 1;
+  const monthlyRemaining = Math.max(Math.round(remaining / monthsLeft), 0);
+  const tone = goal.status === 'possible' ? 'Lo tenés cubierto 💪' : 'Es ajustado pero alcanzable con constancia 💪';
+  const insight = done
+    ? '🎉 ¡Ya juntaste todo lo que necesitás para este objetivo!'
+    : saved > 0
+      ? `📅 Te faltan ${fmt(remaining)}. Ahorrando ${fmt(monthlyRemaining)}/mes llegás en ${goal.timeframe} meses. ${tone}`
+      : `📅 Ahorrá ${fmt(monthlyRemaining)}/mes durante ${goal.timeframe} meses y llegás a tu objetivo. ${tone}`;
+
   return (
     <div
       onClick={onClick}
@@ -384,7 +396,7 @@ function GoalCard({
       )}
 
       <div className="bg-[#F0E7FA] rounded-lg px-3 py-2.5 text-xs text-[#431C72] border-l-[3px] border-[#7626B3]">
-        📅 {goal.insight}
+        {insight}
       </div>
     </div>
   );
