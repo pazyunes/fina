@@ -10,7 +10,7 @@ import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
 import { WhatsAppFab } from './WhatsAppFab';
 import { InvestmentGuideScreen } from './InvestmentGuideScreen';
-import { resolveInvestmentGuide, InvestmentGuide } from '../lib/investmentGuides';
+import { resolveInvestmentGuide, InvestmentGuide, instrumentCoveredByKinds } from '../lib/investmentGuides';
 
 interface InversionesPageProps {
   analysis: FinancialAnalysis;
@@ -232,23 +232,47 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
         )}
 
         {/* OPCIONES RECOMENDADAS */}
-        {recommendations.length > 0 && (
+        {recommendations.length > 0 && (() => {
+          const investedIn = analysis.userData.investedIn ?? [];
+          // Reconocer + complementar: las que la persona NO hace todavía van
+          // primero (para diversificar); las que ya hace, al final y marcadas.
+          const covered = (name: string) => instrumentCoveredByKinds(name, investedIn);
+          const orderedRecs = [...recommendations].sort((a, b) => Number(covered(a)) - Number(covered(b)));
+          const anyNew = orderedRecs.some((n) => !covered(n));
+          return (
           <section>
             <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">Opciones recomendadas</p>
+
+            {/* Coherencia con lo que ya invierte (onboarding). */}
+            {investedIn.length > 0 && (
+              <div className="bg-[#EAF3DE] rounded-xl px-3 py-2.5 mb-2 text-xs text-[#3B6D11] border-l-[3px] border-[#3B6D11]">
+                🎯 Ya invertís en <strong>{investedIn.join(', ')}</strong>.{' '}
+                {anyNew
+                  ? 'Te priorizamos otras opciones para diversificar tu plata.'
+                  : '¡Buenísimo! Ya estás diversificada en lo que recomendamos.'}
+              </div>
+            )}
+
             <div className="bg-white rounded-xl p-3 border border-[#D7C2EF]/70 shadow-sm space-y-2">
-              {recommendations.map((name, i) => {
+              {orderedRecs.map((name, i) => {
                 const info = INSTRUMENT_INFO[name] ?? { desc: '', rinde: '', liquidez: '' };
                 // Coherencia: ¿alguna app que la persona ya usa sirve para esto?
                 const guideApps = resolveInvestmentGuide(name).apps;
                 const userApp = (analysis.userData.banks ?? []).find((b) => guideApps.includes(b));
+                const already = covered(name);
                 return (
-                  <div key={i} className="p-2.5 bg-[#F0E7FA]/60 rounded-lg">
+                  <div key={i} className={`p-2.5 rounded-lg ${already ? 'bg-gray-50 opacity-80' : 'bg-[#F0E7FA]/60'}`}>
                     <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-[#7626B3] text-white text-xs font-medium flex items-center justify-center shrink-0">
+                      <div className={`w-6 h-6 rounded-full text-white text-xs font-medium flex items-center justify-center shrink-0 ${already ? 'bg-gray-400' : 'bg-[#7626B3]'}`}>
                         {i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold">{name}</p>
+                        <p className="text-sm font-semibold flex items-center gap-1.5">
+                          {name}
+                          {already && (
+                            <span className="text-[10px] font-semibold text-[#3B6D11] bg-[#EAF3DE] px-1.5 py-0.5 rounded-full">Ya lo hacés ✓</span>
+                          )}
+                        </p>
                         {userApp ? (
                           <p className="text-xs font-semibold text-[#3B6D11]">✓ Desde tu {userApp}</p>
                         ) : (
@@ -265,14 +289,15 @@ export function InversionesPage({ analysis }: InversionesPageProps) {
                       onClick={() => setActiveGuide(resolveInvestmentGuide(name))}
                       className="mt-2.5 w-full text-xs font-semibold text-[#7626B3] bg-white border border-[#7626B3]/40 rounded-full py-2 hover:bg-[#7626B3] hover:text-white transition-colors"
                     >
-                      {userApp ? `¿Cómo lo hago desde ${userApp}? →` : '¿Cómo lo hago? →'}
+                      {already ? 'Ver la guía igual →' : userApp ? `¿Cómo lo hago desde ${userApp}? →` : '¿Cómo lo hago? →'}
                     </button>
                   </div>
                 );
               })}
             </div>
           </section>
-        )}
+          );
+        })()}
 
         {/* TASA DE MEJORA */}
         {(analysis.available > 0 || invested > 0) && (

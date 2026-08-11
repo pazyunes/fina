@@ -121,3 +121,31 @@ export function resolveInvestmentGuide(name: string): InvestmentGuide {
 }
 
 export { GUIDES };
+
+// Instrumentos que la usuaria puede marcar en "¿En qué invertís?" (onboarding,
+// opcional). Se guardan en UserData.investedIn (más un texto libre de "Otro").
+export const INVESTMENT_KINDS = [
+  'Plazo fijo',
+  'Dólares',
+  'Fondos (FCI)',
+  'CEDEARs',
+  'Acciones',
+  'Cripto',
+  'Bonos',
+  'Inmuebles / ladrillos',
+];
+
+// ¿La recomendación (instrumento del analyzer) ya está cubierta por lo que la
+// usuaria dijo que invierte? Se usa en Inversiones para marcar "ya lo hacés" y
+// priorizar complementos (no re-recomendar lo que ya hace).
+export function instrumentCoveredByKinds(instrumentName: string, kinds?: string[]): boolean {
+  if (!kinds || kinds.length === 0) return false;
+  const set = kinds.map((k) => k.toLowerCase());
+  const n = instrumentName.toLowerCase();
+  const has = (kw: string) => set.some((k) => k.includes(kw));
+  if (n.includes('plazo fijo')) return has('plazo');
+  if (n.includes('cedear')) return has('cedear') || has('acci');
+  if (n.includes('bono')) return has('bono');
+  if (n.includes('fondo común') || n.includes('fondo comun') || n.includes('fci')) return has('fondo') || has('fci');
+  return false; // cuenta remunerada u otros: no los tapamos como "ya lo hacés"
+}

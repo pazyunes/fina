@@ -9,6 +9,7 @@ import { OnboardingProgress } from './OnboardingProgress';
 import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
+import { INVESTMENT_KINDS } from '../lib/investmentGuides';
 import { Currency, UserData } from '../types';
 
 interface HabitsProps {
@@ -26,6 +27,7 @@ interface HabitsProps {
     investedAmount?: number;
     investedCurrency?: Currency;
     investedOriginalAmount?: number;
+    investedIn?: string[];
   }) => void;
 }
 
@@ -60,6 +62,17 @@ export function Habits({ initial, onComplete, editMode }: HabitsProps) {
       : (initial?.investedAmount ? String(initial.investedAmount) : '')
   );
 
+  // ¿En qué invierte? (opcional) — chips de INVESTMENT_KINDS + texto libre "Otro".
+  // Al cargar, separamos lo conocido (chips) de lo que no está en la lista (Otro).
+  const [investedKinds, setInvestedKinds] = useState<string[]>(
+    () => (initial?.investedIn ?? []).filter((x) => INVESTMENT_KINDS.includes(x))
+  );
+  const [investedOther, setInvestedOther] = useState<string>(
+    () => (initial?.investedIn ?? []).filter((x) => !INVESTMENT_KINDS.includes(x)).join(', ')
+  );
+  const toggleKind = (k: string) =>
+    setInvestedKinds((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
+
   const toArs = (digits: number, cur: Currency) => (cur === 'USD' ? (usdRate ? arsFromUsd(digits, usdRate) : 0) : digits);
 
   const isComplete = habits.knowsLastMonthExpenses !== null &&
@@ -82,6 +95,11 @@ export function Habits({ initial, onComplete, editMode }: HabitsProps) {
       data.investedAmount = toArs(d, investedCurrency);
       data.investedCurrency = investedCurrency;
       data.investedOriginalAmount = d;
+      // En qué invierte (chips + "Otro"). Vacío si no invierte o no cargó nada.
+      const otherClean = investedOther.trim();
+      data.investedIn = habits.invests
+        ? [...investedKinds, ...(otherClean ? [otherClean] : [])]
+        : [];
     }
     onComplete(data as Parameters<HabitsProps['onComplete']>[0]);
   };
@@ -186,8 +204,36 @@ export function Habits({ initial, onComplete, editMode }: HabitsProps) {
 
                 {key === 'saves' && habits.saves === true &&
                   renderAmount('¿Cuánto tenés ahorrado? (opcional)', savingsInput, setSavingsInput, savingsCurrency, setSavingsCurrency)}
-                {key === 'invests' && habits.invests === true &&
-                  renderAmount('¿Cuánto tenés invertido? (opcional)', investedInput, setInvestedInput, investedCurrency, setInvestedCurrency)}
+                {key === 'invests' && habits.invests === true && (
+                  <>
+                    {renderAmount('¿Cuánto tenés invertido? (opcional)', investedInput, setInvestedInput, investedCurrency, setInvestedCurrency)}
+                    {/* ¿En qué invierte? (opcional) — personaliza la pantalla de Inversiones. */}
+                    <div className="mt-3">
+                      <label className="block text-sm text-gray-600 mb-2">¿En qué invertís? (opcional)</label>
+                      <div className="flex flex-wrap gap-2">
+                        {INVESTMENT_KINDS.map((k) => {
+                          const on = investedKinds.includes(k);
+                          return (
+                            <button
+                              key={k}
+                              type="button"
+                              onClick={() => toggleKind(k)}
+                              className={`text-sm rounded-full px-3 py-1.5 border-2 transition-colors ${on ? 'border-[#7626B3] bg-[#F0E7FA] text-[#7626B3] font-medium' : 'border-gray-200 bg-white text-gray-600 hover:border-[#7626B3]/50'}`}
+                            >
+                              {k}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <Input
+                        value={investedOther}
+                        onChange={(e) => setInvestedOther(e.target.value)}
+                        placeholder="Otro (contanos en qué)"
+                        className="mt-2 rounded-xl"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

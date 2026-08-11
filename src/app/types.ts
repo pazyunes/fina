@@ -154,6 +154,10 @@ export interface UserData {
   investedAmount?: number;  // cuánto tiene invertido (ARS) — solo si invests
   investedCurrency?: Currency;
   investedOriginalAmount?: number;
+  // En qué invierte (opcional, solo si invests): instrumentos elegidos de la
+  // lista INVESTMENT_KINDS + texto libre de "Otro". Se usa para personalizar la
+  // pantalla de Inversiones (reconocer lo que ya hace y recomendar complementos).
+  investedIn?: string[];
 
   // Exchange rate snapshot used for any USD amounts in this flow
   exchangeRate?: ExchangeRate | null;
