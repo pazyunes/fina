@@ -42,6 +42,8 @@ interface GoalsProps {
       currency: Currency;
       originalAmount: number;
     }>;
+    // Reserva mensual (ARS) que la usuaria puede definir en "No tengo objetivos".
+    reserveArs?: number;
   }) => void;
 }
 
@@ -88,8 +90,7 @@ const CATEGORY_CONFIG: Record<string, GoalCategoryConfig> = {
     message: 'En el informe te vamos a presentar un gráfico con qué parte de tu plata conviene destinar a invertir.',
   },
   'No tengo': {
-    kind: 'percent', emoji: '🐷',
-    prompt: 'Aunque no tengas un objetivo puntual, ahorrar un % fijo de tu sueldo cada mes es la forma más simple de empezar.',
+    kind: 'none', emoji: '🐷',
   },
 };
 
@@ -132,6 +133,9 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   // PR #8 — categoría cuyo popup está abierto (Viajar / Comprar / Pagar / Invertir).
   const [modalCategory, setModalCategory] = useState<string | null>(null);
+  // Reserva mensual (ARS) definida en "No tengo objetivos". Arranca con lo que ya
+  // había (editMode) para no pisarla al continuar.
+  const [reserveArs, setReserveArs] = useState<number>(initial?.reserveArs ?? 0);
 
   // Click en una categoría: las que tienen popup (CATEGORY_CONFIG) lo abren;
   // "Otro" y "No tengo" mantienen su flujo inline (toggle).
@@ -161,6 +165,15 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
 
   // Confirmar el popup informativo (Invertir) → solo marca la categoría.
   const handleModalInfo = () => {
+    if (modalCategory) {
+      setSelectedGoals((prev) => (prev.includes(modalCategory) ? prev : [...prev, modalCategory]));
+    }
+  };
+
+  // Confirmar "No tengo objetivos" → marca la categoría y guarda la reserva
+  // mensual opcional (no crea ningún objetivo).
+  const handleModalNone = (reserve: number) => {
+    setReserveArs(reserve);
     if (modalCategory) {
       setSelectedGoals((prev) => (prev.includes(modalCategory) ? prev : [...prev, modalCategory]));
     }
@@ -230,6 +243,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
       // en sí, así que se filtra antes de persistir.
       goals: selectedGoals.filter(g => g !== CUSTOM_GOAL_OPTION),
       specificGoals: parsedGoals,
+      reserveArs,
     });
     
     // PR — Tras objetivos vamos al paso de prioridades (preferencias); desde
@@ -550,6 +564,7 @@ export function Goals({ initial, onComplete, editMode }: GoalsProps) {
           onClose={() => setModalCategory(null)}
           onConfirmGoals={handleModalGoals}
           onConfirmInfo={handleModalInfo}
+          onConfirmNone={handleModalNone}
         />
       )}
 

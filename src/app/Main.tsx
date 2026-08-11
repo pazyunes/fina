@@ -224,7 +224,7 @@ export function Main() {
     setUserData(prev => ({ ...prev, ...data }));
   };
 
-  const handleGoals = (data: { goals: string[]; specificGoals: UserData['specificGoals'] }) => {
+  const handleGoals = (data: { goals: string[]; specificGoals: UserData['specificGoals']; reserveArs?: number }) => {
     const completeData = { ...userData, ...data, onboardingDate: userData.onboardingDate ?? new Date().toISOString() } as UserData;
     setUserData(completeData);
 

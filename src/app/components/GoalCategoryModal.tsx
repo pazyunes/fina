@@ -19,7 +19,7 @@ import { Currency } from '../types';
 //   - 'percent' → ahorrar X% del sueldo por mes (para "No tengo objetivo").
 //   - 'info'    → mensaje informativo (Invertir).
 export interface GoalCategoryConfig {
-  kind: 'amount' | 'travel' | 'percent' | 'info';
+  kind: 'amount' | 'travel' | 'percent' | 'info' | 'none';
   emoji?: string;
   prompt?: string;
   amountLabel?: string;
@@ -55,6 +55,7 @@ export function GoalCategoryModal({
   onClose,
   onConfirmGoals,
   onConfirmInfo,
+  onConfirmNone,
 }: {
   category: string;
   config: GoalCategoryConfig;
@@ -64,6 +65,9 @@ export function GoalCategoryModal({
   onClose: () => void;
   onConfirmGoals: (goals: GoalDraft[]) => void;
   onConfirmInfo: () => void;
+  // "No tengo objetivos": no crea meta; opcionalmente define la reserva mensual
+  // (ARS) que se muestra en el informe. reserveArs = 0 si no cargó nada.
+  onConfirmNone?: (reserveArs: number) => void;
 }) {
   const [what, setWhat] = useState('');
   const [amount, setAmount] = useState('');
@@ -80,6 +84,8 @@ export function GoalCategoryModal({
     setPaidItems((p) => p.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
   const removePaid = (i: number) => setPaidItems((p) => (p.length <= 1 ? p : p.filter((_, idx) => idx !== i)));
   const [savedAmount, setSavedAmount] = useState('');
+  // "No tengo objetivos": monto opcional de reserva mensual (para el informe).
+  const [reserveAmount, setReserveAmount] = useState('');
 
   const canAsap = monthlyForGoals > 0;
   const toArs = (digits: number) => (currency === 'USD' ? (usdRate ? arsFromUsd(digits, usdRate) : 0) : digits);
@@ -193,6 +199,36 @@ export function GoalCategoryModal({
             </div>
             <Button onClick={() => { onConfirmInfo(); onClose(); }} className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-xl">
               Entendido
+            </Button>
+          </div>
+        ) : config.kind === 'none' ? (
+          <div className="px-5 py-5 space-y-4">
+            {/* Cartel tranquilizador — no es obligatorio tener objetivos. */}
+            <div className="bg-[#EAF3DE] rounded-xl p-4 text-sm text-[#3B6D11] leading-relaxed">
+              💚 Está perfecto no tener un objetivo puntual ahora. A medida que surja alguno, lo podés agregar desde tu perfil cuando quieras.
+            </div>
+
+            {/* Recomendación: reserva mensual opcional (alimenta la reserva del informe). */}
+            <div>
+              <div className="flex items-center justify-between">
+                <Label className="text-gray-700 text-sm">Si querés, apartá un monto por mes para ir ahorrando</Label>
+                <CurrencyToggle value={currency} usdEnabled={!!usdRate} onChange={setCurrency} />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Es opcional. Lo vas a ver como tu <strong>reserva</strong> en el informe, y lo podés cambiar cuando quieras.</p>
+              <div className="relative mt-2">
+                <span className={`absolute top-1/2 -translate-y-1/2 text-gray-500 z-10 ${currency === 'USD' ? 'left-3 text-sm' : 'left-4'}`}>{currency === 'USD' ? 'USD' : '$'}</span>
+                <Input type="text" inputMode="numeric" pattern="[0-9]*" value={reserveAmount} onChange={(e) => setReserveAmount(fmtInput(e.target.value))} placeholder="¿Cuánto querés reservar por mes?" className={`rounded-xl ${currency === 'USD' ? 'pl-12' : 'pl-8'} ${AMOUNT_FIELD_CLASS}`} />
+              </div>
+              {currency === 'USD' && usdRate && digitsOf(reserveAmount) > 0 && (
+                <p className="text-xs text-gray-500 mt-1">≈ {formatArs(toArs(digitsOf(reserveAmount)))}/mes al cambio del día</p>
+              )}
+            </div>
+
+            <Button
+              onClick={() => { onConfirmNone?.(toArs(digitsOf(reserveAmount))); onClose(); }}
+              className="w-full bg-[#059669] hover:bg-[#047857] text-white rounded-xl"
+            >
+              Listo
             </Button>
           </div>
         ) : (
