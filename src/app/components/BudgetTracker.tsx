@@ -104,7 +104,9 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
     .map((c) => {
       const v = VISIT[c.key];
       if (!v) return null;
-      const remaining = Math.max(budgetOf(c) - spentOf(c.key), 0);
+      // "Te queda" realista = tope − lo que ya venías gastando antes de arrancar
+      // (referencia) − lo que registró el bot.
+      const remaining = Math.max(budgetOf(c) - referenceOf(c) - spentOf(c.key), 0);
       const ticket = ticketOf(c.key);
       const n = ticket > 0 ? Math.floor(remaining / ticket) : 0;
       return n >= 1 ? `${n} ${v.unit(n)}` : null;
@@ -139,14 +141,16 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
         {cats.map((c) => {
           const spent = spentOf(c.key);
           const budget = budgetOf(c);
-          const remaining = Math.max(budget - spent, 0);
+          const reference = referenceOf(c);
+          // Te queda = tope − referencia (lo que ya venías gastando antes de
+          // arrancar) − gasto real del bot.
+          const remaining = Math.max(budget - reference - spent, 0);
           const ratio = budget > 0 ? remaining / budget : 0;
-          // La barra ARRANCA LLENA (violeta oscuro = te queda) y baja con el
-          // gasto real del bot.
+          // Violeta oscuro = te queda (baja con el gasto real del bot).
           const remainingPct = budget > 0 ? Math.min((remaining / budget) * 100, 100) : 0;
-          // Tramo de referencia (violeta clarito) FIJO a la derecha: ≈ lo que se
-          // hubiese gastado hasta el día del onboarding. No descuenta; queda ahí.
-          const refPct = budget > 0 ? Math.min((referenceOf(c) / budget) * 100, 100) : 0;
+          // Tramo de referencia (violeta clarito) FIJO a la derecha: ≈ lo que ya
+          // venías gastando antes de arrancar. Ya está descontado del "te queda".
+          const refPct = budget > 0 ? Math.min((reference / budget) * 100, 100) : 0;
           const color = spent > budget ? '#D85A30' : ratio <= 0.2 ? '#D85A30' : ratio <= 0.4 ? '#B8860B' : '#7626B3';
           const v = VISIT[c.key];
           const ticket = ticketOf(c.key);
@@ -184,7 +188,7 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
       {referenceFactor > 0 && (
         <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
           <span className="inline-block w-3 h-2.5 rounded-full bg-[#C6A6E6] shrink-0" />
-          <span>El tramo clarito es ≈ lo que se hubiese gastado hasta que empezaste. Es solo referencia — no se descuenta, solo baja lo que registrás por el bot.</span>
+          <span>El tramo clarito es ≈ lo que ya venías gastando este mes antes de arrancar con FINA. Ya está descontado de lo que te queda; de ahí en más solo baja lo que registrás por el bot.</span>
         </div>
       )}
 
