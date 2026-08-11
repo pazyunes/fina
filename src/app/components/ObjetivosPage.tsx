@@ -7,6 +7,7 @@ import { FinancialAnalysis, UserData } from '../types';
 import { useMoney, DisplayCurrencyToggle } from '../lib/displayCurrency';
 import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
 import { updateReportData } from '../lib/reports';
+import { fetchUserPreferences } from '../lib/preferences';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
@@ -67,6 +68,14 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
   // confirmadas (control visual del tilde).
   const [contribStrategy, setContribStrategy] = useState<{ strategy: GoalStrategy; index: number } | null>(null);
   const [doneStrategies, setDoneStrategies] = useState<Set<number>>(new Set());
+  // Disposición a recortar (del onboarding, tabla aparte) para priorizar ideas.
+  const [cutWillingness, setCutWillingness] = useState<Record<string, number>>({});
+  const [showAllStrategies, setShowAllStrategies] = useState(false);
+  useEffect(() => {
+    let active = true;
+    fetchUserPreferences().then((p) => { if (active) setCutWillingness(p.cutWillingness ?? {}); });
+    return () => { active = false; };
+  }, []);
   const goals = analysis.goalsAnalysis ?? [];
   const specificGoals = analysis.userData.specificGoals ?? [];
 
@@ -79,7 +88,11 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
     }, 200);
     return () => clearTimeout(t);
   }, []);
-  const strategies = buildGoalStrategies(analysis);
+  const strategies = buildGoalStrategies(analysis, { cutWillingness });
+  // Progressive disclosure: mostramos las 3 más relevantes y el resto bajo
+  // "Ver más ideas", para que no sea una pared de texto.
+  const TOP_N = 3;
+  const visibleStrategies = showAllStrategies ? strategies : strategies.slice(0, TOP_N);
 
   // Total ahorrado registrado para el objetivo en la posición i.
   const savedFor = (i: number) =>
@@ -214,13 +227,13 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
         {strategies.length > 0 && (
           <section id="estrategias" className="scroll-mt-24">
             <p className="text-xs font-bold text-[#7626B3] uppercase tracking-wider mb-2">
-              Cómo llegar al objetivo — varias opciones
+              Ideas para llegar más rápido
             </p>
             <p className="text-xs text-gray-500 mb-2">
-              Tildá una cuando la implementes y te preguntamos cuánto ahorraste para sumarlo al objetivo que elijas.
+              Elegidas según lo que gastás y lo que dijiste que podés ajustar. Tildá la que hagas y sumás lo ahorrado a tu objetivo.
             </p>
             <div className="bg-white rounded-xl px-4 py-1 border border-[#D7C2EF]/70 shadow-sm">
-              {strategies.map((s, i) => (
+              {visibleStrategies.map((s, i) => (
                 <StrategyRow
                   key={i}
                   strategy={s}
@@ -230,6 +243,15 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
                 />
               ))}
             </div>
+            {strategies.length > TOP_N && (
+              <button
+                type="button"
+                onClick={() => setShowAllStrategies((v) => !v)}
+                className="mt-2 w-full text-xs font-semibold text-[#7626B3] py-2 hover:underline"
+              >
+                {showAllStrategies ? 'Ver menos' : `Ver más ideas (${strategies.length - TOP_N})`}
+              </button>
+            )}
           </section>
         )}
 
