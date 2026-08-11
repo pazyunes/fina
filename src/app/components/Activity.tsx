@@ -200,6 +200,10 @@ export function Activity({ initial, onComplete, editMode }: ActivityProps) {
                   <p className="mt-1"><strong>Variable</strong>: cambia mes a mes (ej: freelance, propinas, ventas, comisiones).</p>
                 </div>
 
+                <div className="bg-[#EAF3DE] border border-[#CDE3B4] rounded-xl px-3 py-2.5 mb-3 text-xs text-[#3B6D11] leading-relaxed">
+                  💡 ¿Tu plata no entra toda junta, sino de a poco durante el mes (changas, freelance, comisiones)? Poné un <strong>estimado de todo lo que solés juntar en un mes completo</strong>. No tiene que ser exacto.
+                </div>
+
                 <div className="space-y-3">
                   {sources.map((s, i) => {
                     const digits = parseInt(s.amount.replace(/\D/g, '')) || 0;

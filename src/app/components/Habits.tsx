@@ -185,9 +185,9 @@ export function Habits({ initial, onComplete, editMode }: HabitsProps) {
                 </div>
 
                 {key === 'saves' && habits.saves === true &&
-                  renderAmount('¿Cuánto tenés ahorrado?', savingsInput, setSavingsInput, savingsCurrency, setSavingsCurrency)}
+                  renderAmount('¿Cuánto tenés ahorrado? (opcional)', savingsInput, setSavingsInput, savingsCurrency, setSavingsCurrency)}
                 {key === 'invests' && habits.invests === true &&
-                  renderAmount('¿Cuánto tenés invertido?', investedInput, setInvestedInput, investedCurrency, setInvestedCurrency)}
+                  renderAmount('¿Cuánto tenés invertido? (opcional)', investedInput, setInvestedInput, investedCurrency, setInvestedCurrency)}
               </div>
             ))}
           </div>
