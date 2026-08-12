@@ -97,11 +97,14 @@ export function Main() {
 
   // Fetch the USD blue rate once and snapshot it into userData, so every USD
   // amount in this flow uses the same rate and the report stays anchored to it.
+  // IMPORTANTE: si ya hay una cotización (usuaria con informe existente), NO la
+  // pisamos — si no, los montos en USD cargados con el dólar viejo se ven
+  // desfasados (bug: "me cambió los valores"). Solo se setea si falta.
   useEffect(() => {
     let active = true;
     fetchExchangeRate().then((rate) => {
       if (active && rate) {
-        setUserData(prev => ({ ...prev, exchangeRate: rate }));
+        setUserData(prev => (prev.exchangeRate?.rate ? prev : { ...prev, exchangeRate: rate }));
       }
     });
     return () => { active = false; };

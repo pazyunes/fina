@@ -16,7 +16,7 @@ import { AddGoalModal } from './AddGoalModal';
 import { StrategyContributionModal } from './StrategyContributionModal';
 import { GoalEditModal } from './GoalEditModal';
 import { GoalDetailsEditModal, EditableGoal } from './GoalDetailsEditModal';
-import { arsFromUsd } from '../lib/currency';
+import { arsFromUsd, formatUsd } from '../lib/currency';
 
 interface ObjetivosPageProps {
   analysis: FinancialAnalysis;
@@ -262,6 +262,8 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
                   goal={g}
                   saved={savedFor(i)}
                   parts={specificGoals[i]?.parts}
+                  currency={specificGoals[i]?.currency}
+                  originalAmount={specificGoals[i]?.originalAmount}
                   onClick={() => setEditGoalIndex(i)}
                   onEdit={() => setEditDetailsIndex(i)}
                   onDelete={() => handleDeleteGoal(i)}
@@ -395,6 +397,8 @@ function GoalCard({
   goal,
   saved,
   parts,
+  currency,
+  originalAmount,
   onClick,
   onEdit,
   onDelete,
@@ -402,11 +406,20 @@ function GoalCard({
   goal: FinancialAnalysis['goalsAnalysis'][number];
   saved: number;
   parts?: Array<{ label: string; amount: number }>;
+  currency?: 'ARS' | 'USD';
+  originalAmount?: number;
   onClick?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
-  const { fmt } = useMoney();
+  const { fmt: fmtGlobal, isUsd } = useMoney();
+  // Para objetivos cargados en USD, mostramos con la cotización CONGELADA del
+  // propio objetivo (amount_ARS / monto_original_USD), no con la cotización
+  // global (que puede haber cambiado) → muestra EXACTO lo que la usuaria cargó.
+  const goalRate = currency === 'USD' && originalAmount && originalAmount > 0 && goal.amount > 0
+    ? goal.amount / originalAmount
+    : null;
+  const fmt = (ars: number) => (isUsd && goalRate ? formatUsd(Math.round(ars / goalRate)) : fmtGlobal(ars));
 
   const pct = goal.amount > 0 ? Math.min(Math.round((saved / goal.amount) * 100), 100) : 0;
   const remaining = Math.max(goal.amount - saved, 0);
