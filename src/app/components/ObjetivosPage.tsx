@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Check, TrendingUp, Clock, Plus } from 'lucide-react';
+import { Check, TrendingUp, Clock, Plus, Pencil, Trash2 } from 'lucide-react';
 import { FinancialAnalysis, UserData } from '../types';
 import { useMoney, DisplayCurrencyToggle } from '../lib/displayCurrency';
 import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
@@ -15,6 +15,8 @@ import { WhatsAppFab } from './WhatsAppFab';
 import { AddGoalModal } from './AddGoalModal';
 import { StrategyContributionModal } from './StrategyContributionModal';
 import { GoalEditModal } from './GoalEditModal';
+import { GoalDetailsEditModal, EditableGoal } from './GoalDetailsEditModal';
+import { arsFromUsd } from '../lib/currency';
 
 interface ObjetivosPageProps {
   analysis: FinancialAnalysis;
@@ -123,6 +125,44 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
     onAnalysisChange?.(nextAnalysis, newUserData);
   };
 
+  // Editar la DEFINICIÓN del objetivo (nombre/monto/plazo/desglose) desde el lápiz.
+  const [editDetailsIndex, setEditDetailsIndex] = useState<number | null>(null);
+  const handleSaveGoalDetails = async (index: number, updated: EditableGoal) => {
+    const gi = specificGoals[index];
+    if (!gi) return;
+    const usdRate = analysis.userData.exchangeRate?.rate ?? null;
+    const typed = parseInt(updated.amount.replace(/\D/g, '')) || 0;
+    const amountArs = updated.currency === 'USD' && usdRate ? arsFromUsd(typed, usdRate) : typed;
+    const newGoal = {
+      ...gi,
+      title: updated.title,
+      timeframe: parseInt(updated.timeframe) || gi.timeframe,
+      currency: updated.currency,
+      amount: amountArs,
+      originalAmount: typed,
+      parts: updated.parts ?? gi.parts,
+    };
+    const newUserData: UserData = {
+      ...analysis.userData,
+      specificGoals: specificGoals.map((g, i) => (i === index ? newGoal : g)),
+    };
+    const { error, analysis: nextAnalysis } = await updateReportData(newUserData);
+    if (error || !nextAnalysis) { setErrorMsg(error ?? 'No se pudo guardar el objetivo.'); return; }
+    onAnalysisChange?.(nextAnalysis, newUserData);
+  };
+
+  // Borrar un objetivo (con confirmación).
+  const handleDeleteGoal = async (index: number) => {
+    if (!window.confirm('¿Borrar este objetivo? No se puede deshacer.')) return;
+    const newUserData: UserData = {
+      ...analysis.userData,
+      specificGoals: specificGoals.filter((_, i) => i !== index),
+    };
+    const { error, analysis: nextAnalysis } = await updateReportData(newUserData);
+    if (error || !nextAnalysis) { setErrorMsg(error ?? 'No se pudo borrar el objetivo.'); return; }
+    onAnalysisChange?.(nextAnalysis, newUserData);
+  };
+
   // Guardar los aportes editados de un objetivo (llena el donut) y persistir.
   const handleSaveContributions = async (index: number, contributions: Array<{ amount: number; date: string; kind?: 'paid' | 'saved'; label?: string }>) => {
     const newUserData: UserData = {
@@ -217,7 +257,15 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           ) : (
             <div className="space-y-3">
               {goals.map((g, i) => (
-                <GoalCard key={i} goal={g} saved={savedFor(i)} parts={specificGoals[i]?.parts} onClick={() => setEditGoalIndex(i)} />
+                <GoalCard
+                  key={i}
+                  goal={g}
+                  saved={savedFor(i)}
+                  parts={specificGoals[i]?.parts}
+                  onClick={() => setEditGoalIndex(i)}
+                  onEdit={() => setEditDetailsIndex(i)}
+                  onDelete={() => handleDeleteGoal(i)}
+                />
               ))}
             </div>
           )}
@@ -316,6 +364,27 @@ export function ObjetivosPage({ analysis, onAnalysisChange }: ObjetivosPageProps
           onSave={(contribs) => handleSaveContributions(editGoalIndex, contribs)}
         />
       )}
+
+      {editDetailsIndex !== null && specificGoals[editDetailsIndex] && (() => {
+        const gi = specificGoals[editDetailsIndex];
+        const displayAmount = gi.currency === 'USD' ? (gi.originalAmount ?? 0) : gi.amount;
+        const editable: EditableGoal = {
+          title: gi.title,
+          amount: String(Math.round(displayAmount)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'),
+          timeframe: String(gi.timeframe),
+          currency: gi.currency ?? 'ARS',
+          parts: gi.parts,
+          contributions: gi.contributions,
+        };
+        return (
+          <GoalDetailsEditModal
+            goal={editable}
+            usdRate={analysis.userData.exchangeRate?.rate ?? null}
+            onSave={(u) => handleSaveGoalDetails(editDetailsIndex, u)}
+            onClose={() => setEditDetailsIndex(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -327,11 +396,15 @@ function GoalCard({
   saved,
   parts,
   onClick,
+  onEdit,
+  onDelete,
 }: {
   goal: FinancialAnalysis['goalsAnalysis'][number];
   saved: number;
   parts?: Array<{ label: string; amount: number }>;
   onClick?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   const { fmt } = useMoney();
 
@@ -365,9 +438,27 @@ function GoalCard({
             ~{fmt(goal.monthlyRequired)}/mes · {goal.timeframe} meses
           </p>
         </div>
-        <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap ${STATUS_BADGE[goal.status]}`}>
-          {STATUS_LABEL[goal.status]}
-        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap ${STATUS_BADGE[goal.status]}`}>
+            {STATUS_LABEL[goal.status]}
+          </span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+            aria-label="Editar objetivo"
+            className="p-1.5 rounded-full text-gray-400 hover:text-[#7626B3] hover:bg-[#F0E7FA] transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+            aria-label="Borrar objetivo"
+            className="p-1.5 rounded-full text-gray-400 hover:text-[#D85A30] hover:bg-[#FBE3D9] transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Donut con progreso real */}
