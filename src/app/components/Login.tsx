@@ -64,9 +64,17 @@ export function Login() {
     setInfo(null);
 
     if (mode === 'forgot') {
-      await sendPasswordReset(email);
-      // Por seguridad no revelamos si el email existe.
-      setInfo('Si el email está registrado, te mandamos un link para restablecer tu contraseña. Revisá tu casilla (y el spam).');
+      const { error: resetError } = await sendPasswordReset(email);
+      if (resetError) {
+        // Supabase ya no revela acá si el email existe o no (eso lo maneja
+        // server-side sin error), así que un error real es un fallo genuino
+        // (rate limit, redirect URL no permitida, etc.) y sí conviene mostrarlo.
+        // eslint-disable-next-line no-console
+        console.error('[fina] sendPasswordReset failed:', resetError);
+        setError(traducirError(resetError));
+      } else {
+        setInfo('Si el email está registrado, te mandamos un link para restablecer tu contraseña. Revisá tu casilla (y el spam).');
+      }
       setSubmitting(false);
       return;
     }
@@ -241,5 +249,7 @@ function traducirError(msg: string): string {
   if (m.includes('user already registered')) return 'Ya existe una cuenta con ese email.';
   if (m.includes('password should be at least')) return 'La contraseña debe tener al menos 6 caracteres.';
   if (m.includes('email not confirmed')) return 'Tenés que confirmar tu email antes de iniciar sesión.';
+  if (m.includes('rate limit')) return 'Se enviaron demasiados emails en poco tiempo. Esperá unos minutos y probá de nuevo.';
+  if (m.includes('you can only request this after') || m.includes('security purposes')) return 'Esperá un momento antes de pedir otro link — Supabase limita cuántos podés pedir seguidos.';
   return msg;
 }
