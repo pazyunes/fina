@@ -13,6 +13,7 @@ import { MonthEndReview } from './MonthEndReview';
 import { WHATSAPP_URL } from './WhatsAppFab';
 import { OpenBankAccountBox } from './OpenBankAccountBox';
 import { BudgetTracker } from './BudgetTracker';
+import { MovementsCard } from './MovementsCard';
 import { ReserveControl } from './ReserveControl';
 import { IncomeResetControl } from './IncomeResetControl';
 import { BottomNav } from './BottomNav';
@@ -262,6 +263,9 @@ export function Result({ analysis, onAnalysisChange }: ResultProps) {
             <MessageCircle className="w-4 h-4 shrink-0" />
             <span><span className="underline font-bold">Hacé click acá</span> para registrar tus gastos…</span>
           </a>
+
+          {/* ÚLTIMOS MOVIMIENTOS — feed de gastos registrados por el chatbot */}
+          <MovementsCard resetDay={resetDay} />
 
           {/* ¿Cuándo se renueva tu ingreso? (reinicia el presupuesto) */}
           <IncomeResetControl />

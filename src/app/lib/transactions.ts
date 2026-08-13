@@ -40,6 +40,24 @@ export function mapTxnCategory(raw: string | null): BudgetCat {
   return 'other';
 }
 
+// Metadatos (etiqueta + emoji) por categoría canónica. Se usan en el feed de
+// movimientos y en las categorías sin tope del presupuesto.
+export const CATEGORY_META: Record<BudgetCat, { label: string; emoji: string }> = {
+  entertainment: { label: 'Entretenimiento', emoji: '🎉' },
+  delivery:      { label: 'Delivery',        emoji: '🍔' },
+  cafeterias:    { label: 'Cafetería',       emoji: '☕' },
+  restaurants:   { label: 'Restaurantes',    emoji: '🍽️' },
+  supermarket:   { label: 'Supermercado',    emoji: '🛒' },
+  housing:       { label: 'Vivienda',        emoji: '🏠' },
+  health:        { label: 'Salud',           emoji: '🩺' },
+  beauty:        { label: 'Belleza',         emoji: '💄' },
+  therapy:       { label: 'Terapia',         emoji: '🧠' },
+  gym:           { label: 'Gimnasio',        emoji: '🏋️' },
+  transport:     { label: 'Transporte',      emoji: '🚌' },
+  subscriptions: { label: 'Suscripciones',   emoji: '📱' },
+  other:         { label: 'Otros',           emoji: '💸' },
+};
+
 export interface PeriodExpenses {
   items: Txn[];
   total: number;

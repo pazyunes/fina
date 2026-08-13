@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { FinancialAnalysis, UserData } from '../types';
 import { useMoney } from '../lib/displayCurrency';
-import { fetchPeriodExpenses, PeriodExpenses, BudgetCat, mapTxnCategory } from '../lib/transactions';
+import { fetchPeriodExpenses, PeriodExpenses, BudgetCat, mapTxnCategory, CATEGORY_META } from '../lib/transactions';
 
 interface BudgetTrackerProps {
   analysis: FinancialAnalysis;
@@ -115,7 +115,15 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
 
   const overCats = cats.filter((c) => spentOf(c.key) > budgetOf(c));
 
-  if (cats.length === 0) {
+  // Categorías variables SIN tope pero con gasto registrado por el bot (ej:
+  // supermercado que la usuaria no cargó en el onboarding, pero sí gastó por
+  // WhatsApp). Las mostramos igual para que el dato no se pierda.
+  const trackedKeys = new Set(cats.map((c) => c.key));
+  const untracked = ([...VARIABLE_CATS] as BudgetCat[])
+    .filter((k) => !trackedKeys.has(k) && spentOf(k) > 0)
+    .map((k) => ({ key: k, ...CATEGORY_META[k], spent: spentOf(k) }));
+
+  if (cats.length === 0 && untracked.length === 0) {
     return (
       <div className="bg-white rounded-xl p-4 border border-[#D7C2EF]/70 shadow-sm mt-3 text-sm text-gray-500">
         Cargá tus gastos en el perfil para ver tu presupuesto por categoría.
@@ -189,6 +197,31 @@ export function BudgetTracker({ analysis, resetDay }: BudgetTrackerProps) {
         <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
           <span className="inline-block w-3 h-2.5 rounded-full bg-[#C6A6E6] shrink-0" />
           <span>El tramo clarito es ≈ lo que ya venías gastando este mes antes de arrancar con FINA. Ya está descontado de lo que te queda; de ahí en más solo baja lo que registrás por el bot.</span>
+        </div>
+      )}
+
+      {/* Categorías con gasto del bot pero sin tope definido */}
+      {untracked.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-[#D7C2EF]/40">
+          <p className="text-xs text-gray-500 mb-2">
+            Registraste gastos en estas categorías por el chatbot, pero no les pusiste un tope:
+          </p>
+          <div className="space-y-2">
+            {untracked.map((c) => (
+              <div key={c.key} className="flex items-center gap-2 text-sm">
+                <span className="text-base">{c.emoji}</span>
+                <span className="flex-1 text-gray-700">{c.label}</span>
+                <span className="font-semibold text-gray-800">gastaste {fmt(c.spent)}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/editar/gastos-variables')}
+            className="mt-2 text-xs font-semibold text-[#7626B3] underline"
+          >
+            Ponerles un tope →
+          </button>
         </div>
       )}
 
