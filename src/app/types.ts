@@ -29,7 +29,7 @@ export interface TransportData {
 export interface UserData {
   // Personal data
   name: string;
-  age: string;
+  birthDate: string; // YYYY-MM-DD — la edad se calcula a partir de esto (ver lib/age.ts)
   email: string;
   gender: 'femenino' | 'masculino' | 'prefiero_no_decir';
 

@@ -29,7 +29,7 @@ export function Main() {
 
   const [userData, setUserData] = useState<Partial<UserData>>(() => cachedReport?.userData ?? {
     name: '',
-    age: '',
+    birthDate: '',
     email: '',
     monthlyIncome: 0,
     banks: [],
@@ -89,11 +89,11 @@ export function Main() {
     setUserData(prev => ({
       ...prev,
       name: prev.name || profile.name,
-      age: prev.age || profile.age,
+      birthDate: prev.birthDate || profile.birthDate,
       gender: prev.gender || (profile.gender || undefined),
       email: prev.email || user.email || '',
     }));
-  }, [user, profile.name, profile.age, profile.gender]);
+  }, [user, profile.name, profile.birthDate, profile.gender]);
 
   // Fetch the USD blue rate once and snapshot it into userData, so every USD
   // amount in this flow uses the same rate and the report stays anchored to it.
@@ -119,11 +119,11 @@ export function Main() {
     });
   }, [location.pathname]);
 
-  const handlePersonalData = (data: { name: string; age: string; email: string; gender: 'femenino' | 'masculino' | 'prefiero_no_decir' }) => {
+  const handlePersonalData = (data: { name: string; birthDate: string; email: string; gender: 'femenino' | 'masculino' | 'prefiero_no_decir' }) => {
     setUserData(prev => ({ ...prev, ...data }));
     // Persistimos al perfil para que las próximas veces se pre-cargue y se
     // pueda saltear este paso.
-    void updateProfile({ name: data.name, age: data.age, gender: data.gender });
+    void updateProfile({ name: data.name, birthDate: data.birthDate, gender: data.gender });
   };
 
   const handleContext = (data: { livesAlone: boolean }) => {

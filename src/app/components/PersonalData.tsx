@@ -8,13 +8,16 @@ import { BackButton } from './BackButton';
 import { OnboardingAside } from './OnboardingAside';
 import { OnboardingProgress } from './OnboardingProgress';
 import { UserData } from '../types';
+import { birthDateBounds } from '../lib/age';
 
 type Gender = 'femenino' | 'masculino' | 'prefiero_no_decir';
 
 interface PersonalDataProps {
   initial?: Partial<UserData>;
-  onComplete: (data: { name: string; age: string; email: string; gender: Gender }) => void;
+  onComplete: (data: { name: string; birthDate: string; email: string; gender: Gender }) => void;
 }
+
+const BIRTH_DATE_BOUNDS = birthDateBounds();
 
 export function PersonalData({ initial, onComplete }: PersonalDataProps) {
   const navigate = useNavigate();
@@ -22,15 +25,15 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
   // PR6c — Email se omite del form (ya se pidió en el signup; Main lo
   // prefille en userData.email desde session.user.email). Lo seguimos
   // pasando en onComplete porque el resto del flujo lo consume.
-  const [formData, setFormData] = useState<{ name: string; age: string; gender: Gender | '' }>({
+  const [formData, setFormData] = useState<{ name: string; birthDate: string; gender: Gender | '' }>({
     name: initial?.name ?? '',
-    age: initial?.age ?? '',
+    birthDate: initial?.birthDate ?? '',
     gender: initial?.gender ?? ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.age && formData.gender) {
+    if (formData.name && formData.birthDate && formData.gender) {
       onComplete({ ...formData, email: initial?.email ?? '', gender: formData.gender as Gender });
       navigate('/context');
     }
@@ -76,25 +79,17 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
             </div>
 
             <div>
-              <Label htmlFor="age" className="text-gray-700">
-                ¿Cuántos años tenés?
+              <Label htmlFor="birthDate" className="text-gray-700">
+                ¿Cuándo naciste?
               </Label>
               <Input
-                id="age"
-                type="number"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={formData.age}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (val >= 0 || e.target.value === '') {
-                    setFormData({ ...formData, age: e.target.value });
-                  }
-                }}
-                placeholder="Edad"
+                id="birthDate"
+                type="date"
+                value={formData.birthDate}
+                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
                 required
-                min="18"
-                max="100"
+                min={BIRTH_DATE_BOUNDS.min}
+                max={BIRTH_DATE_BOUNDS.max}
                 className="mt-2 bg-white border-gray-200 focus:border-[#7626B3] focus:ring-[#7626B3] rounded-xl"
               />
             </div>
@@ -127,7 +122,7 @@ export function PersonalData({ initial, onComplete }: PersonalDataProps) {
 
             <Button
               type="submit"
-              disabled={!formData.name || !formData.age || !formData.gender}
+              disabled={!formData.name || !formData.birthDate || !formData.gender}
               className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg mt-6 disabled:opacity-50"
             >
               Continuar

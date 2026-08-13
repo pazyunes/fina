@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useAuth, Profile as ProfileData } from '../lib/auth';
+import { calculateAge, birthDateBounds } from '../lib/age';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { TopRightUser } from './TopRightUser';
@@ -20,6 +21,8 @@ const GENDER_OPTIONS: { value: ProfileData['gender']; label: string }[] = [
 
 const genderLabel = (g: ProfileData['gender']) =>
   GENDER_OPTIONS.find((o) => o.value === g)?.label ?? 'Sin especificar';
+
+const BIRTH_DATE_BOUNDS = birthDateBounds();
 
 export function Profile() {
   const navigate = useNavigate();
@@ -39,7 +42,7 @@ export function Profile() {
 
   // Edición de datos del perfil.
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: profile.name, age: profile.age, email: user?.email ?? '', gender: profile.gender, phoneDigits: (profile.phone || '').replace(/^\+54/, '') });
+  const [form, setForm] = useState({ name: profile.name, birthDate: profile.birthDate, email: user?.email ?? '', gender: profile.gender, phoneDigits: (profile.phone || '').replace(/^\+54/, '') });
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -49,7 +52,7 @@ export function Profile() {
   };
 
   const startEditing = () => {
-    setForm({ name: profile.name, age: profile.age, email: user?.email ?? '', gender: profile.gender, phoneDigits: (profile.phone || '').replace(/^\+54/, '') });
+    setForm({ name: profile.name, birthDate: profile.birthDate, email: user?.email ?? '', gender: profile.gender, phoneDigits: (profile.phone || '').replace(/^\+54/, '') });
     setFeedback(null);
     setEditing(true);
   };
@@ -70,7 +73,7 @@ export function Profile() {
     const phoneE164 = phoneNormalized.length === 10 ? `+54${phoneNormalized}` : '';
     const { error, emailChangePending } = await updateProfile({
       name: form.name,
-      age: form.age,
+      birthDate: form.birthDate,
       email: form.email,
       gender: form.gender,
       phone: phoneE164,
@@ -141,7 +144,7 @@ export function Profile() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-gray-400">Edad</p>
-                    <p className="text-gray-700">{profile.age || '—'}</p>
+                    <p className="text-gray-700">{calculateAge(profile.birthDate) ?? '—'}</p>
                   </div>
                   <div>
                     <p className="text-gray-400">Sexo</p>
@@ -165,15 +168,14 @@ export function Profile() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="p-age" className="text-gray-700 text-sm">Edad</Label>
+                  <Label htmlFor="p-birthDate" className="text-gray-700 text-sm">Fecha de nacimiento</Label>
                   <Input
-                    id="p-age"
-                    type="number"
-                    inputMode="numeric"
-                    min="18"
-                    max="100"
-                    value={form.age}
-                    onChange={(e) => setForm({ ...form, age: e.target.value })}
+                    id="p-birthDate"
+                    type="date"
+                    min={BIRTH_DATE_BOUNDS.min}
+                    max={BIRTH_DATE_BOUNDS.max}
+                    value={form.birthDate}
+                    onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
                     className="mt-1 rounded-xl"
                   />
                 </div>

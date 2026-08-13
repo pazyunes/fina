@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { FinancialAnalysis, UserData } from '../types';
 import { analyzeFinances } from '../utils/financialAnalyzer';
+import { calculateAge } from './age';
 
 // Full, human-auditable dump of every step the AI Reasoning dashboard shows
 // plus the raw inputs that fed into the financial analyzer. Stored in the
@@ -8,7 +9,7 @@ import { analyzeFinances } from '../utils/financialAnalyzer';
 export interface FullReasoning {
   profile: {
     name: string;
-    age: string;
+    birthDate: string;
     email: string;
     gender: string;
   };
@@ -131,7 +132,7 @@ export function buildFullReasoning(userData: UserData, analysis: FinancialAnalys
   return {
     profile: {
       name: userData.name,
-      age: userData.age,
+      birthDate: userData.birthDate,
       email: userData.email,
       gender: userData.gender || 'prefiero_no_decir',
     },
@@ -317,11 +318,11 @@ async function syncProfileTables(userId: string, userData: UserData): Promise<vo
   // Hacemos UPDATE en vez de INSERT porque la fila ya existe por el trigger
   // on_auth_user_created. NO tocamos phone ni phone_verified_at (los maneja
   // PR5b a través de user_metadata).
-  const ageInt = userData.age ? parseInt(userData.age, 10) : null;
   try {
     const { error } = await supabase.from('user_profiles').update({
       name: userData.name || null,
-      age: ageInt && !Number.isNaN(ageInt) ? ageInt : null,
+      birth_date: userData.birthDate || null,
+      age: calculateAge(userData.birthDate), // legacy: mirror derivado, por si algo lo sigue leyendo (ej. bot)
       gender: userData.gender || null,
       lives_alone: userData.livesAlone ?? null,
       works_or_studies: userData.worksOrStudies || null,

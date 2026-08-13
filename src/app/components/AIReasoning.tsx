@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
 import { FinancialAnalysis } from '../types';
+import { calculateAge } from '../lib/age';
 import { Brain, TrendingUp, Calculator, Target, Lightbulb, AlertCircle, History, User } from 'lucide-react';
 
 interface AIReasoningProps {
@@ -11,7 +12,7 @@ interface AIReasoningProps {
 
 interface HistoryEntry {
   timestamp: string;
-  profile: { name: string; age: string; email: string; gender: string };
+  profile: { name: string; birthDate: string; email: string; gender: string };
   snapshot: {
     totalIncome: number;
     totalExpenses: number;
@@ -56,7 +57,7 @@ export function AIReasoning({ analysis }: AIReasoningProps) {
       timestamp: new Date().toISOString(),
       profile: {
         name: analysis.userData.name,
-        age: analysis.userData.age,
+        birthDate: analysis.userData.birthDate,
         email: analysis.userData.email,
         gender: analysis.userData.gender || 'prefiero_no_decir',
       },
@@ -184,7 +185,7 @@ export function AIReasoning({ analysis }: AIReasoningProps) {
                 </div>
                 <div>
                   <p className="text-gray-400">Edad:</p>
-                  <p className="text-white">{userData.age || '—'}</p>
+                  <p className="text-white">{calculateAge(userData.birthDate) ?? '—'}</p>
                 </div>
                 <div>
                   <p className="text-gray-400">Email:</p>
@@ -403,7 +404,7 @@ export function AIReasoning({ analysis }: AIReasoningProps) {
                           {new Date(entry.timestamp).toLocaleString('es-AR')}
                         </span>
                         <span className="text-xs text-cyan-400">
-                          {entry.profile.gender} · {entry.profile.age} años
+                          {entry.profile.gender} · {calculateAge(entry.profile.birthDate) ?? '—'} años
                         </span>
                       </div>
                       <div className="text-sm space-y-1">

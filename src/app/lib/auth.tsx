@@ -7,7 +7,7 @@ import type { FinancialAnalysis, UserData } from '../types';
 // Datos de perfil guardados en el user_metadata de Supabase Auth.
 export interface Profile {
   name: string;
-  age: string;
+  birthDate: string; // YYYY-MM-DD
   gender: 'femenino' | 'masculino' | 'prefiero_no_decir' | '';
   // Teléfono en E.164 (ej. +54XXXXXXXXXX). Vive en user_metadata.phone y se
   // espeja a user_profiles.phone.
@@ -41,7 +41,7 @@ interface AuthContextValue {
   sendPasswordReset: (email: string) => Promise<{ error: string | null }>;
   // Setea la contraseña nueva (durante la sesión de recovery).
   updatePassword: (password: string) => Promise<{ error: string | null }>;
-  // Actualiza nombre/edad/sexo (metadata) y, si cambió, el email de acceso.
+  // Actualiza nombre/fecha de nacimiento/sexo (metadata) y, si cambió, el email de acceso.
   // emailChangePending: true si el cambio de email espera confirmación.
   updateProfile: (data: Partial<Profile> & { email?: string }) => Promise<{ error: string | null; emailChangePending: boolean }>;
 }
@@ -169,14 +169,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const profile: Profile = {
     name: (meta.name as string) ?? '',
-    age: (meta.age as string) ?? '',
+    birthDate: (meta.birthDate as string) ?? '',
     gender: (meta.gender as Profile['gender']) ?? '',
     phone: (meta.phone as string) ?? '',
   };
 
-  const updateProfile: AuthContextValue['updateProfile'] = async ({ name, age, gender, email, phone }) => {
+  const updateProfile: AuthContextValue['updateProfile'] = async ({ name, birthDate, gender, email, phone }) => {
     const payload: Parameters<typeof supabase.auth.updateUser>[0] = {
-      data: { name, age, gender, ...(phone !== undefined ? { phone } : {}) },
+      data: { name, birthDate, gender, ...(phone !== undefined ? { phone } : {}) },
     };
     const emailChanged = !!email && email.trim() !== user?.email;
     if (emailChanged) payload.email = email!.trim();
