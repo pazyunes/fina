@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Heart, Lock } from 'lucide-react';
+import { Heart, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -29,6 +29,11 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  // Modo 'forgot': si el email tiene cuenta o no, para decidir si el botón
+  // dice "Enviar link" o "Crear cuenta". null = todavía no lo sabemos
+  // (email vacío/incompleto, o el RPC no respondió).
+  const [emailRegistered, setEmailRegistered] = useState<boolean | null>(null);
 
   // Argentina: el número local es área + abonado = 10 dígitos. El "9" de celular
   // es opcional; lo normalizamos para que "11..." y "9 11..." sean EL MISMO
@@ -52,6 +57,21 @@ export function Login() {
     if (session) navigate('/', { replace: true });
   }, [session]);
 
+  // Modo 'forgot' — consultamos si el email está registrado (debounced) para
+  // mostrar "Crear cuenta" en vez de "Enviar link" cuando no lo está.
+  useEffect(() => {
+    if (mode !== 'forgot') { setEmailRegistered(null); return; }
+    const trimmed = email.trim();
+    if (!/^\S+@\S+\.\S+$/.test(trimmed)) { setEmailRegistered(null); return; }
+    let active = true;
+    const timer = setTimeout(() => {
+      supabase.rpc('email_in_use', { p_email: trimmed }).then(({ data, error }) => {
+        if (active && !error) setEmailRegistered(Boolean(data));
+      });
+    }, 400);
+    return () => { active = false; clearTimeout(timer); };
+  }, [email, mode]);
+
   const valid = mode === 'forgot'
     ? email.trim() !== ''
     : email.trim() !== '' && password.length >= 6 && phoneValid;
@@ -64,6 +84,11 @@ export function Login() {
     setInfo(null);
 
     if (mode === 'forgot') {
+      if (emailRegistered === false) {
+        setMode('signup');
+        setSubmitting(false);
+        return;
+      }
       const { error: resetError } = await sendPasswordReset(email);
       if (resetError) {
         // Supabase ya no revela acá si el email existe o no (eso lo maneja
@@ -139,6 +164,7 @@ export function Login() {
             <Label htmlFor="email" className="text-gray-700 text-sm">Email</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               autoComplete="email"
               value={email}
@@ -146,20 +172,38 @@ export function Login() {
               placeholder="tu@email.com"
               className="mt-1 rounded-xl"
             />
+            {mode === 'forgot' && emailRegistered !== null && (
+              <p className={`text-xs mt-1.5 ${emailRegistered ? 'text-gray-500' : 'text-[#7626B3]'}`}>
+                {emailRegistered
+                  ? 'Tocá "Enviar link" y te mandamos uno para recuperar tu contraseña.'
+                  : 'No estás registrada con este email.'}
+              </p>
+            )}
           </div>
 
           {mode !== 'forgot' && (
             <div>
               <Label htmlFor="password" className="text-gray-700 text-sm">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                className="mt-1 rounded-xl"
-              />
+              <div className="relative mt-1">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  className="rounded-xl pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#7626B3]"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {mode === 'signin' && (
                 <button
                   type="button"
@@ -213,7 +257,15 @@ export function Login() {
             disabled={!valid || submitting}
             className="w-full bg-[#059669] hover:bg-[#047857] text-white py-5 rounded-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? 'Un momento…' : mode === 'signin' ? 'Iniciar sesión' : mode === 'signup' ? 'Crear cuenta' : 'Enviar link'}
+            {submitting
+              ? 'Un momento…'
+              : mode === 'signin'
+              ? 'Iniciar sesión'
+              : mode === 'signup'
+              ? 'Crear cuenta'
+              : emailRegistered === false
+              ? 'Crear cuenta'
+              : 'Enviar link'}
           </Button>
         </form>
 
