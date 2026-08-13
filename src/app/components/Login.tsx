@@ -173,7 +173,14 @@ export function Login() {
               type="email"
               autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                // Si venía de un submit previo (ej. "te mandamos el link"),
+                // no lo dejamos pegado en pantalla contradiciendo lo que
+                // ahora dice el hint de abajo (inválido / no registrado).
+                setError(null);
+                setInfo(null);
+              }}
               placeholder="tu@email.com"
               className="mt-1 rounded-xl"
             />
