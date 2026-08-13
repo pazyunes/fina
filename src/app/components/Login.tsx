@@ -10,6 +10,8 @@ import { supabase } from '../lib/supabase';
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
+
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -62,7 +64,7 @@ export function Login() {
   useEffect(() => {
     if (mode !== 'forgot') { setEmailRegistered(null); return; }
     const trimmed = email.trim();
-    if (!/^\S+@\S+\.\S+$/.test(trimmed)) { setEmailRegistered(null); return; }
+    if (!EMAIL_RE.test(trimmed)) { setEmailRegistered(null); return; }
     let active = true;
     const timer = setTimeout(() => {
       supabase.rpc('email_in_use', { p_email: trimmed }).then(({ data, error }) => {
@@ -72,8 +74,11 @@ export function Login() {
     return () => { active = false; clearTimeout(timer); };
   }, [email, mode]);
 
+  const emailTrimmed = email.trim();
+  const emailFormatValid = EMAIL_RE.test(emailTrimmed);
+
   const valid = mode === 'forgot'
-    ? email.trim() !== ''
+    ? emailFormatValid
     : email.trim() !== '' && password.length >= 6 && phoneValid;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -172,12 +177,14 @@ export function Login() {
               placeholder="tu@email.com"
               className="mt-1 rounded-xl"
             />
-            {mode === 'forgot' && emailRegistered !== null && (
-              <p className={`text-xs mt-1.5 ${emailRegistered ? 'text-gray-500' : 'text-[#7626B3]'}`}>
-                {emailRegistered
-                  ? 'Tocá "Enviar link" y te mandamos uno para recuperar tu contraseña.'
-                  : 'No estás registrada con este email.'}
-              </p>
+            {mode === 'forgot' && emailTrimmed !== '' && (
+              !emailFormatValid ? (
+                <p className="text-red-500 text-xs mt-1.5">Ingresá un mail válido.</p>
+              ) : emailRegistered === true ? (
+                <p className="text-[#3B6D11] text-xs mt-1.5">Tocá "Enviar link" y te mandamos uno para recuperar tu contraseña.</p>
+              ) : emailRegistered === false ? (
+                <p className="text-red-500 text-xs mt-1.5">No estás registrada con este email.</p>
+              ) : null
             )}
           </div>
 
