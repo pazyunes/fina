@@ -219,12 +219,16 @@ export function Main() {
 
   const handleExpensesServices = (data: {
     entertainmentFrequency: number;
+    entertainmentFrequencyUnit?: 'week' | 'month';
     entertainmentAmount: number;
     deliveryFrequency: number;
+    deliveryFrequencyUnit?: 'week' | 'month';
     deliveryAmount: number;
     cafeteriasFrequency: number;
+    cafeteriasFrequencyUnit?: 'week' | 'month';
     cafeteriasAmount: number;
     restaurantsFrequency: number;
+    restaurantsFrequencyUnit?: 'week' | 'month';
     restaurantsAmount: number;
     occasionalExpenses: Array<{ name: string; everyMonths: number; amount: number }>;
   }) => {

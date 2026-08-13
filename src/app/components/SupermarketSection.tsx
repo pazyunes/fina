@@ -4,6 +4,7 @@ import { Input } from './ui/input';
 import { AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import { ShoppingCart } from 'lucide-react';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
+import { FrequencyUnitToggle, FreqUnit, toWeekly, fromWeekly } from './FrequencyUnitToggle';
 import { UserData } from '../types';
 
 // PR #5 — Supermercado movido a "Gastos que se pagan mes a mes". Se sigue
@@ -18,12 +19,14 @@ export function SupermarketSection({
 }: {
   initial?: Partial<UserData>;
   livesAccompanied?: boolean;
-  onChange: (v: { supermarketFrequency: number; supermarketAmount: number }) => void;
+  onChange: (v: { supermarketFrequency: number; supermarketFrequencyUnit?: 'week' | 'month'; supermarketAmount: number }) => void;
   onCompleted?: () => void;
 }) {
-  // Mostramos la frecuencia mensual (semanal guardado × 4.33).
+  // Frecuencia SIEMPRE semanal por debajo; la unidad elegida define la conversión.
+  const initSuperUnit: FreqUnit | null = initial?.supermarketFrequencyUnit ?? (initial?.supermarketFrequency ? 'month' : null);
+  const [unit, setUnit] = useState<FreqUnit | null>(initSuperUnit);
   const [frequency, setFrequency] = useState(
-    initial?.supermarketFrequency ? String(Math.round(initial.supermarketFrequency * 4.33)) : ''
+    initial?.supermarketFrequency && initSuperUnit ? String(fromWeekly(initial.supermarketFrequency, initSuperUnit)) : ''
   );
   const [amount, setAmount] = useState(initial?.supermarketAmount ? String(initial.supermarketAmount) : '');
   const [noSupermarket, setNoSupermarket] = useState(false);
@@ -39,13 +42,14 @@ export function SupermarketSection({
       return;
     }
     onChange({
-      // mensual → semanal para que el resto del sistema (×4.33) dé el mensual real.
-      supermarketFrequency: (parseFloat(frequency) || 0) / 4.33,
+      // Guardamos semanal (según la unidad) para que el resto del sistema (×4.33) dé el mensual real.
+      supermarketFrequency: unit ? toWeekly(parseFloat(frequency) || 0, unit) : 0,
+      supermarketFrequencyUnit: unit ?? undefined,
       supermarketAmount: parseInt(amount.replace(/\D/g, '') || '0'),
     });
-  }, [frequency, amount, noSupermarket]);
+  }, [frequency, amount, unit, noSupermarket]);
 
-  const complete = noSupermarket || (frequency !== '' && amount !== '');
+  const complete = noSupermarket || (frequency !== '' && amount !== '' && unit !== null);
   // Avisar "completo" una sola vez (al perder foco / togglear), para cerrarla.
   const fired = useRef(false);
   const fireIfComplete = () => { if (!fired.current && complete) { fired.current = true; onCompleted?.(); } };
@@ -75,7 +79,15 @@ export function SupermarketSection({
 
         <div className="space-y-4" style={{ opacity: noSupermarket ? 0.4 : 1, pointerEvents: noSupermarket ? 'none' : 'auto' }}>
           <div>
-            <label className="block text-sm text-gray-600 mb-2">¿Cuántas compras en el súper hacés <span className="text-base font-bold text-[#7626B3]">por mes</span>?</label>
+            <div className="mb-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <label className="text-sm text-gray-600">¿Cuántas compras en el súper hacés?</label>
+                <FrequencyUnitToggle value={unit} onChange={setUnit} />
+              </div>
+              {unit === null && !noSupermarket && (
+                <p className="text-xs text-[#7626B3] mt-1">👆 Elegí si es por semana o por mes</p>
+              )}
+            </div>
             <Input
               type="number"
               inputMode="numeric"

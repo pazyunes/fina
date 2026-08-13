@@ -17,10 +17,12 @@ export interface TransportData {
   insuranceNotPaying: boolean;
   fuelNotPaying: boolean;
   hasPublicTransport: boolean;
-  publicTransportTrips: number;
+  publicTransportTrips: number; // viajes por semana (canónico)
+  publicTransportTripsUnit?: 'week' | 'month';
   publicTransportCostPerTrip: number;
   hasRideApps: boolean;
-  rideAppTrips: number;
+  rideAppTrips: number; // viajes por semana (canónico)
+  rideAppTripsUnit?: 'week' | 'month';
   rideAppCostPerTrip: number;
 }
 
@@ -125,18 +127,26 @@ export interface UserData {
   }>;
 
   // Consumption habits
-  entertainmentFrequency: number; // veces por semana
+  // NOTA: las *Frequency SIEMPRE se guardan en base SEMANAL (el analyzer y el bot
+  // multiplican × 4.33). La unidad que eligió la usuaria en el onboarding (para
+  // mostrar/editar el número) se guarda aparte en *FrequencyUnit ('week' | 'month').
+  entertainmentFrequency: number; // veces por semana (canónico)
+  entertainmentFrequencyUnit?: 'week' | 'month';
   entertainmentAmount: number; // gasto por salida
-  deliveryFrequency: number; // veces por semana
+  deliveryFrequency: number; // veces por semana (canónico)
+  deliveryFrequencyUnit?: 'week' | 'month';
   deliveryAmount: number; // gasto por pedido
-  supermarketFrequency: number; // veces por semana que va al super
+  supermarketFrequency: number; // veces por semana que va al super (canónico)
+  supermarketFrequencyUnit?: 'week' | 'month';
   supermarketAmount: number; // gasto por visita al super
   // PR6 — cafeterías/restaurantes (salidas, almuerzos afuera, café en la calle, etc.).
   // Opcional para compat con informes pre-PR6 — el analyzer trata undefined como 0.
-  cafeteriasFrequency?: number; // veces por semana (cafeterías)
+  cafeteriasFrequency?: number; // veces por semana (cafeterías, canónico)
+  cafeteriasFrequencyUnit?: 'week' | 'month';
   cafeteriasAmount?: number; // gasto por visita (cafeterías)
   // PR — restaurantes separados de cafeterías.
-  restaurantsFrequency?: number; // veces por semana (restaurantes)
+  restaurantsFrequency?: number; // veces por semana (restaurantes, canónico)
+  restaurantsFrequencyUnit?: 'week' | 'month';
   restaurantsAmount?: number; // gasto por visita (restaurantes)
 
   // Gastos ocasionales (no todos los meses): ropa, regalos, viajes cortos, etc.

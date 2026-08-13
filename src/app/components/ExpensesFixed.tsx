@@ -38,6 +38,7 @@ interface ExpensesFixedProps {
     housingOriginalAmount: number;
     subscriptions: UserData['subscriptions'];
     supermarketFrequency: number;
+    supermarketFrequencyUnit?: 'week' | 'month';
     supermarketAmount: number;
     therapyDetails: { sessionPrice: number; sessionsPerMonth: number };
     transportDetails: TransportData;
@@ -121,8 +122,9 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
   // Cada sección maneja su estado y nos avisa su valor por onChange.
   const livesAccompanied = initial?.livesAlone === false;
   const [subscriptions, setSubscriptions] = useState<UserData['subscriptions']>(initial?.subscriptions ?? []);
-  const [superData, setSuperData] = useState({
+  const [superData, setSuperData] = useState<{ supermarketFrequency: number; supermarketFrequencyUnit?: 'week' | 'month'; supermarketAmount: number }>({
     supermarketFrequency: initial?.supermarketFrequency ?? 0,
+    supermarketFrequencyUnit: initial?.supermarketFrequencyUnit,
     supermarketAmount: initial?.supermarketAmount ?? 0,
   });
 
@@ -402,6 +404,7 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
       housingOriginalAmount,
       subscriptions,
       supermarketFrequency: superData.supermarketFrequency,
+      supermarketFrequencyUnit: superData.supermarketFrequencyUnit,
       supermarketAmount: superData.supermarketAmount,
       therapyDetails,
       transportDetails: transportData,

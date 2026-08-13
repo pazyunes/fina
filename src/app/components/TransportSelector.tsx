@@ -5,6 +5,7 @@ import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { Car, Bus, Smartphone } from 'lucide-react';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
+import { FrequencyUnitToggle, FreqUnit, toWeekly, fromWeekly } from './FrequencyUnitToggle';
 import { TransportData } from '../types';
 
 interface TransportSelectorProps {
@@ -16,8 +17,9 @@ interface TransportSelectorProps {
 // Export helper to validate transport data
 export function isTransportDataValid(data: TransportData): boolean {
   const isCarValid = !data.hasCar || (data.insuranceNotPaying || data.insurance > 0) && (data.fuelNotPaying || data.fuel > 0);
-  const isPublicTransportValid = !data.hasPublicTransport || (data.publicTransportTrips > 0 && data.publicTransportCostPerTrip > 0);
-  const isRideAppsValid = !data.hasRideApps || (data.rideAppTrips > 0 && data.rideAppCostPerTrip > 0);
+  // Exigimos que se haya ELEGIDO la unidad (semana/mes) de los viajes.
+  const isPublicTransportValid = !data.hasPublicTransport || (data.publicTransportTrips > 0 && data.publicTransportCostPerTrip > 0 && !!data.publicTransportTripsUnit);
+  const isRideAppsValid = !data.hasRideApps || (data.rideAppTrips > 0 && data.rideAppCostPerTrip > 0 && !!data.rideAppTripsUnit);
   return isCarValid && isPublicTransportValid && isRideAppsValid;
 }
 
@@ -33,6 +35,22 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
 
   const updateData = (updates: Partial<TransportData>) => {
     onChange({ ...value, ...updates });
+  };
+
+  // Unidad de los viajes (semana/mes). Los trips se guardan SIEMPRE en base
+  // semanal; la unidad define la conversión al mostrar/editar. Legacy (dato sin
+  // unidad) → 'week'. Sin dato → null (hay que elegir).
+  const pubUnit: FreqUnit | null = value.publicTransportTripsUnit ?? (value.publicTransportTrips ? 'week' : null);
+  const rideUnit: FreqUnit | null = value.rideAppTripsUnit ?? (value.rideAppTrips ? 'week' : null);
+  const pubTripsDisplay = pubUnit ? fromWeekly(value.publicTransportTrips, pubUnit) : 0;
+  const rideTripsDisplay = rideUnit ? fromWeekly(value.rideAppTrips, rideUnit) : 0;
+  const changePubUnit = (u: FreqUnit) => {
+    const displayNum = pubUnit ? fromWeekly(value.publicTransportTrips, pubUnit) : (value.publicTransportTrips || 0);
+    updateData({ publicTransportTripsUnit: u, publicTransportTrips: toWeekly(displayNum, u) });
+  };
+  const changeRideUnit = (u: FreqUnit) => {
+    const displayNum = rideUnit ? fromWeekly(value.rideAppTrips, rideUnit) : (value.rideAppTrips || 0);
+    updateData({ rideAppTripsUnit: u, rideAppTrips: toWeekly(displayNum, u) });
   };
 
   // Calculate costs
@@ -197,22 +215,28 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                 className="ml-11 space-y-3"
               >
                 <div>
-                  <Label className="text-sm text-gray-600">¿Cuántos viajes por semana?</Label>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <Label className="text-sm text-gray-600">¿Cuántos viajes hacés?</Label>
+                    <FrequencyUnitToggle value={pubUnit} onChange={changePubUnit} />
+                  </div>
+                  {pubUnit === null && (
+                    <p className="text-xs text-[#7626B3] mt-1">👆 Elegí si es por semana o por mes</p>
+                  )}
                   <Input
                     type="number"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     min="1"
-                    max="50"
+                    max="300"
                     step="1"
-                    value={value.publicTransportTrips || ''}
+                    value={pubTripsDisplay || ''}
                     onChange={(e) => {
                       const val = parseInt(e.target.value);
-                      if ((val >= 1 && val <= 50) || e.target.value === '') {
-                        updateData({ publicTransportTrips: val || 0 });
+                      if ((val >= 1 && val <= 300) || e.target.value === '') {
+                        updateData({ publicTransportTrips: pubUnit ? toWeekly(val || 0, pubUnit) : (val || 0) });
                       }
                     }}
-                    placeholder="Ej: 10"
+                    placeholder={pubUnit === 'month' ? 'Ej: 40' : 'Ej: 10'}
                     className={`mt-1 ${showValidation && value.publicTransportTrips === 0 ? 'border-red-500' : ''}`}
                   />
                   {showValidation && value.publicTransportTrips === 0 && (
@@ -287,22 +311,28 @@ export function TransportSelector({ value, onChange, showValidation = false }: T
                 className="ml-11 space-y-3"
               >
                 <div>
-                  <Label className="text-sm text-gray-600">¿Cuántos viajes por semana?</Label>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <Label className="text-sm text-gray-600">¿Cuántos viajes hacés?</Label>
+                    <FrequencyUnitToggle value={rideUnit} onChange={changeRideUnit} />
+                  </div>
+                  {rideUnit === null && (
+                    <p className="text-xs text-[#7626B3] mt-1">👆 Elegí si es por semana o por mes</p>
+                  )}
                   <Input
                     type="number"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     min="1"
-                    max="50"
+                    max="300"
                     step="0.5"
-                    value={value.rideAppTrips || ''}
+                    value={rideTripsDisplay || ''}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
-                      if ((val >= 1 && val <= 50) || e.target.value === '') {
-                        updateData({ rideAppTrips: val || 0 });
+                      if ((val >= 1 && val <= 300) || e.target.value === '') {
+                        updateData({ rideAppTrips: rideUnit ? toWeekly(val || 0, rideUnit) : (val || 0) });
                       }
                     }}
-                    placeholder="Ej: 2"
+                    placeholder={rideUnit === 'month' ? 'Ej: 8' : 'Ej: 2'}
                     className={`mt-1 ${showValidation && value.rideAppTrips === 0 ? 'border-red-500' : ''}`}
                   />
                   {showValidation && value.rideAppTrips === 0 && (

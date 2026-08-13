@@ -14,7 +14,20 @@ import { StepIntroMessage } from './StepIntroMessage';
 import { CurrencyToggle } from './CurrencyToggle';
 import { AMOUNT_FIELD_CLASS } from '../onboarding/ui';
 import { arsFromUsd, formatArs } from '../lib/currency';
+import { FrequencyUnitToggle, FreqUnit, toWeekly, fromWeekly } from './FrequencyUnitToggle';
 import { UserData, Currency } from '../types';
+
+// Unidad inicial de una frecuencia: la guardada, o —para informes viejos con
+// dato pero sin unidad— la que usaba esa categoría antes (legacy). Sin dato → null
+// (la usuaria DEBE elegir).
+function initUnit(stored: FreqUnit | undefined, freq: number | undefined, legacy: FreqUnit): FreqUnit | null {
+  if (stored) return stored;
+  return freq ? legacy : null;
+}
+// Número a mostrar en el input según la unidad resuelta.
+function initFreqDisplay(freq: number | undefined, unit: FreqUnit | null): string {
+  return freq && unit ? String(fromWeekly(freq, unit)) : '';
+}
 
 interface ExpensesServicesProps {
   initial?: Partial<UserData>;
@@ -22,12 +35,16 @@ interface ExpensesServicesProps {
   editMode?: boolean;
   onComplete: (data: {
     entertainmentFrequency: number;
+    entertainmentFrequencyUnit?: 'week' | 'month';
     entertainmentAmount: number;
     deliveryFrequency: number;
+    deliveryFrequencyUnit?: 'week' | 'month';
     deliveryAmount: number;
     cafeteriasFrequency: number;
+    cafeteriasFrequencyUnit?: 'week' | 'month';
     cafeteriasAmount: number;
     restaurantsFrequency: number;
+    restaurantsFrequencyUnit?: 'week' | 'month';
     restaurantsAmount: number;
     occasionalExpenses: Array<{ name: string; everyMonths: number; amount: number }>;
   }) => void;
@@ -41,31 +58,47 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   const livesAccompanied = initial?.livesAlone === false;
   const usdRate = initial?.exchangeRate?.rate ?? null;
 
+  // Cada frecuencia se guarda SIEMPRE en base semanal; la unidad elegida
+  // (por semana / por mes) se guarda aparte y define la conversión. La usuaria
+  // DEBE elegir (unit arranca en null salvo que sea un informe existente).
+
   // Entertainment
-  // Salidas: la usuaria ingresa la frecuencia POR MES, pero el resto del sistema
-  // (analyzer, tracker, bot) usa frecuencia semanal × 4.33. Convertimos: al
-  // mostrar, semanal × 4.33 → mensual; al guardar, mensual ÷ 4.33 → semanal.
+  const [entertainmentUnit, setEntertainmentUnit] = useState<FreqUnit | null>(
+    initUnit(initial?.entertainmentFrequencyUnit, initial?.entertainmentFrequency, 'month')
+  );
   const [entertainmentFrequency, setEntertainmentFrequency] = useState(
-    initial?.entertainmentFrequency ? String(Math.round(initial.entertainmentFrequency * 4.33)) : ''
+    initFreqDisplay(initial?.entertainmentFrequency, initUnit(initial?.entertainmentFrequencyUnit, initial?.entertainmentFrequency, 'month'))
   );
   const [entertainmentAmount, setEntertainmentAmount] = useState(initial?.entertainmentAmount ? String(initial.entertainmentAmount) : '');
   const [noEntertainment, setNoEntertainment] = useState(false);
 
   // Delivery
-  // Delivery se INGRESA en mensual (mucha gente no pide todas las semanas) pero
-  // se GUARDA en semanal (÷4.33), igual que entretenimiento, así el resto del
-  // sistema (analyzer/tracker/bot) sigue usando la frecuencia semanal sin cambios.
-  const [deliveryFrequency, setDeliveryFrequency] = useState(initial?.deliveryFrequency ? String(Math.round(initial.deliveryFrequency * 4.33)) : '');
+  const [deliveryUnit, setDeliveryUnit] = useState<FreqUnit | null>(
+    initUnit(initial?.deliveryFrequencyUnit, initial?.deliveryFrequency, 'month')
+  );
+  const [deliveryFrequency, setDeliveryFrequency] = useState(
+    initFreqDisplay(initial?.deliveryFrequency, initUnit(initial?.deliveryFrequencyUnit, initial?.deliveryFrequency, 'month'))
+  );
   const [deliveryAmount, setDeliveryAmount] = useState(initial?.deliveryAmount ? String(initial.deliveryAmount) : '');
   const [noDelivery, setNoDelivery] = useState(false);
 
   // PR6 — Cafeterías
-  const [cafeteriasFrequency, setCafeteriasFrequency] = useState(initial?.cafeteriasFrequency ? String(initial.cafeteriasFrequency) : '');
+  const [cafeteriasUnit, setCafeteriasUnit] = useState<FreqUnit | null>(
+    initUnit(initial?.cafeteriasFrequencyUnit, initial?.cafeteriasFrequency, 'week')
+  );
+  const [cafeteriasFrequency, setCafeteriasFrequency] = useState(
+    initFreqDisplay(initial?.cafeteriasFrequency, initUnit(initial?.cafeteriasFrequencyUnit, initial?.cafeteriasFrequency, 'week'))
+  );
   const [cafeteriasAmount, setCafeteriasAmount] = useState(initial?.cafeteriasAmount ? String(initial.cafeteriasAmount) : '');
   const [noCafeterias, setNoCafeterias] = useState(false);
 
   // PR — Restaurantes (separado de cafeterías)
-  const [restaurantsFrequency, setRestaurantsFrequency] = useState(initial?.restaurantsFrequency ? String(initial.restaurantsFrequency) : '');
+  const [restaurantsUnit, setRestaurantsUnit] = useState<FreqUnit | null>(
+    initUnit(initial?.restaurantsFrequencyUnit, initial?.restaurantsFrequency, 'week')
+  );
+  const [restaurantsFrequency, setRestaurantsFrequency] = useState(
+    initFreqDisplay(initial?.restaurantsFrequency, initUnit(initial?.restaurantsFrequencyUnit, initial?.restaurantsFrequency, 'week'))
+  );
   const [restaurantsAmount, setRestaurantsAmount] = useState(initial?.restaurantsAmount ? String(initial.restaurantsAmount) : '');
   const [noRestaurants, setNoRestaurants] = useState(false);
 
@@ -102,14 +135,21 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   // Commit del estado actual a userData (sin navegar). Lo usan "Continuar" y
   // "Atrás", para no perder lo cargado al volver.
   const commit = () => {
+    // Guardamos SIEMPRE la frecuencia semanal (según la unidad elegida) + la
+    // unidad, para que el resto del sistema (× 4.33) siga funcionando igual.
+    const weekly = (freq: string, unit: FreqUnit | null) => (unit ? toWeekly(parseFloat(freq) || 0, unit) : 0);
     onComplete({
-      entertainmentFrequency: (parseFloat(entertainmentFrequency) || 0) / 4.33,
+      entertainmentFrequency: weekly(entertainmentFrequency, entertainmentUnit),
+      entertainmentFrequencyUnit: entertainmentUnit ?? undefined,
       entertainmentAmount: parseInt(entertainmentAmount.replace(/\D/g, '') || '0'),
-      deliveryFrequency: (parseFloat(deliveryFrequency) || 0) / 4.33,
+      deliveryFrequency: weekly(deliveryFrequency, deliveryUnit),
+      deliveryFrequencyUnit: deliveryUnit ?? undefined,
       deliveryAmount: parseInt(deliveryAmount.replace(/\D/g, '') || '0'),
-      cafeteriasFrequency: parseFloat(cafeteriasFrequency) || 0,
+      cafeteriasFrequency: weekly(cafeteriasFrequency, cafeteriasUnit),
+      cafeteriasFrequencyUnit: cafeteriasUnit ?? undefined,
       cafeteriasAmount: parseInt(cafeteriasAmount.replace(/\D/g, '') || '0'),
-      restaurantsFrequency: parseFloat(restaurantsFrequency) || 0,
+      restaurantsFrequency: weekly(restaurantsFrequency, restaurantsUnit),
+      restaurantsFrequencyUnit: restaurantsUnit ?? undefined,
       restaurantsAmount: parseInt(restaurantsAmount.replace(/\D/g, '') || '0'),
       occasionalExpenses: occasional
         .map((o) => ({
@@ -127,10 +167,10 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
   };
 
   // Per-section completion (drives the auto-close + the trigger check icon)
-  const entertainmentComplete = noEntertainment || (entertainmentFrequency !== '' && entertainmentAmount !== '');
-  const deliveryComplete = noDelivery || (deliveryFrequency !== '' && deliveryAmount !== '');
-  const cafeteriasComplete = noCafeterias || (cafeteriasFrequency !== '' && cafeteriasAmount !== '');
-  const restaurantsComplete = noRestaurants || (restaurantsFrequency !== '' && restaurantsAmount !== '');
+  const entertainmentComplete = noEntertainment || (entertainmentFrequency !== '' && entertainmentAmount !== '' && entertainmentUnit !== null);
+  const deliveryComplete = noDelivery || (deliveryFrequency !== '' && deliveryAmount !== '' && deliveryUnit !== null);
+  const cafeteriasComplete = noCafeterias || (cafeteriasFrequency !== '' && cafeteriasAmount !== '' && cafeteriasUnit !== null);
+  const restaurantsComplete = noRestaurants || (restaurantsFrequency !== '' && restaurantsAmount !== '' && restaurantsUnit !== null);
 
   // Collapse a finished section and open the next one that's still incomplete.
   // Only called when the section itself is already complete (all its fields).
@@ -251,9 +291,15 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
                 <div className="space-y-4" style={{ opacity: noEntertainment ? 0.4 : 1, pointerEvents: noEntertainment ? 'none' : 'auto' }}>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas salidas hacés <span className="text-base font-bold text-[#7626B3]">por mes</span>?
-                    </label>
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <label className="text-sm text-gray-600">¿Cuántas salidas hacés?</label>
+                        <FrequencyUnitToggle value={entertainmentUnit} onChange={setEntertainmentUnit} />
+                      </div>
+                      {entertainmentUnit === null && !noEntertainment && (
+                        <p className="text-xs text-[#7626B3] mt-1">👆 Elegí si es por semana o por mes</p>
+                      )}
+                    </div>
                     <Input
                       type="number"
                       inputMode="numeric"
@@ -329,9 +375,15 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
                 <div className="space-y-4" style={{ opacity: noDelivery ? 0.4 : 1, pointerEvents: noDelivery ? 'none' : 'auto' }}>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces pedís delivery <span className="text-base font-bold text-[#7626B3]">por mes</span> aproximadamente?
-                    </label>
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <label className="text-sm text-gray-600">¿Cuántas veces pedís delivery?</label>
+                        <FrequencyUnitToggle value={deliveryUnit} onChange={setDeliveryUnit} />
+                      </div>
+                      {deliveryUnit === null && !noDelivery && (
+                        <p className="text-xs text-[#7626B3] mt-1">👆 Elegí si es por semana o por mes</p>
+                      )}
+                    </div>
                     <Input
                       type="number"
                       inputMode="numeric"
@@ -410,9 +462,15 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
                 <div className="space-y-4" style={{ opacity: noCafeterias ? 0.4 : 1, pointerEvents: noCafeterias ? 'none' : 'auto' }}>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces <span className="text-base font-bold text-[#7626B3]">por semana</span> vas a una cafetería?
-                    </label>
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <label className="text-sm text-gray-600">¿Cuántas veces vas a una cafetería?</label>
+                        <FrequencyUnitToggle value={cafeteriasUnit} onChange={setCafeteriasUnit} />
+                      </div>
+                      {cafeteriasUnit === null && !noCafeterias && (
+                        <p className="text-xs text-[#7626B3] mt-1">👆 Elegí si es por semana o por mes</p>
+                      )}
+                    </div>
                     <Input
                       type="number"
                       inputMode="numeric"
@@ -490,9 +548,15 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
 
                 <div className="space-y-4" style={{ opacity: noRestaurants ? 0.4 : 1, pointerEvents: noRestaurants ? 'none' : 'auto' }}>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-2">
-                      ¿Cuántas veces <span className="text-base font-bold text-[#7626B3]">por semana</span> vas a un restaurante?
-                    </label>
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <label className="text-sm text-gray-600">¿Cuántas veces vas a un restaurante?</label>
+                        <FrequencyUnitToggle value={restaurantsUnit} onChange={setRestaurantsUnit} />
+                      </div>
+                      {restaurantsUnit === null && !noRestaurants && (
+                        <p className="text-xs text-[#7626B3] mt-1">👆 Elegí si es por semana o por mes</p>
+                      )}
+                    </div>
                     <Input
                       type="number"
                       inputMode="numeric"
