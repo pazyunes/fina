@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { COLORS, Face, CheckIcon, Chip, Cta } from './shared';
+import { COLORS, Face, CheckIcon, Chip, Cta, saveV2Categorias, saveV2InversionesPerfil, saveV2ObjetivosIniciales } from './shared';
 
 // REDISEÑO — Onboarding v2 (rama feat/rediseno-onboarding-v2)
 //
@@ -18,6 +18,12 @@ import { COLORS, Face, CheckIcon, Chip, Cta } from './shared';
 // ya charlamos: preguntas antes de pedir cuenta, sin montos de plata en
 // ningún paso, "Otro" siempre con campo de texto, cada respuesta con una
 // devolución cálida (nunca un camino que se sienta juzgado).
+//
+// El flujo es DINÁMICO según lo que se eligió en "¿Qué querés lograr?":
+// solo se pregunta lo que tiene que ver con eso — categorías de gasto si
+// eligió ahorrar/controlar, un mini-perfil si eligió invertir, si tiene
+// objetivos en mente si eligió eso — y todo es salteable: lo que no se
+// contesta acá se completa después, adentro de cada sección.
 
 type Genero = 'femenino' | 'masculino' | 'otro' | 'prefiero_no_decir' | null;
 type Edad = '12-17' | '18-24' | '25-34' | '35-44' | '45+' | 'otro' | null;
@@ -25,6 +31,28 @@ type Situacion = 'trabaja' | 'estudia' | 'ambas' | 'ninguna' | 'otro' | null;
 type ObjetivoId = 'ahorrar' | 'invertir' | 'controlar' | 'objetivo' | 'otro';
 type HoyId = 'ahorro' | 'invierto' | 'controlo' | 'nunca_supe' | 'nunca_intente' | 'abandone' | 'otro';
 type ComoVieneId = 'justo' | 'sobra' | 'no_llega' | 'hago_lo_que_quiero' | 'no_lo_tengo_en_cuenta' | 'prefiero_no_decir' | 'otro';
+
+type StepKey =
+  | 'intro' | 'color' | 'generoEdad' | 'situacion' | 'objetivo'
+  | 'categoriasGasto' | 'perfilInversor' | 'metasEnMente'
+  | 'hoy' | 'intermedia' | 'comoViene' | 'login';
+
+const CTA_LABELS: Record<StepKey, string> = {
+  intro: 'Empezar',
+  color: 'Continuar',
+  generoEdad: 'Continuar',
+  situacion: 'Continuar',
+  objetivo: 'Continuar',
+  categoriasGasto: 'Continuar',
+  perfilInversor: 'Continuar',
+  metasEnMente: 'Continuar',
+  hoy: 'Continuar',
+  intermedia: 'Ya lo vi, seguimos',
+  comoViene: 'Continuar',
+  login: 'Empezar',
+};
+// Pasos opcionales/de perfilado: se pueden saltar sin contestar nada.
+const SKIPPABLE: StepKey[] = ['hoy', 'categoriasGasto', 'perfilInversor', 'metasEnMente'];
 
 const COLOR_DOTS: { id: string; hex: string }[] = [
   { id: 'coral', hex: COLORS.coral },
@@ -85,6 +113,19 @@ const HOY: { id: HoyId; label: string }[] = [
 ];
 const HOY_VULNERABLES: HoyId[] = ['nunca_supe', 'nunca_intente', 'abandone'];
 
+const CATEGORIAS_GASTO: { id: string; label: string; emoji: string }[] = [
+  { id: 'Delivery', label: 'Delivery', emoji: '🛵' },
+  { id: 'Restaurantes', label: 'Restaurantes', emoji: '🍽️' },
+  { id: 'Cafeterías', label: 'Cafeterías', emoji: '☕' },
+  { id: 'Salidas y entretenimiento', label: 'Salidas y entretenimiento', emoji: '🎉' },
+  { id: 'Supermercado', label: 'Supermercado', emoji: '🛒' },
+  { id: 'Transporte', label: 'Transporte', emoji: '🚌' },
+  { id: 'Belleza y cuidado personal', label: 'Belleza y cuidado personal', emoji: '💅' },
+  { id: 'Ropa', label: 'Ropa', emoji: '👕' },
+  { id: 'Suscripciones', label: 'Suscripciones', emoji: '📺' },
+  { id: 'Compras online', label: 'Compras online', emoji: '📦' },
+];
+
 const COMO_VIENES: { id: ComoVieneId; label: string; msg: string }[] = [
   { id: 'justo', label: 'Me alcanza justo', msg: 'Genial — vamos a ayudarte a que te sobre cada vez más.' },
   { id: 'sobra', label: 'Me sobra un poco', msg: 'Buenísimo, te ayudamos a que ese sobrante trabaje para vos.' },
@@ -97,7 +138,7 @@ const COMO_VIENES: { id: ComoVieneId; label: string; msg: string }[] = [
 
 export function OnboardingV2() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
+  const [currentIdx, setCurrentIdx] = useState(0);
   const [color, setColor] = useState<string | null>(null);
   const [genero, setGenero] = useState<Genero>(null);
   const [generoOtroTxt, setGeneroOtroTxt] = useState('');
@@ -111,45 +152,89 @@ export function OnboardingV2() {
   const [hoyOtroTxt, setHoyOtroTxt] = useState('');
   const [comoViene, setComoViene] = useState<ComoVieneId | null>(null);
   const [comoVieneOtroTxt, setComoVieneOtroTxt] = useState('');
+  const [categoriasGasto, setCategoriasGasto] = useState<string[]>([]);
+  const [categoriasCustom, setCategoriasCustom] = useState<string[]>([]);
+  const [categoriaOtroTxt, setCategoriaOtroTxt] = useState('');
+  const [porQueInv, setPorQueInv] = useState<string | null>(null);
+  const [reaccionInv, setReaccionInv] = useState<string | null>(null);
+  const [tieneMetas, setTieneMetas] = useState<'si' | 'no' | null>(null);
+  const [metasNombres, setMetasNombres] = useState<string[]>([]);
+  const [metaTxt, setMetaTxt] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [finished, setFinished] = useState(false);
+
+  // El flujo se arma según lo que contestó en "¿Qué querés lograr?" — cada
+  // pregunta específica de un objetivo solo aparece si lo votó.
+  const flow = useMemo<StepKey[]>(() => {
+    const f: StepKey[] = ['intro', 'color', 'generoEdad', 'situacion', 'objetivo'];
+    if (rank.includes('ahorrar') || rank.includes('controlar')) f.push('categoriasGasto');
+    if (rank.includes('invertir')) f.push('perfilInversor');
+    if (rank.includes('objetivo')) f.push('metasEnMente');
+    f.push('hoy', 'intermedia', 'comoViene', 'login');
+    return f;
+  }, [rank]);
+  const currentKey = flow[Math.min(currentIdx, flow.length - 1)];
 
   const toggleRank = (id: ObjetivoId) =>
     setRank((r) => (r.includes(id) ? r.filter((x) => x !== id) : [...r, id]));
   const toggleHoy = (id: HoyId) =>
     setHoy((h) => (h.includes(id) ? h.filter((x) => x !== id) : [...h, id]));
+  const toggleCategoriaGasto = (id: string) =>
+    setCategoriasGasto((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
+  function addCategoriaCustom() {
+    const txt = categoriaOtroTxt.trim();
+    if (!txt || categoriasCustom.includes(txt)) return;
+    setCategoriasCustom((c) => [...c, txt]);
+    setCategoriaOtroTxt('');
+  }
+  const removeCategoriaCustom = (txt: string) => setCategoriasCustom((c) => c.filter((x) => x !== txt));
+  function addMeta() {
+    const txt = metaTxt.trim();
+    if (!txt || metasNombres.includes(txt)) return;
+    setMetasNombres((m) => [...m, txt]);
+    setMetaTxt('');
+  }
+  const removeMeta = (txt: string) => setMetasNombres((m) => m.filter((x) => x !== txt));
 
   const joven = edad === '12-17' || edad === '18-24';
   const vulnerable = HOY_VULNERABLES.some((id) => hoy.includes(id));
   const comoVieneMsg = comoViene ? COMO_VIENES.find((o) => o.id === comoViene)?.msg : null;
   const objetivoBubble = rank.length ? BUBBLE_POR_TOP[rank[0]] : 'No te vas a arrepentir...';
 
-  function stepValid(s: number): boolean {
-    if (s === 1) return !!color;
-    if (s === 2) return !!genero && !!edad;
-    if (s === 3) return !!situacion;
-    if (s === 4) return rank.length > 0;
-    if (s === 8) return email.trim().length > 0 && password.length >= 6;
+  function stepValid(key: StepKey): boolean {
+    if (key === 'color') return !!color;
+    if (key === 'generoEdad') return !!genero && !!edad;
+    if (key === 'situacion') return !!situacion;
+    if (key === 'objetivo') return rank.length > 0;
+    if (key === 'login') return email.trim().length > 0 && password.length >= 6;
     return true;
   }
 
   function onNext() {
-    if (!stepValid(step)) return;
-    if (step === 8) {
-      if (!finished) { setFinished(true); return; }
+    if (!stepValid(currentKey)) return;
+    if (currentKey === 'login') {
+      if (!finished) {
+        // Puente hacia el post-onboarding: lo que se contestó acá ya
+        // aparece armado en la sección correspondiente (sandbox local,
+        // ver shared.tsx). Lo que se saltea, se completa ahí directamente.
+        saveV2Categorias([...categoriasGasto, ...categoriasCustom]);
+        if (porQueInv || reaccionInv) saveV2InversionesPerfil({ porQue: porQueInv ?? '', reaccion: reaccionInv ?? '' });
+        if (metasNombres.length > 0) saveV2ObjetivosIniciales(metasNombres);
+        setFinished(true);
+        return;
+      }
       navigate('/onboarding-v2/home');
       return;
     }
-    setStep((s) => Math.min(s + 1, 8));
+    setCurrentIdx((i) => Math.min(i + 1, flow.length - 1));
   }
   function onSkip() {
-    setStep((s) => Math.min(s + 1, 8));
+    setCurrentIdx((i) => Math.min(i + 1, flow.length - 1));
   }
 
-  const ctaLabels = ['Empezar', 'Continuar', 'Continuar', 'Continuar', 'Continuar', 'Continuar', 'Ya lo vi, seguimos', 'Continuar', 'Empezar'];
-  const showTop = step > 0 && step < 8 && !finished;
-  const progressPct = Math.round((step / 8) * 100);
+  const showTop = currentIdx > 0 && currentKey !== 'login';
+  const progressPct = Math.round((currentIdx / (flow.length - 1)) * 100);
 
   return (
     <div className="min-h-screen flex flex-col lg:items-center" style={{ background: COLORS.cream }}>
@@ -164,14 +249,14 @@ export function OnboardingV2() {
 
         <div className="flex-1 flex flex-col px-[22px] py-4 overflow-y-auto gap-4">
           <motion.div
-              key={finished ? 'finished' : step}
+              key={finished ? 'finished' : currentKey}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.18 }}
               className="flex flex-col gap-4"
             >
-              {/* STEP 0 — checklist premio */}
-              {step === 0 && (
+              {/* INTRO — checklist premio */}
+              {currentKey === 'intro' && (
                 <>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E] leading-tight">
                     Llegó tu momento de cambiar la historia de tus finanzas 💪
@@ -190,8 +275,8 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {/* STEP 1 — elegir color */}
-              {step === 1 && (
+              {/* COLOR */}
+              {currentKey === 'color' && (
                 <>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">Antes que nada... elegí un color para tu perfil</h1>
                   <div className="flex justify-center py-2">
@@ -211,8 +296,8 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {/* STEP 2 — genero + edad */}
-              {step === 2 && (
+              {/* GENERO + EDAD */}
+              {currentKey === 'generoEdad' && (
                 <>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Con qué género te identificás?</h1>
                   <div className="flex flex-wrap gap-2.5">
@@ -245,8 +330,8 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {/* STEP 3 — en que andas (tono según edad) */}
-              {step === 3 && (
+              {/* SITUACION (tono según edad) */}
+              {currentKey === 'situacion' && (
                 <>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">
                     {joven ? '¿Qué onda, en qué andás?' : 'Contanos, ¿en qué andás?'}
@@ -267,8 +352,8 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {/* STEP 4 — que queres lograr (ranking + mensajito) */}
-              {step === 4 && (
+              {/* OBJETIVO (ranking + mensajito) — define qué preguntas siguen */}
+              {currentKey === 'objetivo' && (
                 <>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Qué querés lograr?</h1>
                   <p className="text-[14px] text-[#5b5b52]">Tocá en el orden que más te represente.</p>
@@ -302,8 +387,104 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {/* STEP 5 — haces algo de esto hoy */}
-              {step === 5 && (
+              {/* CATEGORIAS DE GASTO — solo si votó ahorrar o controlar */}
+              {currentKey === 'categoriasGasto' && (
+                <>
+                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿En qué se te suele ir la plata y te gustaría recortar?</h1>
+                  <p className="text-[14px] text-[#5b5b52]">Elegí las que quieras — con esto ya te armamos las secciones en Gastos.</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {CATEGORIAS_GASTO.map((o) => (
+                      <Chip key={o.id} on={categoriasGasto.includes(o.id)} onClick={() => toggleCategoriaGasto(o.id)}>{o.emoji} {o.label}</Chip>
+                    ))}
+                    {categoriasCustom.map((txt) => (
+                      <Chip key={txt} on onClick={() => removeCategoriaCustom(txt)}>✍️ {txt} ✕</Chip>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      placeholder="Otro (podés agregar más de uno)"
+                      value={categoriaOtroTxt}
+                      onChange={(e) => setCategoriaOtroTxt(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCategoriaCustom(); } }}
+                    />
+                    <button
+                      type="button"
+                      onClick={addCategoriaCustom}
+                      className="rounded-2xl border-[2.5px] border-[#1E1E1E] px-4 font-bold shrink-0"
+                      style={{ background: COLORS.yellow }}
+                    >
+                      + Agregar
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* PERFIL DE INVERSOR (mini) — solo si votó invertir */}
+              {currentKey === 'perfilInversor' && (
+                <>
+                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">Dijiste que querés invertir — dos preguntas rápidas</h1>
+                  <p className="text-[14px] text-[#5b5b52]">Con esto ya armamos un primer perfil; el resto lo terminás en Inversiones.</p>
+                  <p className="text-[15px] font-semibold text-[#1E1E1E] mt-1">¿Por qué querés invertir?</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {['Para sacarla pronto', 'Para mantenerla en otro lado'].map((o) => (
+                      <Chip key={o} on={porQueInv === o} onClick={() => setPorQueInv(o)}>{o}</Chip>
+                    ))}
+                  </div>
+                  <p className="text-[15px] font-semibold text-[#1E1E1E] mt-1">Si lo que invertiste baja 20%, ¿qué hacés?</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {['Lo saco todo', 'Lo dejo y espero', 'Pongo más'].map((o) => (
+                      <Chip key={o} on={reaccionInv === o} onClick={() => setReaccionInv(o)}>{o}</Chip>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* METAS EN MENTE — solo si votó "lograr objetivos puntuales" */}
+              {currentKey === 'metasEnMente' && (
+                <>
+                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Ya tenés algún objetivo en mente?</h1>
+                  <div className="flex flex-wrap gap-2.5">
+                    {(['si', 'no'] as const).map((o) => (
+                      <Chip key={o} on={tieneMetas === o} onClick={() => setTieneMetas(o)}>{o === 'si' ? 'Sí' : 'Todavía no'}</Chip>
+                    ))}
+                  </div>
+                  {tieneMetas === 'si' && (
+                    <>
+                      {metasNombres.length > 0 && (
+                        <div className="flex flex-wrap gap-2.5">
+                          {metasNombres.map((m) => (
+                            <Chip key={m} on onClick={() => removeMeta(m)}>🎯 {m} ✕</Chip>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <input
+                          className="flex-1 border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                          placeholder="Ej: Viaje a Bariloche"
+                          value={metaTxt}
+                          onChange={(e) => setMetaTxt(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMeta(); } }}
+                        />
+                        <button
+                          type="button"
+                          onClick={addMeta}
+                          className="rounded-2xl border-[2.5px] border-[#1E1E1E] px-4 font-bold shrink-0"
+                          style={{ background: COLORS.yellow }}
+                        >
+                          + Agregar
+                        </button>
+                      </div>
+                      {metasNombres.length > 0 && (
+                        <p className="text-[13px] text-[#5b5b52]">Ya te los dejamos armados en Objetivos para que completes los detalles.</p>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* HOY — haces algo de esto hoy */}
+              {currentKey === 'hoy' && (
                 <>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Hacés algo de esto hoy?</h1>
                   <div className="flex flex-wrap gap-2.5">
@@ -330,8 +511,8 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {/* STEP 6 — pantalla intermedia (boceto aproximado) */}
-              {step === 6 && (
+              {/* INTERMEDIA — pantalla boceto aproximado */}
+              {currentKey === 'intermedia' && (
                 <>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">Así se va a ir viendo tu progreso</h1>
                   <p className="text-[14px] text-[#5b5b52]">Todavía estamos definiendo esta pantalla — este es un boceto aproximado.</p>
@@ -350,8 +531,8 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {/* STEP 7 — como venis con tu plata */}
-              {step === 7 && (
+              {/* COMO VIENES con tu plata */}
+              {currentKey === 'comoViene' && (
                 <>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Cómo venís con tu plata?</h1>
                   <div className="flex flex-wrap gap-2.5">
@@ -375,8 +556,8 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {/* STEP 8 — empecemos / login, o confirmacion final */}
-              {step === 8 && !finished && (
+              {/* LOGIN — o confirmacion final */}
+              {currentKey === 'login' && !finished && (
                 <>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">Guardá tu progreso</h1>
                   <p className="text-[14px] text-[#5b5b52]">Todos los meses vas a poder ver cómo venís.</p>
@@ -402,7 +583,7 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {step === 8 && finished && (
+              {currentKey === 'login' && finished && (
                 <>
                   <div className="flex justify-center py-2"><Face color={color ?? '#E6DCEE'} mood="happy" /></div>
                   <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E] text-center">¡Llegaste a FINA! 🎉</h1>
@@ -413,8 +594,8 @@ export function OnboardingV2() {
         </div>
 
         <div className="px-[22px] pt-2.5 pb-6 flex flex-col gap-1.5">
-          <Cta label={finished ? 'Ir a mi FINA' : ctaLabels[step]} disabled={!finished && !stepValid(step)} onClick={onNext} />
-          {step === 5 && !finished && (
+          <Cta label={finished ? 'Ir a mi FINA' : CTA_LABELS[currentKey]} disabled={!finished && !stepValid(currentKey)} onClick={onNext} />
+          {!finished && SKIPPABLE.includes(currentKey) && (
             <button type="button" onClick={onSkip} className="text-[13.5px] font-semibold text-[#5b5b52] underline py-2 text-center">
               Saltar por ahora
             </button>

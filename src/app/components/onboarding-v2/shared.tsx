@@ -13,7 +13,135 @@ export const COLORS = {
   coral: '#FF6B81',
   coralSoft: '#FFE1E6',
   inkSoft: '#5b5b52',
+  sky: '#6BC1FF',
+  skySoft: '#DCEEFF',
 };
+
+// ── plata: formateo + parseo de inputs ──
+export function fmtMoney(n: number): string {
+  return `$${Math.round(n).toLocaleString('es-AR')}`;
+}
+export function parseMoneyInput(v: string): number {
+  return parseInt(v.replace(/\D/g, '')) || 0;
+}
+export function formatThousands(v: string): string {
+  const digits = v.replace(/\D/g, '').replace(/^0+/, '');
+  return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+}
+
+// id legible a partir de un texto libre (para categorías que el usuario
+// escribe a mano, tanto en el onboarding como en Gastos).
+export function slug(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'otro'
+  );
+}
+
+// ── puente Onboarding → Gastos: las categorías de gasto que la persona
+// marcó en el onboarding ("¿en qué se te suele ir la plata?") aparecen ya
+// creadas como secciones cuando entra a Gastos. Sandbox 100% local (v2 no
+// tiene backend todavía) — se guarda en localStorage de este navegador.
+const LS_CATEGORIAS = 'fina_v2_categorias_gasto';
+export function saveV2Categorias(categorias: string[]) {
+  try {
+    localStorage.setItem(LS_CATEGORIAS, JSON.stringify(categorias));
+  } catch {
+    // localStorage puede no estar disponible (modo privado, etc.) — no es crítico.
+  }
+}
+export function loadV2Categorias(): string[] {
+  try {
+    const raw = localStorage.getItem(LS_CATEGORIAS);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+// Puente Onboarding → Inversiones: si contestó el mini-perfil ("¿por qué
+// querés invertir?" + "si baja 20%, qué hacés?") en el onboarding, Inversiones
+// arranca directo desde ahí en vez de repreguntar.
+const LS_INV_PERFIL = 'fina_v2_inversiones_perfil';
+export function saveV2InversionesPerfil(p: { porQue: string; reaccion: string } | null) {
+  try {
+    if (!p) { localStorage.removeItem(LS_INV_PERFIL); return; }
+    localStorage.setItem(LS_INV_PERFIL, JSON.stringify(p));
+  } catch {
+    // no crítico
+  }
+}
+export function loadV2InversionesPerfil(): { porQue: string; reaccion: string } | null {
+  try {
+    const raw = localStorage.getItem(LS_INV_PERFIL);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Puente Onboarding → Objetivos: si dijo que ya tiene objetivos en mente y
+// los nombró, aparecen ya creados (sin monto todavía) para completar ahí.
+const LS_OBJETIVOS_INICIALES = 'fina_v2_objetivos_iniciales';
+export function saveV2ObjetivosIniciales(nombres: string[]) {
+  try {
+    localStorage.setItem(LS_OBJETIVOS_INICIALES, JSON.stringify(nombres));
+  } catch {
+    // no crítico
+  }
+}
+export function loadV2ObjetivosIniciales(): string[] {
+  try {
+    const raw = localStorage.getItem(LS_OBJETIVOS_INICIALES);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+// Donut de progreso/distribución (conic-gradient, sin librerías de charts).
+export function Donut({
+  segments,
+  centerLabel,
+  centerValue,
+  size = 132,
+}: {
+  segments: { color: string; pct: number }[];
+  centerLabel: string;
+  centerValue: string;
+  size?: number;
+}) {
+  let acc = 0;
+  const stops = segments
+    .filter((s) => s.pct > 0)
+    .map((s) => {
+      const start = acc;
+      acc += s.pct;
+      return `${s.color} ${start}% ${acc}%`;
+    })
+    .join(', ');
+  const inset = Math.round(size * 0.12);
+  return (
+    <div
+      className="relative rounded-full shrink-0 border-[2.5px] border-[#1E1E1E]"
+      style={{ width: size, height: size, background: stops || '#eee' }}
+    >
+      <div
+        className="absolute rounded-full flex flex-col items-center justify-center border-[2.5px] border-[#1E1E1E]"
+        style={{ inset, background: COLORS.cream }}
+      >
+        <span className="text-[10.5px] text-[#5b5b52] leading-tight text-center">{centerLabel}</span>
+        <span className="font-['Baloo_2'] font-bold text-[15px] text-[#1E1E1E] leading-tight">{centerValue}</span>
+      </div>
+    </div>
+  );
+}
 
 export function Face({ color, size = 150, mood = 'neutral' }: { color: string; size?: number; mood?: 'neutral' | 'happy' }) {
   return (
