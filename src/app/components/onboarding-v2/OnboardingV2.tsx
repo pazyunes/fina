@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
+import { COLORS, Face, CheckIcon, Chip, Cta } from './shared';
 
 // REDISEÑO — Onboarding v2 (rama feat/rediseno-onboarding-v2)
 //
@@ -16,17 +18,6 @@ import { motion } from 'motion/react';
 // ya charlamos: preguntas antes de pedir cuenta, sin montos de plata en
 // ningún paso, "Otro" siempre con campo de texto, cada respuesta con una
 // devolución cálida (nunca un camino que se sienta juzgado).
-
-const COLORS = {
-  mint: '#2ECC71',
-  mintLight: '#8EFEA0',
-  cream: '#FFF8E7',
-  yellow: '#FCE042',
-  yellowSoft: '#FFF3B0',
-  ink: '#1E1E1E',
-  coral: '#FF6B81',
-  coralSoft: '#FFE1E6',
-};
 
 type Genero = 'femenino' | 'masculino' | 'otro' | 'prefiero_no_decir' | null;
 type Edad = '12-17' | '18-24' | '25-34' | '35-44' | '45+' | 'otro' | null;
@@ -104,77 +95,8 @@ const COMO_VIENES: { id: ComoVieneId; label: string; msg: string }[] = [
   { id: 'otro', label: 'Otro', msg: 'Sea lo que sea, acá vas a poder resolverlo.' },
 ];
 
-// ── Chip reutilizable — el estilo "rubber hose": borde grueso + sombra dura ──
-function Chip({ on, warm, onClick, children }: { on: boolean; warm?: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-2 rounded-2xl border-[2.5px] border-[#1E1E1E] px-4 py-2.5 text-[14.5px] font-semibold
-        transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
-        shadow-[3px_3px_0_#1E1E1E]
-        ${on ? (warm ? 'bg-[#FF6B81] text-white' : 'bg-[#2ECC71] text-[#1E1E1E]') : 'bg-white text-[#1E1E1E]'}`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Cta({ label, disabled, onClick }: { label: string; disabled?: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`w-full rounded-full border-[2.5px] border-[#1E1E1E] py-4 text-[16px] font-bold
-        transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
-        ${disabled
-          ? 'bg-[#e8e3d0] text-[#a8a394] border-[#e8e3d0] shadow-none cursor-not-allowed'
-          : 'bg-[#2ECC71] text-[#1E1E1E] shadow-[4px_4px_0_#1E1E1E]'}`}
-    >
-      {label}
-    </button>
-  );
-}
-
-// La "carita" — ojos ovalados estilo retro + cejas flotantes, se pinta con el
-// color elegido en el paso 1. `mood` cambia la boca (neutral/feliz).
-function Face({ color, size = 150, mood = 'neutral' }: { color: string; size?: number; mood?: 'neutral' | 'happy' }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 150 150">
-      <circle cx="75" cy="75" r="62" fill={color} stroke="#1E1E1E" strokeWidth="4" />
-      {mood === 'neutral' ? (
-        <>
-          <path d="M48 55 Q56 46 64 55" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-          <path d="M86 55 Q94 46 102 55" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-          <ellipse cx="58" cy="70" rx="13" ry="16" fill="#fff" stroke="#1E1E1E" strokeWidth="3" />
-          <ellipse cx="92" cy="70" rx="13" ry="16" fill="#fff" stroke="#1E1E1E" strokeWidth="3" />
-          <circle cx="60" cy="74" r="4.5" fill="#1E1E1E" />
-          <circle cx="94" cy="74" r="4.5" fill="#1E1E1E" />
-          <path d="M58 98 Q75 112 92 98" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-        </>
-      ) : (
-        <>
-          <path d="M46 52 Q56 42 66 50" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-          <path d="M84 50 Q94 42 104 52" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-          <path d="M46 68 Q58 52 70 68" stroke="#1E1E1E" strokeWidth="3" fill="none" strokeLinecap="round" />
-          <path d="M80 68 Q92 52 104 68" stroke="#1E1E1E" strokeWidth="3" fill="none" strokeLinecap="round" />
-          <path d="M55 96 Q75 118 95 96" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
-      <path d="M1 5.5L5 9.5L13 1.5" stroke="#1E1E1E" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export function OnboardingV2() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [color, setColor] = useState<string | null>(null);
   const [genero, setGenero] = useState<Genero>(null);
@@ -214,7 +136,11 @@ export function OnboardingV2() {
 
   function onNext() {
     if (!stepValid(step)) return;
-    if (step === 8) { setFinished(true); return; }
+    if (step === 8) {
+      if (!finished) { setFinished(true); return; }
+      navigate('/onboarding-v2/home');
+      return;
+    }
     setStep((s) => Math.min(s + 1, 8));
   }
   function onSkip() {
@@ -486,16 +412,14 @@ export function OnboardingV2() {
             </motion.div>
         </div>
 
-        {!finished && (
-          <div className="px-[22px] pt-2.5 pb-6 flex flex-col gap-1.5">
-            <Cta label={ctaLabels[step]} disabled={!stepValid(step)} onClick={onNext} />
-            {step === 5 && (
-              <button type="button" onClick={onSkip} className="text-[13.5px] font-semibold text-[#5b5b52] underline py-2 text-center">
-                Saltar por ahora
-              </button>
-            )}
-          </div>
-        )}
+        <div className="px-[22px] pt-2.5 pb-6 flex flex-col gap-1.5">
+          <Cta label={finished ? 'Ir a mi FINA' : ctaLabels[step]} disabled={!finished && !stepValid(step)} onClick={onNext} />
+          {step === 5 && !finished && (
+            <button type="button" onClick={onSkip} className="text-[13.5px] font-semibold text-[#5b5b52] underline py-2 text-center">
+              Saltar por ahora
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
