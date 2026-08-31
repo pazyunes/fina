@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 // REDISEÑO v2 (rama feat/rediseno-onboarding-v2) — piezas compartidas entre
 // el onboarding y las pantallas post-onboarding.
 //
@@ -142,6 +144,30 @@ export function loadV2Grupo(): Grupo | null {
   } catch {
     return null;
   }
+}
+
+function codigoAlAzar(): string {
+  const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for (let i = 0; i < 5; i++) c += letras[Math.floor(Math.random() * letras.length)];
+  return `FINA-${c}`;
+}
+// Arma un grupo con compañeras de EJEMPLO + vos (con tu nombre real) — se
+// usa tanto desde el onboarding ("¿individual o con amigas?") como desde
+// Grupos ("Crear un grupo"). Mismo criterio de siempre: sin backend real
+// todavía, esto prueba la idea.
+export function crearGrupoDemo(nombreGrupo: string): Grupo {
+  const yo = loadV2Nombre() || 'Vos';
+  return {
+    nombre: nombreGrupo,
+    codigo: codigoAlAzar(),
+    miembros: [
+      { nombre: 'Caro', actividad: 6 },
+      { nombre: yo, actividad: 3, sosVos: true },
+      { nombre: 'Male', actividad: 2 },
+      { nombre: 'Juli', actividad: 1 },
+    ],
+  };
 }
 
 // ── puente Onboarding → Gastos: las categorías de gasto que la persona
@@ -358,6 +384,75 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
       >
         {children}
       </div>
+    </div>
+  );
+}
+
+// ── "Primera vez" — un cartelito que explica una sección apenas se entra,
+// se cierra con la cruz y no vuelve a aparecer nunca más (se recuerda por
+// localStorage). Se usa en cada pantalla nueva, y en Home para explicar
+// puntualmente qué es el botón de chat (el ícono solo no se entiende).
+function coachmarkKey(id: string) {
+  return `fina_v2_coach_${id}`;
+}
+export function Coachmark({ id, children }: { id: string; children: React.ReactNode }) {
+  const [visto, setVisto] = useState(() => {
+    try {
+      return localStorage.getItem(coachmarkKey(id)) === '1';
+    } catch {
+      return true;
+    }
+  });
+  if (visto) return null;
+  return (
+    <div className="flex items-start gap-2.5 rounded-2xl p-3.5" style={{ background: COLORS.brandSoft }}>
+      <p className="flex-1 text-[13px] font-medium leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
+      <button
+        type="button"
+        aria-label="Cerrar"
+        onClick={() => {
+          try { localStorage.setItem(coachmarkKey(id), '1'); } catch { /* no crítico */ }
+          setVisto(true);
+        }}
+        className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold transition-transform duration-100 active:scale-90"
+        style={{ background: 'rgba(67,28,114,0.12)', color: COLORS.brandDark }}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+// Toggle tipo "pestaña" (Pesos/Dólares) — una franja de color con una
+// pestaña blanca elevada para la opción activa, en vez de dos botones
+// iguales. Se usa donde haga falta elegir entre 2-3 opciones excluyentes
+// con más carácter que un selector de chips.
+export function SegmentedTab<T extends string>({
+  options, value, onChange, trackColor = COLORS.gold,
+}: {
+  options: { id: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  trackColor?: string;
+}) {
+  return (
+    <div className="flex rounded-2xl p-1.5 gap-1" style={{ background: trackColor }}>
+      {options.map((o) => {
+        const sel = value === o.id;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => onChange(o.id)}
+            className="flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-150"
+            style={sel
+              ? { background: '#fff', color: COLORS.ink, boxShadow: '0 2px 8px rgba(31,27,46,0.12)' }
+              : { background: 'transparent', color: COLORS.ink, opacity: 0.75 }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

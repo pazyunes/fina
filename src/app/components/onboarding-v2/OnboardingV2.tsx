@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { COLORS, DeviceFrame, Face, CheckIcon, Chip, Cta, saveV2Categorias, saveV2InversionesPerfil, saveV2ObjetivosIniciales, saveV2Nombre } from './shared';
+import { COLORS, DeviceFrame, Face, CheckIcon, Chip, Cta, SegmentedTab, crearGrupoDemo, loadV2Grupo, saveV2Categorias, saveV2Grupo, saveV2InversionesPerfil, saveV2ObjetivosIniciales, saveV2Nombre } from './shared';
 
 // REDISEÑO — Onboarding v2 (rama feat/rediseno-onboarding-v2)
 //
@@ -167,6 +167,8 @@ export function OnboardingV2() {
   const [tieneMetas, setTieneMetas] = useState<'si' | 'no' | null>(null);
   const [metasNombres, setMetasNombres] = useState<string[]>([]);
   const [metaTxt, setMetaTxt] = useState('');
+  const [tipoMetas, setTipoMetas] = useState<'individual' | 'grupal'>('individual');
+  const [nombreGrupoOnb, setNombreGrupoOnb] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [finished, setFinished] = useState(false);
@@ -230,6 +232,9 @@ export function OnboardingV2() {
         saveV2Categorias([...categoriasGasto, ...categoriasCustom]);
         if (porQueInv || reaccionInv) saveV2InversionesPerfil({ porQue: porQueInv ?? '', reaccion: reaccionInv ?? '' });
         if (metasNombres.length > 0) saveV2ObjetivosIniciales(metasNombres);
+        if (tipoMetas === 'grupal' && nombreGrupoOnb.trim() && !loadV2Grupo()) {
+          saveV2Grupo(crearGrupoDemo(nombreGrupoOnb.trim()));
+        }
         setFinished(true);
         return;
       }
@@ -506,6 +511,28 @@ export function OnboardingV2() {
                       {metasNombres.length > 0 && (
                         <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Ya te los dejamos armados en Objetivos para que completes los detalles.</p>
                       )}
+                    </>
+                  )}
+
+                  <p className="text-[15px] font-semibold mt-2" style={{ color: COLORS.ink }}>¿Los vas a armar sola o con amigas?</p>
+                  <SegmentedTab
+                    options={[
+                      { id: 'individual', label: 'Sola' },
+                      { id: 'grupal', label: 'Con amigas' },
+                    ]}
+                    value={tipoMetas}
+                    onChange={setTipoMetas}
+                    trackColor={COLORS.goldSoft}
+                  />
+                  {tipoMetas === 'grupal' && (
+                    <>
+                      <input
+                        className={inputClass}
+                        placeholder="Nombre del grupo (ej: Ahorrando juntas)"
+                        value={nombreGrupoOnb}
+                        onChange={(e) => setNombreGrupoOnb(e.target.value)}
+                      />
+                      <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Lo armamos ya mismo — vas a poder invitar amigas desde adentro de la app.</p>
                     </>
                   )}
                 </>

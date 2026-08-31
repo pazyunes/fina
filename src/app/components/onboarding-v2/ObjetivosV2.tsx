@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cta, Chip, COLORS, Donut, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2Grupo, loadV2Nombre } from './shared';
+import { Cta, Chip, Coachmark, COLORS, Donut, SegmentedTab, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2Grupo, loadV2Nombre } from './shared';
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
 // (ver ObjetivosPage.tsx / GoalEditModal.tsx) pasada a la estética nueva —
@@ -403,22 +403,15 @@ export function ObjetivosV2() {
         {grupo && (
           <div className="flex flex-col gap-1.5">
             <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Individual o grupal?</p>
-            <div className="flex gap-2">
-              {(['individual', 'grupal'] as const).map((t) => {
-                const sel = tipo === t;
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTipo(t)}
-                    className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                    style={sel ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
-                  >
-                    {t === 'individual' ? 'Individual' : `Grupal (${grupo.nombre})`}
-                  </button>
-                );
-              })}
-            </div>
+            <SegmentedTab
+              options={[
+                { id: 'individual', label: 'Individual' },
+                { id: 'grupal', label: `Grupal (${grupo.nombre})` },
+              ]}
+              value={tipo}
+              onChange={setTipo}
+              trackColor={COLORS.gold}
+            />
           </div>
         )}
 
@@ -437,6 +430,7 @@ export function ObjetivosV2() {
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-4">
       <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Objetivos</h1>
+      <Coachmark id="objetivos">Acá armás lo que querés lograr — solo o con tu grupo de amigas — y vas anotando lo que pagás o separás para cada uno.</Coachmark>
       {objetivos.length === 0 && <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todavía no armaste ningún objetivo.</p>}
       {objetivos.map((o) => {
         const estado = estadoMonto(o);

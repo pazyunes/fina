@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Chip, Cta, Donut, COLORS, fmtMoney, formatThousands, parseMoneyInput, loadV2InversionesPerfil } from './shared';
+import { Chip, Coachmark, Cta, Donut, COLORS, fmtMoney, formatThousands, parseMoneyInput, loadV2InversionesPerfil } from './shared';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
 // explícito): un mini-quiz corto arma un perfil de riesgo real (no fijo),
@@ -108,6 +108,7 @@ export function InversionesV2() {
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4">
         <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Inversiones</h1>
+        <Coachmark id="inversiones">Acá vas a poder armar tu perfil de riesgo y ver qué opciones tienen sentido para vos — nunca movemos tu plata, solo te orientamos.</Coachmark>
         <button
           type="button"
           onClick={() => setPaso(pasos[0])}

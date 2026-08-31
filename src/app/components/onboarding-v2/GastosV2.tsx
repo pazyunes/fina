@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cta, Donut, COLORS, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias } from './shared';
+import { Coachmark, Cta, Donut, COLORS, SegmentedTab, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias } from './shared';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
 // gastos con sus botones de "agregar", visualización arriba (donut +
@@ -16,6 +16,8 @@ import { Cta, Donut, COLORS, fmtMoney, formatThousands, parseMoneyInput, slug, l
 // suele ir la plata?") ya aparecen acá como secciones — ver shared.tsx.
 
 type TipoGasto = 'urgente' | 'impulsivo' | 'necesario' | 'otro';
+type Periodo = 'semana' | 'mes';
+type Tope = { monto: number; periodo: Periodo };
 type Categoria = { id: string; nombre: string };
 type Gasto = { id: string; monto: number; descripcion: string; categoriaId: string; tipo: TipoGasto; fecha: string };
 
@@ -47,8 +49,11 @@ export function GastosV2() {
   const [reserva, setReserva] = useState(0);
 
   const [openCatId, setOpenCatId] = useState<string | null>(categorias[0]?.id ?? null);
-  const [topes, setTopes] = useState<Record<string, string>>({});
-  const [topeEdit, setTopeEdit] = useState<Record<string, string>>({});
+  // El tope es de la sección entera (no de un gasto puntual) y elegís si
+  // pensarlo por semana o por mes.
+  const [topes, setTopes] = useState<Record<string, Tope>>({});
+  const [topeEditMonto, setTopeEditMonto] = useState<Record<string, string>>({});
+  const [topeEditPeriodo, setTopeEditPeriodo] = useState<Record<string, Periodo>>({});
 
   const [addingDisponible, setAddingDisponible] = useState(false);
   const [addDispVal, setAddDispVal] = useState('');
@@ -106,9 +111,10 @@ export function GastosV2() {
   }
 
   function guardarTope(catId: string) {
-    const val = (topeEdit[catId] || '').trim();
-    if (!val) return;
-    setTopes((t) => ({ ...t, [catId]: val }));
+    const monto = parseMoneyInput(topeEditMonto[catId] || '');
+    if (monto <= 0) return;
+    const periodo = topeEditPeriodo[catId] || 'semana';
+    setTopes((t) => ({ ...t, [catId]: { monto, periodo } }));
   }
 
   function reservar() {
@@ -126,6 +132,7 @@ export function GastosV2() {
         <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Mis Gastos</h1>
         <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Lo que fuiste contando por WhatsApp.</p>
       </div>
+      <Coachmark id="gastos">Acá vas viendo en qué se te va la plata, separado por sección. Podés ponerle un tope semanal o mensual a cada una.</Coachmark>
 
       {/* Resumen: donut + disponible/gastado */}
       <div className={`bg-white rounded-2xl p-4 ${CARD_SHADOW} flex gap-4 items-center`}>
@@ -302,10 +309,10 @@ export function GastosV2() {
               {tope ? (
                 <div className="mt-3">
                   <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(31,27,46,0.06)' }}>
-                    <div className="h-full rounded-full" style={{ width: `${Math.min((gastado / (parseMoneyInput(tope) || 1)) * 100, 100)}%`, background: colorDe(cat.id) }} />
+                    <div className="h-full rounded-full" style={{ width: `${Math.min((gastado / tope.monto) * 100, 100)}%`, background: colorDe(cat.id) }} />
                   </div>
                   <div className="flex items-center justify-between mt-1.5 text-[12px]">
-                    <span style={{ color: COLORS.inkSoft }}>Tope: {tope}</span>
+                    <span style={{ color: COLORS.inkSoft }}>Tope: {fmtMoney(tope.monto)}/{tope.periodo === 'semana' ? 'sem' : 'mes'}</span>
                     <button type="button" className="font-semibold underline" style={{ color: COLORS.brand }} onClick={() => setOpenCatId(cat.id)}>Editar</button>
                   </div>
                 </div>
@@ -327,21 +334,36 @@ export function GastosV2() {
                       <span className="shrink-0" style={{ color: COLORS.inkSoft }}>{fmtMoney(m.monto)}</span>
                     </div>
                   ))}
-                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      className="flex-1 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#7626B3] transition-colors"
-                      placeholder="Definí tu tope (ej: $15.000/sem)"
-                      value={topeEdit[cat.id] ?? tope ?? ''}
-                      onChange={(e) => setTopeEdit((v) => ({ ...v, [cat.id]: e.target.value }))}
-                    />
-                    <button
-                      type="button"
-                      className="rounded-xl px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95"
-                      style={{ background: COLORS.brand }}
-                      onClick={() => guardarTope(cat.id)}
-                    >
-                      Guardar
-                    </button>
+                  <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>Tope de la sección</p>
+                    <div className="relative">
+                      <span className="absolute top-1/2 -translate-y-1/2 left-3.5" style={{ color: COLORS.inkSoft }}>$</span>
+                      <input
+                        className="w-full border border-[rgba(31,27,46,0.16)] rounded-xl pl-7 pr-3 py-2 text-[13px] outline-none focus:border-[#7626B3] transition-colors"
+                        placeholder="Monto"
+                        inputMode="numeric"
+                        value={topeEditMonto[cat.id] ?? (tope ? String(tope.monto) : '')}
+                        onChange={(e) => setTopeEditMonto((v) => ({ ...v, [cat.id]: formatThousands(e.target.value) }))}
+                      />
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1">
+                        <SegmentedTab
+                          options={[{ id: 'semana' as Periodo, label: 'Por semana' }, { id: 'mes' as Periodo, label: 'Por mes' }]}
+                          value={topeEditPeriodo[cat.id] ?? tope?.periodo ?? 'semana'}
+                          onChange={(p) => setTopeEditPeriodo((v) => ({ ...v, [cat.id]: p }))}
+                          trackColor={COLORS.tint}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95 shrink-0"
+                        style={{ background: COLORS.brand }}
+                        onClick={() => guardarTope(cat.id)}
+                      >
+                        Guardar
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
