@@ -6,7 +6,7 @@ import { COLORS } from './shared';
 // el contenido cambia (Outlet), el menú de abajo se queda fijo.
 export function V2Layout() {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: COLORS.cream }}>
+    <div className="min-h-screen flex flex-col" style={{ background: COLORS.paper }}>
       <div className="flex-1 pb-24">
         <Outlet />
       </div>

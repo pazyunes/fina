@@ -9,7 +9,10 @@ import { Chip, Cta, Donut, COLORS, fmtMoney, formatThousands, parseMoneyInput, l
 // la app real, adaptado a este sandbox sin backend.
 //
 // Una vez armado el perfil, la pantalla se divide en 3 (pedido explícito):
-// Mis inversiones / Recomendaciones / Mi evolución.
+// Mis inversiones / Recomendaciones / Mi evolución — y ahí sí, la sección
+// pasa a modo oscuro (Cleo/Nubank): el número manda, cero ruido de color.
+// El quiz en sí (antes de llegar al resultado) se queda en el mismo
+// lenguaje claro que el resto de la app.
 
 type Paso = 'intro' | 'q1' | 'q2' | 'yaInvierte' | 'enQue' | 'bancos' | 'resultado';
 type PerfilId = 'conservador' | 'moderado' | 'arriesgado';
@@ -33,14 +36,16 @@ const INSTRUMENTOS: Instrumento[] = [
   { id: 'cedears', nombre: 'CEDEARs', desc: 'Pedacitos de empresas grandes del exterior, en pesos.', riesgo: 'Alto', apps: ['Banco tradicional'], perfiles: ['arriesgado'] },
 ];
 
-const PERFILES: Record<PerfilId, { label: string; emoji: string; color: string; copy: string; tasaMensual: number }> = {
-  conservador: { label: 'Conservador', emoji: '🌱', color: COLORS.mintLight, copy: 'Preferís cuidar lo que tenés antes que arriesgar de más.', tasaMensual: 0.008 },
-  moderado: { label: 'Moderado', emoji: '🌿', color: COLORS.yellowSoft, copy: 'Buscás un equilibrio entre seguridad y crecimiento.', tasaMensual: 0.015 },
-  arriesgado: { label: 'Arriesgado', emoji: '🚀', color: COLORS.coralSoft, copy: 'Te bancás más vaivén a cambio de más potencial de crecimiento.', tasaMensual: 0.025 },
+const PERFILES: Record<PerfilId, { label: string; emoji: string; accent: string; copy: string; tasaMensual: number }> = {
+  conservador: { label: 'Conservador', emoji: '🌱', accent: '#34D399', copy: 'Preferís cuidar lo que tenés antes que arriesgar de más.', tasaMensual: 0.008 },
+  moderado: { label: 'Moderado', emoji: '🌿', accent: '#F5B94D', copy: 'Buscás un equilibrio entre seguridad y crecimiento.', tasaMensual: 0.015 },
+  arriesgado: { label: 'Arriesgado', emoji: '🚀', accent: '#FF8FA3', copy: 'Te bancás más vaivén a cambio de más potencial de crecimiento.', tasaMensual: 0.025 },
 };
 
 type Aporte = { id: string; monto: number; instrumentoId: string; fecha: string };
 const hoy = () => new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+
+const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors';
 
 export function InversionesV2() {
   // Si en el onboarding ya contestó el mini-perfil, arrancamos directo desde
@@ -102,132 +107,140 @@ export function InversionesV2() {
   if (paso === 'intro') {
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4">
-        <h1 className="font-['Baloo_2'] text-[22px] font-bold text-[#1E1E1E]">Inversiones</h1>
+        <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Inversiones</h1>
         <button
           type="button"
           onClick={() => setPaso(pasos[0])}
-          className="text-left bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl p-5 shadow-[4px_4px_0_#1E1E1E] flex flex-col gap-2"
+          className="text-left bg-white rounded-2xl p-5 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-2 transition-transform duration-100 active:scale-[0.99]"
         >
-          <span className="font-['Baloo_2'] text-[18px] font-bold text-[#1E1E1E]">Averiguá tu perfil de inversor</span>
-          <span className="text-[13.5px] text-[#5b5b52]">
+          <span className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Averiguá tu perfil de inversor</span>
+          <span className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>
             {prefilledPerfil
               ? 'Ya nos contaste algo de esto en el onboarding — te faltan un par de preguntas más.'
               : '2 minutos, para que las recomendaciones tengan que ver con vos — sin comprometerte a nada.'}
           </span>
-          <span className="self-end text-[20px]">→</span>
+          <span className="self-end text-[20px]" style={{ color: COLORS.brand }}>→</span>
         </button>
       </div>
     );
   }
 
-  // ── resultado: perfil + 3 pestañas ──
+  // ── resultado: perfil + 3 pestañas, en modo oscuro ──
   if (paso === 'resultado') {
     const totalAportado = aportes.reduce((s, a) => s + a.monto, 0);
     const nombreInstr = (id: string) => INSTRUMENTOS.find((i) => i.id === id)?.nombre ?? id;
 
     return (
-      <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
-        {/* Inversiones baja el volumen "rubber hose" a propósito — acá el
-            número tiene que mandar, no el chrome. Sombras finas, borde
-            fino, montos en mono tabular (ver InversionesPage.tsx real). */}
-        <span className="self-start flex items-center gap-1.5 rounded-full border border-[#1E1E1E]/25 px-3 py-1 text-[12.5px] font-bold" style={{ background: perfil.color }}>
-          {perfil.emoji} Perfil {perfil.label.toLowerCase()}
-        </span>
-        <p className="text-[13.5px] text-[#5b5b52] -mt-2">{perfil.copy}</p>
+      <div style={{ background: COLORS.dark, minHeight: '100%' }} className="pb-6">
+        <div className="px-[22px] pt-8 flex flex-col gap-4">
+          <span
+            className="self-start flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
+            style={{ background: `${perfil.accent}26`, color: perfil.accent }}
+          >
+            {perfil.emoji} Perfil {perfil.label.toLowerCase()}
+          </span>
+          <p className="text-[13.5px] -mt-2" style={{ color: COLORS.onDarkSoft }}>{perfil.copy}</p>
 
-        <div className="flex gap-1.5 bg-white border border-[#1E1E1E]/20 rounded-2xl p-1">
-          {([
-            ['recos', 'Recomendaciones'],
-            ['mias', 'Mis inversiones'],
-            ['evolucion', 'Mi evolución'],
-          ] as [Tab, string][]).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`flex-1 rounded-xl py-2 text-[12px] font-bold transition-colors duration-150 ${tab === id ? 'bg-[#1E1E1E] text-white' : 'text-[#1E1E1E]'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'recos' && (
-          <div className="flex flex-col gap-3">
-            {enQue.length > 0 && (
-              <div className="rounded-xl border border-[#1E1E1E]/20 px-3.5 py-2.5 text-[12.5px] font-semibold bg-[#F7F5EF]">
-                Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
-              </div>
-            )}
-            {recomendados.map((r) => {
-              const bancoMatch = bancos.find((b) => r.apps.includes(b));
-              const already = yaEnIds.has(r.id);
+          <div className="flex gap-1.5 rounded-2xl p-1" style={{ background: COLORS.darkCard }}>
+            {([
+              ['recos', 'Recomendaciones'],
+              ['mias', 'Mis inversiones'],
+              ['evolucion', 'Mi evolución'],
+            ] as [Tab, string][]).map(([id, label]) => {
+              const sel = tab === id;
               return (
-                <div key={r.id} className={`bg-white border border-[#1E1E1E]/15 rounded-2xl p-4 ${already ? 'opacity-60' : ''}`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-bold text-[14.5px] text-[#1E1E1E]">{r.nombre}</p>
-                    <span className="text-[10.5px] font-semibold rounded-full px-2 py-0.5 shrink-0 bg-[#F0EDE4] text-[#5b5b52]">{r.riesgo} riesgo</span>
-                  </div>
-                  {bancoMatch ? (
-                    <p className="text-[12.5px] font-semibold text-[#1E1E1E] mt-1">✓ Desde tu {bancoMatch}</p>
-                  ) : (
-                    <p className="text-[12.5px] text-[#5b5b52] mt-1">{r.desc}</p>
-                  )}
-                  {already && <p className="text-[11.5px] font-semibold text-[#5b5b52] mt-1">Ya lo hacés ✓</p>}
-                </div>
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTab(id)}
+                  className="flex-1 rounded-xl py-2 text-[12px] font-bold transition-colors duration-150"
+                  style={sel ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.onDarkSoft }}
+                >
+                  {label}
+                </button>
               );
             })}
-            <p className="text-[11px] text-[#5b5b52] px-1">Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
           </div>
-        )}
 
-        {tab === 'mias' && (
-          <div className="flex flex-col gap-3">
-            <div className="bg-white border border-[#1E1E1E]/15 rounded-2xl p-4 flex gap-4 items-center">
-              <Donut
-                segments={INSTRUMENTOS.map((i) => ({
-                  color: i.riesgo === 'Bajo' ? COLORS.mint : i.riesgo === 'Medio' ? COLORS.yellow : COLORS.coral,
-                  pct: totalAportado > 0 ? (aportes.filter((a) => a.instrumentoId === i.id).reduce((s, a) => s + a.monto, 0) / totalAportado) * 100 : 0,
-                }))}
-                centerLabel="Invertido"
-                centerValue={fmtMoney(totalAportado)}
-                size={100}
-              />
-              <p className="flex-1 text-[13px] text-[#5b5b52]">Vas registrando lo que ponés en cada instrumento acá abajo.</p>
+          {tab === 'recos' && (
+            <div className="flex flex-col gap-3">
+              {enQue.length > 0 && (
+                <div className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold" style={{ background: 'rgba(52,211,153,0.14)', color: '#34D399' }}>
+                  Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
+                </div>
+              )}
+              {recomendados.map((r) => {
+                const bancoMatch = bancos.find((b) => r.apps.includes(b));
+                const already = yaEnIds.has(r.id);
+                return (
+                  <div key={r.id} className="rounded-2xl p-4" style={{ background: COLORS.darkCard, opacity: already ? 0.6 : 1 }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-bold text-[14.5px]" style={{ color: COLORS.onDark }}>{r.nombre}</p>
+                      <span className="text-[10.5px] font-semibold rounded-full px-2 py-0.5 shrink-0" style={{ background: 'rgba(244,241,250,0.1)', color: COLORS.onDarkSoft }}>{r.riesgo} riesgo</span>
+                    </div>
+                    {bancoMatch ? (
+                      <p className="text-[12.5px] font-semibold mt-1" style={{ color: '#34D399' }}>✓ Desde tu {bancoMatch}</p>
+                    ) : (
+                      <p className="text-[12.5px] mt-1" style={{ color: COLORS.onDarkSoft }}>{r.desc}</p>
+                    )}
+                    {already && <p className="text-[11.5px] font-semibold mt-1" style={{ color: COLORS.onDarkSoft }}>Ya lo hacés ✓</p>}
+                  </div>
+                );
+              })}
+              <p className="text-[11px] px-1" style={{ color: COLORS.onDarkSoft }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
             </div>
+          )}
 
-            <div className="bg-white border border-[#1E1E1E]/15 rounded-2xl p-4 flex flex-col gap-2.5">
-              <p className="text-[13px] font-bold text-[#1E1E1E]">Registrar un aporte</p>
-              <div className="flex flex-wrap gap-2">
-                {INSTRUMENTOS.map((i) => (
-                  <Chip key={i.id} on={aporteInstrId === i.id} onClick={() => setAporteInstrId(i.id)}>{i.nombre}</Chip>
+          {tab === 'mias' && (
+            <div className="flex flex-col gap-3">
+              <div className="rounded-2xl p-4 flex gap-4 items-center" style={{ background: COLORS.darkCard }}>
+                <Donut
+                  dark
+                  segments={INSTRUMENTOS.map((i) => ({
+                    color: i.riesgo === 'Bajo' ? '#34D399' : i.riesgo === 'Medio' ? '#F5B94D' : '#FF8FA3',
+                    pct: totalAportado > 0 ? (aportes.filter((a) => a.instrumentoId === i.id).reduce((s, a) => s + a.monto, 0) / totalAportado) * 100 : 0,
+                  }))}
+                  centerLabel="Invertido"
+                  centerValue={fmtMoney(totalAportado)}
+                  size={100}
+                />
+                <p className="flex-1 text-[13px]" style={{ color: COLORS.onDarkSoft }}>Vas registrando lo que ponés en cada instrumento acá abajo.</p>
+              </div>
+
+              <div className="rounded-2xl p-4 flex flex-col gap-2.5" style={{ background: COLORS.darkCard }}>
+                <p className="text-[13px] font-bold" style={{ color: COLORS.onDark }}>Registrar un aporte</p>
+                <div className="flex flex-wrap gap-2">
+                  {INSTRUMENTOS.map((i) => (
+                    <Chip key={i.id} on={aporteInstrId === i.id} onClick={() => setAporteInstrId(i.id)}>{i.nombre}</Chip>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 rounded-xl px-3 py-2 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none"
+                    style={{ background: 'rgba(244,241,250,0.08)', color: COLORS.onDark }}
+                    placeholder="Monto"
+                    inputMode="numeric"
+                    value={aporteMonto}
+                    onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
+                  />
+                  <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>+</button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {aportes.length === 0 && <p className="text-[13px]" style={{ color: COLORS.onDarkSoft }}>Todavía no registraste aportes.</p>}
+                {aportes.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between rounded-xl px-3.5 py-2.5" style={{ background: COLORS.darkCard }}>
+                    <span className="text-[13.5px]" style={{ color: COLORS.onDark }}>{nombreInstr(a.instrumentoId)} · {a.fecha}</span>
+                    <span className="font-['IBM_Plex_Mono'] font-semibold text-[13.5px] tabular-nums" style={{ color: COLORS.onDark }}>{fmtMoney(a.monto)}</span>
+                  </div>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 border border-[#1E1E1E]/25 rounded-xl px-3 py-2 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none"
-                  placeholder="Monto"
-                  inputMode="numeric"
-                  value={aporteMonto}
-                  onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
-                />
-                <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} className="rounded-xl border border-[#1E1E1E]/25 px-4 font-bold disabled:opacity-40 transition-all duration-100 active:translate-y-[1px]" style={{ background: COLORS.mint }}>+</button>
-              </div>
             </div>
+          )}
 
-            <div className="flex flex-col gap-2">
-              {aportes.length === 0 && <p className="text-[13px] text-[#5b5b52]">Todavía no registraste aportes.</p>}
-              {aportes.map((a) => (
-                <div key={a.id} className="flex items-center justify-between bg-white border border-[#1E1E1E]/15 rounded-xl px-3.5 py-2.5">
-                  <span className="text-[13.5px] text-[#1E1E1E]">{nombreInstr(a.instrumentoId)} · {a.fecha}</span>
-                  <span className="font-['IBM_Plex_Mono'] font-semibold text-[13.5px] tabular-nums">{fmtMoney(a.monto)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {tab === 'evolucion' && <Evolucion aportes={aportes} tasaMensual={perfil.tasaMensual} />}
+          {tab === 'evolucion' && <Evolucion aportes={aportes} tasaMensual={perfil.tasaMensual} />}
+        </div>
       </div>
     );
   }
@@ -237,13 +250,13 @@ export function InversionesV2() {
     <div className="px-[22px] pt-8 flex flex-col gap-4">
       <div className="flex justify-center gap-2">
         {pasos.map((p, i) => (
-          <span key={p} className="w-2.5 h-2.5 rounded-full border-2 border-[#1E1E1E]" style={{ background: i <= stepIndex ? COLORS.mint : '#fff' }} />
+          <span key={p} className="w-2.5 h-2.5 rounded-full" style={{ background: i <= stepIndex ? COLORS.brand : 'rgba(31,27,46,0.14)' }} />
         ))}
       </div>
 
       {paso === 'q1' && (
         <>
-          <h1 className="font-['Baloo_2'] text-[20px] font-bold text-[#1E1E1E]">¿Por qué querés invertir?</h1>
+          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿Por qué querés invertir?</h1>
           <div className="flex flex-wrap gap-2.5">
             {['Para sacarla pronto', 'Para mantenerla en otro lado'].map((o) => (
               <Chip key={o} on={porQue === o} onClick={() => setPorQue(o)}>{o}</Chip>
@@ -254,7 +267,7 @@ export function InversionesV2() {
 
       {paso === 'q2' && (
         <>
-          <h1 className="font-['Baloo_2'] text-[20px] font-bold text-[#1E1E1E]">Si lo que invertiste baja 20%, ¿qué hacés?</h1>
+          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>Si lo que invertiste baja 20%, ¿qué hacés?</h1>
           <div className="flex flex-wrap gap-2.5">
             {['Lo saco todo', 'Lo dejo y espero', 'Pongo más'].map((o) => (
               <Chip key={o} on={reaccion === o} onClick={() => setReaccion(o)}>{o}</Chip>
@@ -265,7 +278,7 @@ export function InversionesV2() {
 
       {paso === 'yaInvierte' && (
         <>
-          <h1 className="font-['Baloo_2'] text-[20px] font-bold text-[#1E1E1E]">¿Ya invertís hoy en algo?</h1>
+          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿Ya invertís hoy en algo?</h1>
           <div className="flex flex-wrap gap-2.5">
             {(['si', 'no'] as const).map((o) => (
               <Chip key={o} on={yaInvierte === o} onClick={() => setYaInvierte(o)}>{o === 'si' ? 'Sí' : 'No'}</Chip>
@@ -276,7 +289,7 @@ export function InversionesV2() {
 
       {paso === 'enQue' && (
         <>
-          <h1 className="font-['Baloo_2'] text-[20px] font-bold text-[#1E1E1E]">¿En qué invertís?</h1>
+          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿En qué invertís?</h1>
           <div className="flex flex-wrap gap-2.5">
             {EN_QUE_OPCIONES.map((o) => (
               <Chip key={o} on={enQue.includes(o)} onClick={() => toggleEnQue(o)}>{o}</Chip>
@@ -287,8 +300,8 @@ export function InversionesV2() {
 
       {paso === 'bancos' && (
         <>
-          <h1 className="font-['Baloo_2'] text-[20px] font-bold text-[#1E1E1E]">¿Qué bancos o billeteras usás?</h1>
-          <p className="text-[13px] text-[#5b5b52]">Así te decimos exactamente desde dónde hacerlo.</p>
+          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿Qué bancos o billeteras usás?</h1>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Así te decimos exactamente desde dónde hacerlo.</p>
           <div className="flex flex-wrap gap-2.5">
             {BANCOS.map((b) => (
               <Chip key={b} on={bancos.includes(b)} onClick={() => toggleBanco(b)}>{b}</Chip>
@@ -304,13 +317,14 @@ export function InversionesV2() {
 
 // Línea de tiempo simple: lo aportado de verdad vs una proyección ilustrativa
 // a la tasa mensual del perfil (mismo criterio "orientativo" que el resto
-// de la app real — nunca una promesa de rendimiento).
+// de la app real — nunca una promesa de rendimiento). Vive en modo oscuro,
+// como el resto del resultado.
 function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: number }) {
   const ordenado = [...aportes].reverse();
   if (ordenado.length === 0) {
     return (
-      <div className="bg-white border border-dashed border-[#1E1E1E]/25 rounded-2xl p-5 text-center">
-        <p className="text-[13.5px] text-[#5b5b52]">Registrá algún aporte en "Mis inversiones" para ver tu evolución acá.</p>
+      <div className="rounded-2xl p-5 text-center border border-dashed" style={{ borderColor: COLORS.darkLine }}>
+        <p className="text-[13.5px]" style={{ color: COLORS.onDarkSoft }}>Registrá algún aporte en "Mis inversiones" para ver tu evolución acá.</p>
       </div>
     );
   }
@@ -327,22 +341,24 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
   };
   const pathReal = real.map((_, i) => xy(real, i).join(',')).join(' ');
   const pathProy = proyectado.map((_, i) => xy(proyectado, i).join(',')).join(' ');
+  const realColor = '#34D399';
+  const proyColor = '#F5B94D';
 
   return (
-    <div className="bg-white border border-[#1E1E1E]/15 rounded-2xl p-4 flex flex-col gap-3">
-      <p className="text-[13px] font-bold text-[#1E1E1E]">Tu evolución</p>
+    <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.darkCard }}>
+      <p className="text-[13px] font-bold" style={{ color: COLORS.onDark }}>Tu evolución</p>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[130px]">
-        <polyline points={pathProy} fill="none" stroke={COLORS.yellow} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        <polyline points={pathReal} fill="none" stroke={COLORS.mint} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={pathProy} fill="none" stroke={proyColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={pathReal} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {/* Puntos: sin esto, un solo aporte no dibuja nada (una polyline de 1 punto no se ve). */}
-        {proyectado.map((_, i) => { const [x, y] = xy(proyectado, i); return <circle key={`p${i}`} cx={x} cy={y} r="3.5" fill={COLORS.yellow} stroke={COLORS.ink} strokeWidth="1.5" />; })}
-        {real.map((_, i) => { const [x, y] = xy(real, i); return <circle key={`r${i}`} cx={x} cy={y} r="3.5" fill={COLORS.mint} stroke={COLORS.ink} strokeWidth="1.5" />; })}
+        {proyectado.map((_, i) => { const [x, y] = xy(proyectado, i); return <circle key={`p${i}`} cx={x} cy={y} r="3.5" fill={proyColor} stroke={COLORS.dark} strokeWidth="1.5" />; })}
+        {real.map((_, i) => { const [x, y] = xy(real, i); return <circle key={`r${i}`} cx={x} cy={y} r="3.5" fill={realColor} stroke={COLORS.dark} strokeWidth="1.5" />; })}
       </svg>
       <div className="flex gap-4">
-        <span className="flex items-center gap-1.5 text-[12px] text-[#5b5b52]"><span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS.mint }} /> Aportado real</span>
-        <span className="flex items-center gap-1.5 text-[12px] text-[#5b5b52]"><span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS.yellow }} /> Proyección estimada</span>
+        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.onDarkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Aportado real</span>
+        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.onDarkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: proyColor }} /> Proyección estimada</span>
       </div>
-      <p className="text-[11px] text-[#5b5b52]">Proyección ilustrativa a tu perfil — no es una promesa de rendimiento.</p>
+      <p className="text-[11px]" style={{ color: COLORS.onDarkSoft }}>Proyección ilustrativa a tu perfil — no es una promesa de rendimiento.</p>
     </div>
   );
 }

@@ -2,20 +2,21 @@ import { useNavigate } from 'react-router';
 import { Face, ActionRow, COLORS } from './shared';
 
 // REDISEÑO v2 — Home, según el boceto: perfil arriba + 3 acciones grandes
-// para arrancar. Nada de dashboard con gráficos todavía — el punto de
-// partida es "elegí por dónde empezar", no un panel de números.
+// para arrancar. Fondo con un leve tinte lavanda (zona "cálida" del
+// espectro, junto con el bot) — nada de dashboard con gráficos todavía,
+// el punto de partida es "elegí por dónde empezar".
 export function HomeV2() {
   const navigate = useNavigate();
 
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-6">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full border-[2.5px] border-[#1E1E1E] overflow-hidden shrink-0" style={{ background: COLORS.mint }}>
-          <Face color={COLORS.mint} size={48} mood="happy" />
+        <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 shadow-[0_2px_10px_rgba(31,27,46,0.08)]">
+          <Face color={COLORS.brand} size={48} mood="happy" />
         </div>
         <div>
-          <p className="text-[13px] text-[#5b5b52]">Hola de nuevo</p>
-          <p className="font-['Baloo_2'] text-[19px] font-bold text-[#1E1E1E] leading-tight">Tu FINA</p>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Hola de nuevo</p>
+          <p className="text-[19px] font-bold leading-tight" style={{ color: COLORS.ink }}>Tu FINA</p>
         </div>
       </div>
 

@@ -12,12 +12,14 @@ import { COLORS, Face, CheckIcon, Chip, Cta, saveV2Categorias, saveV2Inversiones
 // 100% local. Cuando el diseño se cierre, esto se porta al flujo real
 // (UserData, Supabase, el resto del router).
 //
-// Estética: "rubber hose vintage / Y2K mascot" — pedido explícito para esta
-// v2, distinta de la paleta violeta actual de FINA. Paleta propia abajo.
-// Basado en el boceto a mano + benchmarks (Gasti, Duolingo, Headspace) que
-// ya charlamos: preguntas antes de pedir cuenta, sin montos de plata en
-// ningún paso, "Otro" siempre con campo de texto, cada respuesta con una
-// devolución cálida (nunca un camino que se sienta juzgado).
+// Estética v2 (segunda pasada): se dejó atrás el "rubber hose / mascota"
+// (bordes negros gruesos, sombra dura de sticker, Baloo 2) por pedido
+// explícito — pega más con Headspace/Cleo/Nubank: tarjetas blancas con
+// sombra suave, tipografía Poppins (la misma que ya usa el resto de FINA,
+// vía --font-sans), y el púrpura de marca real (#7626B3) en vez de un
+// acento inventado. Preguntas antes de pedir cuenta, sin montos de plata
+// en ningún paso, "Otro" siempre con campo de texto, cada respuesta con
+// una devolución cálida (nunca un camino que se sienta juzgado).
 //
 // El flujo es DINÁMICO según lo que se eligió en "¿Qué querés lograr?":
 // solo se pregunta lo que tiene que ver con eso — categorías de gasto si
@@ -54,12 +56,13 @@ const CTA_LABELS: Record<StepKey, string> = {
 // Pasos opcionales/de perfilado: se pueden saltar sin contestar nada.
 const SKIPPABLE: StepKey[] = ['hoy', 'categoriasGasto', 'perfilInversor', 'metasEnMente'];
 
+const FACE_DEFAULT = '#E4DDEE';
 const COLOR_DOTS: { id: string; hex: string }[] = [
+  { id: 'brand', hex: COLORS.brand },
   { id: 'coral', hex: COLORS.coral },
-  { id: 'yellow', hex: COLORS.yellow },
-  { id: 'mint', hex: COLORS.mint },
-  { id: 'sky', hex: '#6BC1FF' },
-  { id: 'cream', hex: '#F0E4C8' },
+  { id: 'gold', hex: COLORS.gold },
+  { id: 'sky', hex: COLORS.sky },
+  { id: 'green', hex: COLORS.green },
 ];
 
 const GENEROS: { id: Genero; label: string }[] = [
@@ -135,6 +138,8 @@ const COMO_VIENES: { id: ComoVieneId; label: string; msg: string }[] = [
   { id: 'prefiero_no_decir', label: 'Prefiero no decir', msg: 'Todo bien — lo vamos descubriendo juntas, a tu ritmo.' },
   { id: 'otro', label: 'Otro', msg: 'Sea lo que sea, acá vas a poder resolverlo.' },
 ];
+
+const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors';
 
 export function OnboardingV2() {
   const navigate = useNavigate();
@@ -237,12 +242,12 @@ export function OnboardingV2() {
   const progressPct = Math.round((currentIdx / (flow.length - 1)) * 100);
 
   return (
-    <div className="min-h-screen flex flex-col lg:items-center" style={{ background: COLORS.cream }}>
+    <div className="min-h-screen flex flex-col lg:items-center" style={{ background: COLORS.paper }}>
       <div className="w-full flex flex-col flex-1 lg:max-w-[480px]">
         {showTop && (
           <div className="px-[22px] pt-5 pb-1">
-            <div className="h-[5px] rounded-full border-[1.5px] border-[#1E1E1E] bg-white overflow-hidden">
-              <div className="h-full bg-[#2ECC71]" style={{ width: `${progressPct}%` }} />
+            <div className="h-[5px] rounded-full bg-[rgba(31,27,46,0.08)] overflow-hidden">
+              <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${progressPct}%`, background: COLORS.brand }} />
             </div>
           </div>
         )}
@@ -258,29 +263,29 @@ export function OnboardingV2() {
               {/* INTRO — checklist premio */}
               {currentKey === 'intro' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E] leading-tight">
+                  <h1 className="text-[23px] font-bold leading-tight" style={{ color: COLORS.ink }}>
                     Llegó tu momento de cambiar la historia de tus finanzas 💪
                   </h1>
-                  <div className="flex flex-col gap-3 bg-white border-[2.5px] border-[#1E1E1E] rounded-[18px] p-[18px] shadow-[5px_5px_0_#1E1E1E]">
+                  <div className="flex flex-col gap-3 bg-white rounded-[18px] p-[18px] shadow-[0_2px_20px_rgba(31,27,46,0.07)]">
                     {['Conocé tus gastos', 'Lográ tus objetivos', 'Cuidá tu bienestar financiero'].map((txt) => (
-                      <div key={txt} className="flex items-center gap-2.5 text-[15px] font-semibold text-[#1E1E1E]">
-                        <span className="w-[26px] h-[26px] rounded-full bg-[#2ECC71] border-2 border-[#1E1E1E] flex items-center justify-center shrink-0">
+                      <div key={txt} className="flex items-center gap-2.5 text-[15px] font-semibold" style={{ color: COLORS.ink }}>
+                        <span className="w-[26px] h-[26px] rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brand }}>
                           <CheckIcon />
                         </span>
                         {txt}
                       </div>
                     ))}
                   </div>
-                  <p className="text-[14px] text-[#5b5b52]">Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
                 </>
               )}
 
               {/* COLOR */}
               {currentKey === 'color' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">Antes que nada... elegí un color para tu perfil</h1>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Antes que nada... elegí un color para tu perfil</h1>
                   <div className="flex justify-center py-2">
-                    <Face color={color ?? '#E6DCEE'} />
+                    <Face color={color ?? FACE_DEFAULT} />
                   </div>
                   <div className="flex justify-center gap-3.5 pt-1.5">
                     {COLOR_DOTS.map((c) => (
@@ -288,8 +293,12 @@ export function OnboardingV2() {
                         key={c.id}
                         type="button"
                         onClick={() => setColor(c.hex)}
-                        className="w-[34px] h-[34px] rounded-full border-[2.5px] border-[#1E1E1E]"
-                        style={{ background: c.hex, outline: color === c.hex ? '3px solid #1E1E1E' : undefined, outlineOffset: color === c.hex ? '2px' : undefined }}
+                        className="w-[34px] h-[34px] rounded-full transition-transform duration-100 active:scale-90"
+                        style={{
+                          background: c.hex,
+                          outline: color === c.hex ? `2.5px solid ${COLORS.ink}` : undefined,
+                          outlineOffset: color === c.hex ? '2.5px' : undefined,
+                        }}
                       />
                     ))}
                   </div>
@@ -299,7 +308,7 @@ export function OnboardingV2() {
               {/* GENERO + EDAD */}
               {currentKey === 'generoEdad' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Con qué género te identificás?</h1>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Con qué género te identificás?</h1>
                   <div className="flex flex-wrap gap-2.5">
                     {GENEROS.map((o) => (
                       <Chip key={o.id} on={genero === o.id} onClick={() => setGenero(o.id)}>{o.label}</Chip>
@@ -307,13 +316,13 @@ export function OnboardingV2() {
                   </div>
                   {genero === 'otro' && (
                     <input
-                      className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      className={inputClass}
                       placeholder="Contanos cómo te identificás"
                       value={generoOtroTxt}
                       onChange={(e) => setGeneroOtroTxt(e.target.value)}
                     />
                   )}
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E] mt-2.5">¿Qué edad tenés?</h1>
+                  <h1 className="text-[23px] font-bold mt-2.5" style={{ color: COLORS.ink }}>¿Qué edad tenés?</h1>
                   <div className="flex flex-wrap gap-2.5">
                     {EDADES.map((o) => (
                       <Chip key={o.id} on={edad === o.id} onClick={() => setEdad(o.id)}>{o.label}</Chip>
@@ -321,7 +330,7 @@ export function OnboardingV2() {
                   </div>
                   {edad === 'otro' && (
                     <input
-                      className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      className={inputClass}
                       placeholder="Contanos tu edad"
                       value={edadOtroTxt}
                       onChange={(e) => setEdadOtroTxt(e.target.value)}
@@ -333,7 +342,7 @@ export function OnboardingV2() {
               {/* SITUACION (tono según edad) */}
               {currentKey === 'situacion' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>
                     {joven ? '¿Qué onda, en qué andás?' : 'Contanos, ¿en qué andás?'}
                   </h1>
                   <div className="flex flex-wrap gap-2.5">
@@ -343,7 +352,7 @@ export function OnboardingV2() {
                   </div>
                   {situacion === 'otro' && (
                     <input
-                      className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      className={inputClass}
                       placeholder="Contanos en qué andás"
                       value={situacionOtroTxt}
                       onChange={(e) => setSituacionOtroTxt(e.target.value)}
@@ -355,15 +364,15 @@ export function OnboardingV2() {
               {/* OBJETIVO (ranking + mensajito) — define qué preguntas siguen */}
               {currentKey === 'objetivo' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Qué querés lograr?</h1>
-                  <p className="text-[14px] text-[#5b5b52]">Tocá en el orden que más te represente.</p>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Qué querés lograr?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Tocá en el orden que más te represente.</p>
                   <div className="flex flex-wrap gap-2.5">
                     {OBJETIVOS.map((o) => {
                       const idx = rank.indexOf(o.id);
                       return (
                         <Chip key={o.id} on={idx >= 0} onClick={() => toggleRank(o.id)}>
                           {idx >= 0 && (
-                            <span className="w-[19px] h-[19px] rounded-full bg-[#1E1E1E] text-white text-[11px] font-extrabold flex items-center justify-center shrink-0">
+                            <span className="w-[19px] h-[19px] rounded-full bg-white/25 text-white text-[11px] font-extrabold flex items-center justify-center shrink-0">
                               {idx + 1}
                             </span>
                           )}
@@ -374,14 +383,14 @@ export function OnboardingV2() {
                   </div>
                   {rank.includes('otro') && (
                     <input
-                      className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      className={inputClass}
                       placeholder="Contanos qué querés lograr"
                       value={objetivoOtroTxt}
                       onChange={(e) => setObjetivoOtroTxt(e.target.value)}
                     />
                   )}
-                  <div className="flex justify-center py-1"><Face color={color ?? '#E6DCEE'} size={90} mood="happy" /></div>
-                  <div className="self-center max-w-[82%] text-center bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[13.5px] font-semibold text-[#1E1E1E]">
+                  <div className="flex justify-center py-1"><Face color={color ?? FACE_DEFAULT} size={90} mood="happy" /></div>
+                  <div className="self-center max-w-[82%] text-center bg-white rounded-2xl px-4 py-3 text-[13.5px] font-semibold shadow-[0_2px_16px_rgba(31,27,46,0.06)]" style={{ color: COLORS.ink }}>
                     {objetivoBubble}
                   </div>
                 </>
@@ -390,8 +399,8 @@ export function OnboardingV2() {
               {/* CATEGORIAS DE GASTO — solo si votó ahorrar o controlar */}
               {currentKey === 'categoriasGasto' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿En qué se te suele ir la plata y te gustaría recortar?</h1>
-                  <p className="text-[14px] text-[#5b5b52]">Elegí las que quieras — con esto ya te armamos las secciones en Gastos.</p>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿En qué se te suele ir la plata y te gustaría recortar?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Elegí las que quieras — con esto ya te armamos las secciones en Gastos.</p>
                   <div className="flex flex-wrap gap-2.5">
                     {CATEGORIAS_GASTO.map((o) => (
                       <Chip key={o.id} on={categoriasGasto.includes(o.id)} onClick={() => toggleCategoriaGasto(o.id)}>{o.emoji} {o.label}</Chip>
@@ -402,7 +411,7 @@ export function OnboardingV2() {
                   </div>
                   <div className="flex gap-2">
                     <input
-                      className="flex-1 border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      className={`flex-1 ${inputClass}`}
                       placeholder="Otro (podés agregar más de uno)"
                       value={categoriaOtroTxt}
                       onChange={(e) => setCategoriaOtroTxt(e.target.value)}
@@ -411,8 +420,8 @@ export function OnboardingV2() {
                     <button
                       type="button"
                       onClick={addCategoriaCustom}
-                      className="rounded-2xl border-[2.5px] border-[#1E1E1E] px-4 font-bold shrink-0"
-                      style={{ background: COLORS.yellow }}
+                      className="rounded-2xl px-4 font-bold shrink-0 transition-all duration-100 active:scale-95"
+                      style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
                     >
                       + Agregar
                     </button>
@@ -423,15 +432,15 @@ export function OnboardingV2() {
               {/* PERFIL DE INVERSOR (mini) — solo si votó invertir */}
               {currentKey === 'perfilInversor' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">Dijiste que querés invertir — dos preguntas rápidas</h1>
-                  <p className="text-[14px] text-[#5b5b52]">Con esto ya armamos un primer perfil; el resto lo terminás en Inversiones.</p>
-                  <p className="text-[15px] font-semibold text-[#1E1E1E] mt-1">¿Por qué querés invertir?</p>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Dijiste que querés invertir — dos preguntas rápidas</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Con esto ya armamos un primer perfil; el resto lo terminás en Inversiones.</p>
+                  <p className="text-[15px] font-semibold mt-1" style={{ color: COLORS.ink }}>¿Por qué querés invertir?</p>
                   <div className="flex flex-wrap gap-2.5">
                     {['Para sacarla pronto', 'Para mantenerla en otro lado'].map((o) => (
                       <Chip key={o} on={porQueInv === o} onClick={() => setPorQueInv(o)}>{o}</Chip>
                     ))}
                   </div>
-                  <p className="text-[15px] font-semibold text-[#1E1E1E] mt-1">Si lo que invertiste baja 20%, ¿qué hacés?</p>
+                  <p className="text-[15px] font-semibold mt-1" style={{ color: COLORS.ink }}>Si lo que invertiste baja 20%, ¿qué hacés?</p>
                   <div className="flex flex-wrap gap-2.5">
                     {['Lo saco todo', 'Lo dejo y espero', 'Pongo más'].map((o) => (
                       <Chip key={o} on={reaccionInv === o} onClick={() => setReaccionInv(o)}>{o}</Chip>
@@ -443,7 +452,7 @@ export function OnboardingV2() {
               {/* METAS EN MENTE — solo si votó "lograr objetivos puntuales" */}
               {currentKey === 'metasEnMente' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Ya tenés algún objetivo en mente?</h1>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Ya tenés algún objetivo en mente?</h1>
                   <div className="flex flex-wrap gap-2.5">
                     {(['si', 'no'] as const).map((o) => (
                       <Chip key={o} on={tieneMetas === o} onClick={() => setTieneMetas(o)}>{o === 'si' ? 'Sí' : 'Todavía no'}</Chip>
@@ -460,7 +469,7 @@ export function OnboardingV2() {
                       )}
                       <div className="flex gap-2">
                         <input
-                          className="flex-1 border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                          className={`flex-1 ${inputClass}`}
                           placeholder="Ej: Viaje a Bariloche"
                           value={metaTxt}
                           onChange={(e) => setMetaTxt(e.target.value)}
@@ -469,14 +478,14 @@ export function OnboardingV2() {
                         <button
                           type="button"
                           onClick={addMeta}
-                          className="rounded-2xl border-[2.5px] border-[#1E1E1E] px-4 font-bold shrink-0"
-                          style={{ background: COLORS.yellow }}
+                          className="rounded-2xl px-4 font-bold shrink-0 transition-all duration-100 active:scale-95"
+                          style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
                         >
                           + Agregar
                         </button>
                       </div>
                       {metasNombres.length > 0 && (
-                        <p className="text-[13px] text-[#5b5b52]">Ya te los dejamos armados en Objetivos para que completes los detalles.</p>
+                        <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Ya te los dejamos armados en Objetivos para que completes los detalles.</p>
                       )}
                     </>
                   )}
@@ -486,7 +495,7 @@ export function OnboardingV2() {
               {/* HOY — haces algo de esto hoy */}
               {currentKey === 'hoy' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Hacés algo de esto hoy?</h1>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Hacés algo de esto hoy?</h1>
                   <div className="flex flex-wrap gap-2.5">
                     {HOY.map((o) => (
                       <Chip key={o.id} warm on={hoy.includes(o.id)} onClick={() => toggleHoy(o.id)}>{o.label}</Chip>
@@ -494,7 +503,7 @@ export function OnboardingV2() {
                   </div>
                   {hoy.includes('otro') && (
                     <input
-                      className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      className={inputClass}
                       placeholder="Contanos más"
                       value={hoyOtroTxt}
                       onChange={(e) => setHoyOtroTxt(e.target.value)}
@@ -502,8 +511,8 @@ export function OnboardingV2() {
                   )}
                   {vulnerable && (
                     <div
-                      className="self-center max-w-[82%] text-center border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[13.5px] font-semibold text-[#1E1E1E]"
-                      style={{ background: hoy.includes('abandone') ? COLORS.coralSoft : COLORS.yellowSoft }}
+                      className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[13.5px] font-semibold"
+                      style={{ background: hoy.includes('abandone') ? COLORS.coralSoft : COLORS.goldSoft, color: COLORS.ink }}
                     >
                       {hoy.includes('abandone') ? 'Estás en el lugar correcto.' : 'No pasa nada, todavía podés hacer mucho.'}
                     </div>
@@ -514,19 +523,19 @@ export function OnboardingV2() {
               {/* INTERMEDIA — pantalla boceto aproximado */}
               {currentKey === 'intermedia' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">Así se va a ir viendo tu progreso</h1>
-                  <p className="text-[14px] text-[#5b5b52]">Todavía estamos definiendo esta pantalla — este es un boceto aproximado.</p>
-                  <div className="relative flex-1 flex flex-col gap-2.5 bg-white border-[2.5px] border-dashed border-[#1E1E1E] rounded-[18px] p-4">
-                    <span className="absolute top-2.5 right-2.5 bg-[#FCE042] border-2 border-[#1E1E1E] rounded-full px-2.5 py-0.5 text-[10.5px] font-bold">Boceto</span>
-                    {[{ w: 40, c: '#2ECC71' }, { w: 65, c: '#FF6B81' }, { w: 20, c: '#FCE042' }].map((row, i) => (
-                      <div key={i} className="flex items-center gap-2.5 bg-[#FFF8E7] rounded-xl px-3 py-2.5">
-                        <div className="w-5 h-5 rounded-full border-2 border-[#1E1E1E] shrink-0" style={{ background: row.c }} />
-                        <div className="flex-1 h-2 bg-[#eee] rounded-full overflow-hidden">
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Así se va a ir viendo tu progreso</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía estamos definiendo esta pantalla — este es un boceto aproximado.</p>
+                  <div className="relative flex-1 flex flex-col gap-2.5 bg-white border border-dashed border-[rgba(31,27,46,0.18)] rounded-[18px] p-4">
+                    <span className="absolute top-2.5 right-2.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>Boceto</span>
+                    {[{ w: 40, c: COLORS.brand }, { w: 65, c: COLORS.coral }, { w: 20, c: COLORS.gold }].map((row, i) => (
+                      <div key={i} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: COLORS.paper }}>
+                        <div className="w-5 h-5 rounded-full shrink-0" style={{ background: row.c }} />
+                        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(31,27,46,0.08)' }}>
                           <div className="h-full rounded-full" style={{ width: `${row.w}%`, background: row.c }} />
                         </div>
                       </div>
                     ))}
-                    <p className="text-[14px] text-[#5b5b52] mt-auto">Ya lo vamos a terminar de diseñar juntas — esto es solo para que veas la idea.</p>
+                    <p className="text-[14px] mt-auto" style={{ color: COLORS.inkSoft }}>Ya lo vamos a terminar de diseñar juntas — esto es solo para que veas la idea.</p>
                   </div>
                 </>
               )}
@@ -534,7 +543,7 @@ export function OnboardingV2() {
               {/* COMO VIENES con tu plata */}
               {currentKey === 'comoViene' && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">¿Cómo venís con tu plata?</h1>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Cómo venís con tu plata?</h1>
                   <div className="flex flex-wrap gap-2.5">
                     {COMO_VIENES.map((o) => (
                       <Chip key={o.id} on={comoViene === o.id} onClick={() => setComoViene(o.id)}>{o.label}</Chip>
@@ -542,14 +551,14 @@ export function OnboardingV2() {
                   </div>
                   {comoViene === 'otro' && (
                     <input
-                      className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      className={inputClass}
                       placeholder="Contanos más"
                       value={comoVieneOtroTxt}
                       onChange={(e) => setComoVieneOtroTxt(e.target.value)}
                     />
                   )}
                   {comoVieneMsg && (
-                    <div className="self-center max-w-[82%] text-center bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[13.5px] font-semibold text-[#1E1E1E]">
+                    <div className="self-center max-w-[82%] text-center bg-white rounded-2xl px-4 py-3 text-[13.5px] font-semibold shadow-[0_2px_16px_rgba(31,27,46,0.06)]" style={{ color: COLORS.ink }}>
                       {comoVieneMsg}
                     </div>
                   )}
@@ -559,22 +568,22 @@ export function OnboardingV2() {
               {/* LOGIN — o confirmacion final */}
               {currentKey === 'login' && !finished && (
                 <>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E]">Guardá tu progreso</h1>
-                  <p className="text-[14px] text-[#5b5b52]">Todos los meses vas a poder ver cómo venís.</p>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Guardá tu progreso</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todos los meses vas a poder ver cómo venís.</p>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-semibold text-[#5b5b52]">Mail o teléfono</label>
+                    <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Mail o teléfono</label>
                     <input
-                      className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      className={inputClass}
                       placeholder="vos@mail.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-semibold text-[#5b5b52]">Contraseña</label>
+                    <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Contraseña</label>
                     <input
                       type="password"
-                      className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none"
+                      className={inputClass}
                       placeholder="Mínimo 6 caracteres"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -585,9 +594,9 @@ export function OnboardingV2() {
 
               {currentKey === 'login' && finished && (
                 <>
-                  <div className="flex justify-center py-2"><Face color={color ?? '#E6DCEE'} mood="happy" /></div>
-                  <h1 className="font-['Baloo_2'] text-[23px] font-bold text-[#1E1E1E] text-center">¡Llegaste a FINA! 🎉</h1>
-                  <p className="text-[14px] text-[#5b5b52] text-center">Ya está — a partir de ahora, te acompañamos en esto.</p>
+                  <div className="flex justify-center py-2"><Face color={color ?? FACE_DEFAULT} mood="happy" /></div>
+                  <h1 className="text-[23px] font-bold text-center" style={{ color: COLORS.ink }}>¡Llegaste a FINA! 🎉</h1>
+                  <p className="text-[14px] text-center" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
                 </>
               )}
             </motion.div>
@@ -596,7 +605,7 @@ export function OnboardingV2() {
         <div className="px-[22px] pt-2.5 pb-6 flex flex-col gap-1.5">
           <Cta label={finished ? 'Ir a mi FINA' : CTA_LABELS[currentKey]} disabled={!finished && !stepValid(currentKey)} onClick={onNext} />
           {!finished && SKIPPABLE.includes(currentKey) && (
-            <button type="button" onClick={onSkip} className="text-[13.5px] font-semibold text-[#5b5b52] underline py-2 text-center">
+            <button type="button" onClick={onSkip} className="text-[13.5px] font-semibold underline py-2 text-center" style={{ color: COLORS.inkSoft }}>
               Saltar por ahora
             </button>
           )}

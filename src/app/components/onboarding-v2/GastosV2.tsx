@@ -7,6 +7,11 @@ import { Cta, Donut, COLORS, fmtMoney, formatThousands, parseMoneyInput, slug, l
 // recientes, y una reserva tipo ahorro (mismo concepto que ReserveControl.tsx
 // de la app real, pasado a esta estética).
 //
+// Es el extremo "llamativo" del espectro (Gastos grita, Inversiones
+// susurra): tarjetas blancas con sombra suave y buen color variado por
+// categoría/tipo, pero sin el borde negro grueso ni la sombra de sticker
+// de la v1 — eso es lo que se sacó de la mesa.
+//
 // Las categorías que la persona marcó en el onboarding ("¿en qué se te
 // suele ir la plata?") ya aparecen acá como secciones — ver shared.tsx.
 
@@ -16,19 +21,23 @@ type Gasto = { id: string; monto: number; descripcion: string; categoriaId: stri
 
 const TIPO_INFO: Record<TipoGasto, { label: string; color: string }> = {
   urgente: { label: 'Urgente', color: COLORS.coral },
-  impulsivo: { label: 'Impulsivo', color: COLORS.yellow },
-  necesario: { label: 'Necesario', color: COLORS.mint },
+  impulsivo: { label: 'Impulsivo', color: COLORS.gold },
+  necesario: { label: 'Necesario', color: COLORS.green },
   otro: { label: 'Otro', color: COLORS.sky },
 };
 const TIPOS: TipoGasto[] = ['necesario', 'urgente', 'impulsivo', 'otro'];
 
-const CAT_COLORS = [COLORS.mint, COLORS.coral, COLORS.yellow, COLORS.sky, '#C9A6F5', '#FFB067'];
+const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.green, '#C9A6F5'];
 const DEFAULT_CATEGORIAS: Categoria[] = [
   { id: 'delivery', nombre: 'Delivery' },
   { id: 'ropa', nombre: 'Ropa' },
   { id: 'transporte', nombre: 'Transporte' },
   { id: 'super', nombre: 'Supermercado' },
 ];
+// Nota Tailwind: la clase tiene que aparecer COMPLETA en el archivo (aunque
+// sea adentro de este string) para que el scanner de Tailwind la detecte —
+// por eso no se arma por partes con interpolación.
+const CARD_SHADOW = 'shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
 
 function categoriasIniciales(): Categoria[] {
   const guardadas = loadV2Categorias();
@@ -131,33 +140,33 @@ export function GastosV2() {
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
       <div>
-        <h1 className="font-['Baloo_2'] text-[22px] font-bold text-[#1E1E1E]">Mis Gastos</h1>
-        <p className="text-[13.5px] text-[#5b5b52]">Lo que fuiste contando por WhatsApp.</p>
+        <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Mis Gastos</h1>
+        <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Lo que fuiste contando por WhatsApp.</p>
       </div>
 
       {/* Resumen: donut + disponible/gastado */}
-      <div className="bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl p-4 shadow-[4px_4px_0_#1E1E1E] flex gap-4 items-center">
+      <div className={`bg-white rounded-2xl p-4 ${CARD_SHADOW} flex gap-4 items-center`}>
         <Donut segments={donutCategorias} centerLabel="Gastado" centerValue={fmtMoney(totalGastado)} />
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <div>
-            <p className="text-[12px] text-[#5b5b52]">Dinero disponible</p>
-            <p className="font-['Baloo_2'] font-bold text-[19px] text-[#1E1E1E]">{fmtMoney(disponible)}</p>
+            <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Dinero disponible</p>
+            <p className="font-bold text-[19px]" style={{ color: COLORS.ink }}>{fmtMoney(disponible)}</p>
           </div>
           {!addingDisponible ? (
-            <button type="button" onClick={() => setAddingDisponible(true)} className="self-start text-[12.5px] font-semibold underline text-[#5b5b52]">
+            <button type="button" onClick={() => setAddingDisponible(true)} className="self-start text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }}>
               + Agregar dinero disponible
             </button>
           ) : (
             <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
               <input
                 autoFocus
-                className="flex-1 min-w-0 border-[1.5px] border-[#1E1E1E] rounded-xl px-2.5 py-1.5 text-[12.5px] outline-none"
+                className="flex-1 min-w-0 border border-[rgba(31,27,46,0.16)] rounded-xl px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#7626B3] transition-colors"
                 placeholder="Monto"
                 inputMode="numeric"
                 value={addDispVal}
                 onChange={(e) => setAddDispVal(formatThousands(e.target.value))}
               />
-              <button type="button" onClick={agregarDinero} className="rounded-xl border-[2px] border-[#1E1E1E] px-2.5 text-[12px] font-bold shrink-0" style={{ background: COLORS.mint }}>
+              <button type="button" onClick={agregarDinero} className="rounded-xl px-2.5 text-[12px] font-bold shrink-0 text-white transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>
                 Ok
               </button>
             </div>
@@ -167,17 +176,17 @@ export function GastosV2() {
 
       {/* Distribución por tipo — la parte que agrega valor: cuánto es impulso vs necesidad */}
       {porTipo.length > 0 && (
-        <div className="bg-white border-[2px] border-[#1E1E1E] rounded-2xl p-3.5 flex flex-col gap-2">
-          <p className="text-[11.5px] font-bold uppercase tracking-wide text-[#5b5b52]">¿En qué tipo de gasto se te va?</p>
-          <div className="h-2.5 rounded-full overflow-hidden border border-[#1E1E1E]/20 flex">
+        <div className={`bg-white rounded-2xl p-3.5 flex flex-col gap-2 ${CARD_SHADOW}`}>
+          <p className="text-[11.5px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>¿En qué tipo de gasto se te va?</p>
+          <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: 'rgba(31,27,46,0.06)' }}>
             {porTipo.map((t) => (
               <div key={t.tipo} style={{ width: `${(t.monto / totalGastado) * 100}%`, background: TIPO_INFO[t.tipo].color }} />
             ))}
           </div>
           <div className="flex flex-wrap gap-x-3.5 gap-y-1">
             {porTipo.map((t) => (
-              <span key={t.tipo} className="flex items-center gap-1.5 text-[11.5px] text-[#5b5b52]">
-                <span className="w-2.5 h-2.5 rounded-full border border-[#1E1E1E]/30" style={{ background: TIPO_INFO[t.tipo].color }} />
+              <span key={t.tipo} className="flex items-center gap-1.5 text-[11.5px]" style={{ color: COLORS.inkSoft }}>
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: TIPO_INFO[t.tipo].color }} />
                 {TIPO_INFO[t.tipo].label} · {fmtMoney(t.monto)}
               </span>
             ))}
@@ -189,12 +198,12 @@ export function GastosV2() {
       {!addingGasto ? (
         <Cta label="+ Agregar gasto" onClick={() => setAddingGasto(true)} />
       ) : (
-        <div className="bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl p-4 flex flex-col gap-3">
+        <div className={`bg-white rounded-2xl p-4 flex flex-col gap-3 ${CARD_SHADOW}`}>
           <div className="relative">
-            <span className="absolute top-1/2 -translate-y-1/2 left-4 text-[#5b5b52]">$</span>
+            <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
             <input
               autoFocus
-              className="w-full border-[1.5px] border-[#1E1E1E] rounded-xl pl-8 pr-3 py-2.5 text-[14.5px] outline-none"
+              className="w-full border border-[rgba(31,27,46,0.16)] rounded-xl pl-8 pr-3 py-2.5 text-[14.5px] outline-none focus:border-[#7626B3] transition-colors"
               placeholder="Monto"
               inputMode="numeric"
               value={ngMonto}
@@ -202,31 +211,34 @@ export function GastosV2() {
             />
           </div>
           <input
-            className="border-[1.5px] border-[#1E1E1E] rounded-xl px-3.5 py-2.5 text-[14.5px] outline-none"
+            className="border border-[rgba(31,27,46,0.16)] rounded-xl px-3.5 py-2.5 text-[14.5px] outline-none focus:border-[#7626B3] transition-colors"
             placeholder="Descripción (ej: PedidosYa)"
             value={ngDesc}
             onChange={(e) => setNgDesc(e.target.value)}
           />
 
           <div>
-            <p className="text-[12px] font-bold text-[#5b5b52] mb-1.5">Sección</p>
+            <p className="text-[12px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>Sección</p>
             <div className="flex flex-wrap gap-2">
-              {categorias.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => { setNgCatId(c.id); setNgNuevaCat(''); }}
-                  className="rounded-xl border-2 border-[#1E1E1E] px-3 py-1.5 text-[13px] font-semibold"
-                  style={{ background: ngCatId === c.id && !ngNuevaCat ? COLORS.mint : '#fff' }}
-                >
-                  {c.nombre}
-                </button>
-              ))}
+              {categorias.map((c) => {
+                const sel = ngCatId === c.id && !ngNuevaCat;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { setNgCatId(c.id); setNgNuevaCat(''); }}
+                    className="rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                    style={sel ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                  >
+                    {c.nombre}
+                  </button>
+                );
+              })}
               <button
                 type="button"
                 onClick={() => { setNgCatId(null); setNgNuevaCat(' '); }}
-                className="rounded-xl border-2 border-dashed border-[#1E1E1E] px-3 py-1.5 text-[13px] font-semibold"
-                style={{ background: ngNuevaCat ? COLORS.yellowSoft : '#fff' }}
+                className="rounded-xl px-3 py-1.5 text-[13px] font-semibold border border-dashed transition-all duration-100 active:scale-95"
+                style={{ background: ngNuevaCat ? COLORS.brandSoft : '#fff', color: ngNuevaCat ? COLORS.brandDark : COLORS.ink, borderColor: 'rgba(31,27,46,0.25)' }}
               >
                 + Nueva
               </button>
@@ -234,7 +246,7 @@ export function GastosV2() {
             {ngNuevaCat && (
               <input
                 autoFocus
-                className="mt-2 w-full border-[1.5px] border-[#1E1E1E] rounded-xl px-3 py-2 text-[13.5px] outline-none"
+                className="mt-2 w-full border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
                 placeholder="Nombre de la sección"
                 value={ngNuevaCat.trim()}
                 onChange={(e) => setNgNuevaCat(e.target.value || ' ')}
@@ -243,32 +255,35 @@ export function GastosV2() {
           </div>
 
           <div>
-            <p className="text-[12px] font-bold text-[#5b5b52] mb-1.5">¿Qué tipo de gasto fue?</p>
+            <p className="text-[12px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</p>
             <div className="flex flex-wrap gap-2">
-              {TIPOS.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setNgTipo(t)}
-                  className="rounded-xl border-2 border-[#1E1E1E] px-3 py-1.5 text-[13px] font-semibold"
-                  style={{ background: ngTipo === t ? TIPO_INFO[t].color : '#fff' }}
-                >
-                  {TIPO_INFO[t].label}
-                </button>
-              ))}
+              {TIPOS.map((t) => {
+                const sel = ngTipo === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setNgTipo(t)}
+                    className="rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                    style={sel ? { background: TIPO_INFO[t].color, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                  >
+                    {TIPO_INFO[t].label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <div className="flex gap-2 mt-1">
-            <button type="button" onClick={() => setAddingGasto(false)} className="flex-1 rounded-xl border-2 border-[#1E1E1E] py-2.5 text-[13.5px] font-semibold">
+            <button type="button" onClick={() => setAddingGasto(false)} className="flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold border border-[rgba(31,27,46,0.16)]" style={{ color: COLORS.ink }}>
               Cancelar
             </button>
             <button
               type="button"
               onClick={agregarGasto}
               disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim())}
-              className="flex-[2] rounded-xl border-2 border-[#1E1E1E] py-2.5 text-[13.5px] font-bold disabled:opacity-40"
-              style={{ background: COLORS.mint }}
+              className="flex-[2] rounded-xl py-2.5 text-[13.5px] font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95"
+              style={{ background: COLORS.brand }}
             >
               Agregar gasto
             </button>
@@ -284,57 +299,57 @@ export function GastosV2() {
           const tope = topes[cat.id];
           const movs = gastos.filter((g) => g.categoriaId === cat.id);
           return (
-            <div key={cat.id} className="bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl p-4 shadow-[4px_4px_0_#1E1E1E]">
+            <div key={cat.id} className={`bg-white rounded-2xl p-4 ${CARD_SHADOW}`}>
               <button type="button" className="w-full flex items-center justify-between" onClick={() => setOpenCatId(open ? null : cat.id)}>
                 <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full border-2 border-[#1E1E1E] shrink-0" style={{ background: colorDe(cat.id) }} />
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: colorDe(cat.id) }} />
                   <div className="text-left">
-                    <p className="font-semibold text-[14.5px] text-[#1E1E1E]">{cat.nombre}</p>
-                    <p className="text-[12.5px] text-[#5b5b52]">{gastado > 0 ? fmtMoney(gastado) : 'Sin registros todavía'}</p>
+                    <p className="font-semibold text-[14.5px]" style={{ color: COLORS.ink }}>{cat.nombre}</p>
+                    <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>{gastado > 0 ? fmtMoney(gastado) : 'Sin registros todavía'}</p>
                   </div>
                 </div>
-                <span className="text-[#5b5b52]">{open ? '▲' : '▼'}</span>
+                <span style={{ color: COLORS.inkFaint }}>{open ? '▲' : '▼'}</span>
               </button>
 
               {tope ? (
                 <div className="mt-3">
-                  <div className="h-2 bg-[#f0ead6] rounded-full overflow-hidden border border-[#1E1E1E]/20">
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(31,27,46,0.06)' }}>
                     <div className="h-full rounded-full" style={{ width: `${Math.min((gastado / (parseMoneyInput(tope) || 1)) * 100, 100)}%`, background: colorDe(cat.id) }} />
                   </div>
                   <div className="flex items-center justify-between mt-1.5 text-[12px]">
-                    <span className="text-[#5b5b52]">Tope: {tope}</span>
-                    <button type="button" className="font-semibold underline" onClick={() => setOpenCatId(cat.id)}>Editar</button>
+                    <span style={{ color: COLORS.inkSoft }}>Tope: {tope}</span>
+                    <button type="button" className="font-semibold underline" style={{ color: COLORS.brand }} onClick={() => setOpenCatId(cat.id)}>Editar</button>
                   </div>
                 </div>
               ) : (
-                <div className="mt-3 rounded-xl px-3 py-2 text-[12px] font-semibold" style={{ background: COLORS.yellowSoft }}>
+                <div className="mt-3 rounded-xl px-3 py-2 text-[12px] font-semibold" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>
                   👀 Por ahora, estamos mirando cómo es tu {cat.nombre.toLowerCase()}
                 </div>
               )}
 
               {open && (
-                <div className="mt-3 pt-3 border-t-2 border-dashed border-[#1E1E1E]/20 flex flex-col gap-2">
-                  {movs.length === 0 && <p className="text-[12.5px] text-[#5b5b52]">Todavía no hay movimientos acá.</p>}
+                <div className="mt-3 pt-3 border-t border-dashed flex flex-col gap-2" style={{ borderColor: 'rgba(31,27,46,0.14)' }}>
+                  {movs.length === 0 && <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Todavía no hay movimientos acá.</p>}
                   {movs.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between text-[13px] text-[#1E1E1E] gap-2">
+                    <div key={m.id} className="flex items-center justify-between text-[13px] gap-2" style={{ color: COLORS.ink }}>
                       <span className="flex items-center gap-1.5 min-w-0">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TIPO_INFO[m.tipo].color }} />
                         <span className="truncate">{m.descripcion} · {m.fecha}</span>
                       </span>
-                      <span className="text-[#5b5b52] shrink-0">{fmtMoney(m.monto)}</span>
+                      <span className="shrink-0" style={{ color: COLORS.inkSoft }}>{fmtMoney(m.monto)}</span>
                     </div>
                   ))}
                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                     <input
-                      className="flex-1 border-[1.5px] border-[#1E1E1E] rounded-xl px-3 py-2 text-[13px] outline-none"
+                      className="flex-1 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13px] outline-none focus:border-[#7626B3] transition-colors"
                       placeholder="Definí tu tope (ej: $15.000/sem)"
                       value={topeEdit[cat.id] ?? tope ?? ''}
                       onChange={(e) => setTopeEdit((v) => ({ ...v, [cat.id]: e.target.value }))}
                     />
                     <button
                       type="button"
-                      className="rounded-xl border-[2px] border-[#1E1E1E] px-3.5 py-2 text-[12.5px] font-bold"
-                      style={{ background: COLORS.mint }}
+                      className="rounded-xl px-3.5 py-2 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95"
+                      style={{ background: COLORS.brand }}
                       onClick={() => guardarTope(cat.id)}
                     >
                       Guardar
@@ -349,59 +364,59 @@ export function GastosV2() {
 
       {/* Gastos recientes */}
       <div className="flex flex-col gap-2">
-        <p className="text-[12px] font-bold uppercase tracking-wide text-[#5b5b52]">Gastos recientes</p>
-        {gastos.length === 0 && <p className="text-[13px] text-[#5b5b52]">Todavía no registraste gastos.</p>}
+        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Gastos recientes</p>
+        {gastos.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
         {gastos.slice(0, 6).map((g) => {
           const cat = categorias.find((c) => c.id === g.categoriaId);
           return (
-            <div key={g.id} className="flex items-center gap-2.5 bg-white border-[2px] border-[#1E1E1E] rounded-xl px-3.5 py-2.5">
-              <span className="w-2.5 h-2.5 rounded-full border border-[#1E1E1E]/30 shrink-0" style={{ background: TIPO_INFO[g.tipo].color }} />
+            <div key={g.id} className={`flex items-center gap-2.5 bg-white rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`}>
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[g.tipo].color }} />
               <div className="flex-1 min-w-0">
-                <p className="text-[13.5px] text-[#1E1E1E] truncate">{g.descripcion}</p>
-                <p className="text-[11.5px] text-[#5b5b52]">{cat?.nombre ?? 'Sin sección'} · {g.fecha}</p>
+                <p className="text-[13.5px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
+                <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{cat?.nombre ?? 'Sin sección'} · {g.fecha}</p>
               </div>
-              <span className="font-semibold text-[13.5px] text-[#1E1E1E] shrink-0">{fmtMoney(g.monto)}</span>
+              <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtMoney(g.monto)}</span>
             </div>
           );
         })}
       </div>
 
       {/* Reserva tipo ahorro */}
-      <div className="bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl p-4">
+      <div className={`bg-white rounded-2xl p-4 ${CARD_SHADOW}`}>
         <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-full border-2 border-[#1E1E1E] flex items-center justify-center shrink-0" style={{ background: COLORS.yellowSoft }}>🔒</span>
-          <p className="flex-1 text-[14.5px] font-semibold text-[#1E1E1E]">Reserva</p>
-          <button type="button" onClick={() => setReservaOpen((o) => !o)} className="text-[13px] font-semibold underline shrink-0">
+          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
+          <p className="flex-1 text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reserva</p>
+          <button type="button" onClick={() => setReservaOpen((o) => !o)} className="text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
             {reserva > 0 ? 'Editar' : 'Reservar'}
           </button>
         </div>
 
         {reserva > 0 ? (
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.yellowSoft }}>
-              <p className="text-[11px] text-[#5b5b52]">En reserva</p>
-              <p className="font-bold text-[15px] text-[#1E1E1E]">{fmtMoney(reserva)}</p>
+            <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.goldSoft }}>
+              <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>En reserva</p>
+              <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>{fmtMoney(reserva)}</p>
             </div>
-            <div className="rounded-xl px-3 py-2.5 bg-[#f5f0dd]">
-              <p className="text-[11px] text-[#5b5b52]">Disponible libre</p>
-              <p className="font-bold text-[15px] text-[#1E1E1E]">{fmtMoney(disponible)}</p>
+            <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.paper }}>
+              <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>Disponible libre</p>
+              <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>{fmtMoney(disponible)}</p>
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-[12.5px] text-[#5b5b52]">Apartá un monto para no gastarlo — tipo alcancía.</p>
+          <p className="mt-2 text-[12.5px]" style={{ color: COLORS.inkSoft }}>Apartá un monto para no gastarlo — tipo alcancía.</p>
         )}
 
         {reservaOpen && (
-          <div className="mt-3 pt-3 border-t-2 border-dashed border-[#1E1E1E]/20 flex gap-2">
+          <div className="mt-3 pt-3 border-t border-dashed flex gap-2" style={{ borderColor: 'rgba(31,27,46,0.14)' }}>
             <input
               autoFocus
-              className="flex-1 border-[1.5px] border-[#1E1E1E] rounded-xl px-3 py-2 text-[13.5px] outline-none"
+              className="flex-1 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
               placeholder="¿Cuánto querés reservar?"
               inputMode="numeric"
               value={reservaVal}
               onChange={(e) => setReservaVal(formatThousands(e.target.value))}
             />
-            <button type="button" onClick={reservar} className="rounded-xl border-2 border-[#1E1E1E] px-3.5 text-[12.5px] font-bold" style={{ background: COLORS.mint }}>
+            <button type="button" onClick={reservar} className="rounded-xl px-3.5 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>
               Guardar
             </button>
           </div>

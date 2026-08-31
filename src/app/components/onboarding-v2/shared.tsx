@@ -1,20 +1,45 @@
 // REDISEÑO v2 (rama feat/rediseno-onboarding-v2) — piezas compartidas entre
-// el onboarding y las pantallas post-onboarding: paleta, la "carita" (avatar
-// estilo rubber-hose) y los controles base (chip, cta). Todo lo nuevo de esta
-// rama importa de acá para no repetir el mismo botón/color en cada archivo.
+// el onboarding y las pantallas post-onboarding.
+//
+// V2 del rediseño: se deja atrás la estética "rubber hose / mascota" —
+// bordes negros gruesos, sombras duras tipo sticker, tipografía Baloo 2 —
+// y se acerca a las referencias que sí sumaron (Headspace/Cleo/Nubank):
+// tarjetas limpias con sombra suave, tipografía Poppins (la misma que ya
+// usa el resto de la app real) y el púrpura de marca de FINA (#7626B3,
+// el mismo que Login/ObjetivosPage/InversionesPage) en vez de un acento
+// inventado. La energía sigue cambiando por sección (Gastos colorido,
+// Inversiones serio en modo oscuro), pero ya no via sombra de cómic.
 
 export const COLORS = {
-  mint: '#2ECC71',
-  mintLight: '#8EFEA0',
-  cream: '#FFF8E7',
-  yellow: '#FCE042',
-  yellowSoft: '#FFF3B0',
-  ink: '#1E1E1E',
-  coral: '#FF6B81',
-  coralSoft: '#FFE1E6',
-  inkSoft: '#5b5b52',
-  sky: '#6BC1FF',
-  skySoft: '#DCEEFF',
+  ink: '#1F1B2E',
+  inkSoft: '#6B647A',
+  inkFaint: '#A29BB3',
+  paper: '#FBFAF8',
+  surface: '#FFFFFF',
+  tint: '#F3EEFA',
+  line: 'rgba(31,27,46,0.09)',
+  lineStrong: 'rgba(31,27,46,0.16)',
+
+  brand: '#7626B3',
+  brandSoft: '#F0E7FA',
+  brandDark: '#431C72',
+
+  coral: '#FF5C7A',
+  coralSoft: '#FFE3E9',
+  gold: '#E8A33D',
+  goldSoft: '#FBEDD3',
+  green: '#2FAE66',
+  greenSoft: '#E1F3E7',
+  sky: '#4C8DFF',
+  skySoft: '#E3ECFF',
+
+  // Inversiones vive en modo oscuro — el mismo criterio "Nubank/Cleo": la
+  // plata seria se muestra sin ruido de color, en un fondo casi negro.
+  dark: '#17132A',
+  darkCard: '#221C38',
+  darkLine: 'rgba(244,241,250,0.12)',
+  onDark: '#F4F1FA',
+  onDarkSoft: 'rgba(244,241,250,0.6)',
 };
 
 // ── plata: formateo + parseo de inputs ──
@@ -36,7 +61,7 @@ export function slug(s: string): string {
     s
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '') || 'otro'
   );
@@ -111,11 +136,13 @@ export function Donut({
   centerLabel,
   centerValue,
   size = 132,
+  dark = false,
 }: {
   segments: { color: string; pct: number }[];
   centerLabel: string;
   centerValue: string;
   size?: number;
+  dark?: boolean;
 }) {
   let acc = 0;
   const stops = segments
@@ -126,44 +153,47 @@ export function Donut({
       return `${s.color} ${start}% ${acc}%`;
     })
     .join(', ');
-  const inset = Math.round(size * 0.12);
+  const inset = Math.round(size * 0.13);
   return (
     <div
-      className="relative rounded-full shrink-0 border-[2.5px] border-[#1E1E1E]"
-      style={{ width: size, height: size, background: stops || '#eee' }}
+      className="relative rounded-full shrink-0"
+      style={{ width: size, height: size, background: stops || (dark ? COLORS.darkLine : '#ECE7F2') }}
     >
       <div
-        className="absolute rounded-full flex flex-col items-center justify-center border-[2.5px] border-[#1E1E1E]"
-        style={{ inset, background: COLORS.cream }}
+        className="absolute rounded-full flex flex-col items-center justify-center"
+        style={{
+          inset,
+          background: dark ? COLORS.darkCard : COLORS.surface,
+          boxShadow: dark ? 'none' : '0 2px 10px rgba(31,27,46,0.07)',
+        }}
       >
-        <span className="text-[10.5px] text-[#5b5b52] leading-tight text-center">{centerLabel}</span>
-        <span className="font-['Baloo_2'] font-bold text-[15px] text-[#1E1E1E] leading-tight">{centerValue}</span>
+        <span className="text-[10.5px] leading-tight text-center" style={{ color: dark ? COLORS.onDarkSoft : COLORS.inkSoft }}>{centerLabel}</span>
+        <span className="font-bold text-[15px] leading-tight" style={{ color: dark ? COLORS.onDark : COLORS.ink }}>{centerValue}</span>
       </div>
     </div>
   );
 }
 
+// Avatar — un "orbe de humor" en vez de la carita de mascota cómic: mismo
+// mecanismo de personalización (elegís un color en el onboarding), sin
+// ojos-de-muñeco ni contorno negro grueso. El trazo de la cara sale del
+// propio color (negro translúcido, nunca #000 puro), así se ve integrado.
 export function Face({ color, size = 150, mood = 'neutral' }: { color: string; size?: number; mood?: 'neutral' | 'happy' }) {
+  const stroke = 'rgba(20,14,32,0.4)';
   return (
     <svg width={size} height={size} viewBox="0 0 150 150">
-      <circle cx="75" cy="75" r="62" fill={color} stroke="#1E1E1E" strokeWidth="4" />
+      <circle cx="75" cy="75" r="70" fill={color} />
       {mood === 'neutral' ? (
         <>
-          <path d="M48 55 Q56 46 64 55" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-          <path d="M86 55 Q94 46 102 55" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-          <ellipse cx="58" cy="70" rx="13" ry="16" fill="#fff" stroke="#1E1E1E" strokeWidth="3" />
-          <ellipse cx="92" cy="70" rx="13" ry="16" fill="#fff" stroke="#1E1E1E" strokeWidth="3" />
-          <circle cx="60" cy="74" r="4.5" fill="#1E1E1E" />
-          <circle cx="94" cy="74" r="4.5" fill="#1E1E1E" />
-          <path d="M58 98 Q75 112 92 98" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
+          <circle cx="58" cy="72" r="4.5" fill={stroke} />
+          <circle cx="92" cy="72" r="4.5" fill={stroke} />
+          <path d="M60 97 Q75 105 90 97" stroke={stroke} strokeWidth="3" fill="none" strokeLinecap="round" />
         </>
       ) : (
         <>
-          <path d="M46 52 Q56 42 66 50" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-          <path d="M84 50 Q94 42 104 52" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
-          <path d="M46 68 Q58 52 70 68" stroke="#1E1E1E" strokeWidth="3" fill="none" strokeLinecap="round" />
-          <path d="M80 68 Q92 52 104 68" stroke="#1E1E1E" strokeWidth="3" fill="none" strokeLinecap="round" />
-          <path d="M55 96 Q75 118 95 96" stroke="#1E1E1E" strokeWidth="4" fill="none" strokeLinecap="round" />
+          <path d="M49 68 Q58 61 67 68" stroke={stroke} strokeWidth="3.2" fill="none" strokeLinecap="round" />
+          <path d="M83 68 Q92 61 101 68" stroke={stroke} strokeWidth="3.2" fill="none" strokeLinecap="round" />
+          <path d="M55 93 Q75 112 95 93" stroke={stroke} strokeWidth="3.6" fill="none" strokeLinecap="round" />
         </>
       )}
     </svg>
@@ -173,20 +203,25 @@ export function Face({ color, size = 150, mood = 'neutral' }: { color: string; s
 export function CheckIcon() {
   return (
     <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
-      <path d="M1 5.5L5 9.5L13 1.5" stroke="#1E1E1E" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M1 5.5L5 9.5L13 1.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
+// Chip de selección — plano, sin sombra dura: relleno sólido cuando está
+// activo (violeta de marca, o coral en las preguntas "warm"), borde fino
+// cuando no. El feedback táctil es un scale-down breve (estilo Cleo), no
+// un desplazamiento con sombra que desaparece de golpe.
 export function Chip({ on, warm, onClick, children }: { on: boolean; warm?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-2xl border-[2.5px] border-[#1E1E1E] px-4 py-2.5 text-[14.5px] font-semibold select-none
-        transition-all duration-100 ease-out active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
-        shadow-[3px_3px_0_#1E1E1E]
-        ${on ? (warm ? 'bg-[#FF6B81] text-white' : 'bg-[#2ECC71] text-[#1E1E1E]') : 'bg-white text-[#1E1E1E]'}`}
+      className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14.5px] font-semibold select-none
+        transition-all duration-100 ease-out active:scale-[0.96]
+        ${on
+          ? (warm ? 'bg-[#FF5C7A] text-white' : 'bg-[#7626B3] text-white')
+          : 'bg-white text-[#1F1B2E] border border-[rgba(31,27,46,0.14)]'}`}
     >
       {children}
     </button>
@@ -199,32 +234,31 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full rounded-full border-[2.5px] border-[#1E1E1E] py-4 text-[16px] font-bold select-none
-        transition-all duration-100 ease-out active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
+      className={`w-full rounded-2xl py-4 text-[16px] font-bold select-none
+        transition-all duration-100 ease-out active:scale-[0.98]
         ${disabled
-          ? 'bg-[#e8e3d0] text-[#a8a394] border-[#e8e3d0] shadow-none cursor-not-allowed'
-          : 'bg-[#2ECC71] text-[#1E1E1E] shadow-[4px_4px_0_#1E1E1E]'}`}
+          ? 'bg-[#E7E2ED] text-[#A29BB3] cursor-not-allowed'
+          : 'bg-[#7626B3] text-white shadow-[0_10px_24px_-8px_rgba(118,38,179,0.55)] hover:bg-[#68219E]'}`}
     >
       {label}
     </button>
   );
 }
 
-// Fila de acción grande, estilo "rubber hose" (borde grueso + sombra dura),
-// usada en Home para los 3 CTAs y reusable donde haga falta algo parecido.
+// Fila de acción grande de Home — tarjeta blanca con sombra suave.
 export function ActionRow({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-3.5 bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-4
-        shadow-[4px_4px_0_#1E1E1E] transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none text-left"
+      className="w-full flex items-center gap-3.5 bg-white rounded-2xl px-4 py-4
+        shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 ease-out active:scale-[0.98] text-left"
     >
-      <span className="w-11 h-11 rounded-full bg-[#FFF3B0] border-2 border-[#1E1E1E] flex items-center justify-center shrink-0">
+      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft }}>
         {icon}
       </span>
-      <span className="flex-1 font-semibold text-[15px] text-[#1E1E1E]">{label}</span>
-      <span className="text-[#1E1E1E]">→</span>
+      <span className="flex-1 font-semibold text-[15px]" style={{ color: COLORS.ink }}>{label}</span>
+      <span style={{ color: COLORS.brand }}>→</span>
     </button>
   );
 }

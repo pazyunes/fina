@@ -13,6 +13,11 @@ type Kind = 'paid' | 'saved';
 type Contribucion = { id: string; monto: number; kind: Kind; label: string; fecha: string };
 type Objetivo = { id: string; nombre: string; descripcion: string; montoTotal: number; contribuciones: Contribucion[] };
 
+// Nota Tailwind: la clase completa tiene que aparecer en el archivo (aunque
+// sea dentro de este string) para que el scanner de Tailwind la detecte.
+const CARD_SHADOW = 'shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
+const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-xl px-3 py-2.5 text-[14px] outline-none transition-colors';
+
 const hoy = () => new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
 
 function objetivosIniciales(): Objetivo[] {
@@ -96,41 +101,41 @@ export function ObjetivosV2() {
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
         <div className="flex items-center justify-between">
-          <button type="button" className="text-[13px] font-semibold text-[#5b5b52]" onClick={() => setOpenId(null)}>← Volver</button>
-          <button type="button" className="text-[12.5px] font-semibold text-[#5b5b52] underline" onClick={() => borrarObjetivo(abierto.id)}>Borrar</button>
+          <button type="button" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>← Volver</button>
+          <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.inkSoft }} onClick={() => borrarObjetivo(abierto.id)}>Borrar</button>
         </div>
 
-        <div className="bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl p-4 shadow-[4px_4px_0_#1E1E1E] flex gap-4 items-center">
+        <div className={`bg-white rounded-2xl p-4 flex gap-4 items-center ${CARD_SHADOW}`}>
           {total > 0 && (
             <Donut
-              segments={[{ color: done ? COLORS.mint : COLORS.yellow, pct: porcentaje }]}
+              segments={[{ color: done ? COLORS.green : COLORS.gold, pct: porcentaje }]}
               centerLabel={done ? '¡Lograste!' : 'Logrado'}
               centerValue={`${porcentaje}%`}
               size={96}
             />
           )}
           <div className="flex-1 min-w-0">
-            <p className="font-['Baloo_2'] text-[18px] font-bold text-[#1E1E1E] truncate">{abierto.nombre}</p>
-            {abierto.descripcion && <p className="text-[12.5px] text-[#5b5b52] mt-0.5">{abierto.descripcion}</p>}
+            <p className="text-[18px] font-bold truncate" style={{ color: COLORS.ink }}>{abierto.nombre}</p>
+            {abierto.descripcion && <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>{abierto.descripcion}</p>}
             {total > 0 ? (
               <>
-                <p className="text-[13px] mt-1.5">
+                <p className="text-[13px] mt-1.5" style={{ color: COLORS.ink }}>
                   Llevás <strong>{fmtMoney(acumulado)}</strong> de {fmtMoney(total)}
                 </p>
-                {!done && <p className="text-[12px] text-[#5b5b52]">Te falta {fmtMoney(restante)}</p>}
+                {!done && <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Te falta {fmtMoney(restante)}</p>}
               </>
             ) : (
-              <p className="text-[12.5px] text-[#5b5b52] mt-1">Todavía no le pusiste un monto — completalo para ver el progreso.</p>
+              <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>Todavía no le pusiste un monto — completalo para ver el progreso.</p>
             )}
           </div>
         </div>
 
         {total === 0 && (
-          <div className="bg-white border-[2px] border-[#1E1E1E] rounded-2xl p-4 flex gap-2">
+          <div className={`bg-white rounded-2xl p-4 flex gap-2 ${CARD_SHADOW}`}>
             <div className="relative flex-1">
-              <span className="absolute top-1/2 -translate-y-1/2 left-4 text-[#5b5b52]">$</span>
+              <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
               <input
-                className="w-full border-[1.5px] border-[#1E1E1E] rounded-xl pl-8 pr-3 py-2.5 text-[14px] outline-none"
+                className={`w-full ${inputClass} pl-8`}
                 placeholder="¿Cuánto necesitás en total?"
                 inputMode="numeric"
                 value={montoTotalEdit}
@@ -141,8 +146,8 @@ export function ObjetivosV2() {
               type="button"
               onClick={completarMontoTotal}
               disabled={parseMoneyInput(montoTotalEdit) <= 0}
-              className="rounded-xl border-2 border-[#1E1E1E] px-4 font-bold disabled:opacity-40"
-              style={{ background: COLORS.mint }}
+              className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95"
+              style={{ background: COLORS.brand }}
             >
               Guardar
             </button>
@@ -150,36 +155,39 @@ export function ObjetivosV2() {
         )}
 
         {done && (
-          <div className="rounded-2xl border-[2.5px] border-[#1E1E1E] px-4 py-3 text-[13.5px] font-semibold text-center" style={{ background: COLORS.mintLight }}>
+          <div className="rounded-2xl px-4 py-3 text-[13.5px] font-semibold text-center" style={{ background: COLORS.greenSoft, color: COLORS.ink }}>
             🎉 ¡Ya juntaste todo lo que necesitás para este objetivo!
           </div>
         )}
 
         {/* Registrar un pago o un ahorro */}
-        <div className="bg-white border-[2px] border-[#1E1E1E] rounded-2xl p-4 flex flex-col gap-2.5">
-          <p className="text-[13px] font-bold text-[#1E1E1E]">Sumar un registro</p>
+        <div className={`bg-white rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`}>
+          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Sumar un registro</p>
           <div className="grid grid-cols-2 gap-2">
-            {(['paid', 'saved'] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setKind(k)}
-                className="py-2 rounded-xl border-2 border-[#1E1E1E] text-[13px] font-semibold"
-                style={{ background: kind === k ? COLORS.mint : '#fff' }}
-              >
-                {k === 'paid' ? 'Ya lo pagué' : 'Lo separé'}
-              </button>
-            ))}
+            {(['paid', 'saved'] as const).map((k) => {
+              const sel = kind === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setKind(k)}
+                  className="py-2 rounded-xl text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                  style={sel ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                >
+                  {k === 'paid' ? 'Ya lo pagué' : 'Lo separé'}
+                </button>
+              );
+            })}
           </div>
           <input
-            className="border-[1.5px] border-[#1E1E1E] rounded-xl px-3 py-2 text-[13.5px] outline-none"
+            className={inputClass}
             placeholder={kind === 'paid' ? '¿Qué pagaste? (opcional)' : 'Nota (opcional)'}
             value={regLabel}
             onChange={(e) => setRegLabel(e.target.value)}
           />
           <div className="flex gap-2">
             <input
-              className="flex-1 border-[1.5px] border-[#1E1E1E] rounded-xl px-3 py-2 text-[13.5px] outline-none"
+              className={`flex-1 ${inputClass}`}
               placeholder="Monto"
               inputMode="numeric"
               value={regMonto}
@@ -189,8 +197,8 @@ export function ObjetivosV2() {
               type="button"
               onClick={agregarRegistro}
               disabled={parseMoneyInput(regMonto) <= 0}
-              className="rounded-xl border-[2px] border-[#1E1E1E] px-4 font-bold disabled:opacity-40"
-              style={{ background: COLORS.yellow }}
+              className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95"
+              style={{ background: COLORS.brand }}
             >
               +
             </button>
@@ -199,20 +207,20 @@ export function ObjetivosV2() {
 
         {/* Historial de registros */}
         <div className="flex flex-col gap-2">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-[#5b5b52]">Registros</p>
-          {abierto.contribuciones.length === 0 && <p className="text-[13px] text-[#5b5b52]">Todavía no registraste nada.</p>}
+          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Registros</p>
+          {abierto.contribuciones.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste nada.</p>}
           {abierto.contribuciones.map((c) => (
-            <div key={c.id} className="flex items-center gap-2.5 bg-white border-[2px] border-[#1E1E1E] rounded-xl px-3.5 py-2.5">
+            <div key={c.id} className={`flex items-center gap-2.5 bg-white rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`}>
               <span
-                className="text-[10.5px] font-bold rounded-full px-2 py-0.5 border-2 border-[#1E1E1E] shrink-0"
-                style={{ background: c.kind === 'paid' ? COLORS.mint : COLORS.yellowSoft }}
+                className="text-[10.5px] font-bold rounded-full px-2 py-0.5 shrink-0"
+                style={{ background: c.kind === 'paid' ? COLORS.greenSoft : COLORS.goldSoft, color: COLORS.ink }}
               >
                 {c.kind === 'paid' ? 'Pagado' : 'Separado'}
               </span>
-              <span className="flex-1 text-[13.5px] text-[#1E1E1E] truncate">{c.label}</span>
-              <span className="text-[12px] text-[#5b5b52] shrink-0">{c.fecha}</span>
-              <span className="font-semibold text-[13.5px] text-[#1E1E1E] shrink-0">{fmtMoney(c.monto)}</span>
-              <button type="button" onClick={() => borrarRegistro(c.id)} className="text-[#5b5b52] shrink-0" aria-label="Borrar registro">✕</button>
+              <span className="flex-1 text-[13.5px] truncate" style={{ color: COLORS.ink }}>{c.label}</span>
+              <span className="text-[12px] shrink-0" style={{ color: COLORS.inkSoft }}>{c.fecha}</span>
+              <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtMoney(c.monto)}</span>
+              <button type="button" onClick={() => borrarRegistro(c.id)} className="shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Borrar registro">✕</button>
             </div>
           ))}
         </div>
@@ -224,14 +232,14 @@ export function ObjetivosV2() {
   if (creating) {
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-3.5">
-        <button type="button" className="text-[13px] font-semibold text-[#5b5b52] self-start" onClick={() => setCreating(false)}>← Volver</button>
-        <h1 className="font-['Baloo_2'] text-[21px] font-bold text-[#1E1E1E]">Nombre del objetivo</h1>
-        <input className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] outline-none" placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        <input className="border-[2.5px] border-[#1E1E1E] rounded-2xl px-4 py-3 text-[15px] outline-none" placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+        <button type="button" className="text-[13px] font-semibold self-start" style={{ color: COLORS.inkSoft }} onClick={() => setCreating(false)}>← Volver</button>
+        <h1 className="text-[21px] font-bold" style={{ color: COLORS.ink }}>Nombre del objetivo</h1>
+        <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
         <div className="relative">
-          <span className="absolute top-1/2 -translate-y-1/2 left-4 text-[#5b5b52]">$</span>
+          <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
           <input
-            className="w-full border-[2.5px] border-[#1E1E1E] rounded-2xl pl-8 pr-4 py-3 text-[15px] outline-none"
+            className={`w-full ${inputClass} rounded-2xl py-3 pl-8 text-[15px]`}
             placeholder="Monto total"
             inputMode="numeric"
             value={montoTotal}
@@ -246,33 +254,33 @@ export function ObjetivosV2() {
   // ── Vista: lista ──
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-4">
-      <h1 className="font-['Baloo_2'] text-[22px] font-bold text-[#1E1E1E]">Objetivos</h1>
-      {objetivos.length === 0 && <p className="text-[13.5px] text-[#5b5b52]">Todavía no armaste ningún objetivo.</p>}
+      <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Objetivos</h1>
+      {objetivos.length === 0 && <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todavía no armaste ningún objetivo.</p>}
       {objetivos.map((o) => (
         <button
           key={o.id}
           type="button"
           onClick={() => setOpenId(o.id)}
-          className="w-full flex items-center gap-3.5 text-left bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl p-4 shadow-[4px_4px_0_#1E1E1E]"
+          className={`w-full flex items-center gap-3.5 text-left bg-white rounded-2xl p-4 ${CARD_SHADOW}`}
         >
           {o.montoTotal > 0 ? (
             <Donut
-              segments={[{ color: pct(o) >= 100 ? COLORS.mint : COLORS.yellow, pct: pct(o) }]}
+              segments={[{ color: pct(o) >= 100 ? COLORS.green : COLORS.gold, pct: pct(o) }]}
               centerLabel=""
               centerValue={`${pct(o)}%`}
               size={56}
             />
           ) : (
-            <span className="w-14 h-14 rounded-full border-[2.5px] border-dashed border-[#1E1E1E] flex items-center justify-center text-[11px] text-center font-semibold text-[#5b5b52] shrink-0 px-1">
+            <span className="w-14 h-14 rounded-full border border-dashed flex items-center justify-center text-[11px] text-center font-semibold shrink-0 px-1" style={{ borderColor: 'rgba(31,27,46,0.25)', color: COLORS.inkSoft }}>
               sin monto
             </span>
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-[15px] text-[#1E1E1E] truncate">{o.nombre}</p>
+            <p className="font-semibold text-[15px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
             {o.montoTotal > 0 ? (
-              <p className="text-[12.5px] text-[#5b5b52]">Llevás {fmtMoney(saved(o))} de {fmtMoney(o.montoTotal)}</p>
+              <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Llevás {fmtMoney(saved(o))} de {fmtMoney(o.montoTotal)}</p>
             ) : (
-              <p className="text-[12.5px] text-[#5b5b52]">Tocá para completar el monto</p>
+              <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Tocá para completar el monto</p>
             )}
           </div>
         </button>
@@ -280,7 +288,8 @@ export function ObjetivosV2() {
       <button
         type="button"
         onClick={() => setCreating(true)}
-        className="w-full rounded-2xl border-[2.5px] border-dashed border-[#1E1E1E] py-4 text-[15px] font-bold"
+        className="w-full rounded-2xl border border-dashed py-4 text-[15px] font-bold transition-all duration-100 active:scale-[0.99]"
+        style={{ borderColor: 'rgba(31,27,46,0.25)', color: COLORS.ink }}
       >
         + Agregar objetivo
       </button>
