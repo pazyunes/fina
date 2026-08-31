@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { COLORS, Face, CheckIcon, Chip, Cta, saveV2Categorias, saveV2InversionesPerfil, saveV2ObjetivosIniciales } from './shared';
+import { COLORS, DeviceFrame, Face, CheckIcon, Chip, Cta, saveV2Categorias, saveV2InversionesPerfil, saveV2ObjetivosIniciales, saveV2Nombre } from './shared';
 
 // REDISEÑO — Onboarding v2 (rama feat/rediseno-onboarding-v2)
 //
@@ -35,12 +35,13 @@ type HoyId = 'ahorro' | 'invierto' | 'controlo' | 'nunca_supe' | 'nunca_intente'
 type ComoVieneId = 'justo' | 'sobra' | 'no_llega' | 'hago_lo_que_quiero' | 'no_lo_tengo_en_cuenta' | 'prefiero_no_decir' | 'otro';
 
 type StepKey =
-  | 'intro' | 'color' | 'generoEdad' | 'situacion' | 'objetivo'
+  | 'intro' | 'nombre' | 'color' | 'generoEdad' | 'situacion' | 'objetivo'
   | 'categoriasGasto' | 'perfilInversor' | 'metasEnMente'
   | 'hoy' | 'intermedia' | 'comoViene' | 'login';
 
 const CTA_LABELS: Record<StepKey, string> = {
   intro: 'Empezar',
+  nombre: 'Continuar',
   color: 'Continuar',
   generoEdad: 'Continuar',
   situacion: 'Continuar',
@@ -144,6 +145,7 @@ const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] r
 export function OnboardingV2() {
   const navigate = useNavigate();
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [nombre, setNombre] = useState('');
   const [color, setColor] = useState<string | null>(null);
   const [genero, setGenero] = useState<Genero>(null);
   const [generoOtroTxt, setGeneroOtroTxt] = useState('');
@@ -172,7 +174,7 @@ export function OnboardingV2() {
   // El flujo se arma según lo que contestó en "¿Qué querés lograr?" — cada
   // pregunta específica de un objetivo solo aparece si lo votó.
   const flow = useMemo<StepKey[]>(() => {
-    const f: StepKey[] = ['intro', 'color', 'generoEdad', 'situacion', 'objetivo'];
+    const f: StepKey[] = ['intro', 'nombre', 'color', 'generoEdad', 'situacion', 'objetivo'];
     if (rank.includes('ahorrar') || rank.includes('controlar')) f.push('categoriasGasto');
     if (rank.includes('invertir')) f.push('perfilInversor');
     if (rank.includes('objetivo')) f.push('metasEnMente');
@@ -208,6 +210,7 @@ export function OnboardingV2() {
   const objetivoBubble = rank.length ? BUBBLE_POR_TOP[rank[0]] : 'No te vas a arrepentir...';
 
   function stepValid(key: StepKey): boolean {
+    if (key === 'nombre') return nombre.trim().length > 0;
     if (key === 'color') return !!color;
     if (key === 'generoEdad') return !!genero && !!edad;
     if (key === 'situacion') return !!situacion;
@@ -223,6 +226,7 @@ export function OnboardingV2() {
         // Puente hacia el post-onboarding: lo que se contestó acá ya
         // aparece armado en la sección correspondiente (sandbox local,
         // ver shared.tsx). Lo que se saltea, se completa ahí directamente.
+        saveV2Nombre(nombre.trim());
         saveV2Categorias([...categoriasGasto, ...categoriasCustom]);
         if (porQueInv || reaccionInv) saveV2InversionesPerfil({ porQue: porQueInv ?? '', reaccion: reaccionInv ?? '' });
         if (metasNombres.length > 0) saveV2ObjetivosIniciales(metasNombres);
@@ -242,8 +246,7 @@ export function OnboardingV2() {
   const progressPct = Math.round((currentIdx / (flow.length - 1)) * 100);
 
   return (
-    <div className="min-h-screen flex flex-col lg:items-center" style={{ background: COLORS.paper }}>
-      <div className="w-full flex flex-col flex-1 lg:max-w-[480px]">
+    <DeviceFrame>
         {showTop && (
           <div className="px-[22px] pt-5 pb-1">
             <div className="h-[5px] rounded-full bg-[rgba(31,27,46,0.08)] overflow-hidden">
@@ -277,6 +280,22 @@ export function OnboardingV2() {
                     ))}
                   </div>
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
+                </>
+              )}
+
+              {/* NOMBRE — lo primero que personaliza todo lo demás */}
+              {currentKey === 'nombre' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Cómo te llamamos?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Así te vamos a hablar de acá en adelante.</p>
+                  <input
+                    autoFocus
+                    className={inputClass}
+                    placeholder="Tu nombre"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') onNext(); }}
+                  />
                 </>
               )}
 
@@ -595,7 +614,7 @@ export function OnboardingV2() {
               {currentKey === 'login' && finished && (
                 <>
                   <div className="flex justify-center py-2"><Face color={color ?? FACE_DEFAULT} mood="happy" /></div>
-                  <h1 className="text-[23px] font-bold text-center" style={{ color: COLORS.ink }}>¡Llegaste a FINA! 🎉</h1>
+                  <h1 className="text-[23px] font-bold text-center" style={{ color: COLORS.ink }}>¡Llegaste a FINA, {nombre.trim().split(' ')[0]}! 🎉</h1>
                   <p className="text-[14px] text-center" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
                 </>
               )}
@@ -610,7 +629,6 @@ export function OnboardingV2() {
             </button>
           )}
         </div>
-      </div>
-    </div>
+    </DeviceFrame>
   );
 }

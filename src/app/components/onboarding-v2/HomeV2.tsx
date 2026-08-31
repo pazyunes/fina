@@ -1,12 +1,17 @@
 import { useNavigate } from 'react-router';
-import { Face, ActionRow, COLORS } from './shared';
+import { Face, ActionRow, COLORS, loadV2Nombre, saludoDelDia } from './shared';
 
 // REDISEÑO v2 — Home, según el boceto: perfil arriba + 3 acciones grandes
 // para arrancar. Fondo con un leve tinte lavanda (zona "cálida" del
 // espectro, junto con el bot) — nada de dashboard con gráficos todavía,
 // el punto de partida es "elegí por dónde empezar".
+//
+// Saluda por nombre y según la hora (mismo detalle que Headspace/Cleo) —
+// es lo que más cambia que esto se sienta "alguien te habla" y no un
+// formulario. Si todavía no dio el nombre (saltó ese paso), cae al genérico.
 export function HomeV2() {
   const navigate = useNavigate();
+  const nombre = loadV2Nombre();
 
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-6">
@@ -15,7 +20,7 @@ export function HomeV2() {
           <Face color={COLORS.brand} size={48} mood="happy" />
         </div>
         <div>
-          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Hola de nuevo</p>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>{saludoDelDia()}{nombre ? `, ${nombre}` : ''}</p>
           <p className="text-[19px] font-bold leading-tight" style={{ color: COLORS.ink }}>Tu FINA</p>
         </div>
       </div>

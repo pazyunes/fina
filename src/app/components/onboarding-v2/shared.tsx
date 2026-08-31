@@ -24,8 +24,12 @@ export const COLORS = {
   brandSoft: '#F0E7FA',
   brandDark: '#431C72',
 
+  // Fondo del "marco" que envuelve la pantalla en desktop — ver DeviceFrame.
+  frameBg: '#E8E4F0',
+
   coral: '#FF5C7A',
   coralSoft: '#FFE3E9',
+  coralDark: '#B3324D',
   gold: '#E8A33D',
   goldSoft: '#FBEDD3',
   green: '#2FAE66',
@@ -65,6 +69,35 @@ export function slug(s: string): string {
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '') || 'otro'
   );
+}
+
+// Puente Onboarding → toda la app: el nombre es lo primero que personaliza
+// todo — saludo en Home, mensajes del bot, pantalla final. Sin esto la app
+// se siente un formulario; con esto se siente que te habla a vos.
+const LS_NOMBRE = 'fina_v2_nombre';
+export function saveV2Nombre(nombre: string) {
+  try {
+    localStorage.setItem(LS_NOMBRE, nombre);
+  } catch {
+    // no crítico
+  }
+}
+export function loadV2Nombre(): string {
+  try {
+    return localStorage.getItem(LS_NOMBRE) || '';
+  } catch {
+    return '';
+  }
+}
+
+// Saludo según la hora — el mismo detalle que usan Headspace/Cleo para que
+// la pantalla de entrada se sienta una persona hablándote, no un dashboard.
+export function saludoDelDia(): string {
+  const h = new Date().getHours();
+  if (h < 6) return 'Buenas noches';
+  if (h < 12) return 'Buenos días';
+  if (h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
 }
 
 // ── puente Onboarding → Gastos: las categorías de gasto que la persona
@@ -260,5 +293,27 @@ export function ActionRow({ icon, label, onClick }: { icon: React.ReactNode; lab
       <span className="flex-1 font-semibold text-[15px]" style={{ color: COLORS.ink }}>{label}</span>
       <span style={{ color: COLORS.brand }}>→</span>
     </button>
+  );
+}
+
+// "Marco" de la pantalla — mobile-first: en mobile es simplemente la
+// pantalla completa (sin marco, como cualquier página real), y solo en
+// desktop se convierte en una tarjeta con alto fijo tipo celular, centrada
+// sobre un fondo neutro. Sin esto, en una ventana de escritorio alta el
+// contenido corto queda pegado arriba con medio monitor vacío abajo.
+export function DeviceFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="min-h-screen w-full flex flex-col lg:items-center lg:justify-center lg:py-10"
+      style={{ background: COLORS.frameBg }}
+    >
+      <div
+        className="w-full flex flex-col flex-1 lg:flex-none lg:h-[860px] lg:max-w-[430px]
+          lg:rounded-[36px] lg:shadow-[0_25px_70px_-15px_rgba(20,14,32,0.35)] overflow-hidden"
+        style={{ background: COLORS.paper }}
+      >
+        {children}
+      </div>
+    </div>
   );
 }

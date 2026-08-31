@@ -1,17 +1,29 @@
 import { useState } from 'react';
-import { Cta, Donut, COLORS, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales } from './shared';
+import { Cta, COLORS, Donut, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales } from './shared';
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
 // (ver ObjetivosPage.tsx / GoalEditModal.tsx) pasada a la estética nueva —
 // un objetivo tiene un monto total y una lista de REGISTROS ("ya lo pagué"
 // / "lo separé") que van llenando el donut. Lo que falta = pendiente.
 //
-// Si en el onboarding dijo que ya tenía objetivos en mente y los nombró,
-// ya aparecen acá creados (sin monto) — se completa el resto en el momento.
+// El monto no siempre se sabe de entrada, así que admite 3 modos: un monto
+// exacto, un rango (todavía no lo tenés cerrado), o "todavía no sé" (se
+// completa más adelante). Solo el estado "nunca contestado" (viene así del
+// onboarding cuando se nombra un objetivo sin más datos) se marca como
+// Incompleto en rojo — "todavía no sé" es una respuesta válida, no un error.
 
 type Kind = 'paid' | 'saved';
+type MontoModo = 'exacto' | 'rango' | 'desconocido';
 type Contribucion = { id: string; monto: number; kind: Kind; label: string; fecha: string };
-type Objetivo = { id: string; nombre: string; descripcion: string; montoTotal: number; contribuciones: Contribucion[] };
+type Objetivo = {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  montoModo: MontoModo | null; // null = todavía no contestó nada (viene del onboarding)
+  montoTotal: number; // para cálculos: el monto exacto, o el máximo del rango; 0 si desconocido/sin definir
+  montoMin?: number; // solo si montoModo === 'rango'
+  contribuciones: Contribucion[];
+};
 
 // Nota Tailwind: la clase completa tiene que aparecer en el archivo (aunque
 // sea dentro de este string) para que el scanner de Tailwind la detecte.
@@ -25,9 +37,111 @@ function objetivosIniciales(): Objetivo[] {
     id: `onb-${i}-${nombre}`,
     nombre,
     descripcion: '',
+    montoModo: null,
     montoTotal: 0,
     contribuciones: [],
   }));
+}
+
+function buildMonto(modo: MontoModo, montoTxt: string, minTxt: string): { montoModo: MontoModo; montoTotal: number; montoMin?: number } {
+  if (modo === 'desconocido') return { montoModo: 'desconocido', montoTotal: 0 };
+  if (modo === 'rango') {
+    const min = parseMoneyInput(minTxt);
+    const max = parseMoneyInput(montoTxt);
+    return { montoModo: 'rango', montoTotal: max, montoMin: min || undefined };
+  }
+  return { montoModo: 'exacto', montoTotal: parseMoneyInput(montoTxt) };
+}
+
+// 'definido' = tiene un monto (exacto o rango) con el que calcular progreso.
+// 'desconocido' = eligió "todavía no sé" a propósito — no es un error.
+// 'incompleto' = nunca contestó nada (recién llegó del onboarding).
+function estadoMonto(o: Objetivo): 'definido' | 'desconocido' | 'incompleto' {
+  if (o.montoModo === 'desconocido') return 'desconocido';
+  if (o.montoTotal > 0) return 'definido';
+  return 'incompleto';
+}
+
+function montoLabel(o: Objetivo): string {
+  if (o.montoModo === 'rango' && o.montoMin) return `${fmtMoney(o.montoMin)}–${fmtMoney(o.montoTotal)}`;
+  return fmtMoney(o.montoTotal);
+}
+
+// Selector de "cómo querés poner el monto" — se reusa al crear un objetivo
+// y al completar uno que llegó incompleto desde el onboarding.
+function MontoPicker({
+  modo, setModo, montoTxt, setMontoTxt, minTxt, setMinTxt,
+}: {
+  modo: MontoModo; setModo: (m: MontoModo) => void;
+  montoTxt: string; setMontoTxt: (v: string) => void;
+  minTxt: string; setMinTxt: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-wrap gap-2">
+        {([
+          ['exacto', 'Monto exacto'],
+          ['rango', 'Un rango'],
+          ['desconocido', 'Todavía no sé'],
+        ] as [MontoModo, string][]).map(([m, label]) => {
+          const sel = modo === m;
+          return (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setModo(m)}
+              className="rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+              style={sel ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {modo === 'exacto' && (
+        <div className="relative">
+          <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
+          <input
+            className={`w-full ${inputClass} pl-8`}
+            placeholder="¿Cuánto necesitás en total?"
+            inputMode="numeric"
+            value={montoTxt}
+            onChange={(e) => setMontoTxt(formatThousands(e.target.value))}
+          />
+        </div>
+      )}
+
+      {modo === 'rango' && (
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
+            <input
+              className={`w-full ${inputClass} pl-8`}
+              placeholder="Desde"
+              inputMode="numeric"
+              value={minTxt}
+              onChange={(e) => setMinTxt(formatThousands(e.target.value))}
+            />
+          </div>
+          <div className="relative flex-1">
+            <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
+            <input
+              className={`w-full ${inputClass} pl-8`}
+              placeholder="Hasta"
+              inputMode="numeric"
+              value={montoTxt}
+              onChange={(e) => setMontoTxt(formatThousands(e.target.value))}
+            />
+          </div>
+        </div>
+      )}
+
+      {modo === 'desconocido' && (
+        <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Buenísimo — lo vas a poder poner más adelante, cuando lo tengas más claro.</p>
+      )}
+    </div>
+  );
 }
 
 export function ObjetivosV2() {
@@ -36,20 +150,25 @@ export function ObjetivosV2() {
   const [creating, setCreating] = useState(false);
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [montoModo, setMontoModo] = useState<MontoModo>('exacto');
   const [montoTotal, setMontoTotal] = useState('');
+  const [montoMinTxt, setMontoMinTxt] = useState('');
 
   const [kind, setKind] = useState<Kind>('paid');
   const [regLabel, setRegLabel] = useState('');
   const [regMonto, setRegMonto] = useState('');
+  const [montoModoEdit, setMontoModoEdit] = useState<MontoModo>('exacto');
   const [montoTotalEdit, setMontoTotalEdit] = useState('');
+  const [montoMinEdit, setMontoMinEdit] = useState('');
 
   const abierto = objetivos.find((o) => o.id === openId) || null;
 
   function crearObjetivo() {
     if (!nombre.trim()) return;
     const id = String(Date.now());
-    setObjetivos((os) => [...os, { id, nombre: nombre.trim(), descripcion: descripcion.trim(), montoTotal: parseMoneyInput(montoTotal), contribuciones: [] }]);
-    setNombre(''); setDescripcion(''); setMontoTotal('');
+    const monto = buildMonto(montoModo, montoTotal, montoMinTxt);
+    setObjetivos((os) => [...os, { id, nombre: nombre.trim(), descripcion: descripcion.trim(), contribuciones: [], ...monto }]);
+    setNombre(''); setDescripcion(''); setMontoTotal(''); setMontoMinTxt(''); setMontoModo('exacto');
     setCreating(false);
     setOpenId(id);
   }
@@ -81,10 +200,10 @@ export function ObjetivosV2() {
 
   function completarMontoTotal() {
     if (!abierto) return;
-    const monto = parseMoneyInput(montoTotalEdit);
-    if (monto <= 0) return;
-    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, montoTotal: monto } : o)));
-    setMontoTotalEdit('');
+    const monto = buildMonto(montoModoEdit, montoTotalEdit, montoMinEdit);
+    if (monto.montoModo !== 'desconocido' && monto.montoTotal <= 0) return;
+    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, ...monto } : o)));
+    setMontoTotalEdit(''); setMontoMinEdit(''); setMontoModoEdit('exacto');
   }
 
   const saved = (o: Objetivo) => o.contribuciones.reduce((s, c) => s + c.monto, 0);
@@ -92,11 +211,12 @@ export function ObjetivosV2() {
 
   // ── Vista: detalle de un objetivo ──
   if (abierto) {
+    const estado = estadoMonto(abierto);
     const total = abierto.montoTotal;
     const acumulado = saved(abierto);
     const restante = Math.max(total - acumulado, 0);
     const porcentaje = pct(abierto);
-    const done = total > 0 && acumulado >= total;
+    const done = estado === 'definido' && acumulado >= total;
 
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
@@ -106,7 +226,7 @@ export function ObjetivosV2() {
         </div>
 
         <div className={`bg-white rounded-2xl p-4 flex gap-4 items-center ${CARD_SHADOW}`}>
-          {total > 0 && (
+          {estado === 'definido' && (
             <Donut
               segments={[{ color: done ? COLORS.green : COLORS.gold, pct: porcentaje }]}
               centerLabel={done ? '¡Lograste!' : 'Logrado'}
@@ -115,38 +235,50 @@ export function ObjetivosV2() {
             />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-[18px] font-bold truncate" style={{ color: COLORS.ink }}>{abierto.nombre}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[18px] font-bold truncate" style={{ color: COLORS.ink }}>{abierto.nombre}</p>
+              {estado === 'incompleto' && (
+                <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}>
+                  Incompleto
+                </span>
+              )}
+              {estado === 'desconocido' && (
+                <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>
+                  Por definir
+                </span>
+              )}
+            </div>
             {abierto.descripcion && <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>{abierto.descripcion}</p>}
-            {total > 0 ? (
+            {estado === 'definido' && (
               <>
                 <p className="text-[13px] mt-1.5" style={{ color: COLORS.ink }}>
-                  Llevás <strong>{fmtMoney(acumulado)}</strong> de {fmtMoney(total)}
+                  Llevás <strong>{fmtMoney(acumulado)}</strong> de {montoLabel(abierto)}
                 </p>
                 {!done && <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Te falta {fmtMoney(restante)}</p>}
               </>
-            ) : (
-              <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>Todavía no le pusiste un monto — completalo para ver el progreso.</p>
+            )}
+            {estado === 'incompleto' && (
+              <p className="text-[12.5px] mt-1 font-medium" style={{ color: COLORS.coralDark }}>Falta ponerle un monto — completalo para ver el progreso.</p>
+            )}
+            {estado === 'desconocido' && (
+              <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>Todavía no definiste cuánto necesitás.</p>
             )}
           </div>
         </div>
 
-        {total === 0 && (
-          <div className={`bg-white rounded-2xl p-4 flex gap-2 ${CARD_SHADOW}`}>
-            <div className="relative flex-1">
-              <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
-              <input
-                className={`w-full ${inputClass} pl-8`}
-                placeholder="¿Cuánto necesitás en total?"
-                inputMode="numeric"
-                value={montoTotalEdit}
-                onChange={(e) => setMontoTotalEdit(formatThousands(e.target.value))}
-              />
-            </div>
+        {estado !== 'definido' && (
+          <div className={`bg-white rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`}>
+            <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+            <MontoPicker
+              modo={montoModoEdit} setModo={setMontoModoEdit}
+              montoTxt={montoTotalEdit} setMontoTxt={setMontoTotalEdit}
+              minTxt={montoMinEdit} setMinTxt={setMontoMinEdit}
+            />
             <button
               type="button"
               onClick={completarMontoTotal}
-              disabled={parseMoneyInput(montoTotalEdit) <= 0}
-              className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95"
+              disabled={montoModoEdit !== 'desconocido' && parseMoneyInput(montoTotalEdit) <= 0}
+              className="rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95"
               style={{ background: COLORS.brand }}
             >
               Guardar
@@ -236,16 +368,12 @@ export function ObjetivosV2() {
         <h1 className="text-[21px] font-bold" style={{ color: COLORS.ink }}>Nombre del objetivo</h1>
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
-        <div className="relative">
-          <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
-          <input
-            className={`w-full ${inputClass} rounded-2xl py-3 pl-8 text-[15px]`}
-            placeholder="Monto total"
-            inputMode="numeric"
-            value={montoTotal}
-            onChange={(e) => setMontoTotal(formatThousands(e.target.value))}
-          />
-        </div>
+        <p className="text-[13px] font-bold -mb-1" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+        <MontoPicker
+          modo={montoModo} setModo={setMontoModo}
+          montoTxt={montoTotal} setMontoTxt={setMontoTotal}
+          minTxt={montoMinTxt} setMinTxt={setMontoMinTxt}
+        />
         <Cta label="Agregar objetivo" disabled={!nombre.trim()} onClick={crearObjetivo} />
       </div>
     );
@@ -256,35 +384,52 @@ export function ObjetivosV2() {
     <div className="px-[22px] pt-8 flex flex-col gap-4">
       <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Objetivos</h1>
       {objetivos.length === 0 && <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todavía no armaste ningún objetivo.</p>}
-      {objetivos.map((o) => (
-        <button
-          key={o.id}
-          type="button"
-          onClick={() => setOpenId(o.id)}
-          className={`w-full flex items-center gap-3.5 text-left bg-white rounded-2xl p-4 ${CARD_SHADOW}`}
-        >
-          {o.montoTotal > 0 ? (
-            <Donut
-              segments={[{ color: pct(o) >= 100 ? COLORS.green : COLORS.gold, pct: pct(o) }]}
-              centerLabel=""
-              centerValue={`${pct(o)}%`}
-              size={56}
-            />
-          ) : (
-            <span className="w-14 h-14 rounded-full border border-dashed flex items-center justify-center text-[11px] text-center font-semibold shrink-0 px-1" style={{ borderColor: 'rgba(31,27,46,0.25)', color: COLORS.inkSoft }}>
-              sin monto
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-[15px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
-            {o.montoTotal > 0 ? (
-              <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Llevás {fmtMoney(saved(o))} de {fmtMoney(o.montoTotal)}</p>
+      {objetivos.map((o) => {
+        const estado = estadoMonto(o);
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => setOpenId(o.id)}
+            className={`w-full flex items-center gap-3.5 text-left bg-white rounded-2xl p-4 ${CARD_SHADOW}`}
+          >
+            {estado === 'definido' ? (
+              <Donut
+                segments={[{ color: pct(o) >= 100 ? COLORS.green : COLORS.gold, pct: pct(o) }]}
+                centerLabel=""
+                centerValue={`${pct(o)}%`}
+                size={56}
+              />
+            ) : estado === 'desconocido' ? (
+              <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-bold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.gold, color: COLORS.gold }}>
+                por<br />definir
+              </span>
             ) : (
-              <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Tocá para completar el monto</p>
+              <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-bold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.coral, color: COLORS.coral }}>
+                falta<br />monto
+              </span>
             )}
-          </div>
-        </button>
-      ))}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-[15px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
+                {estado === 'incompleto' && (
+                  <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}>
+                    Incompleto
+                  </span>
+                )}
+                {estado === 'desconocido' && (
+                  <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>
+                    Por definir
+                  </span>
+                )}
+              </div>
+              {estado === 'definido' && <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Llevás {fmtMoney(saved(o))} de {montoLabel(o)}</p>}
+              {estado === 'incompleto' && <p className="text-[12.5px] font-medium" style={{ color: COLORS.coralDark }}>Falta completar el monto</p>}
+              {estado === 'desconocido' && <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Todavía no definiste cuánto necesitás</p>}
+            </div>
+          </button>
+        );
+      })}
       <button
         type="button"
         onClick={() => setCreating(true)}

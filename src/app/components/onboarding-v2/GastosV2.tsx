@@ -28,39 +28,22 @@ const TIPO_INFO: Record<TipoGasto, { label: string; color: string }> = {
 const TIPOS: TipoGasto[] = ['necesario', 'urgente', 'impulsivo', 'otro'];
 
 const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.green, '#C9A6F5'];
-const DEFAULT_CATEGORIAS: Categoria[] = [
-  { id: 'delivery', nombre: 'Delivery' },
-  { id: 'ropa', nombre: 'Ropa' },
-  { id: 'transporte', nombre: 'Transporte' },
-  { id: 'super', nombre: 'Supermercado' },
-];
 // Nota Tailwind: la clase tiene que aparecer COMPLETA en el archivo (aunque
 // sea adentro de este string) para que el scanner de Tailwind la detecte —
 // por eso no se arma por partes con interpolación.
 const CARD_SHADOW = 'shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
 
+// Cuenta nueva: acá solo entra lo que la persona puso en el onboarding — sin
+// categorías ni gastos de ejemplo inventados. Si no eligió ninguna categoría
+// de gasto, arranca vacío del todo (se van creando desde "+ Agregar gasto").
 function categoriasIniciales(): Categoria[] {
-  const guardadas = loadV2Categorias();
-  if (guardadas.length === 0) return DEFAULT_CATEGORIAS;
-  return guardadas.map((nombre) => ({ id: slug(nombre), nombre }));
-}
-
-function seedGastos(categorias: Categoria[]): Gasto[] {
-  if (categorias.length === 0) return [];
-  const pick = (i: number) => categorias[i % categorias.length];
-  return [
-    { id: 's1', monto: 4100, descripcion: 'PedidosYa', categoriaId: pick(0).id, tipo: 'impulsivo', fecha: 'Ayer' },
-    { id: 's2', monto: 3600, descripcion: 'Rappi', categoriaId: pick(0).id, tipo: 'impulsivo', fecha: 'Lunes' },
-    { id: 's3', monto: 8900, descripcion: 'Zara', categoriaId: pick(1).id, tipo: 'otro', fecha: '4 ago' },
-    { id: 's4', monto: 1200, descripcion: 'SUBE', categoriaId: pick(2).id, tipo: 'necesario', fecha: 'Hoy' },
-    { id: 's5', monto: 6200, descripcion: 'Super de la semana', categoriaId: pick(3).id, tipo: 'necesario', fecha: 'Domingo' },
-  ];
+  return loadV2Categorias().map((nombre) => ({ id: slug(nombre), nombre }));
 }
 
 export function GastosV2() {
   const [categorias, setCategorias] = useState<Categoria[]>(categoriasIniciales);
-  const [gastos, setGastos] = useState<Gasto[]>(() => seedGastos(categoriasIniciales()));
-  const [disponible, setDisponible] = useState(60000);
+  const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [disponible, setDisponible] = useState(0);
   const [reserva, setReserva] = useState(0);
 
   const [openCatId, setOpenCatId] = useState<string | null>(categorias[0]?.id ?? null);
@@ -293,6 +276,11 @@ export function GastosV2() {
 
       {/* Sobres por categoría */}
       <div className="flex flex-col gap-3">
+        {categorias.length === 0 && (
+          <p className="text-[13px] px-1" style={{ color: COLORS.inkSoft }}>
+            Todavía no tenés secciones — se crean solas cuando agregás tu primer gasto.
+          </p>
+        )}
         {categorias.map((cat) => {
           const open = openCatId === cat.id;
           const gastado = gastadoEn(cat.id);

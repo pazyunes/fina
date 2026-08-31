@@ -21,7 +21,7 @@ export function BottomNavV2() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 flex items-stretch justify-around bg-white z-50 px-1 shadow-[0_-2px_20px_rgba(31,27,46,0.06)]"
+      className="shrink-0 flex items-stretch justify-around bg-white px-1 shadow-[0_-2px_20px_rgba(31,27,46,0.06)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {TABS.slice(0, 2).map((tab) => {
