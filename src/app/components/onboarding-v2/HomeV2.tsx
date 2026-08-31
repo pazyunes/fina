@@ -1,7 +1,31 @@
 import { useNavigate } from 'react-router';
-import { ActionRow, Coachmark, COLORS, Face, loadV2Foto, loadV2Grupo, loadV2Nombre, saludoDelDia } from './shared';
+import { ActionRow, Coachmark, COLORS, Face, loadV2Categorias, loadV2Foto, loadV2Grupo, loadV2InversionesPerfil, loadV2Nombre, loadV2ObjetivosIniciales, saludoDelDia } from './shared';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
+
+type Tip = { icon: string; texto: string; to: string };
+
+// Tips reales, no inventados — el mismo espíritu que las "ideas para
+// llegar más rápido" que ya tiene ObjetivosPage.tsx en la app real, pero
+// acá en Home y armados con lo único que persiste entre pantallas en este
+// sandbox (las respuestas del onboarding), no con gastos/objetivos que se
+// cargan durante la sesión — esos todavía viven solo en cada pantalla.
+function tipsPara(): Tip[] {
+  const tips: Tip[] = [];
+  if (loadV2Categorias().length === 0) {
+    tips.push({ icon: '💸', texto: 'Registrá tu primer gasto y armamos tus secciones solas, a partir de eso.', to: '/onboarding-v2/gastos' });
+  }
+  if (loadV2ObjetivosIniciales().length > 0) {
+    tips.push({ icon: '🎯', texto: 'Tenés objetivos anotados del onboarding — ponéles un monto para ver el progreso.', to: '/onboarding-v2/objetivos' });
+  }
+  if (loadV2InversionesPerfil()) {
+    tips.push({ icon: '🌱', texto: 'Ya nos contaste algo de tu perfil inversor — terminalo en Inversiones para ver recomendaciones.', to: '/onboarding-v2/inversiones' });
+  }
+  if (tips.length === 0) {
+    tips.push({ icon: '👀', texto: 'Explorá Gastos, Objetivos e Inversiones — cuanto más uses FINA, más te vamos a poder ayudar.', to: '/onboarding-v2/gastos' });
+  }
+  return tips.slice(0, 2);
+}
 
 // REDISEÑO v2 — Home, según el boceto: perfil arriba + 3 acciones grandes
 // para arrancar, y — si hay un grupo armado — una vista chica de la
@@ -17,6 +41,7 @@ export function HomeV2() {
   const foto = loadV2Foto();
   const grupo = loadV2Grupo();
   const topGrupo = grupo ? [...grupo.miembros].sort((a, b) => b.actividad - a.actividad).slice(0, 3) : [];
+  const tips = tipsPara();
 
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-6 pb-4">
@@ -55,6 +80,23 @@ export function HomeV2() {
           label="Empezá a invertir con FINA"
           onClick={() => navigate('/onboarding-v2/inversiones')}
         />
+      </div>
+
+      {/* Tips para vos — recomendaciones cortas según lo que ya sabemos de vos */}
+      <div className="flex flex-col gap-2">
+        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tips para vos</p>
+        {tips.map((t) => (
+          <button
+            key={t.texto}
+            type="button"
+            onClick={() => navigate(t.to)}
+            className="w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
+            style={{ background: COLORS.goldSoft }}
+          >
+            <span className="text-lg shrink-0">{t.icon}</span>
+            <span className="flex-1 text-[13px] font-medium" style={{ color: COLORS.ink }}>{t.texto}</span>
+          </button>
+        ))}
       </div>
 
       {/* Tu grupo — debajo del dashboard, no mezclado con los accesos de arriba */}
