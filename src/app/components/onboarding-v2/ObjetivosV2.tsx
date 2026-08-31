@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cta, COLORS, Donut, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales } from './shared';
+import { Cta, Chip, COLORS, Donut, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2Grupo, loadV2Nombre } from './shared';
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
 // (ver ObjetivosPage.tsx / GoalEditModal.tsx) pasada a la estética nueva —
@@ -11,14 +11,20 @@ import { Cta, COLORS, Donut, fmtMoney, formatThousands, parseMoneyInput, loadV2O
 // completa más adelante). Solo el estado "nunca contestado" (viene así del
 // onboarding cuando se nombra un objetivo sin más datos) se marca como
 // Incompleto en rojo — "todavía no sé" es una respuesta válida, no un error.
+//
+// Si hay un grupo armado (ver GruposV2), un objetivo puede ser grupal: cada
+// registro se etiqueta con quién lo hizo, así se ve el aporte de cada una
+// aunque todavía no haya cuentas reales sincronizando esto entre celulares.
 
 type Kind = 'paid' | 'saved';
 type MontoModo = 'exacto' | 'rango' | 'desconocido';
-type Contribucion = { id: string; monto: number; kind: Kind; label: string; fecha: string };
+type TipoObjetivo = 'individual' | 'grupal';
+type Contribucion = { id: string; monto: number; kind: Kind; label: string; fecha: string; de: string };
 type Objetivo = {
   id: string;
   nombre: string;
   descripcion: string;
+  tipo: TipoObjetivo;
   montoModo: MontoModo | null; // null = todavía no contestó nada (viene del onboarding)
   montoTotal: number; // para cálculos: el monto exacto, o el máximo del rango; 0 si desconocido/sin definir
   montoMin?: number; // solo si montoModo === 'rango'
@@ -37,6 +43,7 @@ function objetivosIniciales(): Objetivo[] {
     id: `onb-${i}-${nombre}`,
     nombre,
     descripcion: '',
+    tipo: 'individual',
     montoModo: null,
     montoTotal: 0,
     contribuciones: [],
@@ -150,6 +157,7 @@ export function ObjetivosV2() {
   const [creating, setCreating] = useState(false);
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [tipo, setTipo] = useState<TipoObjetivo>('individual');
   const [montoModo, setMontoModo] = useState<MontoModo>('exacto');
   const [montoTotal, setMontoTotal] = useState('');
   const [montoMinTxt, setMontoMinTxt] = useState('');
@@ -157,9 +165,13 @@ export function ObjetivosV2() {
   const [kind, setKind] = useState<Kind>('paid');
   const [regLabel, setRegLabel] = useState('');
   const [regMonto, setRegMonto] = useState('');
+  const [regDe, setRegDe] = useState('');
   const [montoModoEdit, setMontoModoEdit] = useState<MontoModo>('exacto');
   const [montoTotalEdit, setMontoTotalEdit] = useState('');
   const [montoMinEdit, setMontoMinEdit] = useState('');
+
+  const grupo = loadV2Grupo();
+  const miNombre = loadV2Nombre() || 'Vos';
 
   const abierto = objetivos.find((o) => o.id === openId) || null;
 
@@ -167,8 +179,8 @@ export function ObjetivosV2() {
     if (!nombre.trim()) return;
     const id = String(Date.now());
     const monto = buildMonto(montoModo, montoTotal, montoMinTxt);
-    setObjetivos((os) => [...os, { id, nombre: nombre.trim(), descripcion: descripcion.trim(), contribuciones: [], ...monto }]);
-    setNombre(''); setDescripcion(''); setMontoTotal(''); setMontoMinTxt(''); setMontoModo('exacto');
+    setObjetivos((os) => [...os, { id, nombre: nombre.trim(), descripcion: descripcion.trim(), tipo, contribuciones: [], ...monto }]);
+    setNombre(''); setDescripcion(''); setMontoTotal(''); setMontoMinTxt(''); setMontoModo('exacto'); setTipo('individual');
     setCreating(false);
     setOpenId(id);
   }
@@ -188,9 +200,10 @@ export function ObjetivosV2() {
       kind,
       label: regLabel.trim() || (kind === 'paid' ? 'Pago' : 'Separado'),
       fecha: hoy(),
+      de: abierto.tipo === 'grupal' ? (regDe || miNombre) : miNombre,
     };
     setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, contribuciones: [nuevo, ...o.contribuciones] } : o)));
-    setRegLabel(''); setRegMonto('');
+    setRegLabel(''); setRegMonto(''); setRegDe('');
   }
 
   function borrarRegistro(regId: string) {
@@ -237,6 +250,11 @@ export function ObjetivosV2() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-[18px] font-bold truncate" style={{ color: COLORS.ink }}>{abierto.nombre}</p>
+              {abierto.tipo === 'grupal' && (
+                <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
+                  👥 Grupal
+                </span>
+              )}
               {estado === 'incompleto' && (
                 <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}>
                   Incompleto
@@ -317,6 +335,16 @@ export function ObjetivosV2() {
             value={regLabel}
             onChange={(e) => setRegLabel(e.target.value)}
           />
+          {abierto.tipo === 'grupal' && grupo && (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Quién lo hizo?</p>
+              <div className="flex flex-wrap gap-2">
+                {[miNombre, ...grupo.miembros.filter((m) => m.nombre !== miNombre).map((m) => m.nombre)].map((n) => (
+                  <Chip key={n} on={(regDe || miNombre) === n} onClick={() => setRegDe(n)}>{n}</Chip>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex gap-2">
             <input
               className={`flex-1 ${inputClass}`}
@@ -349,7 +377,10 @@ export function ObjetivosV2() {
               >
                 {c.kind === 'paid' ? 'Pagado' : 'Separado'}
               </span>
-              <span className="flex-1 text-[13.5px] truncate" style={{ color: COLORS.ink }}>{c.label}</span>
+              <span className="flex-1 min-w-0 truncate">
+                <span className="text-[13.5px]" style={{ color: COLORS.ink }}>{c.label}</span>
+                {abierto.tipo === 'grupal' && <span className="text-[12px]" style={{ color: COLORS.inkSoft }}> · {c.de}</span>}
+              </span>
               <span className="text-[12px] shrink-0" style={{ color: COLORS.inkSoft }}>{c.fecha}</span>
               <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtMoney(c.monto)}</span>
               <button type="button" onClick={() => borrarRegistro(c.id)} className="shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Borrar registro">✕</button>
@@ -368,6 +399,29 @@ export function ObjetivosV2() {
         <h1 className="text-[21px] font-bold" style={{ color: COLORS.ink }}>Nombre del objetivo</h1>
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+
+        {grupo && (
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Individual o grupal?</p>
+            <div className="flex gap-2">
+              {(['individual', 'grupal'] as const).map((t) => {
+                const sel = tipo === t;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTipo(t)}
+                    className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                    style={sel ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                  >
+                    {t === 'individual' ? 'Individual' : `Grupal (${grupo.nombre})`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <p className="text-[13px] font-bold -mb-1" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
         <MontoPicker
           modo={montoModo} setModo={setMontoModo}
@@ -412,6 +466,11 @@ export function ObjetivosV2() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="font-semibold text-[15px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
+                {o.tipo === 'grupal' && (
+                  <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
+                    👥
+                  </span>
+                )}
                 {estado === 'incompleto' && (
                   <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}>
                     Incompleto

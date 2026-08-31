@@ -100,6 +100,50 @@ export function saludoDelDia(): string {
   return 'Buenas noches';
 }
 
+// Foto de perfil — se guarda como data URL (base64) en localStorage, no
+// hay backend todavía para subir archivos de verdad.
+const LS_FOTO = 'fina_v2_foto';
+export function saveV2Foto(dataUrl: string | null) {
+  try {
+    if (!dataUrl) { localStorage.removeItem(LS_FOTO); return; }
+    localStorage.setItem(LS_FOTO, dataUrl);
+  } catch {
+    // no crítico
+  }
+}
+export function loadV2Foto(): string | null {
+  try {
+    return localStorage.getItem(LS_FOTO);
+  } catch {
+    return null;
+  }
+}
+
+// Grupo — CONCEPTO/EJEMPLO todavía: no hay cuentas ni backend real para
+// que dos personas compartan datos entre dispositivos, así que esto vive
+// 100% en tu propio localStorage. Sirve para probar la idea (competir por
+// actividad, objetivos compartidos) antes de invertir en la parte de
+// cuentas reales — mostralo como demo, no como "así ya funciona".
+export type Miembro = { nombre: string; actividad: number; sosVos?: boolean };
+export type Grupo = { nombre: string; codigo: string; miembros: Miembro[] };
+const LS_GRUPO = 'fina_v2_grupo';
+export function saveV2Grupo(g: Grupo | null) {
+  try {
+    if (!g) { localStorage.removeItem(LS_GRUPO); return; }
+    localStorage.setItem(LS_GRUPO, JSON.stringify(g));
+  } catch {
+    // no crítico
+  }
+}
+export function loadV2Grupo(): Grupo | null {
+  try {
+    const raw = localStorage.getItem(LS_GRUPO);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 // ── puente Onboarding → Gastos: las categorías de gasto que la persona
 // marcó en el onboarding ("¿en qué se te suele ir la plata?") aparecen ya
 // creadas como secciones cuando entra a Gastos. Sandbox 100% local (v2 no

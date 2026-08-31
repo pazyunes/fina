@@ -13,6 +13,8 @@ import { HomeV2 } from "./components/onboarding-v2/HomeV2";
 import { GastosV2 } from "./components/onboarding-v2/GastosV2";
 import { ObjetivosV2 } from "./components/onboarding-v2/ObjetivosV2";
 import { InversionesV2 } from "./components/onboarding-v2/InversionesV2";
+import { PerfilV2 } from "./components/onboarding-v2/PerfilV2";
+import { GruposV2 } from "./components/onboarding-v2/GruposV2";
 
 // Layout que persiste entre las rutas de onboarding/informe: renderiza la
 // pantalla (Outlet) + el controlador de encuestas, que detecta cuándo salís de
@@ -52,6 +54,8 @@ export const router = createBrowserRouter([
       { path: "/onboarding-v2/gastos", element: <GastosV2 /> },
       { path: "/onboarding-v2/objetivos", element: <ObjetivosV2 /> },
       { path: "/onboarding-v2/inversiones", element: <InversionesV2 /> },
+      { path: "/onboarding-v2/perfil", element: <PerfilV2 /> },
+      { path: "/onboarding-v2/grupos", element: <GruposV2 /> },
     ],
   },
   {
