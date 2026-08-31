@@ -69,6 +69,7 @@ export function InversionesV2() {
   const [enQue, setEnQue] = useState<string[]>(() => persistido?.enQue ?? []);
   const [bancos, setBancos] = useState<string[]>(() => persistido?.bancos ?? []);
   const [tab, setTab] = useState<Tab>('recos');
+  const [modoEvolucion, setModoEvolucion] = useState<'real' | 'simulador'>('real');
 
   const [aportes, setAportes] = useState<Aporte[]>(() => persistido?.aportes ?? []);
   const [aporteMonto, setAporteMonto] = useState('');
@@ -255,7 +256,29 @@ export function InversionesV2() {
             </div>
           )}
 
-          {tab === 'evolucion' && <Evolucion aportes={aportes} tasaMensual={perfil.tasaMensual} />}
+          {tab === 'evolucion' && (
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-1.5 rounded-2xl p-1" style={{ background: COLORS.darkCard }}>
+                {(['real', 'simulador'] as const).map((m) => {
+                  const sel = modoEvolucion === m;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setModoEvolucion(m)}
+                      className="flex-1 rounded-xl py-2 text-[12px] font-bold transition-colors duration-150"
+                      style={sel ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.onDarkSoft }}
+                    >
+                      {m === 'real' ? 'Mis aportes' : 'Simular'}
+                    </button>
+                  );
+                })}
+              </div>
+              {modoEvolucion === 'real'
+                ? <Evolucion aportes={aportes} tasaMensual={perfil.tasaMensual} />
+                : <Simulador tasaMensual={perfil.tasaMensual} />}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -375,6 +398,101 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
         <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.onDarkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: proyColor }} /> Proyección estimada</span>
       </div>
       <p className="text-[11px]" style={{ color: COLORS.onDarkSoft }}>Proyección ilustrativa a tu perfil — no es una promesa de rendimiento.</p>
+    </div>
+  );
+}
+
+function serieAPath(arr: number[], w: number, h: number, pad: number, max: number) {
+  return arr
+    .map((v, i) => {
+      const x = pad + (arr.length > 1 ? (i / (arr.length - 1)) * (w - 2 * pad) : (w - 2 * pad) / 2);
+      const y = h - pad - (v / max) * (h - 2 * pad);
+      return `${x},${y}`;
+    })
+    .join(' ');
+}
+
+// Simulador con plata ficticia — pensado para bajar el miedo de quien
+// nunca invirtió: "probalo antes de comprometerte". Usa la misma tasa
+// mensual ilustrativa del perfil ya calculado, pero con un monto y un
+// plazo que la persona inventa, no con aportes reales — por eso el
+// disclaimer es todavía más explícito que en "Mis aportes".
+function Simulador({ tasaMensual }: { tasaMensual: number }) {
+  const [monto, setMonto] = useState('10.000');
+  const [meses, setMeses] = useState(12);
+  const montoNum = parseMoneyInput(monto);
+
+  const serieAportado: number[] = [];
+  const serieProyectado: number[] = [];
+  let acumAp = 0;
+  let acumProy = 0;
+  for (let i = 0; i < meses; i++) {
+    acumAp += montoNum;
+    acumProy = (acumProy + montoNum) * (1 + tasaMensual);
+    serieAportado.push(acumAp);
+    serieProyectado.push(acumProy);
+  }
+  const max = Math.max(...serieAportado, ...serieProyectado, 1);
+  const w = 280, h = 130, pad = 10;
+  const totalAportado = serieAportado[serieAportado.length - 1] ?? 0;
+  const totalProyectado = serieProyectado[serieProyectado.length - 1] ?? 0;
+  const realColor = '#34D399';
+  const proyColor = '#F5B94D';
+
+  return (
+    <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.darkCard }}>
+      <p className="text-[13px] font-bold" style={{ color: COLORS.onDark }}>Probá antes de invertir plata real</p>
+      <div className="relative">
+        <span className="absolute top-1/2 -translate-y-1/2 left-3" style={{ color: COLORS.onDarkSoft }}>$</span>
+        <input
+          className="w-full rounded-xl pl-7 pr-3 py-2.5 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none"
+          style={{ background: 'rgba(244,241,250,0.08)', color: COLORS.onDark }}
+          placeholder="Cuánto pondrías por mes"
+          inputMode="numeric"
+          value={monto}
+          onChange={(e) => setMonto(formatThousands(e.target.value))}
+        />
+      </div>
+      <div className="flex gap-2">
+        {[6, 12, 24].map((m) => {
+          const sel = meses === m;
+          return (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMeses(m)}
+              className="flex-1 rounded-xl py-2 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+              style={sel ? { background: COLORS.brand, color: '#fff' } : { background: 'rgba(244,241,250,0.08)', color: COLORS.onDarkSoft }}
+            >
+              {m} meses
+            </button>
+          );
+        })}
+      </div>
+
+      {montoNum > 0 && (
+        <>
+          <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[130px]">
+            <polyline points={serieAPath(serieProyectado, w, h, pad, max)} fill="none" stroke={proyColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={serieAPath(serieAportado, w, h, pad, max)} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div className="flex gap-4">
+            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.onDarkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Pondrías</span>
+            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.onDarkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: proyColor }} /> Tendrías (estimado)</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(244,241,250,0.06)' }}>
+              <p className="text-[11px]" style={{ color: COLORS.onDarkSoft }}>En {meses} meses pondrías</p>
+              <p className="font-['IBM_Plex_Mono'] font-bold text-[15px] tabular-nums" style={{ color: COLORS.onDark }}>{fmtMoney(totalAportado)}</p>
+            </div>
+            <div className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(244,241,250,0.06)' }}>
+              <p className="text-[11px]" style={{ color: COLORS.onDarkSoft }}>Podrías tener</p>
+              <p className="font-['IBM_Plex_Mono'] font-bold text-[15px] tabular-nums" style={{ color: proyColor }}>{fmtMoney(totalProyectado)}</p>
+            </div>
+          </div>
+        </>
+      )}
+      <p className="text-[11px]" style={{ color: COLORS.onDarkSoft }}>Es una simulación con números inventados — no es una promesa de rendimiento ni mueve plata real.</p>
     </div>
   );
 }
