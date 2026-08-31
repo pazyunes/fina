@@ -1,2 +1,6 @@
 /* Poppins — fuente geométrica redondeada (estilo Cocos Capital), Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+/* Baloo 2 — solo para el rediseño v2 (rama feat/rediseno-onboarding-v2),
+   estética "rubber hose vintage / Y2K mascot". No se usa en el resto de la app. */
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap');

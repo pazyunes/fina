@@ -7,6 +7,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RootRedirect } from "./components/RootRedirect";
 import { OnboardingGate } from "./components/OnboardingGate";
 import { FeedbackController } from "./components/FeedbackModal";
+import { OnboardingV2 } from "./components/onboarding-v2/OnboardingV2";
 
 // Layout que persiste entre las rutas de onboarding/informe: renderiza la
 // pantalla (Outlet) + el controlador de encuestas, que detecta cuándo salís de
@@ -29,6 +30,13 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    // REDISEÑO (rama feat/rediseno-onboarding-v2) — sandbox público, sin
+    // sesión ni Supabase, solo para iterar el diseño del onboarding nuevo.
+    // No reemplaza /personal-data ni el resto del flujo real todavía.
+    path: "/onboarding-v2",
+    element: <OnboardingV2 />,
   },
   {
     // Pública: llega desde el link del mail de recuperación (sesión de recovery).
