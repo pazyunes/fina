@@ -183,8 +183,8 @@ export function Chip({ on, warm, onClick, children }: { on: boolean; warm?: bool
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-2xl border-[2.5px] border-[#1E1E1E] px-4 py-2.5 text-[14.5px] font-semibold
-        transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
+      className={`flex items-center gap-2 rounded-2xl border-[2.5px] border-[#1E1E1E] px-4 py-2.5 text-[14.5px] font-semibold select-none
+        transition-all duration-100 ease-out active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
         shadow-[3px_3px_0_#1E1E1E]
         ${on ? (warm ? 'bg-[#FF6B81] text-white' : 'bg-[#2ECC71] text-[#1E1E1E]') : 'bg-white text-[#1E1E1E]'}`}
     >
@@ -199,8 +199,8 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full rounded-full border-[2.5px] border-[#1E1E1E] py-4 text-[16px] font-bold
-        transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
+      className={`w-full rounded-full border-[2.5px] border-[#1E1E1E] py-4 text-[16px] font-bold select-none
+        transition-all duration-100 ease-out active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
         ${disabled
           ? 'bg-[#e8e3d0] text-[#a8a394] border-[#e8e3d0] shadow-none cursor-not-allowed'
           : 'bg-[#2ECC71] text-[#1E1E1E] shadow-[4px_4px_0_#1E1E1E]'}`}

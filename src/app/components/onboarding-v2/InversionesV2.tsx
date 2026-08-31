@@ -127,12 +127,15 @@ export function InversionesV2() {
 
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
-        <span className="self-start flex items-center gap-1.5 rounded-full border-2 border-[#1E1E1E] px-3 py-1 text-[12.5px] font-bold" style={{ background: perfil.color }}>
+        {/* Inversiones baja el volumen "rubber hose" a propósito — acá el
+            número tiene que mandar, no el chrome. Sombras finas, borde
+            fino, montos en mono tabular (ver InversionesPage.tsx real). */}
+        <span className="self-start flex items-center gap-1.5 rounded-full border border-[#1E1E1E]/25 px-3 py-1 text-[12.5px] font-bold" style={{ background: perfil.color }}>
           {perfil.emoji} Perfil {perfil.label.toLowerCase()}
         </span>
         <p className="text-[13.5px] text-[#5b5b52] -mt-2">{perfil.copy}</p>
 
-        <div className="flex gap-1.5 bg-white border-[2px] border-[#1E1E1E] rounded-2xl p-1">
+        <div className="flex gap-1.5 bg-white border border-[#1E1E1E]/20 rounded-2xl p-1">
           {([
             ['recos', 'Recomendaciones'],
             ['mias', 'Mis inversiones'],
@@ -142,8 +145,7 @@ export function InversionesV2() {
               key={id}
               type="button"
               onClick={() => setTab(id)}
-              className="flex-1 rounded-xl py-2 text-[12px] font-bold"
-              style={{ background: tab === id ? COLORS.mint : 'transparent' }}
+              className={`flex-1 rounded-xl py-2 text-[12px] font-bold transition-colors duration-150 ${tab === id ? 'bg-[#1E1E1E] text-white' : 'text-[#1E1E1E]'}`}
             >
               {label}
             </button>
@@ -153,18 +155,18 @@ export function InversionesV2() {
         {tab === 'recos' && (
           <div className="flex flex-col gap-3">
             {enQue.length > 0 && (
-              <div className="rounded-xl border-2 border-[#1E1E1E] px-3.5 py-2.5 text-[12.5px] font-semibold" style={{ background: COLORS.mintLight }}>
-                🎯 Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
+              <div className="rounded-xl border border-[#1E1E1E]/20 px-3.5 py-2.5 text-[12.5px] font-semibold bg-[#F7F5EF]">
+                Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
               </div>
             )}
             {recomendados.map((r) => {
               const bancoMatch = bancos.find((b) => r.apps.includes(b));
               const already = yaEnIds.has(r.id);
               return (
-                <div key={r.id} className={`bg-white border-[2px] border-[#1E1E1E] rounded-2xl p-4 ${already ? 'opacity-70' : ''}`}>
+                <div key={r.id} className={`bg-white border border-[#1E1E1E]/15 rounded-2xl p-4 ${already ? 'opacity-60' : ''}`}>
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-bold text-[14.5px] text-[#1E1E1E]">{r.nombre}</p>
-                    <span className="text-[10.5px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.yellowSoft }}>{r.riesgo} riesgo</span>
+                    <span className="text-[10.5px] font-semibold rounded-full px-2 py-0.5 shrink-0 bg-[#F0EDE4] text-[#5b5b52]">{r.riesgo} riesgo</span>
                   </div>
                   {bancoMatch ? (
                     <p className="text-[12.5px] font-semibold text-[#1E1E1E] mt-1">✓ Desde tu {bancoMatch}</p>
@@ -181,7 +183,7 @@ export function InversionesV2() {
 
         {tab === 'mias' && (
           <div className="flex flex-col gap-3">
-            <div className="bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl p-4 flex gap-4 items-center shadow-[4px_4px_0_#1E1E1E]">
+            <div className="bg-white border border-[#1E1E1E]/15 rounded-2xl p-4 flex gap-4 items-center">
               <Donut
                 segments={INSTRUMENTOS.map((i) => ({
                   color: i.riesgo === 'Bajo' ? COLORS.mint : i.riesgo === 'Medio' ? COLORS.yellow : COLORS.coral,
@@ -194,7 +196,7 @@ export function InversionesV2() {
               <p className="flex-1 text-[13px] text-[#5b5b52]">Vas registrando lo que ponés en cada instrumento acá abajo.</p>
             </div>
 
-            <div className="bg-white border-[2px] border-[#1E1E1E] rounded-2xl p-4 flex flex-col gap-2.5">
+            <div className="bg-white border border-[#1E1E1E]/15 rounded-2xl p-4 flex flex-col gap-2.5">
               <p className="text-[13px] font-bold text-[#1E1E1E]">Registrar un aporte</p>
               <div className="flex flex-wrap gap-2">
                 {INSTRUMENTOS.map((i) => (
@@ -203,22 +205,22 @@ export function InversionesV2() {
               </div>
               <div className="flex gap-2">
                 <input
-                  className="flex-1 border-[1.5px] border-[#1E1E1E] rounded-xl px-3 py-2 text-[13.5px] outline-none"
+                  className="flex-1 border border-[#1E1E1E]/25 rounded-xl px-3 py-2 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none"
                   placeholder="Monto"
                   inputMode="numeric"
                   value={aporteMonto}
                   onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
                 />
-                <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} className="rounded-xl border-2 border-[#1E1E1E] px-4 font-bold disabled:opacity-40" style={{ background: COLORS.mint }}>+</button>
+                <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} className="rounded-xl border border-[#1E1E1E]/25 px-4 font-bold disabled:opacity-40 transition-all duration-100 active:translate-y-[1px]" style={{ background: COLORS.mint }}>+</button>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
               {aportes.length === 0 && <p className="text-[13px] text-[#5b5b52]">Todavía no registraste aportes.</p>}
               {aportes.map((a) => (
-                <div key={a.id} className="flex items-center justify-between bg-white border-[2px] border-[#1E1E1E] rounded-xl px-3.5 py-2.5">
+                <div key={a.id} className="flex items-center justify-between bg-white border border-[#1E1E1E]/15 rounded-xl px-3.5 py-2.5">
                   <span className="text-[13.5px] text-[#1E1E1E]">{nombreInstr(a.instrumentoId)} · {a.fecha}</span>
-                  <span className="font-semibold text-[13.5px]">{fmtMoney(a.monto)}</span>
+                  <span className="font-['IBM_Plex_Mono'] font-semibold text-[13.5px] tabular-nums">{fmtMoney(a.monto)}</span>
                 </div>
               ))}
             </div>
@@ -307,7 +309,7 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
   const ordenado = [...aportes].reverse();
   if (ordenado.length === 0) {
     return (
-      <div className="bg-white border-[2.5px] border-dashed border-[#1E1E1E] rounded-2xl p-5 text-center">
+      <div className="bg-white border border-dashed border-[#1E1E1E]/25 rounded-2xl p-5 text-center">
         <p className="text-[13.5px] text-[#5b5b52]">Registrá algún aporte en "Mis inversiones" para ver tu evolución acá.</p>
       </div>
     );
@@ -327,7 +329,7 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
   const pathProy = proyectado.map((_, i) => xy(proyectado, i).join(',')).join(' ');
 
   return (
-    <div className="bg-white border-[2.5px] border-[#1E1E1E] rounded-2xl p-4 flex flex-col gap-3 shadow-[4px_4px_0_#1E1E1E]">
+    <div className="bg-white border border-[#1E1E1E]/15 rounded-2xl p-4 flex flex-col gap-3">
       <p className="text-[13px] font-bold text-[#1E1E1E]">Tu evolución</p>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[130px]">
         <polyline points={pathProy} fill="none" stroke={COLORS.yellow} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
