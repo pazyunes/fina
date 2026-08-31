@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Coachmark, Cta, Donut, COLORS, SegmentedTab, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias } from './shared';
+import { useEffect, useState } from 'react';
+import { Coachmark, Cta, Donut, COLORS, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
 // gastos con sus botones de "agregar", visualización arriba (donut +
-// distribución por tipo), sobres por categoría con tope editable, gastos
-// recientes, y una reserva tipo ahorro (mismo concepto que ReserveControl.tsx
-// de la app real, pasado a esta estética).
+// distribución por tipo), sobres por categoría con tope editable, buscador
+// de gastos, y una reserva tipo ahorro (mismo concepto que
+// ReserveControl.tsx de la app real, pasado a esta estética).
 //
 // Es el extremo "llamativo" del espectro (Gastos grita, Inversiones
 // susurra): tarjetas blancas con sombra suave y buen color variado por
@@ -14,12 +14,18 @@ import { Coachmark, Cta, Donut, COLORS, SegmentedTab, fmtMoney, formatThousands,
 //
 // Las categorías que la persona marcó en el onboarding ("¿en qué se te
 // suele ir la plata?") ya aparecen acá como secciones — ver shared.tsx.
+//
+// Todo esto ahora PERSISTE de verdad (antes vivía solo en el estado de esta
+// pantalla y se perdía al navegar a Home y volver) — hace falta para que el
+// buscador tenga algo real que buscar, y para que Home pueda resumir tu
+// bienestar financiero con datos de verdad.
 
 type TipoGasto = 'urgente' | 'impulsivo' | 'necesario' | 'otro';
 type Periodo = 'semana' | 'mes';
 type Tope = { monto: number; periodo: Periodo };
 type Categoria = { id: string; nombre: string };
-type Gasto = { id: string; monto: number; descripcion: string; categoriaId: string; tipo: TipoGasto; fecha: string };
+type Gasto = { id: string; monto: number; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number };
+type EstadoGastos = { categorias: Categoria[]; gastos: Gasto[]; disponible: number; reserva: number; topes: Record<string, Tope> };
 
 const TIPO_INFO: Record<TipoGasto, { label: string; color: string }> = {
   urgente: { label: 'Urgente', color: COLORS.coral },
@@ -36,22 +42,30 @@ const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.
 const CARD_SHADOW = 'shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
 
 // Cuenta nueva: acá solo entra lo que la persona puso en el onboarding — sin
-// categorías ni gastos de ejemplo inventados. Si no eligió ninguna categoría
-// de gasto, arranca vacío del todo (se van creando desde "+ Agregar gasto").
-function categoriasIniciales(): Categoria[] {
-  return loadV2Categorias().map((nombre) => ({ id: slug(nombre), nombre }));
+// categorías ni gastos de ejemplo inventados. Si ya había estado antes en
+// esta sección, se retoma lo que dejó (persistido); si no, arranca de las
+// categorías del onboarding con todo lo demás en cero.
+function estadoInicial(): EstadoGastos {
+  const persistido = loadV2GastosState<EstadoGastos>();
+  if (persistido) return persistido;
+  return {
+    categorias: loadV2Categorias().map((nombre) => ({ id: slug(nombre), nombre })),
+    gastos: [],
+    disponible: 0,
+    reserva: 0,
+    topes: {},
+  };
 }
 
 export function GastosV2() {
-  const [categorias, setCategorias] = useState<Categoria[]>(categoriasIniciales);
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [disponible, setDisponible] = useState(0);
-  const [reserva, setReserva] = useState(0);
+  const [estado, setEstado] = useState<EstadoGastos>(estadoInicial);
+  const { categorias, gastos, disponible, reserva, topes } = estado;
+
+  useEffect(() => {
+    saveV2GastosState(estado);
+  }, [estado]);
 
   const [openCatId, setOpenCatId] = useState<string | null>(categorias[0]?.id ?? null);
-  // El tope es de la sección entera (no de un gasto puntual) y elegís si
-  // pensarlo por semana o por mes.
-  const [topes, setTopes] = useState<Record<string, Tope>>({});
   const [topeEditMonto, setTopeEditMonto] = useState<Record<string, string>>({});
   const [topeEditPeriodo, setTopeEditPeriodo] = useState<Record<string, Periodo>>({});
 
@@ -68,6 +82,12 @@ export function GastosV2() {
   const [ngNuevaCat, setNgNuevaCat] = useState('');
   const [ngTipo, setNgTipo] = useState<TipoGasto>('necesario');
 
+  // Buscador — por nombre, sección, tipo, y orden por monto o por fecha.
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroSeccion, setFiltroSeccion] = useState<string>('todas');
+  const [filtroTipo, setFiltroTipo] = useState<TipoGasto | 'todos'>('todos');
+  const [orden, setOrden] = useState<'recientes' | 'monto'>('recientes');
+
   const totalGastado = gastos.reduce((s, g) => s + g.monto, 0);
   const gastadoEn = (catId: string) => gastos.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.monto, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
@@ -81,17 +101,24 @@ export function GastosV2() {
     monto: gastos.filter((g) => g.tipo === t).reduce((s, g) => s + g.monto, 0),
   })).filter((t) => t.monto > 0);
 
+  const gastosFiltrados = gastos
+    .filter((g) => !busqueda.trim() || g.descripcion.toLowerCase().includes(busqueda.trim().toLowerCase()))
+    .filter((g) => filtroSeccion === 'todas' || g.categoriaId === filtroSeccion)
+    .filter((g) => filtroTipo === 'todos' || g.tipo === filtroTipo)
+    .sort((a, b) => (orden === 'monto' ? b.monto - a.monto : b.ts - a.ts));
+  const hayFiltrosActivos = !!busqueda.trim() || filtroSeccion !== 'todas' || filtroTipo !== 'todos';
+
   function agregarDinero() {
     const n = parseMoneyInput(addDispVal);
     if (!n) return;
-    setDisponible((d) => d + n);
+    setEstado((s) => ({ ...s, disponible: s.disponible + n }));
     setAddDispVal('');
     setAddingDisponible(false);
   }
 
   function crearCategoria(nombre: string): string {
     const id = slug(nombre);
-    setCategorias((cs) => (cs.some((c) => c.id === id) ? cs : [...cs, { id, nombre }]));
+    setEstado((s) => (s.categorias.some((c) => c.id === id) ? s : { ...s, categorias: [...s.categorias, { id, nombre }] }));
     return id;
   }
 
@@ -100,11 +127,8 @@ export function GastosV2() {
     if (monto <= 0) return;
     const catId = ngNuevaCat.trim() ? crearCategoria(ngNuevaCat.trim()) : ngCatId;
     if (!catId) return;
-    setGastos((gs) => [
-      { id: String(Date.now()), monto, descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label, categoriaId: catId, tipo: ngTipo, fecha: 'Hoy' },
-      ...gs,
-    ]);
-    setDisponible((d) => Math.max(d - monto, 0));
+    const nuevo: Gasto = { id: String(Date.now()), monto, descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label, categoriaId: catId, tipo: ngTipo, ts: Date.now() };
+    setEstado((s) => ({ ...s, gastos: [nuevo, ...s.gastos], disponible: Math.max(s.disponible - monto, 0) }));
     setNgMonto(''); setNgDesc(''); setNgNuevaCat(''); setNgTipo('necesario');
     setAddingGasto(false);
     setOpenCatId(catId);
@@ -114,14 +138,13 @@ export function GastosV2() {
     const monto = parseMoneyInput(topeEditMonto[catId] || '');
     if (monto <= 0) return;
     const periodo = topeEditPeriodo[catId] || 'semana';
-    setTopes((t) => ({ ...t, [catId]: { monto, periodo } }));
+    setEstado((s) => ({ ...s, topes: { ...s.topes, [catId]: { monto, periodo } } }));
   }
 
   function reservar() {
     const n = parseMoneyInput(reservaVal);
     if (!n) return;
-    setReserva((r) => r + n);
-    setDisponible((d) => Math.max(d - n, 0));
+    setEstado((s) => ({ ...s, reserva: s.reserva + n, disponible: Math.max(s.disponible - n, 0) }));
     setReservaVal('');
     setReservaOpen(false);
   }
@@ -329,7 +352,7 @@ export function GastosV2() {
                     <div key={m.id} className="flex items-center justify-between text-[13px] gap-2" style={{ color: COLORS.ink }}>
                       <span className="flex items-center gap-1.5 min-w-0">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TIPO_INFO[m.tipo].color }} />
-                        <span className="truncate">{m.descripcion} · {m.fecha}</span>
+                        <span className="truncate">{m.descripcion} · {fechaDisplay(m.ts)}</span>
                       </span>
                       <span className="shrink-0" style={{ color: COLORS.inkSoft }}>{fmtMoney(m.monto)}</span>
                     </div>
@@ -372,18 +395,78 @@ export function GastosV2() {
         })}
       </div>
 
-      {/* Gastos recientes */}
-      <div className="flex flex-col gap-2">
-        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Gastos recientes</p>
+      {/* Buscador de gastos — por nombre, sección, tipo y orden por monto/fecha */}
+      <div className="flex flex-col gap-2.5">
+        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tus gastos</p>
+        <input
+          className="border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-2.5 text-[14px] bg-white outline-none transition-colors"
+          placeholder="Buscar por nombre (ej: Rappi)"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+        />
+        {categorias.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setFiltroSeccion('todas')}
+              className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+              style={filtroSeccion === 'todas' ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+            >
+              Todas las secciones
+            </button>
+            {categorias.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setFiltroSeccion(c.id)}
+                className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+                style={filtroSeccion === c.id ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+              >
+                {c.nombre}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltroTipo('todos')}
+            className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+            style={filtroTipo === 'todos' ? { background: COLORS.ink, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+          >
+            Todos los tipos
+          </button>
+          {TIPOS.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setFiltroTipo(t)}
+              className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+              style={filtroTipo === t ? { background: TIPO_INFO[t].color, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+            >
+              {TIPO_INFO[t].label}
+            </button>
+          ))}
+        </div>
+        <SegmentedTab
+          options={[{ id: 'recientes' as const, label: 'Más recientes' }, { id: 'monto' as const, label: 'Mayor monto' }]}
+          value={orden}
+          onChange={setOrden}
+          trackColor={COLORS.tint}
+        />
+
         {gastos.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
-        {gastos.slice(0, 6).map((g) => {
+        {gastos.length > 0 && gastosFiltrados.length === 0 && (
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>No encontramos gastos con esos filtros.</p>
+        )}
+        {gastosFiltrados.slice(0, hayFiltrosActivos ? 50 : 6).map((g) => {
           const cat = categorias.find((c) => c.id === g.categoriaId);
           return (
             <div key={g.id} className={`flex items-center gap-2.5 bg-white rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`}>
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[g.tipo].color }} />
               <div className="flex-1 min-w-0">
                 <p className="text-[13.5px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
-                <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{cat?.nombre ?? 'Sin sección'} · {g.fecha}</p>
+                <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{cat?.nombre ?? 'Sin sección'} · {fechaDisplay(g.ts)}</p>
               </div>
               <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtMoney(g.monto)}</span>
             </div>

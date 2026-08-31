@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Chip, Coachmark, Cta, Donut, COLORS, fmtMoney, formatThousands, parseMoneyInput, loadV2InversionesPerfil } from './shared';
+import { useEffect, useState } from 'react';
+import { Chip, Coachmark, Cta, Donut, COLORS, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2InversionesPerfil, loadV2InversionesState, saveV2InversionesState } from './shared';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
 // explícito): un mini-quiz corto arma un perfil de riesgo real (no fijo),
@@ -42,26 +42,41 @@ const PERFILES: Record<PerfilId, { label: string; emoji: string; accent: string;
   arriesgado: { label: 'Arriesgado', emoji: '🚀', accent: '#FF8FA3', copy: 'Te bancás más vaivén a cambio de más potencial de crecimiento.', tasaMensual: 0.025 },
 };
 
-type Aporte = { id: string; monto: number; instrumentoId: string; fecha: string };
-const hoy = () => new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+type Aporte = { id: string; monto: number; instrumentoId: string; ts: number };
+type PersistidoInv = {
+  completado: boolean; // llegó a la pantalla de resultado alguna vez
+  porQue: string | null;
+  reaccion: string | null;
+  yaInvierte: 'si' | 'no' | null;
+  enQue: string[];
+  bancos: string[];
+  aportes: Aporte[];
+};
 
 const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors';
 
 export function InversionesV2() {
-  // Si en el onboarding ya contestó el mini-perfil, arrancamos directo desde
-  // "¿ya invertís?" en vez de repreguntar por qué invierte / cómo reacciona.
+  // Si ya había estado antes en esta pantalla y llegó al resultado, retoma
+  // todo tal cual quedó (perfil + aportes) en vez de hacerla repetir el
+  // quiz cada vez que entra. Si en el onboarding ya contestó el
+  // mini-perfil, arranca directo desde "¿ya invertís?".
+  const persistido = loadV2InversionesState<PersistidoInv>();
   const [prefilledPerfil] = useState(() => !!loadV2InversionesPerfil());
-  const [paso, setPaso] = useState<Paso>('intro');
-  const [porQue, setPorQue] = useState<string | null>(() => loadV2InversionesPerfil()?.porQue || null);
-  const [reaccion, setReaccion] = useState<string | null>(() => loadV2InversionesPerfil()?.reaccion || null);
-  const [yaInvierte, setYaInvierte] = useState<'si' | 'no' | null>(null);
-  const [enQue, setEnQue] = useState<string[]>([]);
-  const [bancos, setBancos] = useState<string[]>([]);
+  const [paso, setPaso] = useState<Paso>(() => (persistido?.completado ? 'resultado' : 'intro'));
+  const [porQue, setPorQue] = useState<string | null>(() => persistido?.porQue ?? loadV2InversionesPerfil()?.porQue ?? null);
+  const [reaccion, setReaccion] = useState<string | null>(() => persistido?.reaccion ?? loadV2InversionesPerfil()?.reaccion ?? null);
+  const [yaInvierte, setYaInvierte] = useState<'si' | 'no' | null>(() => persistido?.yaInvierte ?? null);
+  const [enQue, setEnQue] = useState<string[]>(() => persistido?.enQue ?? []);
+  const [bancos, setBancos] = useState<string[]>(() => persistido?.bancos ?? []);
   const [tab, setTab] = useState<Tab>('recos');
 
-  const [aportes, setAportes] = useState<Aporte[]>([]);
+  const [aportes, setAportes] = useState<Aporte[]>(() => persistido?.aportes ?? []);
   const [aporteMonto, setAporteMonto] = useState('');
   const [aporteInstrId, setAporteInstrId] = useState<string>(INSTRUMENTOS[0].id);
+
+  useEffect(() => {
+    saveV2InversionesState({ completado: paso === 'resultado', porQue, reaccion, yaInvierte, enQue, bancos, aportes });
+  }, [paso, porQue, reaccion, yaInvierte, enQue, bancos, aportes]);
 
   const pasos: Paso[] = [
     ...(prefilledPerfil ? [] : (['q1', 'q2'] as Paso[])),
@@ -99,7 +114,7 @@ export function InversionesV2() {
   function agregarAporte() {
     const monto = parseMoneyInput(aporteMonto);
     if (monto <= 0) return;
-    setAportes((a) => [{ id: String(Date.now()), monto, instrumentoId: aporteInstrId, fecha: hoy() }, ...a]);
+    setAportes((a) => [{ id: String(Date.now()), monto, instrumentoId: aporteInstrId, ts: Date.now() }, ...a]);
     setAporteMonto('');
   }
 
@@ -232,7 +247,7 @@ export function InversionesV2() {
                 {aportes.length === 0 && <p className="text-[13px]" style={{ color: COLORS.onDarkSoft }}>Todavía no registraste aportes.</p>}
                 {aportes.map((a) => (
                   <div key={a.id} className="flex items-center justify-between rounded-xl px-3.5 py-2.5" style={{ background: COLORS.darkCard }}>
-                    <span className="text-[13.5px]" style={{ color: COLORS.onDark }}>{nombreInstr(a.instrumentoId)} · {a.fecha}</span>
+                    <span className="text-[13.5px]" style={{ color: COLORS.onDark }}>{nombreInstr(a.instrumentoId)} · {fechaDisplay(a.ts)}</span>
                     <span className="font-['IBM_Plex_Mono'] font-semibold text-[13.5px] tabular-nums" style={{ color: COLORS.onDark }}>{fmtMoney(a.monto)}</span>
                   </div>
                 ))}

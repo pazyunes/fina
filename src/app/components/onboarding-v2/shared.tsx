@@ -456,3 +456,52 @@ export function SegmentedTab<T extends string>({
     </div>
   );
 }
+
+// ── Persistencia real de Gastos / Objetivos / Inversiones ──────────────
+// Antes, lo que cargabas en cada sección vivía solo en el estado de esa
+// pantalla y se perdía apenas navegabas a otra (Home, por ejemplo). Sin
+// esto, ni un buscador de gastos ni un resumen tipo "anillo de bienestar"
+// en Home pueden ser reales — no habría nada persistente que leer. Genérico
+// a propósito (cada pantalla define su propia forma de estado) para no
+// duplicar los tipos acá.
+function saveV2State(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // no crítico
+  }
+}
+function loadV2State<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+const LS_GASTOS_STATE = 'fina_v2_gastos_state';
+export const saveV2GastosState = (s: unknown) => saveV2State(LS_GASTOS_STATE, s);
+export const loadV2GastosState = <T,>() => loadV2State<T>(LS_GASTOS_STATE);
+
+const LS_OBJETIVOS_STATE = 'fina_v2_objetivos_state';
+export const saveV2ObjetivosState = (s: unknown) => saveV2State(LS_OBJETIVOS_STATE, s);
+export const loadV2ObjetivosState = <T,>() => loadV2State<T>(LS_OBJETIVOS_STATE);
+
+const LS_INVERSIONES_STATE = 'fina_v2_inversiones_state';
+export const saveV2InversionesState = (s: unknown) => saveV2State(LS_INVERSIONES_STATE, s);
+export const loadV2InversionesState = <T,>() => loadV2State<T>(LS_INVERSIONES_STATE);
+
+// Formatea una fecha real (timestamp) como "Hoy" / "Ayer" / "12 ago" — para
+// que las listas de gastos/aportes se puedan ordenar y filtrar por fecha de
+// verdad, no por una etiqueta de texto fija.
+export function fechaDisplay(ts: number): string {
+  const d = new Date(ts);
+  const hoy = new Date();
+  const ayer = new Date();
+  ayer.setDate(hoy.getDate() - 1);
+  const mismoDia = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (mismoDia(d, hoy)) return 'Hoy';
+  if (mismoDia(d, ayer)) return 'Ayer';
+  return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+}

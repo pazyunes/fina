@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Cta, Chip, Coachmark, COLORS, Donut, SegmentedTab, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2Grupo, loadV2Nombre } from './shared';
+import { useEffect, useState } from 'react';
+import { Cta, Chip, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, loadV2Nombre } from './shared';
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
 // (ver ObjetivosPage.tsx / GoalEditModal.tsx) pasada a la estética nueva —
@@ -19,7 +19,7 @@ import { Cta, Chip, Coachmark, COLORS, Donut, SegmentedTab, fmtMoney, formatThou
 type Kind = 'paid' | 'saved';
 type MontoModo = 'exacto' | 'rango' | 'desconocido';
 type TipoObjetivo = 'individual' | 'grupal';
-type Contribucion = { id: string; monto: number; kind: Kind; label: string; fecha: string; de: string };
+type Contribucion = { id: string; monto: number; kind: Kind; label: string; ts: number; de: string };
 type Objetivo = {
   id: string;
   nombre: string;
@@ -36,9 +36,11 @@ type Objetivo = {
 const CARD_SHADOW = 'shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
 const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-xl px-3 py-2.5 text-[14px] outline-none transition-colors';
 
-const hoy = () => new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
-
+// Si ya había estado antes acá, retoma lo persistido; si no, arranca de los
+// objetivos nombrados en el onboarding (sin monto todavía).
 function objetivosIniciales(): Objetivo[] {
+  const persistido = loadV2ObjetivosState<Objetivo[]>();
+  if (persistido) return persistido;
   return loadV2ObjetivosIniciales().map((nombre, i) => ({
     id: `onb-${i}-${nombre}`,
     nombre,
@@ -153,6 +155,7 @@ function MontoPicker({
 
 export function ObjetivosV2() {
   const [objetivos, setObjetivos] = useState<Objetivo[]>(objetivosIniciales);
+  useEffect(() => { saveV2ObjetivosState(objetivos); }, [objetivos]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -199,7 +202,7 @@ export function ObjetivosV2() {
       monto,
       kind,
       label: regLabel.trim() || (kind === 'paid' ? 'Pago' : 'Separado'),
-      fecha: hoy(),
+      ts: Date.now(),
       de: abierto.tipo === 'grupal' ? (regDe || miNombre) : miNombre,
     };
     setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, contribuciones: [nuevo, ...o.contribuciones] } : o)));
@@ -381,7 +384,7 @@ export function ObjetivosV2() {
                 <span className="text-[13.5px]" style={{ color: COLORS.ink }}>{c.label}</span>
                 {abierto.tipo === 'grupal' && <span className="text-[12px]" style={{ color: COLORS.inkSoft }}> · {c.de}</span>}
               </span>
-              <span className="text-[12px] shrink-0" style={{ color: COLORS.inkSoft }}>{c.fecha}</span>
+              <span className="text-[12px] shrink-0" style={{ color: COLORS.inkSoft }}>{fechaDisplay(c.ts)}</span>
               <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtMoney(c.monto)}</span>
               <button type="button" onClick={() => borrarRegistro(c.id)} className="shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Borrar registro">✕</button>
             </div>
