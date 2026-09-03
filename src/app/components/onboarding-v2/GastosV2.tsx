@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Coachmark, Cta, Donut, COLORS, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
+import { WHATSAPP_URL } from '../WhatsAppFab';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
 // gastos con sus botones de "agregar", visualización arriba (donut +
@@ -94,6 +95,8 @@ export function GastosV2() {
   const [ngTipo, setNgTipo] = useState<TipoGasto>('necesario');
 
   // Buscador — por nombre, sección, tipo, y orden por monto o por fecha.
+  // Colapsado en una lupita de costado por defecto para no ocupar tanto lugar.
+  const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [filtroSeccion, setFiltroSeccion] = useState<string>('todas');
   const [filtroTipo, setFiltroTipo] = useState<TipoGasto | 'todos'>('todos');
@@ -233,7 +236,19 @@ export function GastosV2() {
 
       {/* Agregar gasto */}
       {!addingGasto ? (
-        <Cta label="+ Agregar gasto" onClick={() => setAddingGasto(true)} />
+        <>
+          <Cta label="+ Agregar gasto" onClick={() => setAddingGasto(true)} />
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 rounded-2xl px-4 py-3 text-[13px] font-medium transition-all duration-100 active:scale-[0.99]"
+            style={{ background: COLORS.tint, color: COLORS.brandDark }}
+          >
+            <span className="text-lg shrink-0">💬</span>
+            <span className="flex-1">También los podés registrar hablándole a tu bot de WhatsApp — el mismo botón redondo de abajo.</span>
+          </a>
+        </>
       ) : (
         <div className={`bg-white rounded-2xl p-4 flex flex-col gap-3 ${CARD_SHADOW}`}>
           <div className="relative">
@@ -419,15 +434,29 @@ export function GastosV2() {
         })}
       </div>
 
-      {/* Buscador de gastos — por nombre, sección, tipo y orden por monto/fecha */}
+      {/* Buscador de gastos — colapsado en una lupita, no ocupa lugar hasta que se usa */}
       <div className="flex flex-col gap-2.5">
-        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tus gastos</p>
-        <input
-          className="border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-2.5 text-[14px] bg-white outline-none transition-colors"
-          placeholder="Buscar por nombre (ej: Rappi)"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
+        <div className="flex items-center justify-between">
+          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tus gastos</p>
+          <button
+            type="button"
+            onClick={() => setBusquedaAbierta((v) => !v)}
+            aria-label="Buscar gastos"
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+            style={busquedaAbierta ? { background: COLORS.brand, color: '#fff' } : { background: COLORS.tint, color: COLORS.brand }}
+          >
+            🔍
+          </button>
+        </div>
+        {busquedaAbierta && (
+          <input
+            autoFocus
+            className="border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-2.5 text-[14px] bg-white outline-none transition-colors"
+            placeholder="Buscar por nombre (ej: Rappi)"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        )}
         {categorias.length > 0 && (
           <div className="flex flex-wrap gap-2">
             <button
