@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Cta, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, loadV2Nombre } from './shared';
+import { Cta, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
 // (ver ObjetivosPage.tsx / GoalEditModal.tsx) pasada a la estética nueva —
@@ -20,7 +20,7 @@ type Kind = 'paid' | 'saved';
 type MontoModo = 'exacto' | 'rango' | 'desconocido';
 type TipoObjetivo = 'individual' | 'grupal';
 type Moneda = 'ARS' | 'USD';
-type Contribucion = { id: string; monto: number; kind: Kind; label: string; ts: number; de: string };
+type Contribucion = { id: string; monto: number; moneda: Moneda; kind: Kind; label: string; ts: number; de: string };
 type Objetivo = {
   id: string;
   nombre: string;
@@ -116,6 +116,17 @@ function estadoMonto(o: Objetivo): 'definido' | 'desconocido' | 'incompleto' {
   if (o.montoModo === 'desconocido') return 'desconocido';
   if (o.montoTotal > 0) return 'definido';
   return 'incompleto';
+}
+
+// Consejo para llegar más rápido a un objetivo — con lo único que ya
+// sabemos de verdad (las categorías que la persona dijo que le gustaría
+// recortar en el onboarding), no un cálculo de "ahorrá $X/mes" inventado.
+function consejoPara(o: Objetivo, estado: 'definido' | 'desconocido' | 'incompleto'): string | null {
+  if (estado !== 'definido') return null;
+  const perfil = loadV2PerfilOnboarding();
+  const categoria = perfil?.categoriasRecortar?.[0];
+  if (!categoria) return null;
+  return `💡 Nos dijiste que querías gastar menos en ${categoria} — cada peso que ahorres ahí puede ir directo a "${o.nombre}".`;
 }
 
 function montoLabel(o: Objetivo): string {
@@ -219,6 +230,7 @@ export function ObjetivosV2() {
   const [kind, setKind] = useState<Kind>('paid');
   const [regLabel, setRegLabel] = useState('');
   const [regMonto, setRegMonto] = useState('');
+  const [regMoneda, setRegMoneda] = useState<Moneda>('ARS');
   const [montoModoEdit, setMontoModoEdit] = useState<MontoModo>('exacto');
   const [montoTotalEdit, setMontoTotalEdit] = useState('');
   const [montoMinEdit, setMontoMinEdit] = useState('');
@@ -233,9 +245,17 @@ export function ObjetivosV2() {
   const [editHorizonteFecha, setEditHorizonteFecha] = useState('');
 
   const [grupo, setGrupoLocal] = useState(() => loadV2Grupo());
+  const [invitado, setInvitado] = useState(false);
   const miNombre = loadV2Nombre() || 'Vos';
 
+  async function invitarGente() {
+    if (!grupo) return;
+    const resultado = await invitarAGrupo(grupo);
+    if (resultado === 'copiado') { setInvitado(true); setTimeout(() => setInvitado(false), 1800); }
+  }
+
   const abierto = objetivos.find((o) => o.id === openId) || null;
+  useEffect(() => { if (abierto) setRegMoneda(abierto.moneda); }, [abierto?.id]);
 
   function crearObjetivo() {
     if (!nombre.trim()) return;
@@ -286,6 +306,7 @@ export function ObjetivosV2() {
     const nuevo: Contribucion = {
       id: String(Date.now()),
       monto,
+      moneda: regMoneda,
       kind,
       label: regLabel.trim() || (kind === 'paid' ? 'Pago' : 'Separado'),
       ts: Date.now(),
@@ -325,6 +346,9 @@ export function ObjetivosV2() {
         <div className="flex items-center justify-between">
           <button type="button" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>← Volver</button>
           <div className="flex items-center gap-3">
+            {abierto.tipo === 'grupal' && grupo && (
+              <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }} onClick={invitarGente}>{invitado ? '✓ Copiado' : 'Invitar'}</button>
+            )}
             <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }} onClick={empezarEdicion}>Editar</button>
             <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.inkSoft }} onClick={() => borrarObjetivo(abierto.id)}>Borrar</button>
           </div>
@@ -432,6 +456,12 @@ export function ObjetivosV2() {
           </div>
         )}
 
+        {!done && consejoPara(abierto, estado) && (
+          <div className="rounded-2xl px-4 py-3 text-[13px] font-medium" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>
+            {consejoPara(abierto, estado)}
+          </div>
+        )}
+
         {/* Registrar un pago o un ahorro */}
         <div className={`bg-white rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`}>
           <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Sumar un registro</p>
@@ -465,6 +495,19 @@ export function ObjetivosV2() {
               value={regMonto}
               onChange={(e) => setRegMonto(formatThousands(e.target.value))}
             />
+            <div className="flex rounded-xl overflow-hidden border border-[rgba(31,27,46,0.16)] shrink-0">
+              {(['ARS', 'USD'] as Moneda[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setRegMoneda(m)}
+                  className="px-2.5 text-[12px] font-bold transition-colors"
+                  style={regMoneda === m ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={agregarRegistro}
@@ -493,7 +536,7 @@ export function ObjetivosV2() {
                 <span className="text-[13.5px]" style={{ color: COLORS.ink }}>{c.label}</span>
               </span>
               <span className="text-[12px] shrink-0" style={{ color: COLORS.inkSoft }}>{fechaDisplay(c.ts)}</span>
-              <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtMoney(c.monto)}</span>
+              <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{c.moneda === 'USD' ? `US$${c.monto.toLocaleString('es-AR')}` : fmtMoney(c.monto)}</span>
               <button type="button" onClick={() => borrarRegistro(c.id)} className="shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Borrar registro">✕</button>
             </div>
           ))}
@@ -502,12 +545,15 @@ export function ObjetivosV2() {
     );
   }
 
-  // ── Vista: crear objetivo ──
-  if (creating) {
-    return (
-      <div className="px-[22px] pt-8 flex flex-col gap-3.5">
-        <button type="button" className="text-[13px] font-semibold self-start" style={{ color: COLORS.inkSoft }} onClick={() => setCreating(false)}>← Volver</button>
-        <h1 className="text-[21px] font-bold" style={{ color: COLORS.ink }}>Nombre del objetivo</h1>
+  // ── Modal: crear objetivo — un box flotante sobre Objetivos, no otra
+  // pantalla, para que quede claro que es "agregar uno más" acá mismo.
+  const modalCrear = creating && (
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: 'rgba(31,27,46,0.45)' }} onClick={() => setCreating(false)}>
+      <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto bg-white rounded-[24px] p-5 flex flex-col gap-3.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h1 className="text-[19px] font-bold" style={{ color: COLORS.ink }}>Nuevo objetivo</h1>
+          <button type="button" onClick={() => setCreating(false)} aria-label="Cerrar" className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>✕</button>
+        </div>
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
@@ -524,20 +570,10 @@ export function ObjetivosV2() {
           />
           {tipo === 'grupal' && !grupo && (
             <div className="flex flex-col gap-1.5 mt-1">
-              <input className={inputClass} placeholder="Nombre del grupo (opcional)" value={invitarNombre} onChange={(e) => setInvitarNombre(e.target.value)} />
-              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Si le ponés nombre, armamos el grupo e invitás gente ya mismo — sino, lo hacés más adelante desde Grupos, no hace falta ahora.</p>
+              <input className={inputClass} placeholder="Nombre del grupo" value={invitarNombre} onChange={(e) => setInvitarNombre(e.target.value)} />
+              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Armamos el grupo con este nombre y vas a poder invitar gente apenas lo crees.</p>
             </div>
           )}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿En qué moneda?</p>
-          <SegmentedTab
-            options={[{ id: 'ARS' as Moneda, label: 'Pesos' }, { id: 'USD' as Moneda, label: 'Dólares' }]}
-            value={moneda}
-            onChange={setMoneda}
-            trackColor={COLORS.tint}
-          />
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -545,20 +581,34 @@ export function ObjetivosV2() {
           <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} />
         </div>
 
-        <p className="text-[13px] font-bold -mb-1" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+        <div className="flex items-center justify-between -mb-1">
+          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+          <div className="w-[128px]">
+            <SegmentedTab
+              options={[{ id: 'ARS' as Moneda, label: 'ARS' }, { id: 'USD' as Moneda, label: 'USD' }]}
+              value={moneda}
+              onChange={setMoneda}
+              trackColor={COLORS.tint}
+            />
+          </div>
+        </div>
         <MontoPicker
           modo={montoModo} setModo={setMontoModo}
           montoTxt={montoTotal} setMontoTxt={setMontoTotal}
           minTxt={montoMinTxt} setMinTxt={setMontoMinTxt}
         />
-        <Cta label="Agregar objetivo" disabled={!nombre.trim()} onClick={crearObjetivo} />
+        <Cta label="Agregar objetivo" disabled={!nombre.trim() || (tipo === 'grupal' && !grupo && !invitarNombre.trim())} onClick={crearObjetivo} />
+        {tipo === 'grupal' && !grupo && !invitarNombre.trim() && (
+          <p className="text-[12px] text-center" style={{ color: COLORS.coral }}>Ponele nombre al grupo para poder invitar gente.</p>
+        )}
       </div>
-    );
-  }
+    </div>
+  );
 
   // ── Vista: lista ──
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-4">
+      {modalCrear}
       <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Objetivos</h1>
       <Coachmark id="objetivos">Acá armás lo que querés lograr — solo o con tu grupo de amigas — y vas anotando lo que pagás o separás para cada uno.</Coachmark>
       {objetivos.length === 0 && <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todavía no armaste ningún objetivo.</p>}

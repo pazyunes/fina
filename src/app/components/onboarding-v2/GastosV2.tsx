@@ -23,9 +23,16 @@ import { WHATSAPP_URL } from '../WhatsAppFab';
 
 type TipoGasto = 'urgente' | 'impulsivo' | 'necesario' | 'otro';
 type Periodo = 'semana' | 'mes';
+type Moneda = 'ARS' | 'USD';
 type Tope = { monto: number; periodo: Periodo };
 type Categoria = { id: string; nombre: string };
-type Gasto = { id: string; monto: number; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number };
+type Gasto = { id: string; monto: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number };
+// Nota: el total gastado / disponible siguen calculándose en pesos — un
+// gasto en USD se registra y se muestra con su propio signo (US$), pero
+// todavía no convertimos a un tipo de cambio real para sumarlo al total.
+function fmtGasto(g: { monto: number; moneda: Moneda }): string {
+  return g.moneda === 'USD' ? `US$${g.monto.toLocaleString('es-AR')}` : fmtMoney(g.monto);
+}
 type EstadoGastos = { categorias: Categoria[]; gastos: Gasto[]; disponible: number; reserva: number; topes: Record<string, Tope> };
 
 const TIPO_INFO: Record<TipoGasto, { label: string; color: string }> = {
@@ -89,6 +96,7 @@ export function GastosV2() {
 
   const [addingGasto, setAddingGasto] = useState(false);
   const [ngMonto, setNgMonto] = useState('');
+  const [ngMoneda, setNgMoneda] = useState<Moneda>('ARS');
   const [ngDesc, setNgDesc] = useState('');
   const [ngCatId, setNgCatId] = useState<string | null>(categorias[0]?.id ?? null);
   const [ngNuevaCat, setNgNuevaCat] = useState('');
@@ -141,9 +149,9 @@ export function GastosV2() {
     if (monto <= 0) return;
     const catId = ngNuevaCat.trim() ? crearCategoria(ngNuevaCat.trim()) : ngCatId;
     if (!catId) return;
-    const nuevo: Gasto = { id: String(Date.now()), monto, descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label, categoriaId: catId, tipo: ngTipo, ts: Date.now() };
-    setEstado((s) => ({ ...s, gastos: [nuevo, ...s.gastos], disponible: Math.max(s.disponible - monto, 0) }));
-    setNgMonto(''); setNgDesc(''); setNgNuevaCat(''); setNgTipo('necesario');
+    const nuevo: Gasto = { id: String(Date.now()), monto, moneda: ngMoneda, descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label, categoriaId: catId, tipo: ngTipo, ts: Date.now() };
+    setEstado((s) => ({ ...s, gastos: [nuevo, ...s.gastos], disponible: ngMoneda === 'ARS' ? Math.max(s.disponible - monto, 0) : s.disponible }));
+    setNgMonto(''); setNgMoneda('ARS'); setNgDesc(''); setNgNuevaCat(''); setNgTipo('necesario');
     setAddingGasto(false);
     setOpenCatId(catId);
   }
@@ -251,16 +259,31 @@ export function GastosV2() {
         </>
       ) : (
         <div className={`bg-white rounded-2xl p-4 flex flex-col gap-3 ${CARD_SHADOW}`}>
-          <div className="relative">
-            <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
-            <input
-              autoFocus
-              className="w-full border border-[rgba(31,27,46,0.16)] rounded-xl pl-8 pr-3 py-2.5 text-[14.5px] outline-none focus:border-[#7626B3] transition-colors"
-              placeholder="Monto"
-              inputMode="numeric"
-              value={ngMonto}
-              onChange={(e) => setNgMonto(formatThousands(e.target.value))}
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{ngMoneda === 'USD' ? 'US$' : '$'}</span>
+              <input
+                autoFocus
+                className="w-full border border-[rgba(31,27,46,0.16)] rounded-xl pl-10 pr-3 py-2.5 text-[14.5px] outline-none focus:border-[#7626B3] transition-colors"
+                placeholder="Monto"
+                inputMode="numeric"
+                value={ngMonto}
+                onChange={(e) => setNgMonto(formatThousands(e.target.value))}
+              />
+            </div>
+            <div className="flex rounded-xl overflow-hidden border border-[rgba(31,27,46,0.16)] shrink-0">
+              {(['ARS', 'USD'] as Moneda[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setNgMoneda(m)}
+                  className="px-2.5 text-[12px] font-bold transition-colors"
+                  style={ngMoneda === m ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
           </div>
           <input
             className="border border-[rgba(31,27,46,0.16)] rounded-xl px-3.5 py-2.5 text-[14.5px] outline-none focus:border-[#7626B3] transition-colors"
@@ -393,7 +416,7 @@ export function GastosV2() {
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TIPO_INFO[m.tipo].color }} />
                         <span className="truncate">{m.descripcion} · {fechaDisplay(m.ts)}</span>
                       </span>
-                      <span className="shrink-0" style={{ color: COLORS.inkSoft }}>{fmtMoney(m.monto)}</span>
+                      <span className="shrink-0" style={{ color: COLORS.inkSoft }}>{fmtGasto(m)}</span>
                     </div>
                   ))}
                   <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
@@ -521,7 +544,7 @@ export function GastosV2() {
                 <p className="text-[13.5px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
                 <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{cat?.nombre ?? 'Sin sección'} · {fechaDisplay(g.ts)}</p>
               </div>
-              <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtMoney(g.monto)}</span>
+              <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
             </div>
           );
         })}

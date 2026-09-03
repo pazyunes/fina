@@ -1,8 +1,30 @@
 import { useNavigate } from 'react-router';
-import { ActionRow, Coachmark, COLORS, Face, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, saludoDelDia } from './shared';
+import { ActionRow, COLORS, Face, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, saludoDelDia } from './shared';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
-const NIVEL_LABEL: Record<string, string> = { nada: 'Nada', poco: 'Un poco', bastante: 'Bastante', todo: 'Todo' };
+
+// Mensajes motivadores, no un "Control: Bastante" a secas — la idea es que
+// se sienta un acompañamiento, no una planilla de datos sobre uno mismo.
+const MENSAJES_POTENCIAL: Record<string, Record<string, string>> = {
+  controlaGastos: {
+    todo: '🔍 Tenés muy controlados tus gastos — seguí así.',
+    bastante: '🔍 Ya controlás bastante bien tus gastos — vamos por más.',
+    poco: '🔍 Vas controlando de a poco tus gastos — te lo hacemos más fácil.',
+    nada: '🔍 Todavía no controlás mucho tus gastos — arrancamos juntas.',
+  },
+  ahorra: {
+    todo: '🐷 Gran parte de tu plata ya va al ahorro — ¡buenísimo!',
+    bastante: '🐷 Ya le destinás bastante al ahorro — vamos por más.',
+    poco: '🐷 Estás arrancando a ahorrar — de a poco se llega lejos.',
+    nada: '🐷 Todavía no ahorrás nada — es un buen momento para arrancar.',
+  },
+  invierte: {
+    todo: '🌱 Gran parte de tu plata ya está invirtiendo — ¡que siga rindiendo!',
+    bastante: '🌱 Ya invertís bastante — vamos por más.',
+    poco: '🌱 Diste el primer paso invirtiendo — vamos por más.',
+    nada: '🌱 Todavía no invertís nada — es un buen momento para arrancar.',
+  },
+};
 
 type Tip = { icon: string; texto: string; to: string };
 
@@ -151,11 +173,9 @@ export function HomeV2() {
   const hayBienestar = b.gastosPct !== null || b.objetivosPct !== null || b.inversionPct !== null;
   const perfil = loadV2PerfilOnboarding();
   const potencial = perfil
-    ? [
-        { label: 'Control de gastos', valor: perfil.controlaGastos },
-        { label: 'Ahorro', valor: perfil.ahorra },
-        { label: 'Inversión', valor: perfil.invierte },
-      ].filter((p) => p.valor)
+    ? (['controlaGastos', 'ahorra', 'invierte'] as const)
+        .map((key) => (perfil[key] ? MENSAJES_POTENCIAL[key]?.[perfil[key] as string] : null))
+        .filter((m): m is string => !!m)
     : [];
 
   return (
@@ -174,10 +194,6 @@ export function HomeV2() {
           <p className="text-[19px] font-bold leading-tight" style={{ color: COLORS.ink }}>Tu FINA</p>
         </div>
       </div>
-
-      <Coachmark id="home">
-        ¡Bienvenida! Elegí por dónde arrancar acá abajo. Y ese botón redondo y oscuro del medio, en el menú de abajo, es tu bot de WhatsApp — tocalo cuando quieras cargar un gasto hablando o hacer una pregunta.
-      </Coachmark>
 
       {/* Anillo de bienestar financiero — solo si hay algo real que mostrar */}
       {hayBienestar && (
@@ -208,15 +224,12 @@ export function HomeV2() {
         </div>
       )}
 
-      {/* Tu potencial — con lo que ya contaste en el onboarding, no con uso real todavía */}
+      {/* Así arrancás — mensajes motivadores con lo que ya contaste en el onboarding, no con uso real todavía */}
       {potencial.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-1.5">
-          <p className="text-[12px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSoft }}>Tu potencial</p>
-          {potencial.map((p) => (
-            <div key={p.label} className="flex items-center justify-between text-[13.5px]">
-              <span style={{ color: COLORS.ink }}>{p.label}</span>
-              <span className="font-semibold" style={{ color: COLORS.brand }}>{NIVEL_LABEL[p.valor as string] ?? p.valor}</span>
-            </div>
+        <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-2">
+          <p className="text-[12px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSoft }}>Así arrancás en FINA</p>
+          {potencial.map((m) => (
+            <p key={m} className="text-[13.5px] font-medium leading-snug" style={{ color: COLORS.ink }}>{m}</p>
           ))}
         </div>
       )}
