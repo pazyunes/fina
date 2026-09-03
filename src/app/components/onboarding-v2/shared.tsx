@@ -192,11 +192,15 @@ export function loadV2Categorias(): string[] {
   }
 }
 
-// Puente Onboarding → Inversiones: si contestó el mini-perfil ("¿por qué
-// querés invertir?" + "si baja 20%, qué hacés?") en el onboarding, Inversiones
-// arranca directo desde ahí en vez de repreguntar.
+// Puente Onboarding → Inversiones: si contestó el mini-perfil ("¿con qué
+// objetivo querés invertir?" + la de reacción ante la volatilidad) en el
+// onboarding, Inversiones arranca directo desde ahí en vez de repreguntar.
+// yaInvierte es opcional: si el onboarding ya preguntó "¿invertís?" (la
+// pregunta de hábitos), ese dato viaja acá también para no repetir la
+// pregunta sí/no que Inversiones hacía por su cuenta.
+export type InversionesPerfil = { porQue: string; reaccion: string; yaInvierte?: 'si' | 'no' };
 const LS_INV_PERFIL = 'fina_v2_inversiones_perfil';
-export function saveV2InversionesPerfil(p: { porQue: string; reaccion: string } | null) {
+export function saveV2InversionesPerfil(p: InversionesPerfil | null) {
   try {
     if (!p) { localStorage.removeItem(LS_INV_PERFIL); return; }
     localStorage.setItem(LS_INV_PERFIL, JSON.stringify(p));
@@ -204,7 +208,7 @@ export function saveV2InversionesPerfil(p: { porQue: string; reaccion: string } 
     // no crítico
   }
 }
-export function loadV2InversionesPerfil(): { porQue: string; reaccion: string } | null {
+export function loadV2InversionesPerfil(): InversionesPerfil | null {
   try {
     const raw = localStorage.getItem(LS_INV_PERFIL);
     return raw ? JSON.parse(raw) : null;
@@ -214,22 +218,99 @@ export function loadV2InversionesPerfil(): { porQue: string; reaccion: string } 
 }
 
 // Puente Onboarding → Objetivos: si dijo que ya tiene objetivos en mente y
-// los nombró, aparecen ya creados (sin monto todavía) para completar ahí.
+// los nombró, aparecen ya creados (sin monto todavía) para completar ahí —
+// ahora con el plazo y la moneda que ya contestó en el onboarding, en vez de
+// solo el nombre a secas.
+export type ObjetivoInicial = { nombre: string; horizonte: string | null; moneda: 'ARS' | 'USD' };
 const LS_OBJETIVOS_INICIALES = 'fina_v2_objetivos_iniciales';
-export function saveV2ObjetivosIniciales(nombres: string[]) {
+export function saveV2ObjetivosIniciales(objetivos: ObjetivoInicial[]) {
   try {
-    localStorage.setItem(LS_OBJETIVOS_INICIALES, JSON.stringify(nombres));
+    localStorage.setItem(LS_OBJETIVOS_INICIALES, JSON.stringify(objetivos));
   } catch {
     // no crítico
   }
 }
-export function loadV2ObjetivosIniciales(): string[] {
+export function loadV2ObjetivosIniciales(): ObjetivoInicial[] {
   try {
     const raw = localStorage.getItem(LS_OBJETIVOS_INICIALES);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+// Puente Onboarding → toda la app: perfil ampliado con las señales de
+// situación/hábitos que hoy no tienen otra sección propia (Gastos/Objetivos/
+// Inversiones). Es lo que en el futuro va a alimentar al asesor con IA —
+// por eso se guarda entero, incluso lo que la persona escribió a mano en
+// "Otro" (nunca se descarta post-onboarding, como si nunca se hubiese
+// contestado).
+export type PerfilOnboarding = {
+  zona: string | null;
+  convivencia: string[];
+  ingresos: string[];
+  estabilidadIngresos: string | null;
+  margenPropio: string | null;
+  gastosFijos: string[];
+  categoriasRecortar: string[];
+  ahorra: string | null;
+  invierte: string | null;
+  controlaGastos: string | null;
+  comoConocio: string | null;
+};
+const LS_PERFIL_ONB = 'fina_v2_perfil_onboarding';
+export function saveV2PerfilOnboarding(p: PerfilOnboarding) {
+  try {
+    localStorage.setItem(LS_PERFIL_ONB, JSON.stringify(p));
+  } catch {
+    // no crítico
+  }
+}
+export function loadV2PerfilOnboarding(): PerfilOnboarding | null {
+  try {
+    const raw = localStorage.getItem(LS_PERFIL_ONB);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Aceptación de términos y condiciones — falta real en el onboarding (no
+// existía ningún paso de esto), no una idea copiada de otra app.
+const LS_TERMINOS = 'fina_v2_terminos_aceptados';
+export function saveV2TerminosAceptados(v: boolean) {
+  try {
+    localStorage.setItem(LS_TERMINOS, v ? '1' : '0');
+  } catch {
+    // no crítico
+  }
+}
+export function loadV2TerminosAceptados(): boolean {
+  try {
+    return localStorage.getItem(LS_TERMINOS) === '1';
+  } catch {
+    return false;
+  }
+}
+
+// Nivel de conocimiento financiero — NO se pregunta en el onboarding: vive
+// como CTA en Home ("Conocé tu nivel de conocimiento financiero") para no
+// sumar un paso más ahí. Se guarda igual que el resto para que el futuro
+// asesor pueda calibrar cómo explicar las cosas.
+const LS_NIVEL_FIN = 'fina_v2_nivel_financiero';
+export function saveV2NivelFinanciero(nivel: string) {
+  try {
+    localStorage.setItem(LS_NIVEL_FIN, nivel);
+  } catch {
+    // no crítico
+  }
+}
+export function loadV2NivelFinanciero(): string | null {
+  try {
+    return localStorage.getItem(LS_NIVEL_FIN);
+  } catch {
+    return null;
   }
 }
 
