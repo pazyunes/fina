@@ -39,6 +39,48 @@ type Objetivo = {
 const CARD_SHADOW = 'shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
 const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-xl px-3 py-2.5 text-[14px] outline-none transition-colors';
 
+const HORIZONTE_OPCIONES = ['Lo antes posible', 'En los próximos meses', 'Este año', 'El año que viene', 'En 2 a 5 años', 'Más de 5 años', 'Todavía no lo pensé'];
+
+// Plazo del objetivo — quedó acá (ya no en el onboarding) porque cada
+// objetivo puede tener el suyo propio. Si toca "elegir una fecha exacta",
+// se abre un calendario real en vez de pedirlo escrito.
+function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string | null; setValor: (v: string | null) => void; fecha: string; setFecha: (v: string) => void }) {
+  const fechaElegida = !!fecha;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        {HORIZONTE_OPCIONES.map((o) => (
+          <button
+            key={o}
+            type="button"
+            onClick={() => { setValor(o); setFecha(''); }}
+            className="rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+            style={valor === o && !fechaElegida ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+          >
+            {o}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setValor(null)}
+          className="rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+          style={fechaElegida || valor === null ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+        >
+          Elegir una fecha
+        </button>
+      </div>
+      {(valor === null || fechaElegida) && (
+        <input
+          type="date"
+          className={inputClass}
+          value={fecha}
+          onChange={(e) => { setFecha(e.target.value); setValor(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
 // Si ya había estado antes acá, retoma lo persistido; si no, arranca de los
 // objetivos nombrados en el onboarding (sin monto todavía).
 function objetivosIniciales(): Objetivo[] {
@@ -167,6 +209,8 @@ export function ObjetivosV2() {
   const [descripcion, setDescripcion] = useState('');
   const [tipo, setTipo] = useState<TipoObjetivo>('individual');
   const [moneda, setMoneda] = useState<Moneda>('ARS');
+  const [horizonte, setHorizonte] = useState<string | null>(null);
+  const [horizonteFecha, setHorizonteFecha] = useState('');
   const [invitarNombre, setInvitarNombre] = useState('');
   const [montoModo, setMontoModo] = useState<MontoModo>('exacto');
   const [montoTotal, setMontoTotal] = useState('');
@@ -185,6 +229,8 @@ export function ObjetivosV2() {
   const [editDescripcion, setEditDescripcion] = useState('');
   const [editTipo, setEditTipo] = useState<TipoObjetivo>('individual');
   const [editMoneda, setEditMoneda] = useState<Moneda>('ARS');
+  const [editHorizonte, setEditHorizonte] = useState<string | null>(null);
+  const [editHorizonteFecha, setEditHorizonteFecha] = useState('');
 
   const [grupo, setGrupoLocal] = useState(() => loadV2Grupo());
   const miNombre = loadV2Nombre() || 'Vos';
@@ -195,8 +241,9 @@ export function ObjetivosV2() {
     if (!nombre.trim()) return;
     const id = String(Date.now());
     const monto = buildMonto(montoModo, montoTotal, montoMinTxt);
+    const horizonteFinal = horizonteFecha ? new Date(horizonteFecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) : horizonte;
     setObjetivos((os) => [...os, {
-      id, nombre: nombre.trim(), descripcion: descripcion.trim(), tipo, moneda,
+      id, nombre: nombre.trim(), descripcion: descripcion.trim(), tipo, moneda, horizonte: horizonteFinal,
       contribuciones: [], ...monto,
     }]);
     if (tipo === 'grupal' && invitarNombre.trim() && !grupo) {
@@ -205,7 +252,7 @@ export function ObjetivosV2() {
       setGrupoLocal(nuevoGrupo);
     }
     setNombre(''); setDescripcion(''); setMontoTotal(''); setMontoMinTxt(''); setMontoModo('exacto'); setTipo('individual');
-    setMoneda('ARS'); setInvitarNombre('');
+    setMoneda('ARS'); setInvitarNombre(''); setHorizonte(null); setHorizonteFecha('');
     setCreating(false);
     setOpenId(id);
   }
@@ -221,11 +268,14 @@ export function ObjetivosV2() {
     setEditDescripcion(abierto.descripcion);
     setEditTipo(abierto.tipo);
     setEditMoneda(abierto.moneda);
+    setEditHorizonte(abierto.horizonte ?? null);
+    setEditHorizonteFecha('');
     setEditando(true);
   }
   function guardarEdicion() {
     if (!abierto || !editNombre.trim()) return;
-    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, nombre: editNombre.trim(), descripcion: editDescripcion.trim(), tipo: editTipo, moneda: editMoneda } : o)));
+    const horizonteFinal = editHorizonteFecha ? new Date(editHorizonteFecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) : editHorizonte;
+    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, nombre: editNombre.trim(), descripcion: editDescripcion.trim(), tipo: editTipo, moneda: editMoneda, horizonte: horizonteFinal } : o)));
     setEditando(false);
   }
 
@@ -293,6 +343,8 @@ export function ObjetivosV2() {
               options={[{ id: 'ARS' as Moneda, label: 'Pesos' }, { id: 'USD' as Moneda, label: 'Dólares' }]}
               value={editMoneda} onChange={setEditMoneda} trackColor={COLORS.tint}
             />
+            <p className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Para cuándo?</p>
+            <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} />
             <div className="flex gap-2 mt-1">
               <button type="button" onClick={() => setEditando(false)} className="flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold border border-[rgba(31,27,46,0.16)]" style={{ color: COLORS.ink }}>Cancelar</button>
               <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="flex-[2] rounded-xl py-2.5 text-[13.5px] font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>Guardar cambios</button>
@@ -486,6 +538,11 @@ export function ObjetivosV2() {
             onChange={setMoneda}
             trackColor={COLORS.tint}
           />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Para cuándo?</p>
+          <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} />
         </div>
 
         <p className="text-[13px] font-bold -mb-1" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
