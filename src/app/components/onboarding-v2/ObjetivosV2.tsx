@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Cta, Chip, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, loadV2Nombre } from './shared';
+import { Cta, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, loadV2Nombre } from './shared';
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
 // (ver ObjetivosPage.tsx / GoalEditModal.tsx) pasada a la estética nueva —
@@ -20,10 +20,6 @@ type Kind = 'paid' | 'saved';
 type MontoModo = 'exacto' | 'rango' | 'desconocido';
 type TipoObjetivo = 'individual' | 'grupal';
 type Moneda = 'ARS' | 'USD';
-// Con quién se maneja este objetivo en conjunto — independiente del sistema
-// de Grupos/gamificación: se puede compartir un objetivo con tu pareja o tu
-// familia sin necesidad de armar un grupo de amigas para competir actividad.
-type CompartidoCon = 'pareja' | 'familia' | 'roommates' | 'otro' | null;
 type Contribucion = { id: string; monto: number; kind: Kind; label: string; ts: number; de: string };
 type Objetivo = {
   id: string;
@@ -32,20 +28,11 @@ type Objetivo = {
   tipo: TipoObjetivo;
   moneda: Moneda;
   horizonte?: string | null;
-  compartidoCon?: CompartidoCon;
-  compartidoConTxt?: string;
   montoModo: MontoModo | null; // null = todavía no contestó nada (viene del onboarding)
   montoTotal: number; // para cálculos: el monto exacto, o el máximo del rango; 0 si desconocido/sin definir
   montoMin?: number; // solo si montoModo === 'rango'
   contribuciones: Contribucion[];
 };
-
-const COMPARTIDO_OPCIONES: { id: Exclude<CompartidoCon, null>; label: string }[] = [
-  { id: 'pareja', label: 'Con mi pareja' },
-  { id: 'familia', label: 'Con mi familia' },
-  { id: 'roommates', label: 'Con roommates/amigues' },
-  { id: 'otro', label: 'Otro' },
-];
 
 // Nota Tailwind: la clase completa tiene que aparecer en el archivo (aunque
 // sea dentro de este string) para que el scanner de Tailwind la detecte.
@@ -180,8 +167,7 @@ export function ObjetivosV2() {
   const [descripcion, setDescripcion] = useState('');
   const [tipo, setTipo] = useState<TipoObjetivo>('individual');
   const [moneda, setMoneda] = useState<Moneda>('ARS');
-  const [compartidoCon, setCompartidoCon] = useState<CompartidoCon>(null);
-  const [compartidoConTxt, setCompartidoConTxt] = useState('');
+  const [invitarNombre, setInvitarNombre] = useState('');
   const [montoModo, setMontoModo] = useState<MontoModo>('exacto');
   const [montoTotal, setMontoTotal] = useState('');
   const [montoMinTxt, setMontoMinTxt] = useState('');
@@ -189,12 +175,18 @@ export function ObjetivosV2() {
   const [kind, setKind] = useState<Kind>('paid');
   const [regLabel, setRegLabel] = useState('');
   const [regMonto, setRegMonto] = useState('');
-  const [regDe, setRegDe] = useState('');
   const [montoModoEdit, setMontoModoEdit] = useState<MontoModo>('exacto');
   const [montoTotalEdit, setMontoTotalEdit] = useState('');
   const [montoMinEdit, setMontoMinEdit] = useState('');
 
-  const grupo = loadV2Grupo();
+  // Editar un objetivo existente (nombre/descripción/moneda/tipo/monto).
+  const [editando, setEditando] = useState(false);
+  const [editNombre, setEditNombre] = useState('');
+  const [editDescripcion, setEditDescripcion] = useState('');
+  const [editTipo, setEditTipo] = useState<TipoObjetivo>('individual');
+  const [editMoneda, setEditMoneda] = useState<Moneda>('ARS');
+
+  const [grupo, setGrupoLocal] = useState(() => loadV2Grupo());
   const miNombre = loadV2Nombre() || 'Vos';
 
   const abierto = objetivos.find((o) => o.id === openId) || null;
@@ -205,11 +197,15 @@ export function ObjetivosV2() {
     const monto = buildMonto(montoModo, montoTotal, montoMinTxt);
     setObjetivos((os) => [...os, {
       id, nombre: nombre.trim(), descripcion: descripcion.trim(), tipo, moneda,
-      compartidoCon, compartidoConTxt: compartidoCon === 'otro' ? compartidoConTxt.trim() : undefined,
       contribuciones: [], ...monto,
     }]);
+    if (tipo === 'grupal' && invitarNombre.trim() && !grupo) {
+      const nuevoGrupo = crearGrupoDemo(invitarNombre.trim());
+      saveV2Grupo(nuevoGrupo);
+      setGrupoLocal(nuevoGrupo);
+    }
     setNombre(''); setDescripcion(''); setMontoTotal(''); setMontoMinTxt(''); setMontoModo('exacto'); setTipo('individual');
-    setMoneda('ARS'); setCompartidoCon(null); setCompartidoConTxt('');
+    setMoneda('ARS'); setInvitarNombre('');
     setCreating(false);
     setOpenId(id);
   }
@@ -217,6 +213,20 @@ export function ObjetivosV2() {
   function borrarObjetivo(id: string) {
     setObjetivos((os) => os.filter((o) => o.id !== id));
     if (openId === id) setOpenId(null);
+  }
+
+  function empezarEdicion() {
+    if (!abierto) return;
+    setEditNombre(abierto.nombre);
+    setEditDescripcion(abierto.descripcion);
+    setEditTipo(abierto.tipo);
+    setEditMoneda(abierto.moneda);
+    setEditando(true);
+  }
+  function guardarEdicion() {
+    if (!abierto || !editNombre.trim()) return;
+    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, nombre: editNombre.trim(), descripcion: editDescripcion.trim(), tipo: editTipo, moneda: editMoneda } : o)));
+    setEditando(false);
   }
 
   function agregarRegistro() {
@@ -229,10 +239,10 @@ export function ObjetivosV2() {
       kind,
       label: regLabel.trim() || (kind === 'paid' ? 'Pago' : 'Separado'),
       ts: Date.now(),
-      de: abierto.tipo === 'grupal' ? (regDe || miNombre) : miNombre,
+      de: miNombre,
     };
     setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, contribuciones: [nuevo, ...o.contribuciones] } : o)));
-    setRegLabel(''); setRegMonto(''); setRegDe('');
+    setRegLabel(''); setRegMonto('');
   }
 
   function borrarRegistro(regId: string) {
@@ -264,9 +274,31 @@ export function ObjetivosV2() {
       <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
         <div className="flex items-center justify-between">
           <button type="button" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>← Volver</button>
-          <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.inkSoft }} onClick={() => borrarObjetivo(abierto.id)}>Borrar</button>
+          <div className="flex items-center gap-3">
+            <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }} onClick={empezarEdicion}>Editar</button>
+            <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.inkSoft }} onClick={() => borrarObjetivo(abierto.id)}>Borrar</button>
+          </div>
         </div>
 
+        {editando ? (
+          <div className={`bg-white rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`}>
+            <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Editar objetivo</p>
+            <input className={inputClass} placeholder="Nombre" value={editNombre} onChange={(e) => setEditNombre(e.target.value)} />
+            <input className={inputClass} placeholder="Descripción (opcional)" value={editDescripcion} onChange={(e) => setEditDescripcion(e.target.value)} />
+            <SegmentedTab
+              options={[{ id: 'individual' as TipoObjetivo, label: 'Individual' }, { id: 'grupal' as TipoObjetivo, label: 'En conjunto' }]}
+              value={editTipo} onChange={setEditTipo} trackColor={COLORS.gold}
+            />
+            <SegmentedTab
+              options={[{ id: 'ARS' as Moneda, label: 'Pesos' }, { id: 'USD' as Moneda, label: 'Dólares' }]}
+              value={editMoneda} onChange={setEditMoneda} trackColor={COLORS.tint}
+            />
+            <div className="flex gap-2 mt-1">
+              <button type="button" onClick={() => setEditando(false)} className="flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold border border-[rgba(31,27,46,0.16)]" style={{ color: COLORS.ink }}>Cancelar</button>
+              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="flex-[2] rounded-xl py-2.5 text-[13.5px] font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>Guardar cambios</button>
+            </div>
+          </div>
+        ) : (
         <div className={`bg-white rounded-2xl p-4 flex gap-4 items-center ${CARD_SHADOW}`}>
           {estado === 'definido' && (
             <Donut
@@ -301,12 +333,8 @@ export function ObjetivosV2() {
               )}
             </div>
             {abierto.descripcion && <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>{abierto.descripcion}</p>}
-            {(abierto.horizonte || abierto.compartidoCon) && (
-              <p className="text-[11.5px] mt-0.5" style={{ color: COLORS.inkFaint }}>
-                {abierto.horizonte ? `📅 ${abierto.horizonte}` : ''}
-                {abierto.horizonte && abierto.compartidoCon ? ' · ' : ''}
-                {abierto.compartidoCon ? `Con ${abierto.compartidoCon === 'otro' ? (abierto.compartidoConTxt || 'otra persona') : COMPARTIDO_OPCIONES.find((o) => o.id === abierto.compartidoCon)?.label.replace('Con ', '')}` : ''}
-              </p>
+            {abierto.horizonte && (
+              <p className="text-[11.5px] mt-0.5" style={{ color: COLORS.inkFaint }}>📅 {abierto.horizonte}</p>
             )}
             {estado === 'definido' && (
               <>
@@ -324,6 +352,7 @@ export function ObjetivosV2() {
             )}
           </div>
         </div>
+        )}
 
         {estado !== 'definido' && (
           <div className={`bg-white rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`}>
@@ -376,16 +405,6 @@ export function ObjetivosV2() {
             value={regLabel}
             onChange={(e) => setRegLabel(e.target.value)}
           />
-          {abierto.tipo === 'grupal' && grupo && (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Quién lo hizo?</p>
-              <div className="flex flex-wrap gap-2">
-                {[miNombre, ...grupo.miembros.filter((m) => m.nombre !== miNombre).map((m) => m.nombre)].map((n) => (
-                  <Chip key={n} on={(regDe || miNombre) === n} onClick={() => setRegDe(n)}>{n}</Chip>
-                ))}
-              </div>
-            </div>
-          )}
           <div className="flex gap-2">
             <input
               className={`flex-1 ${inputClass}`}
@@ -420,7 +439,6 @@ export function ObjetivosV2() {
               </span>
               <span className="flex-1 min-w-0 truncate">
                 <span className="text-[13.5px]" style={{ color: COLORS.ink }}>{c.label}</span>
-                {abierto.tipo === 'grupal' && <span className="text-[12px]" style={{ color: COLORS.inkSoft }}> · {c.de}</span>}
               </span>
               <span className="text-[12px] shrink-0" style={{ color: COLORS.inkSoft }}>{fechaDisplay(c.ts)}</span>
               <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtMoney(c.monto)}</span>
@@ -441,31 +459,22 @@ export function ObjetivosV2() {
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
-        {grupo && (
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Individual o grupal?</p>
-            <SegmentedTab
-              options={[
-                { id: 'individual', label: 'Individual' },
-                { id: 'grupal', label: `Grupal (${grupo.nombre})` },
-              ]}
-              value={tipo}
-              onChange={setTipo}
-              trackColor={COLORS.gold}
-            />
-          </div>
-        )}
-
         <div className="flex flex-col gap-1.5">
-          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Lo vas a manejar en conjunto con alguien?</p>
-          <div className="flex flex-wrap gap-2">
-            <Chip on={compartidoCon === null} onClick={() => setCompartidoCon(null)}>No, solo yo</Chip>
-            {COMPARTIDO_OPCIONES.map((o) => (
-              <Chip key={o.id} on={compartidoCon === o.id} onClick={() => setCompartidoCon(o.id)}>{o.label}</Chip>
-            ))}
-          </div>
-          {compartidoCon === 'otro' && (
-            <input className={inputClass} placeholder="Contanos con quién" value={compartidoConTxt} onChange={(e) => setCompartidoConTxt(e.target.value)} />
+          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Individual o en conjunto?</p>
+          <SegmentedTab
+            options={[
+              { id: 'individual', label: 'Individual' },
+              { id: 'grupal', label: grupo ? `En conjunto (${grupo.nombre})` : 'En conjunto' },
+            ]}
+            value={tipo}
+            onChange={setTipo}
+            trackColor={COLORS.gold}
+          />
+          {tipo === 'grupal' && !grupo && (
+            <div className="flex flex-col gap-1.5 mt-1">
+              <input className={inputClass} placeholder="Nombre del grupo (opcional)" value={invitarNombre} onChange={(e) => setInvitarNombre(e.target.value)} />
+              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Si le ponés nombre, armamos el grupo e invitás gente ya mismo — sino, lo hacés más adelante desde Grupos, no hace falta ahora.</p>
+            </div>
           )}
         </div>
 
