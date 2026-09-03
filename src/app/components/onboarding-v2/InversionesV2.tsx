@@ -27,13 +27,33 @@ const EN_QUE_TO_INSTRUMENTO: Record<string, string> = {
   'CEDEARs / acciones': 'cedears',
 };
 
-type Instrumento = { id: string; nombre: string; desc: string; riesgo: 'Bajo' | 'Medio' | 'Alto'; apps: string[]; perfiles: PerfilId[] };
+type Instrumento = { id: string; nombre: string; desc: string; porQue: string; riesgo: 'Bajo' | 'Medio' | 'Alto'; apps: string[]; perfiles: PerfilId[] };
 const INSTRUMENTOS: Instrumento[] = [
-  { id: 'cuenta_remunerada', nombre: 'Cuenta remunerada', desc: 'Tu plata rinde todos los días y la sacás cuando quieras.', riesgo: 'Bajo', apps: ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank'], perfiles: ['conservador', 'moderado', 'arriesgado'] },
-  { id: 'plazo_fijo', nombre: 'Plazo fijo UVA', desc: 'Dejás la plata quieta un tiempo y sigue la inflación.', riesgo: 'Bajo', apps: ['Banco tradicional', 'Mercado Pago', 'Ualá'], perfiles: ['conservador', 'moderado'] },
-  { id: 'fci', nombre: 'Fondo Común de Inversión', desc: 'Un equipo profesional invierte por vos, retiro rápido.', riesgo: 'Medio', apps: ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank'], perfiles: ['moderado', 'arriesgado'] },
-  { id: 'dolar_mep', nombre: 'Dólar MEP', desc: 'Protegés lo ahorrado de la devaluación.', riesgo: 'Medio', apps: ['Banco tradicional', 'Brubank'], perfiles: ['moderado', 'arriesgado'] },
-  { id: 'cedears', nombre: 'CEDEARs', desc: 'Pedacitos de empresas grandes del exterior, en pesos.', riesgo: 'Alto', apps: ['Banco tradicional'], perfiles: ['arriesgado'] },
+  {
+    id: 'cuenta_remunerada', nombre: 'Cuenta remunerada', desc: 'Tu plata rinde todos los días y la sacás cuando quieras.',
+    porQue: 'Te la recomendamos porque no perdés acceso a la plata ni un solo día — sirve como base antes de meterte en algo más largo, y por eso la sugerimos casi sin importar tu perfil.',
+    riesgo: 'Bajo', apps: ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank'], perfiles: ['conservador', 'moderado', 'arriesgado'],
+  },
+  {
+    id: 'plazo_fijo', nombre: 'Plazo fijo UVA', desc: 'Dejás la plata quieta un tiempo y sigue la inflación.',
+    porQue: 'Te la recomendamos porque, dijiste que preferís cuidar lo que tenés antes que arriesgar — esto ajusta por inflación sin que tengas que mirar el mercado todos los días.',
+    riesgo: 'Bajo', apps: ['Banco tradicional', 'Mercado Pago', 'Ualá'], perfiles: ['conservador', 'moderado'],
+  },
+  {
+    id: 'fci', nombre: 'Fondo Común de Inversión', desc: 'Un equipo profesional invierte por vos, retiro rápido.',
+    porQue: 'Te la recomendamos porque buscás algo de crecimiento sin manejarlo vos misma — un equipo decide dónde poner la plata, y la podés sacar en pocos días si la necesitás.',
+    riesgo: 'Medio', apps: ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank'], perfiles: ['moderado', 'arriesgado'],
+  },
+  {
+    id: 'dolar_mep', nombre: 'Dólar MEP', desc: 'Protegés lo ahorrado de la devaluación.',
+    porQue: 'Te la recomendamos porque tu prioridad parece ser no perder poder de compra frente al dólar — no crece como una inversión de riesgo, pero cuida el valor de lo que ya juntaste.',
+    riesgo: 'Medio', apps: ['Banco tradicional', 'Brubank'], perfiles: ['moderado', 'arriesgado'],
+  },
+  {
+    id: 'cedears', nombre: 'CEDEARs', desc: 'Pedacitos de empresas grandes del exterior, en pesos.',
+    porQue: 'Te la recomendamos porque contestaste que te bancás la volatilidad a cambio de más potencial — subís y bajás con el mercado internacional, pero a largo plazo históricamente crece.',
+    riesgo: 'Alto', apps: ['Banco tradicional'], perfiles: ['arriesgado'],
+  },
 ];
 
 const PERFILES: Record<PerfilId, { label: string; emoji: string; accent: string; copy: string; tasaMensual: number }> = {
@@ -42,6 +62,7 @@ const PERFILES: Record<PerfilId, { label: string; emoji: string; accent: string;
   arriesgado: { label: 'Arriesgado', emoji: '🚀', accent: '#FF8FA3', copy: 'Te bancás más vaivén a cambio de más potencial de crecimiento.', tasaMensual: 0.025 },
 };
 
+type Moneda = 'ARS' | 'USD';
 type Aporte = { id: string; monto: number; instrumentoId: string; ts: number };
 type PersistidoInv = {
   completado: boolean; // llegó a la pantalla de resultado alguna vez
@@ -51,6 +72,7 @@ type PersistidoInv = {
   enQue: string[];
   bancos: string[];
   aportes: Aporte[];
+  monedaInv?: Moneda;
 };
 
 const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors';
@@ -65,23 +87,29 @@ export function InversionesV2() {
   const [paso, setPaso] = useState<Paso>(() => (persistido?.completado ? 'resultado' : 'intro'));
   const [porQue, setPorQue] = useState<string | null>(() => persistido?.porQue ?? loadV2InversionesPerfil()?.porQue ?? null);
   const [reaccion, setReaccion] = useState<string | null>(() => persistido?.reaccion ?? loadV2InversionesPerfil()?.reaccion ?? null);
-  const [yaInvierte, setYaInvierte] = useState<'si' | 'no' | null>(() => persistido?.yaInvierte ?? null);
+  // "¿Invertís?" ya se contestó en el onboarding (pregunta de hábitos, con
+  // más matices que un sí/no) — si esa respuesta viajó hasta acá, no se
+  // repregunta de nuevo.
+  const [prefilledYaInvierte] = useState(() => !!loadV2InversionesPerfil()?.yaInvierte);
+  const [yaInvierte, setYaInvierte] = useState<'si' | 'no' | null>(() => persistido?.yaInvierte ?? loadV2InversionesPerfil()?.yaInvierte ?? null);
   const [enQue, setEnQue] = useState<string[]>(() => persistido?.enQue ?? []);
   const [bancos, setBancos] = useState<string[]>(() => persistido?.bancos ?? []);
   const [tab, setTab] = useState<Tab>('recos');
   const [modoEvolucion, setModoEvolucion] = useState<'real' | 'simulador'>('real');
+  const [monedaInv, setMonedaInv] = useState<Moneda>(() => persistido?.monedaInv ?? 'ARS');
+  const [expandido, setExpandido] = useState<Set<string>>(new Set());
 
   const [aportes, setAportes] = useState<Aporte[]>(() => persistido?.aportes ?? []);
   const [aporteMonto, setAporteMonto] = useState('');
   const [aporteInstrId, setAporteInstrId] = useState<string>(INSTRUMENTOS[0].id);
 
   useEffect(() => {
-    saveV2InversionesState({ completado: paso === 'resultado', porQue, reaccion, yaInvierte, enQue, bancos, aportes });
-  }, [paso, porQue, reaccion, yaInvierte, enQue, bancos, aportes]);
+    saveV2InversionesState({ completado: paso === 'resultado', porQue, reaccion, yaInvierte, enQue, bancos, aportes, monedaInv });
+  }, [paso, porQue, reaccion, yaInvierte, enQue, bancos, aportes, monedaInv]);
 
   const pasos: Paso[] = [
     ...(prefilledPerfil ? [] : (['q1', 'q2'] as Paso[])),
-    'yaInvierte',
+    ...(prefilledYaInvierte ? [] : (['yaInvierte'] as Paso[])),
     ...(yaInvierte === 'si' ? (['enQue'] as Paso[]) : []),
     'bancos',
   ];
@@ -98,7 +126,7 @@ export function InversionesV2() {
   // ── perfil calculado en base a lo que contestó, no fijo ──
   function calcularPerfil(): PerfilId {
     let score = reaccion === 'Pongo más' ? 2 : reaccion === 'Lo dejo y espero' ? 1 : 0;
-    if (porQue === 'Para sacarla pronto') score -= 0.5;
+    if (porQue === 'Sacarla pronto (corto plazo)') score -= 0.5;
     if (yaInvierte === 'si') score += 0.5;
     if (score <= 0.5) return 'conservador';
     if (score <= 1.5) return 'moderado';
@@ -150,12 +178,27 @@ export function InversionesV2() {
     return (
       <div style={{ background: COLORS.dark, minHeight: '100%' }} className="pb-6">
         <div className="px-[22px] pt-8 flex flex-col gap-4">
-          <span
-            className="self-start flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
-            style={{ background: `${perfil.accent}26`, color: perfil.accent }}
-          >
-            {perfil.emoji} Perfil {perfil.label.toLowerCase()}
-          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
+              style={{ background: `${perfil.accent}26`, color: perfil.accent }}
+            >
+              {perfil.emoji} Perfil {perfil.label.toLowerCase()}
+            </span>
+            <div className="flex rounded-full p-0.5 shrink-0" style={{ background: COLORS.darkCard }}>
+              {(['ARS', 'USD'] as Moneda[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMonedaInv(m)}
+                  className="rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors duration-150"
+                  style={monedaInv === m ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.onDarkSoft }}
+                >
+                  {m === 'ARS' ? 'Pesos' : 'USD'}
+                </button>
+              ))}
+            </div>
+          </div>
           <p className="text-[13.5px] -mt-2" style={{ color: COLORS.onDarkSoft }}>{perfil.copy}</p>
 
           <div className="flex gap-1.5 rounded-2xl p-1" style={{ background: COLORS.darkCard }}>
@@ -201,6 +244,17 @@ export function InversionesV2() {
                       <p className="text-[12.5px] mt-1" style={{ color: COLORS.onDarkSoft }}>{r.desc}</p>
                     )}
                     {already && <p className="text-[11.5px] font-semibold mt-1" style={{ color: COLORS.onDarkSoft }}>Ya lo hacés ✓</p>}
+                    <button
+                      type="button"
+                      onClick={() => setExpandido((s) => { const n = new Set(s); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
+                      className="mt-2 text-[11.5px] font-bold underline"
+                      style={{ color: COLORS.onDarkSoft }}
+                    >
+                      {expandido.has(r.id) ? 'Ocultar' : '¿Por qué te lo recomendamos?'}
+                    </button>
+                    {expandido.has(r.id) && (
+                      <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: COLORS.onDarkSoft }}>{r.porQue}</p>
+                    )}
                   </div>
                 );
               })}
@@ -295,9 +349,9 @@ export function InversionesV2() {
 
       {paso === 'q1' && (
         <>
-          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿Por qué querés invertir?</h1>
+          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿Con qué objetivo querés invertir esa plata?</h1>
           <div className="flex flex-wrap gap-2.5">
-            {['Para sacarla pronto', 'Para mantenerla en otro lado'].map((o) => (
+            {['Sacarla pronto (corto plazo)', 'Dejarla que rinda (largo plazo)'].map((o) => (
               <Chip key={o} on={porQue === o} onClick={() => setPorQue(o)}>{o}</Chip>
             ))}
           </div>
@@ -306,7 +360,9 @@ export function InversionesV2() {
 
       {paso === 'q2' && (
         <>
-          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>Si lo que invertiste baja 20%, ¿qué hacés?</h1>
+          <h1 className="text-[20px] font-bold leading-snug" style={{ color: COLORS.ink }}>
+            Estás en una inversión que sube y baja en el camino, pero promete crecer a 5 años a una tasa razonable. ¿Qué hacés?
+          </h1>
           <div className="flex flex-wrap gap-2.5">
             {['Lo saco todo', 'Lo dejo y espero', 'Pongo más'].map((o) => (
               <Chip key={o} on={reaccion === o} onClick={() => setReaccion(o)}>{o}</Chip>

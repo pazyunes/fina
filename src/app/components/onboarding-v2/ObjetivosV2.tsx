@@ -19,17 +19,33 @@ import { Cta, Chip, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMon
 type Kind = 'paid' | 'saved';
 type MontoModo = 'exacto' | 'rango' | 'desconocido';
 type TipoObjetivo = 'individual' | 'grupal';
+type Moneda = 'ARS' | 'USD';
+// Con quién se maneja este objetivo en conjunto — independiente del sistema
+// de Grupos/gamificación: se puede compartir un objetivo con tu pareja o tu
+// familia sin necesidad de armar un grupo de amigas para competir actividad.
+type CompartidoCon = 'pareja' | 'familia' | 'roommates' | 'otro' | null;
 type Contribucion = { id: string; monto: number; kind: Kind; label: string; ts: number; de: string };
 type Objetivo = {
   id: string;
   nombre: string;
   descripcion: string;
   tipo: TipoObjetivo;
+  moneda: Moneda;
+  horizonte?: string | null;
+  compartidoCon?: CompartidoCon;
+  compartidoConTxt?: string;
   montoModo: MontoModo | null; // null = todavía no contestó nada (viene del onboarding)
   montoTotal: number; // para cálculos: el monto exacto, o el máximo del rango; 0 si desconocido/sin definir
   montoMin?: number; // solo si montoModo === 'rango'
   contribuciones: Contribucion[];
 };
+
+const COMPARTIDO_OPCIONES: { id: Exclude<CompartidoCon, null>; label: string }[] = [
+  { id: 'pareja', label: 'Con mi pareja' },
+  { id: 'familia', label: 'Con mi familia' },
+  { id: 'roommates', label: 'Con roommates/amigues' },
+  { id: 'otro', label: 'Otro' },
+];
 
 // Nota Tailwind: la clase completa tiene que aparecer en el archivo (aunque
 // sea dentro de este string) para que el scanner de Tailwind la detecte.
@@ -41,11 +57,13 @@ const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] r
 function objetivosIniciales(): Objetivo[] {
   const persistido = loadV2ObjetivosState<Objetivo[]>();
   if (persistido) return persistido;
-  return loadV2ObjetivosIniciales().map((nombre, i) => ({
-    id: `onb-${i}-${nombre}`,
-    nombre,
+  return loadV2ObjetivosIniciales().map((oi, i) => ({
+    id: `onb-${i}-${oi.nombre}`,
+    nombre: oi.nombre,
     descripcion: '',
     tipo: 'individual',
+    moneda: oi.moneda,
+    horizonte: oi.horizonte,
     montoModo: null,
     montoTotal: 0,
     contribuciones: [],
@@ -161,6 +179,9 @@ export function ObjetivosV2() {
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [tipo, setTipo] = useState<TipoObjetivo>('individual');
+  const [moneda, setMoneda] = useState<Moneda>('ARS');
+  const [compartidoCon, setCompartidoCon] = useState<CompartidoCon>(null);
+  const [compartidoConTxt, setCompartidoConTxt] = useState('');
   const [montoModo, setMontoModo] = useState<MontoModo>('exacto');
   const [montoTotal, setMontoTotal] = useState('');
   const [montoMinTxt, setMontoMinTxt] = useState('');
@@ -182,8 +203,13 @@ export function ObjetivosV2() {
     if (!nombre.trim()) return;
     const id = String(Date.now());
     const monto = buildMonto(montoModo, montoTotal, montoMinTxt);
-    setObjetivos((os) => [...os, { id, nombre: nombre.trim(), descripcion: descripcion.trim(), tipo, contribuciones: [], ...monto }]);
+    setObjetivos((os) => [...os, {
+      id, nombre: nombre.trim(), descripcion: descripcion.trim(), tipo, moneda,
+      compartidoCon, compartidoConTxt: compartidoCon === 'otro' ? compartidoConTxt.trim() : undefined,
+      contribuciones: [], ...monto,
+    }]);
     setNombre(''); setDescripcion(''); setMontoTotal(''); setMontoMinTxt(''); setMontoModo('exacto'); setTipo('individual');
+    setMoneda('ARS'); setCompartidoCon(null); setCompartidoConTxt('');
     setCreating(false);
     setOpenId(id);
   }
@@ -258,6 +284,11 @@ export function ObjetivosV2() {
                   👥 Grupal
                 </span>
               )}
+              {abierto.moneda === 'USD' && (
+                <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.skySoft, color: COLORS.ink }}>
+                  USD
+                </span>
+              )}
               {estado === 'incompleto' && (
                 <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}>
                   Incompleto
@@ -270,6 +301,13 @@ export function ObjetivosV2() {
               )}
             </div>
             {abierto.descripcion && <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>{abierto.descripcion}</p>}
+            {(abierto.horizonte || abierto.compartidoCon) && (
+              <p className="text-[11.5px] mt-0.5" style={{ color: COLORS.inkFaint }}>
+                {abierto.horizonte ? `📅 ${abierto.horizonte}` : ''}
+                {abierto.horizonte && abierto.compartidoCon ? ' · ' : ''}
+                {abierto.compartidoCon ? `Con ${abierto.compartidoCon === 'otro' ? (abierto.compartidoConTxt || 'otra persona') : COMPARTIDO_OPCIONES.find((o) => o.id === abierto.compartidoCon)?.label.replace('Con ', '')}` : ''}
+              </p>
+            )}
             {estado === 'definido' && (
               <>
                 <p className="text-[13px] mt-1.5" style={{ color: COLORS.ink }}>
@@ -417,6 +455,29 @@ export function ObjetivosV2() {
             />
           </div>
         )}
+
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Lo vas a manejar en conjunto con alguien?</p>
+          <div className="flex flex-wrap gap-2">
+            <Chip on={compartidoCon === null} onClick={() => setCompartidoCon(null)}>No, solo yo</Chip>
+            {COMPARTIDO_OPCIONES.map((o) => (
+              <Chip key={o.id} on={compartidoCon === o.id} onClick={() => setCompartidoCon(o.id)}>{o.label}</Chip>
+            ))}
+          </div>
+          {compartidoCon === 'otro' && (
+            <input className={inputClass} placeholder="Contanos con quién" value={compartidoConTxt} onChange={(e) => setCompartidoConTxt(e.target.value)} />
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿En qué moneda?</p>
+          <SegmentedTab
+            options={[{ id: 'ARS' as Moneda, label: 'Pesos' }, { id: 'USD' as Moneda, label: 'Dólares' }]}
+            value={moneda}
+            onChange={setMoneda}
+            trackColor={COLORS.tint}
+          />
+        </div>
 
         <p className="text-[13px] font-bold -mb-1" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
         <MontoPicker
