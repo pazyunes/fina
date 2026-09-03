@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ActionRow, Coachmark, COLORS, Face, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, saludoDelDia } from './shared';
+import { ActionRow, Chip, Coachmark, COLORS, Face, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosIniciales, loadV2ObjetivosState, saludoDelDia, saveV2NivelFinanciero } from './shared';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
+const NIVELES = ['Recién estoy arrancando', 'Sé lo básico, quiero mejorar', 'Me manejo bastante bien', 'Soy bastante experta/o en esto'];
 
 type Tip = { icon: string; texto: string; to: string };
 
@@ -109,6 +111,53 @@ function Arco({ radius, pct, color }: { radius: number; pct: number | null; colo
 // Saluda por nombre y según la hora (mismo detalle que Headspace/Cleo) —
 // es lo que más cambia que esto se sienta "alguien te habla" y no un
 // formulario. El avatar lleva a Perfil (foto + nombre + grupos).
+// CTA llamativo (no un Tip más) para el mini-quiz de nivel de conocimiento
+// financiero. Sin número inventado en la bajada: todavía no medimos cuánto
+// mejora la recomendación con esto, así que la promesa queda cualitativa
+// hasta que haya un dato real que mostrar.
+function NivelFinancieroCard() {
+  const [abierto, setAbierto] = useState(false);
+  const [nivel, setNivel] = useState<string | null>(() => loadV2NivelFinanciero());
+
+  if (nivel && !abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
+        style={{ background: COLORS.skySoft }}
+      >
+        <span className="text-lg shrink-0">🎓</span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tu nivel financiero</span>
+          <span className="block text-[13.5px] font-semibold truncate" style={{ color: COLORS.ink }}>{nivel}</span>
+        </span>
+        <span className="text-[12px] font-semibold shrink-0" style={{ color: COLORS.brand }}>Cambiar →</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl p-4 flex flex-col gap-2.5" style={{ background: COLORS.skySoft }}>
+      {!abierto ? (
+        <button type="button" onClick={() => setAbierto(true)} className="text-left transition-transform duration-100 active:scale-[0.99]">
+          <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>🎓 Conocé tu nivel de conocimiento financiero</p>
+          <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>Así las recomendaciones te van a hablar en tu idioma, sin sonar ni muy básico ni muy técnico.</p>
+        </button>
+      ) : (
+        <>
+          <p className="font-bold text-[14.5px]" style={{ color: COLORS.ink }}>¿Cómo describirías lo que sabés hoy?</p>
+          <div className="flex flex-wrap gap-2">
+            {NIVELES.map((n) => (
+              <Chip key={n} on={nivel === n} onClick={() => { setNivel(n); saveV2NivelFinanciero(n); setAbierto(false); }}>{n}</Chip>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function HomeV2() {
   const navigate = useNavigate();
   const nombre = loadV2Nombre();
@@ -168,6 +217,8 @@ export function HomeV2() {
           </div>
         </div>
       )}
+
+      <NivelFinancieroCard />
 
       <div className="flex flex-col gap-3.5">
         <ActionRow
