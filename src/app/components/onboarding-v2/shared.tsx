@@ -455,11 +455,11 @@ export function ActionRow({ icon, label, onClick }: { icon: React.ReactNode; lab
 export function DeviceFrame({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="min-h-screen w-full flex flex-col lg:items-center lg:justify-center lg:py-10"
+      className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col overflow-hidden lg:items-center lg:justify-center lg:py-10"
       style={{ background: COLORS.frameBg }}
     >
       <div
-        className="w-full flex flex-col flex-1 lg:flex-none lg:h-[860px] lg:max-w-[430px]
+        className="w-full flex flex-col flex-1 min-h-0 lg:flex-none lg:h-[860px] lg:max-w-[430px]
           lg:rounded-[36px] lg:shadow-[0_25px_70px_-15px_rgba(20,14,32,0.35)] overflow-hidden"
         style={{ background: COLORS.paper }}
       >

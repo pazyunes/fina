@@ -520,7 +520,7 @@ export function OnboardingV2() {
 
   return (
     <DeviceFrame>
-      <div className="flex-1 flex flex-col transition-colors duration-300" style={{ background: seccionActual.bg }}>
+      <div className="flex-1 min-h-0 flex flex-col transition-colors duration-300" style={{ background: seccionActual.bg }}>
         {showTop && (
           <div className="px-[22px] pt-5 pb-1 flex items-center gap-3">
             {currentIdx > 0 && (
@@ -543,7 +543,7 @@ export function OnboardingV2() {
           </div>
         )}
 
-        <div className="flex-1 flex flex-col px-[22px] py-4 overflow-y-auto gap-4">
+        <div className="flex-1 min-h-0 flex flex-col px-[22px] py-4 overflow-y-auto gap-4">
           <motion.div
               key={finished ? 'finished' : currentKey}
               initial={{ opacity: 0, y: 12 }}
