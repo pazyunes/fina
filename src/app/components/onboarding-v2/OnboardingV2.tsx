@@ -2,9 +2,8 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
-  COLORS, DeviceFrame, Face, CheckIcon, Chip, Cta, SegmentedTab,
-  crearGrupoDemo, loadV2Grupo, saveV2Categorias, saveV2Grupo,
-  saveV2InversionesPerfil, saveV2ObjetivosIniciales, saveV2Nombre,
+  COLORS, DeviceFrame, Face, CheckIcon, Chip, Cta,
+  saveV2Categorias, saveV2Nombre,
   saveV2PerfilOnboarding, saveV2TerminosAceptados,
 } from './shared';
 
@@ -12,110 +11,81 @@ import {
 //
 // Sandbox aislado para iterar el onboarding sin tocar el flujo real
 // (/personal-data, /activity, etc.), que sigue en producción sin cambios.
-// Vive en su propia ruta pública (/onboarding-v2, ver routes.tsx) para poder
-// iterarlo sin necesitar sesión ni tocar Supabase todavía — el estado es
-// 100% local. Cuando el diseño se cierre, esto se porta al flujo real
-// (UserData, Supabase, el resto del router).
-//
-// Estética: tarjetas blancas con sombra suave, Poppins, el púrpura de marca
-// real (#7626B3). Preguntas antes de pedir cuenta, sin montos de plata en
-// ningún paso, "Otro" siempre con campo de texto (y se GUARDA de verdad,
-// nunca se descarta post-onboarding), cada respuesta con una devolución
-// cálida.
+// El estado es 100% local (localStorage) — no hay backend todavía.
 //
 // TONO: ninguna pregunta pide un monto ni una cifra exacta — todo se
 // pregunta como quien cuenta su situación, nunca como un formulario de
-// banco. Esto importa tanto como el contenido en sí.
+// banco. "Otro" siempre está como una opción más (un chip), nunca oculto,
+// y lo que se escribe ahí se GUARDA de verdad — no se pierde post-onboarding.
 //
 // SECCIONES: el onboarding agrupa preguntas relacionadas bajo un nombre y un
-// fondo de color propio (ver SECCION_DE/SECCION_INFO) — la barra de arriba
-// pasa a ser un segmento por sección, y cada segmento se va llenando a
-// medida que avanzás dentro de esa sección. Esto es lo que hace que un
-// flujo largo (necesario para juntar buena info para el futuro asesor) no
-// se sienta un formulario gigante: se percibe como capítulos, no como una
-// sola lista interminable.
+// fondo de color propio — la barra de arriba es un segmento por sección, y
+// cada segmento se va llenando a medida que avanzás dentro de esa sección.
 //
-// El flujo es DINÁMICO según lo que se eligió en "¿Qué querés lograr?" y en
-// las categorías de gasto: solo se pregunta lo que corresponde, y todo lo
-// que no es obligatorio es salteable — lo que no se contesta acá se
-// completa después, adentro de cada sección.
+// Las preguntas específicas de cada área (objetivos concretos + su plazo y
+// moneda, el perfil de inversión) NO se preguntan acá — el onboarding solo
+// junta lo general; el resto se completa dentro de Objetivos/Inversiones
+// cuando la persona entra por primera vez a esa sección.
 
 type Genero = 'femenino' | 'masculino' | 'otro' | 'prefiero_no_decir' | null;
-type Edad = '12-17' | '18-24' | '25-34' | '35-44' | '45+' | 'otro' | null;
-type Situacion = 'trabaja' | 'estudia' | 'ambas' | 'ninguna' | 'otro' | null;
+type Edad = '18-24' | '25-34' | '35-44' | '45-54' | '55-64' | '65+' | null;
+type Situacion = 'trabaja' | 'estudia' | 'ambas' | 'ninguna' | null;
 type ObjetivoId = 'ahorrar' | 'invertir' | 'controlar' | 'objetivo' | 'otro';
 type ComoVieneId = 'justo' | 'sobra' | 'no_llega' | 'hago_lo_que_quiero' | 'no_lo_tengo_en_cuenta' | 'prefiero_no_decir' | 'otro';
-type Moneda = 'ARS' | 'USD';
+type Nivel = 'nada' | 'poco' | 'bastante' | 'todo';
+type PasoLogin = 'datos' | 'verificar';
 
 type StepKey =
-  | 'intro' | 'nombre' | 'generoEdad' | 'situacion' | 'convivencia' | 'zona'
-  | 'ingresos' | 'estabilidadIngresos' | 'margenPropio' | 'gastosFijos' | 'categoriasGasto' | 'categoriasRecortar'
-  | 'objetivo' | 'metasEnMente' | 'horizonte' | 'monedaObjetivo'
-  | 'perfilInversorPorque' | 'perfilInversorReaccion'
-  | 'ahorra' | 'invierte' | 'controlaGastos' | 'comoViene'
+  | 'intro' | 'nombre' | 'generoEdad' | 'objetivo' | 'situacion' | 'convivencia' | 'zona'
+  | 'ingresos' | 'estabilidadIngresos' | 'gastosFijos' | 'categoriasGasto' | 'categoriasRecortar'
+  | 'asignacionPlata' | 'tedioso' | 'tediosoComparacion' | 'comoViene'
   | 'intermedia' | 'comoConocio' | 'terminos' | 'login';
 
 const CTA_LABELS: Record<StepKey, string> = {
   intro: 'Empezar',
   nombre: 'Continuar',
   generoEdad: 'Continuar',
+  objetivo: 'Continuar',
   situacion: 'Continuar',
   convivencia: 'Continuar',
   zona: 'Continuar',
   ingresos: 'Continuar',
   estabilidadIngresos: 'Continuar',
-  margenPropio: 'Continuar',
   gastosFijos: 'Continuar',
   categoriasGasto: 'Continuar',
   categoriasRecortar: 'Continuar',
-  objetivo: 'Continuar',
-  metasEnMente: 'Continuar',
-  horizonte: 'Continuar',
-  monedaObjetivo: 'Continuar',
-  perfilInversorPorque: 'Continuar',
-  perfilInversorReaccion: 'Continuar',
-  ahorra: 'Continuar',
-  invierte: 'Continuar',
-  controlaGastos: 'Continuar',
+  asignacionPlata: 'Continuar',
+  tedioso: 'Continuar',
+  tediosoComparacion: 'Continuar',
   comoViene: 'Continuar',
   intermedia: 'Genial, sigamos',
   comoConocio: 'Continuar',
   terminos: 'Aceptar y continuar',
-  login: 'Empezar',
+  login: 'Continuar',
 };
-// Pasos opcionales/de perfilado: se pueden saltar sin contestar nada. Lo
-// obligatorio es lo mínimo para que el resto de la app funcione (nombre,
-// género/edad, situación, objetivo, términos, login).
 const SKIPPABLE: StepKey[] = [
-  'convivencia', 'zona', 'ingresos', 'estabilidadIngresos', 'margenPropio', 'gastosFijos',
-  'categoriasGasto', 'categoriasRecortar', 'metasEnMente', 'horizonte', 'monedaObjetivo',
-  'perfilInversorPorque', 'perfilInversorReaccion', 'ahorra', 'invierte', 'controlaGastos', 'comoConocio',
+  'convivencia', 'zona', 'ingresos', 'estabilidadIngresos', 'gastosFijos',
+  'categoriasGasto', 'categoriasRecortar', 'asignacionPlata', 'tedioso', 'comoConocio',
 ];
 
 // ── Secciones: nombre + fondo propio por bloque de preguntas ───────────
-type SeccionId = 'bienvenida' | 'vos' | 'diaadia' | 'objetivos' | 'invertir' | 'habitos' | 'cierre';
+type SeccionId = 'bienvenida' | 'vos' | 'diaadia' | 'cierre';
 const SECCION_INFO: Record<SeccionId, { label: string; bg: string }> = {
   bienvenida: { label: '', bg: COLORS.paper },
   vos: { label: 'Vos', bg: COLORS.tint },
   diaadia: { label: 'Tu día a día', bg: COLORS.goldSoft },
-  objetivos: { label: 'Objetivos', bg: COLORS.coralSoft },
-  invertir: { label: 'Cómo invertís', bg: COLORS.skySoft },
-  habitos: { label: 'Tus hábitos', bg: COLORS.greenSoft },
   cierre: { label: 'Ya casi', bg: COLORS.brandSoft },
 };
 const SECCION_DE: Record<StepKey, SeccionId> = {
   intro: 'bienvenida', nombre: 'bienvenida',
-  generoEdad: 'vos', situacion: 'vos', convivencia: 'vos', zona: 'vos',
-  ingresos: 'diaadia', estabilidadIngresos: 'diaadia', margenPropio: 'diaadia',
-  gastosFijos: 'diaadia', categoriasGasto: 'diaadia', categoriasRecortar: 'diaadia',
-  objetivo: 'objetivos', metasEnMente: 'objetivos', horizonte: 'objetivos', monedaObjetivo: 'objetivos',
-  perfilInversorPorque: 'invertir', perfilInversorReaccion: 'invertir',
-  ahorra: 'habitos', invierte: 'habitos', controlaGastos: 'habitos', comoViene: 'habitos',
-  intermedia: 'cierre', comoConocio: 'cierre', terminos: 'cierre',
-  login: 'cierre',
+  generoEdad: 'vos', objetivo: 'vos', situacion: 'vos', convivencia: 'vos', zona: 'vos',
+  ingresos: 'diaadia', estabilidadIngresos: 'diaadia', gastosFijos: 'diaadia',
+  categoriasGasto: 'diaadia', categoriasRecortar: 'diaadia', asignacionPlata: 'diaadia',
+  tedioso: 'diaadia', tediosoComparacion: 'diaadia', comoViene: 'diaadia',
+  intermedia: 'cierre', comoConocio: 'cierre', terminos: 'cierre', login: 'cierre',
 };
 
-const FACE_COLOR = COLORS.brand; // ya no se elige color de perfil — todas las cuentas arrancan igual
+const FACE_COLOR = COLORS.brand; // no se elige color de perfil — todas las cuentas arrancan igual
 
 const GENEROS: { id: Genero; label: string }[] = [
   { id: 'femenino', label: 'Femenino' },
@@ -125,12 +95,12 @@ const GENEROS: { id: Genero; label: string }[] = [
 ];
 
 const EDADES: { id: Edad; label: string }[] = [
-  { id: '12-17', label: '12 a 17' },
   { id: '18-24', label: '18 a 24' },
   { id: '25-34', label: '25 a 34' },
   { id: '35-44', label: '35 a 44' },
-  { id: '45+', label: '45 o más' },
-  { id: 'otro', label: 'Otro' },
+  { id: '45-54', label: '45 a 54' },
+  { id: '55-64', label: '55 a 64' },
+  { id: '65+', label: '65 o más' },
 ];
 
 const SITUACIONES: { id: Situacion; label: string; emoji: string }[] = [
@@ -138,7 +108,6 @@ const SITUACIONES: { id: Situacion; label: string; emoji: string }[] = [
   { id: 'estudia', label: 'Estudiando', emoji: '📚' },
   { id: 'ambas', label: 'Ambas', emoji: '💼📚' },
   { id: 'ninguna', label: 'Ninguna', emoji: '🌤️' },
-  { id: 'otro', label: 'Otro', emoji: '✍️' },
 ];
 
 const CONVIVENCIA_OPCIONES = ['Vivo sola/o', 'Con mi pareja', 'Con mi familia', 'Con roommates', 'Tengo hijos/as a cargo', 'Tengo otras personas a cargo'];
@@ -151,7 +120,7 @@ const ZONAS: { id: string; label: string }[] = [
   { id: 'Prefiero no decir', label: 'Prefiero no decir' },
 ];
 
-const INGRESOS_OPCIONES = ['Sueldo fijo', 'Changas o freelance', 'Mi propio emprendimiento', 'Beca', 'Mis papás/familia me bancan', 'Por ahora casi no manejo plata propia'];
+const INGRESOS_OPCIONES = ['Relación de dependencia', 'Changas o freelance', 'Mi propio emprendimiento', 'Beca', 'Mis papás/familia me bancan', 'Por ahora casi no manejo plata propia'];
 
 const ESTABILIDAD: { id: string; label: string }[] = [
   { id: 'Todos los meses, más o menos lo mismo', label: 'Todos los meses, más o menos lo mismo' },
@@ -161,15 +130,9 @@ const ESTABILIDAD: { id: string; label: string }[] = [
   { id: 'otro', label: 'Otro' },
 ];
 
-const MARGEN: { id: string; label: string }[] = [
-  { id: 'Toda es mía, la uso como quiero', label: 'Toda es mía, la uso como quiero' },
-  { id: 'Una parte es mía, el resto se va en gastos fijos', label: 'Una parte es mía, el resto se va en gastos fijos' },
-  { id: 'Casi toda se va en gastos fijos o de otros', label: 'Casi toda se va en gastos fijos o de otros' },
-  { id: 'Me la dan para algo puntual', label: 'Me la dan para algo puntual' },
-  { id: 'Todavía no lo pensé', label: 'Todavía no lo pensé' },
-];
-
 const GASTOS_FIJOS_OPCIONES = ['Alquiler', 'Cuota de préstamo', 'Tarjeta de crédito', 'Obra social o prepaga', 'Suscripciones', 'Cuota de estudios', 'Ayuda a familiares', 'Ninguno por ahora'];
+
+const CATEGORIAS_GASTO_LABELS = ['Delivery', 'Restaurantes', 'Cafeterías', 'Salidas y entretenimiento', 'Supermercado', 'Transporte', 'Belleza y cuidado personal', 'Ropa', 'Suscripciones', 'Compras online'];
 
 const OBJETIVOS: { id: ObjetivoId; label: string; emoji: string }[] = [
   { id: 'ahorrar', label: 'Ahorrar', emoji: '🐷' },
@@ -179,62 +142,19 @@ const OBJETIVOS: { id: ObjetivoId; label: string; emoji: string }[] = [
   { id: 'otro', label: 'Otro', emoji: '✍️' },
 ];
 
-const BUBBLE_POR_TOP: Record<ObjetivoId, string> = {
-  ahorrar: 'Modo ahorro: ON',
-  invertir: 'Vos sí que sabés lo que es bueno para vos',
-  controlar: 'Ocuparte de esto ya es un montón — arranquemos.',
-  objetivo: 'Con la mira puesta en lo que importa, siempre.',
-  otro: 'Lo que sea, te acompañamos a lograrlo.',
-};
-
-const METAS_SUGERIDAS = ['Viaje', 'Un regalo para alguien', 'Pagar una deuda', 'Comprarme algo especial', 'Fondo para imprevistos', 'Mudarme / depto propio', 'Estudios o un curso', 'Auto o moto', 'Un evento grande', 'Un emprendimiento'];
-
-const HORIZONTES: { id: string; label: string }[] = [
-  { id: 'En los próximos meses', label: 'En los próximos meses' },
-  { id: 'Este año', label: 'Este año' },
-  { id: 'El año que viene', label: 'El año que viene' },
-  { id: 'En 2 a 5 años', label: 'En 2 a 5 años' },
-  { id: 'Más de 5 años', label: 'Más de 5 años' },
-  { id: 'fecha_exacta', label: 'Tengo una fecha exacta en mente' },
-  { id: 'Todavía no lo pensé', label: 'Todavía no lo pensé' },
+const NIVELES: { id: Nivel; label: string }[] = [
+  { id: 'nada', label: 'Nada' },
+  { id: 'poco', label: 'Un poco' },
+  { id: 'bastante', label: 'Bastante' },
+  { id: 'todo', label: 'Todo' },
 ];
 
-const AHORRA: { id: string; label: string }[] = [
-  { id: 'Sí', label: 'Sí' },
-  { id: 'Más o menos', label: 'Más o menos' },
-  { id: 'Nunca supe cómo empezar', label: 'Nunca supe cómo empezar' },
-  { id: 'Empecé y no lo pude sostener', label: 'Empecé y no lo pude sostener' },
-  { id: 'otro', label: 'Otro' },
-];
-
-const INVIERTE: { id: string; label: string }[] = [
-  { id: 'Sí, y lo manejo yo', label: 'Sí, y lo manejo yo' },
-  { id: 'Sí, pero me lo maneja otra persona', label: 'Sí, pero me lo maneja otra persona' },
-  { id: 'Nunca supe cómo empezar', label: 'Nunca supe cómo empezar' },
-  { id: 'Empecé y no lo pude sostener', label: 'Empecé y no lo pude sostener' },
-  { id: 'No me interesa por ahora', label: 'No me interesa por ahora' },
-  { id: 'otro', label: 'Otro' },
-];
-
-const CONTROLA: { id: string; label: string }[] = [
-  { id: 'Sí', label: 'Sí' },
-  { id: 'Más o menos', label: 'Más o menos' },
-  { id: 'Nunca supe cómo empezar', label: 'Nunca supe cómo empezar' },
-  { id: 'Empecé y no lo pude sostener', label: 'Empecé y no lo pude sostener' },
-  { id: 'otro', label: 'Otro' },
-];
-
-const CATEGORIAS_GASTO: { id: string; label: string; emoji: string }[] = [
-  { id: 'Delivery', label: 'Delivery', emoji: '🛵' },
-  { id: 'Restaurantes', label: 'Restaurantes', emoji: '🍽️' },
-  { id: 'Cafeterías', label: 'Cafeterías', emoji: '☕' },
-  { id: 'Salidas y entretenimiento', label: 'Salidas y entretenimiento', emoji: '🎉' },
-  { id: 'Supermercado', label: 'Supermercado', emoji: '🛒' },
-  { id: 'Transporte', label: 'Transporte', emoji: '🚌' },
-  { id: 'Belleza y cuidado personal', label: 'Belleza y cuidado personal', emoji: '💅' },
-  { id: 'Ropa', label: 'Ropa', emoji: '👕' },
-  { id: 'Suscripciones', label: 'Suscripciones', emoji: '📺' },
-  { id: 'Compras online', label: 'Compras online', emoji: '📦' },
+type FilaAsignacion = { id: 'ahorro' | 'inversiones' | 'gastosFijos' | 'gastosVariables'; titulo: string; ejemplo: string };
+const FILAS_ASIGNACION: FilaAsignacion[] = [
+  { id: 'ahorro', titulo: 'Ahorro', ejemplo: 'Lo que dejás guardado, sin invertir.' },
+  { id: 'inversiones', titulo: 'Inversiones', ejemplo: 'Lo que ponés a que rinda (plazo fijo, fondos, etc.)' },
+  { id: 'gastosFijos', titulo: 'Gastos fijos', ejemplo: 'Ej: alquiler, cuotas, suscripciones — lo que se repite todos los meses.' },
+  { id: 'gastosVariables', titulo: 'Gastos variables', ejemplo: 'Ej: salidas, gustos, delivery — lo que cambia mes a mes.' },
 ];
 
 const COMO_VIENES: { id: ComoVieneId; label: string; msg: string }[] = [
@@ -256,52 +176,60 @@ const COMO_CONOCIO: { id: string; label: string }[] = [
   { id: 'otro', label: 'Otro' },
 ];
 
+// Preview esquemático de cada sección para la pantalla intermedia — nada de
+// datos reales, son placeholders explícitamente ilustrativos.
+const PREVIEW_INFO: Record<ObjetivoId, { icon: string; titulo: string; desc: string; bg: string }> = {
+  controlar: { icon: '🔍', titulo: 'Gastos', desc: 'Vas a ver en qué se te va la plata, separado por sección.', bg: COLORS.coralSoft },
+  objetivo: { icon: '🎯', titulo: 'Objetivos', desc: 'Cada meta con su progreso, a tu ritmo.', bg: COLORS.goldSoft },
+  ahorrar: { icon: '🐷', titulo: 'Objetivos', desc: 'Vas a ver cuánto llevás ahorrado para lo que te propongas.', bg: COLORS.goldSoft },
+  invertir: { icon: '🌱', titulo: 'Inversiones', desc: 'Te va a mostrar en qué te conviene poner tu plata según tu perfil.', bg: COLORS.skySoft },
+  otro: { icon: '✨', titulo: 'Tu FINA', desc: 'Armada a tu manera, con lo que nos fuiste contando.', bg: COLORS.tint },
+};
+
 const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors';
 
-// Chip multi-select + input "Otro" que permite agregar más de uno — mismo
-// patrón que ya existía para categorías de gasto, generalizado para que lo
-// puedan usar todas las preguntas nuevas que lo necesitan.
-function MultiConAgregar({
-  base, seleccion, toggle, custom, agregarCustom, quitarCustom, otroTxt, setOtroTxt, placeholder,
-}: {
-  base: string[];
-  seleccion: string[];
-  toggle: (v: string) => void;
-  custom: string[];
-  agregarCustom: () => void;
-  quitarCustom: (v: string) => void;
-  otroTxt: string;
-  setOtroTxt: (v: string) => void;
-  placeholder: string;
-}) {
+// "Otro" para preguntas multi-select: siempre es un chip más de la lista (no
+// un input aparte que ocupa lugar todo el tiempo). Al tocarlo se abre un
+// campo de texto único — si escribís varias separadas por coma, se separan
+// solas en varios chips (no hace falta tocar "+ Agregar" por cada una).
+function useOtroMulti() {
+  const [custom, setCustom] = useState<string[]>([]);
+  const [abierto, setAbierto] = useState(false);
+  const [txt, setTxt] = useState('');
+  function confirmar() {
+    const partes = txt.split(/[,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (partes.length > 0) setCustom((c) => Array.from(new Set([...c, ...partes])));
+    setTxt('');
+  }
+  const quitar = (v: string) => setCustom((c) => c.filter((x) => x !== v));
+  return { custom, abierto, setAbierto, txt, setTxt, confirmar, quitar };
+}
+type OtroMulti = ReturnType<typeof useOtroMulti>;
+
+function MultiOtroChips({ base, seleccion, toggle, otro }: { base: string[]; seleccion: string[]; toggle: (v: string) => void; otro: OtroMulti }) {
   return (
-    <>
+    <div className="flex flex-col gap-2.5">
       <div className="flex flex-wrap gap-2.5">
         {base.map((o) => (
           <Chip key={o} on={seleccion.includes(o)} onClick={() => toggle(o)}>{o}</Chip>
         ))}
-        {custom.map((txt) => (
-          <Chip key={txt} on onClick={() => quitarCustom(txt)}>✍️ {txt} ✕</Chip>
+        {otro.custom.map((txt) => (
+          <Chip key={txt} on onClick={() => otro.quitar(txt)}>✍️ {txt} ✕</Chip>
         ))}
+        <Chip on={otro.abierto} onClick={() => otro.setAbierto((v) => !v)}>Otro</Chip>
       </div>
-      <div className="flex gap-2">
+      {otro.abierto && (
         <input
-          className={`flex-1 ${inputClass}`}
-          placeholder={placeholder}
-          value={otroTxt}
-          onChange={(e) => setOtroTxt(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregarCustom(); } }}
+          autoFocus
+          className={inputClass}
+          placeholder="Escribí y separá con comas si son varias"
+          value={otro.txt}
+          onChange={(e) => otro.setTxt(e.target.value)}
+          onBlur={otro.confirmar}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); otro.confirmar(); } }}
         />
-        <button
-          type="button"
-          onClick={agregarCustom}
-          className="rounded-2xl px-4 font-bold shrink-0 transition-all duration-100 active:scale-95"
-          style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
-        >
-          + Agregar
-        </button>
-      </div>
-    </>
+      )}
+    </div>
   );
 }
 
@@ -312,52 +240,33 @@ export function OnboardingV2() {
   const [genero, setGenero] = useState<Genero>(null);
   const [generoOtroTxt, setGeneroOtroTxt] = useState('');
   const [edad, setEdad] = useState<Edad>(null);
-  const [edadOtroTxt, setEdadOtroTxt] = useState('');
   const [situacion, setSituacion] = useState<Situacion>(null);
-  const [situacionOtroTxt, setSituacionOtroTxt] = useState('');
-
-  const [convivencia, setConvivencia] = useState<string[]>([]);
-  const [convivenciaCustom, setConvivenciaCustom] = useState<string[]>([]);
-  const [convivenciaOtroTxt, setConvivenciaOtroTxt] = useState('');
-  const [zona, setZona] = useState<string | null>(null);
-
-  const [ingresos, setIngresos] = useState<string[]>([]);
-  const [ingresosCustom, setIngresosCustom] = useState<string[]>([]);
-  const [ingresoOtroTxt, setIngresoOtroTxt] = useState('');
-  const [estabilidadIngresos, setEstabilidadIngresos] = useState<string | null>(null);
-  const [estabilidadOtroTxt, setEstabilidadOtroTxt] = useState('');
-  const [margenPropio, setMargenPropio] = useState<string | null>(null);
-
-  const [gastosFijos, setGastosFijos] = useState<string[]>([]);
-  const [gastosFijosCustom, setGastosFijosCustom] = useState<string[]>([]);
-  const [gastoFijoOtroTxt, setGastoFijoOtroTxt] = useState('');
-
-  const [categoriasGasto, setCategoriasGasto] = useState<string[]>([]);
-  const [categoriasCustom, setCategoriasCustom] = useState<string[]>([]);
-  const [categoriaOtroTxt, setCategoriaOtroTxt] = useState('');
-  const [categoriasRecortarSel, setCategoriasRecortarSel] = useState<string[]>([]);
-  const [recortarNinguna, setRecortarNinguna] = useState(false);
 
   const [rank, setRank] = useState<ObjetivoId[]>([]);
   const [objetivoOtroTxt, setObjetivoOtroTxt] = useState('');
-  const [tieneMetas, setTieneMetas] = useState<'si' | 'no' | null>(null);
-  const [metasNombres, setMetasNombres] = useState<string[]>([]);
-  const [metaTxt, setMetaTxt] = useState('');
-  const [tipoMetas, setTipoMetas] = useState<'individual' | 'grupal'>('individual');
-  const [nombreGrupoOnb, setNombreGrupoOnb] = useState('');
-  const [horizonte, setHorizonte] = useState<string | null>(null);
-  const [horizonteFechaTxt, setHorizonteFechaTxt] = useState('');
-  const [monedaObjetivo, setMonedaObjetivo] = useState<Moneda>('ARS');
 
-  const [porQueInv, setPorQueInv] = useState<string | null>(null);
-  const [reaccionInv, setReaccionInv] = useState<string | null>(null);
+  const [convivencia, setConvivencia] = useState<string[]>([]);
+  const convivenciaOtro = useOtroMulti();
+  const [zona, setZona] = useState<string | null>(null);
 
-  const [ahorra, setAhorra] = useState<string | null>(null);
-  const [ahorraOtroTxt, setAhorraOtroTxt] = useState('');
-  const [invierte, setInvierte] = useState<string | null>(null);
-  const [invierteOtroTxt, setInvierteOtroTxt] = useState('');
-  const [controlaGastos, setControlaGastos] = useState<string | null>(null);
-  const [controlaOtroTxt, setControlaOtroTxt] = useState('');
+  const [ingresos, setIngresos] = useState<string[]>([]);
+  const ingresosOtro = useOtroMulti();
+  const [estabilidadIngresos, setEstabilidadIngresos] = useState<string | null>(null);
+  const [estabilidadOtroTxt, setEstabilidadOtroTxt] = useState('');
+
+  const [gastosFijos, setGastosFijos] = useState<string[]>([]);
+  const gastosFijosOtro = useOtroMulti();
+
+  const [categoriasGasto, setCategoriasGasto] = useState<string[]>([]);
+  const categoriasOtro = useOtroMulti();
+  const [categoriasRecortarSel, setCategoriasRecortarSel] = useState<string[]>([]);
+  const [recortarNinguna, setRecortarNinguna] = useState(false);
+
+  const [asignacion, setAsignacion] = useState<Record<FilaAsignacion['id'], Nivel | null>>({
+    ahorro: null, inversiones: null, gastosFijos: null, gastosVariables: null,
+  });
+
+  const [tedioso, setTedioso] = useState<'si' | 'no' | null>(null);
 
   const [comoViene, setComoViene] = useState<ComoVieneId | null>(null);
   const [comoVieneOtroTxt, setComoVieneOtroTxt] = useState('');
@@ -367,23 +276,28 @@ export function OnboardingV2() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [pasoLogin, setPasoLogin] = useState<PasoLogin>('datos');
+  const [codigoVerif, setCodigoVerif] = useState('');
   const [finished, setFinished] = useState(false);
 
-  // El flujo se arma según lo que se va contestando — cada pregunta
-  // específica de un objetivo solo aparece si corresponde, y todo es una
-  // pregunta por pantalla (nada de apilar varias en un mismo paso).
+  // Flujo — casi lineal: lo único condicional es "categorías a recortar"
+  // (solo si eligió alguna categoría) y la comparación ilustrativa de
+  // "tedioso" (solo si contestó que sí). Las preguntas propias de cada
+  // objetivo (metas concretas, plazo, moneda, perfil de inversión) ya NO
+  // están acá — se preguntan dentro de Objetivos/Inversiones directamente.
   const flow = useMemo<StepKey[]>(() => {
     const f: StepKey[] = [
-      'intro', 'nombre', 'generoEdad', 'situacion', 'convivencia', 'zona',
-      'ingresos', 'estabilidadIngresos', 'margenPropio', 'gastosFijos', 'categoriasGasto',
+      'intro', 'nombre', 'generoEdad', 'objetivo', 'situacion', 'convivencia', 'zona',
+      'ingresos', 'estabilidadIngresos', 'gastosFijos', 'categoriasGasto',
     ];
-    if (categoriasGasto.length > 0 || categoriasCustom.length > 0) f.push('categoriasRecortar');
-    f.push('objetivo');
-    if (rank.includes('objetivo')) f.push('metasEnMente', 'horizonte', 'monedaObjetivo');
-    if (rank.includes('invertir')) f.push('perfilInversorPorque', 'perfilInversorReaccion');
-    f.push('ahorra', 'invierte', 'controlaGastos', 'comoViene', 'intermedia', 'comoConocio', 'terminos', 'login');
+    if (categoriasGasto.length > 0 || categoriasOtro.custom.length > 0) f.push('categoriasRecortar');
+    f.push('asignacionPlata', 'tedioso');
+    if (tedioso === 'si') f.push('tediosoComparacion');
+    f.push('comoViene', 'intermedia', 'comoConocio', 'terminos', 'login');
     return f;
-  }, [rank, categoriasGasto, categoriasCustom]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriasGasto, categoriasOtro.custom, tedioso]);
   const currentKey = flow[Math.min(currentIdx, flow.length - 1)];
   const seccionActual = SECCION_INFO[SECCION_DE[currentKey]];
 
@@ -400,94 +314,58 @@ export function OnboardingV2() {
     setCategoriasRecortarSel((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
   };
 
-  function agregarA(setterCustom: (fn: (v: string[]) => string[]) => void, txt: string, existentes: string[]) {
-    const t = txt.trim();
-    if (!t || existentes.includes(t)) return;
-    setterCustom((c) => [...c, t]);
-  }
-  function addConvivenciaCustom() { agregarA(setConvivenciaCustom, convivenciaOtroTxt, convivenciaCustom); setConvivenciaOtroTxt(''); }
-  function addIngresoCustom() { agregarA(setIngresosCustom, ingresoOtroTxt, ingresosCustom); setIngresoOtroTxt(''); }
-  function addGastoFijoCustom() { agregarA(setGastosFijosCustom, gastoFijoOtroTxt, gastosFijosCustom); setGastoFijoOtroTxt(''); }
-  function addCategoriaCustom() { agregarA(setCategoriasCustom, categoriaOtroTxt, categoriasCustom); setCategoriaOtroTxt(''); }
-  const removeFrom = (setter: (fn: (v: string[]) => string[]) => void) => (txt: string) => setter((c) => c.filter((x) => x !== txt));
-
-  function addMeta() {
-    const txt = metaTxt.trim();
-    if (!txt || metasNombres.includes(txt)) return;
-    setMetasNombres((m) => [...m, txt]);
-    setMetaTxt('');
-  }
-  const removeMeta = (txt: string) => setMetasNombres((m) => m.filter((x) => x !== txt));
-  const agregarMetaSugerida = (txt: string) => {
-    if (!metasNombres.includes(txt)) setMetasNombres((m) => [...m, txt]);
-  };
-
-  const joven = edad === '12-17' || edad === '18-24';
+  const joven = edad === '18-24';
   const comoVieneMsg = comoViene ? COMO_VIENES.find((o) => o.id === comoViene)?.msg : null;
-  const objetivoBubble = rank.length ? BUBBLE_POR_TOP[rank[0]] : 'No te vas a arrepentir...';
-  const categoriasElegidas = [...categoriasGasto, ...categoriasCustom];
+  const categoriasElegidas = [...categoriasGasto, ...categoriasOtro.custom];
+  const sufijoGenero = genero === 'masculino' ? 'os' : genero === 'femenino' ? 'as' : '@s';
 
   function stepValid(key: StepKey): boolean {
     if (key === 'nombre') return nombre.trim().length > 0;
     if (key === 'generoEdad') return !!genero && !!edad;
-    if (key === 'situacion') return !!situacion;
     if (key === 'objetivo') return rank.length > 0;
+    if (key === 'situacion') return !!situacion;
     if (key === 'terminos') return aceptoTerminos;
-    if (key === 'login') return email.trim().length > 0 && password.length >= 6;
+    if (key === 'login') {
+      if (pasoLogin === 'datos') return email.trim().length > 0 && password.length >= 6 && telefono.trim().length >= 8;
+      return codigoVerif.trim().length >= 4;
+    }
     return true;
   }
 
-  // Resuelve "otro" al texto libre que escribió (así no se pierde post
-  // onboarding — antes quedaba guardado como el string "otro" a secas).
   function resuelto(valor: string | null, txt: string): string | null {
     if (valor === 'otro') return txt.trim() || null;
     return valor;
   }
 
+  function guardarTodo() {
+    saveV2Nombre(nombre.trim());
+    saveV2Categorias(categoriasElegidas);
+    saveV2PerfilOnboarding({
+      zona,
+      convivencia: [...convivencia, ...convivenciaOtro.custom],
+      ingresos: [...ingresos, ...ingresosOtro.custom],
+      estabilidadIngresos: resuelto(estabilidadIngresos, estabilidadOtroTxt),
+      margenPropio: null,
+      gastosFijos: [...gastosFijos, ...gastosFijosOtro.custom],
+      categoriasRecortar: recortarNinguna ? [] : categoriasRecortarSel,
+      ahorra: asignacion.ahorro,
+      invierte: asignacion.inversiones,
+      controlaGastos: asignacion.gastosFijos,
+      comoConocio: resuelto(comoConocio, comoConocioOtroTxt),
+    });
+    saveV2TerminosAceptados(aceptoTerminos);
+  }
+
   function onNext() {
-    if (!stepValid(currentKey)) return;
     if (currentKey === 'login') {
-      if (!finished) {
-        // Puente hacia el post-onboarding: lo que se contestó acá ya
-        // aparece armado en la sección correspondiente (sandbox local,
-        // ver shared.tsx). Lo que se saltea, se completa ahí directamente.
-        saveV2Nombre(nombre.trim());
-        saveV2Categorias(categoriasElegidas);
-
-        const yaInvierteResuelto = invierte ? (invierte.startsWith('Sí') ? 'si' as const : 'no' as const) : undefined;
-        if (porQueInv || reaccionInv || yaInvierteResuelto) {
-          saveV2InversionesPerfil({ porQue: porQueInv ?? '', reaccion: reaccionInv ?? '', ...(yaInvierteResuelto ? { yaInvierte: yaInvierteResuelto } : {}) });
-        }
-
-        if (metasNombres.length > 0) {
-          const horizonteResuelto = horizonte === 'fecha_exacta' ? (horizonteFechaTxt.trim() || null) : horizonte;
-          saveV2ObjetivosIniciales(metasNombres.map((n) => ({ nombre: n, horizonte: horizonteResuelto, moneda: monedaObjetivo })));
-        }
-        if (tipoMetas === 'grupal' && nombreGrupoOnb.trim() && !loadV2Grupo()) {
-          saveV2Grupo(crearGrupoDemo(nombreGrupoOnb.trim()));
-        }
-
-        saveV2PerfilOnboarding({
-          zona,
-          convivencia: [...convivencia, ...convivenciaCustom],
-          ingresos: [...ingresos, ...ingresosCustom],
-          estabilidadIngresos: resuelto(estabilidadIngresos, estabilidadOtroTxt),
-          margenPropio,
-          gastosFijos: [...gastosFijos, ...gastosFijosCustom],
-          categoriasRecortar: recortarNinguna ? [] : categoriasRecortarSel,
-          ahorra: resuelto(ahorra, ahorraOtroTxt),
-          invierte: resuelto(invierte, invierteOtroTxt),
-          controlaGastos: resuelto(controlaGastos, controlaOtroTxt),
-          comoConocio: resuelto(comoConocio, comoConocioOtroTxt),
-        });
-        saveV2TerminosAceptados(aceptoTerminos);
-
-        setFinished(true);
-        return;
-      }
-      navigate('/onboarding-v2/home');
+      if (finished) { navigate('/onboarding-v2/home'); return; }
+      if (!stepValid('login')) return;
+      if (pasoLogin === 'datos') { setPasoLogin('verificar'); return; }
+      guardarTodo();
+      setFinished(true);
       return;
     }
+    if (!stepValid(currentKey)) return;
     setCurrentIdx((i) => Math.min(i + 1, flow.length - 1));
   }
   function onSkip() {
@@ -499,9 +377,6 @@ export function OnboardingV2() {
 
   const showTop = currentIdx > 0 && currentKey !== 'login';
 
-  // Barra segmentada: un segmento por SECCIÓN presente en el flujo (no por
-  // pregunta) — así se ve "voy por la mitad de Objetivos", no un porcentaje
-  // genérico de 24 pasos sueltos.
   const segmentos = useMemo(() => {
     const vistos = new Set<SeccionId>();
     const lista: SeccionId[] = [];
@@ -517,6 +392,26 @@ export function OnboardingV2() {
     const alcanzados = idxs.filter((i) => i <= currentIdx).length;
     return Math.round((alcanzados / idxs.length) * 100);
   }
+
+  const ctaLabel = finished
+    ? 'Ir a mi FINA'
+    : currentKey === 'login'
+      ? (pasoLogin === 'datos' ? 'Continuar' : 'Verificar y empezar')
+      : CTA_LABELS[currentKey];
+
+  // Orden de los preview de la pantalla intermedia según cómo rankeó — sin
+  // duplicar título si dos objetivos apuntan a la misma sección.
+  const previewsOrdenados = (() => {
+    const ids = rank.length > 0 ? rank : (['controlar', 'objetivo', 'invertir'] as ObjetivoId[]);
+    const vistos = new Set<string>();
+    return ids
+      .map((id) => PREVIEW_INFO[id])
+      .filter((p) => {
+        if (vistos.has(p.titulo)) return false;
+        vistos.add(p.titulo);
+        return true;
+      });
+  })();
 
   return (
     <DeviceFrame>
@@ -551,23 +446,23 @@ export function OnboardingV2() {
               transition={{ duration: 0.18 }}
               className="flex flex-col gap-4"
             >
-              {/* INTRO — checklist premio */}
+              {/* INTRO — más grande y con más aire, es la primera impresión */}
               {currentKey === 'intro' && (
                 <>
-                  <h1 className="text-[23px] font-bold leading-tight" style={{ color: COLORS.ink }}>
+                  <h1 className="text-[28px] font-bold leading-tight pt-2" style={{ color: COLORS.ink }}>
                     Llegó tu momento de cambiar la historia de tus finanzas 💪
                   </h1>
-                  <div className="flex flex-col gap-3 bg-white rounded-[18px] p-[18px] shadow-[0_2px_20px_rgba(31,27,46,0.07)]">
+                  <div className="flex flex-col gap-4 bg-white rounded-[18px] p-5 shadow-[0_2px_20px_rgba(31,27,46,0.07)]">
                     {['Conocé tus gastos', 'Lográ tus objetivos', 'Cuidá tu bienestar financiero'].map((txt) => (
-                      <div key={txt} className="flex items-center gap-2.5 text-[15px] font-semibold" style={{ color: COLORS.ink }}>
-                        <span className="w-[26px] h-[26px] rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brand }}>
+                      <div key={txt} className="flex items-center gap-3 text-[16px] font-semibold" style={{ color: COLORS.ink }}>
+                        <span className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brand }}>
                           <CheckIcon />
                         </span>
                         {txt}
                       </div>
                     ))}
                   </div>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
+                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
                 </>
               )}
 
@@ -605,153 +500,13 @@ export function OnboardingV2() {
                       <Chip key={o.id} on={edad === o.id} onClick={() => setEdad(o.id)}>{o.label}</Chip>
                     ))}
                   </div>
-                  {edad === 'otro' && (
-                    <input className={inputClass} placeholder="Contanos tu edad" value={edadOtroTxt} onChange={(e) => setEdadOtroTxt(e.target.value)} />
-                  )}
                 </>
               )}
 
-              {/* SITUACION */}
-              {currentKey === 'situacion' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>
-                    {joven ? '¿Qué onda, en qué andás?' : 'Contanos, ¿en qué andás?'}
-                  </h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {SITUACIONES.map((o) => (
-                      <Chip key={o.id} on={situacion === o.id} onClick={() => setSituacion(o.id)}>{o.emoji} {o.label}</Chip>
-                    ))}
-                  </div>
-                  {situacion === 'otro' && (
-                    <input className={inputClass} placeholder="Contanos en qué andás" value={situacionOtroTxt} onChange={(e) => setSituacionOtroTxt(e.target.value)} />
-                  )}
-                </>
-              )}
-
-              {/* CONVIVENCIA */}
-              {currentKey === 'convivencia' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Contanos un poco de tu día a día: ¿con quién compartís tu casa?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Elegí todas las que apliquen.</p>
-                  <MultiConAgregar
-                    base={CONVIVENCIA_OPCIONES} seleccion={convivencia} toggle={toggleConvivencia}
-                    custom={convivenciaCustom} agregarCustom={addConvivenciaCustom} quitarCustom={removeFrom(setConvivenciaCustom)}
-                    otroTxt={convivenciaOtroTxt} setOtroTxt={setConvivenciaOtroTxt} placeholder="Otro (podés agregar más de uno)"
-                  />
-                </>
-              )}
-
-              {/* ZONA */}
-              {currentKey === 'zona' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Por dónde andás viviendo?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {ZONAS.map((o) => (
-                      <Chip key={o.id} on={zona === o.id} onClick={() => setZona(o.id)}>{o.label}</Chip>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* INGRESOS */}
-              {currentKey === 'ingresos' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Cómo entra la plata en tu vida hoy?</h1>
-                  <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>🔒 Esto es solo tuyo — nadie más lo ve. Elegí todas las que apliquen.</p>
-                  <MultiConAgregar
-                    base={INGRESOS_OPCIONES} seleccion={ingresos} toggle={toggleIngresos}
-                    custom={ingresosCustom} agregarCustom={addIngresoCustom} quitarCustom={removeFrom(setIngresosCustom)}
-                    otroTxt={ingresoOtroTxt} setOtroTxt={setIngresoOtroTxt} placeholder="Otro (podés agregar más de uno)"
-                  />
-                </>
-              )}
-
-              {/* ESTABILIDAD DE INGRESOS */}
-              {currentKey === 'estabilidadIngresos' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Y te llega siempre parecido, o varía?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {ESTABILIDAD.map((o) => (
-                      <Chip key={o.id} on={estabilidadIngresos === o.id} onClick={() => setEstabilidadIngresos(o.id)}>{o.label}</Chip>
-                    ))}
-                  </div>
-                  {estabilidadIngresos === 'otro' && (
-                    <input className={inputClass} placeholder="Contanos más" value={estabilidadOtroTxt} onChange={(e) => setEstabilidadOtroTxt(e.target.value)} />
-                  )}
-                </>
-              )}
-
-              {/* MARGEN PROPIO */}
-              {currentKey === 'margenPropio' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto de esa plata es tuya, para usar como quieras?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {MARGEN.map((o) => (
-                      <Chip key={o.id} on={margenPropio === o.id} onClick={() => setMargenPropio(o.id)}>{o.label}</Chip>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* GASTOS FIJOS */}
-              {currentKey === 'gastosFijos' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Tenés algún gasto grande que se te repite todos los meses?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>No hace falta el monto, solo si existe.</p>
-                  <MultiConAgregar
-                    base={GASTOS_FIJOS_OPCIONES} seleccion={gastosFijos} toggle={toggleGastosFijos}
-                    custom={gastosFijosCustom} agregarCustom={addGastoFijoCustom} quitarCustom={removeFrom(setGastosFijosCustom)}
-                    otroTxt={gastoFijoOtroTxt} setOtroTxt={setGastoFijoOtroTxt} placeholder="Otro (podés agregar más de uno)"
-                  />
-                </>
-              )}
-
-              {/* CATEGORIAS DE GASTO — siempre se pregunta, no solo si votó ahorrar/controlar */}
-              {currentKey === 'categoriasGasto' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿En qué se te suele ir la plata día a día?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Elegí las que quieras — con esto ya te armamos las secciones en Gastos.</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {CATEGORIAS_GASTO.map((o) => (
-                      <Chip key={o.id} on={categoriasGasto.includes(o.id)} onClick={() => toggleCategoriaGasto(o.id)}>{o.emoji} {o.label}</Chip>
-                    ))}
-                    {categoriasCustom.map((txt) => (
-                      <Chip key={txt} on onClick={() => removeFrom(setCategoriasCustom)(txt)}>✍️ {txt} ✕</Chip>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      className={`flex-1 ${inputClass}`}
-                      placeholder="Otro (podés agregar más de uno)"
-                      value={categoriaOtroTxt}
-                      onChange={(e) => setCategoriaOtroTxt(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCategoriaCustom(); } }}
-                    />
-                    <button type="button" onClick={addCategoriaCustom} className="rounded-2xl px-4 font-bold shrink-0 transition-all duration-100 active:scale-95" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
-                      + Agregar
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* CATEGORIAS A RECORTAR */}
-              {currentKey === 'categoriasRecortar' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Hay alguna de estas en la que te gustaría gastar menos?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Así te avisamos si te conviene ponerle un tope.</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {categoriasElegidas.map((c) => (
-                      <Chip key={c} on={categoriasRecortarSel.includes(c)} onClick={() => toggleCategoriaRecortar(c)}>{c}</Chip>
-                    ))}
-                    <Chip on={recortarNinguna} onClick={() => { setRecortarNinguna(true); setCategoriasRecortarSel([]); }}>Ninguna por ahora</Chip>
-                  </div>
-                </>
-              )}
-
-              {/* OBJETIVO (ranking + mensajito) — define qué preguntas siguen */}
+              {/* OBJETIVO (ranking) — primero de todo el cuestionario en sí, define el orden de la pantalla final */}
               {currentKey === 'objetivo' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Qué querés lograr?</h1>
+                  <h1 className="text-[23px] font-bold leading-snug" style={{ color: COLORS.ink }}>¿Hacia qué objetivos/logros deberíamos trabajar junt{sufijoGenero}?</h1>
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Tocá en el orden que más te represente.</p>
                   <div className="flex flex-wrap gap-2.5">
                     {OBJETIVOS.map((o) => {
@@ -772,187 +527,151 @@ export function OnboardingV2() {
                     <input className={inputClass} placeholder="Contanos qué querés lograr" value={objetivoOtroTxt} onChange={(e) => setObjetivoOtroTxt(e.target.value)} />
                   )}
                   <div className="flex justify-center py-1"><Face color={FACE_COLOR} size={90} mood="happy" /></div>
-                  <div className="self-center max-w-[82%] text-center bg-white rounded-2xl px-4 py-3 text-[13.5px] font-semibold shadow-[0_2px_16px_rgba(31,27,46,0.06)]" style={{ color: COLORS.ink }}>
-                    {objetivoBubble}
-                  </div>
                 </>
               )}
 
-              {/* METAS EN MENTE — solo si votó "lograr objetivos puntuales" */}
-              {currentKey === 'metasEnMente' && (
+              {/* SITUACION */}
+              {currentKey === 'situacion' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Ya tenés algún objetivo en mente?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {(['si', 'no'] as const).map((o) => (
-                      <Chip key={o} on={tieneMetas === o} onClick={() => setTieneMetas(o)}>{o === 'si' ? 'Sí' : 'Todavía no'}</Chip>
-                    ))}
-                  </div>
-                  {tieneMetas === 'si' && (
-                    <>
-                      <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Algunas ideas para arrancar rápido:</p>
-                      <div className="flex flex-wrap gap-2.5">
-                        {METAS_SUGERIDAS.map((m) => (
-                          <Chip key={m} on={metasNombres.includes(m)} onClick={() => (metasNombres.includes(m) ? removeMeta(m) : agregarMetaSugerida(m))}>{m}</Chip>
-                        ))}
-                      </div>
-                      {metasNombres.length > 0 && (
-                        <div className="flex flex-wrap gap-2.5">
-                          {metasNombres.filter((m) => !METAS_SUGERIDAS.includes(m)).map((m) => (
-                            <Chip key={m} on onClick={() => removeMeta(m)}>🎯 {m} ✕</Chip>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex gap-2">
-                        <input
-                          className={`flex-1 ${inputClass}`}
-                          placeholder="Otro (ej: Viaje a Bariloche)"
-                          value={metaTxt}
-                          onChange={(e) => setMetaTxt(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMeta(); } }}
-                        />
-                        <button type="button" onClick={addMeta} className="rounded-2xl px-4 font-bold shrink-0 transition-all duration-100 active:scale-95" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
-                          + Agregar
-                        </button>
-                      </div>
-                      {metasNombres.length > 0 && (
-                        <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Ya te los dejamos armados en Objetivos para que completes los detalles.</p>
-                      )}
-                    </>
-                  )}
-
-                  <p className="text-[15px] font-semibold mt-2" style={{ color: COLORS.ink }}>¿Los vas a armar sola o con amigas?</p>
-                  <SegmentedTab
-                    options={[
-                      { id: 'individual', label: 'Sola' },
-                      { id: 'grupal', label: 'Con amigas' },
-                    ]}
-                    value={tipoMetas}
-                    onChange={setTipoMetas}
-                    trackColor={COLORS.goldSoft}
-                  />
-                  {tipoMetas === 'grupal' && (
-                    <>
-                      <input className={inputClass} placeholder="Nombre del grupo (ej: Ahorrando juntas)" value={nombreGrupoOnb} onChange={(e) => setNombreGrupoOnb(e.target.value)} />
-                      <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Lo armamos ya mismo — vas a poder invitar amigas desde adentro de la app.</p>
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* HORIZONTE */}
-              {currentKey === 'horizonte' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Para cuándo te gustaría lograrlo?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {HORIZONTES.map((o) => (
-                      <Chip key={o.id} on={horizonte === o.id} onClick={() => setHorizonte(o.id)}>{o.label}</Chip>
-                    ))}
-                  </div>
-                  {horizonte === 'fecha_exacta' && (
-                    <input className={inputClass} placeholder="Ej: diciembre 2026" value={horizonteFechaTxt} onChange={(e) => setHorizonteFechaTxt(e.target.value)} />
-                  )}
-                </>
-              )}
-
-              {/* MONEDA DEL OBJETIVO */}
-              {currentKey === 'monedaObjetivo' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿En qué moneda pensás ese objetivo?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    <Chip on={monedaObjetivo === 'ARS'} onClick={() => setMonedaObjetivo('ARS')}>Pesos</Chip>
-                    <Chip on={monedaObjetivo === 'USD'} onClick={() => setMonedaObjetivo('USD')}>Dólares</Chip>
-                  </div>
-                </>
-              )}
-
-              {/* PERFIL DE INVERSOR — 1 de 2: horizonte de la inversión */}
-              {currentKey === 'perfilInversorPorque' && (
-                <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Con qué objetivo querés invertir esa plata?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Con esto ya armamos un primer perfil; el resto lo terminás en Inversiones.</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {['Sacarla pronto (corto plazo)', 'Dejarla que rinda (largo plazo)'].map((o) => (
-                      <Chip key={o} on={porQueInv === o} onClick={() => setPorQueInv(o)}>{o}</Chip>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* PERFIL DE INVERSOR — 2 de 2: reacción con escenario concreto */}
-              {currentKey === 'perfilInversorReaccion' && (
-                <>
-                  <h1 className="text-[23px] font-bold leading-snug" style={{ color: COLORS.ink }}>
-                    Estás en una inversión que sube y baja en el camino, pero promete crecer a 5 años a una tasa razonable. ¿Qué hacés?
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>
+                    {joven ? '¿Qué onda, en qué andás?' : 'Contanos, ¿en qué andás?'}
                   </h1>
                   <div className="flex flex-wrap gap-2.5">
-                    {['Lo saco todo', 'Lo dejo y espero', 'Pongo más'].map((o) => (
-                      <Chip key={o} on={reaccionInv === o} onClick={() => setReaccionInv(o)}>{o}</Chip>
+                    {SITUACIONES.map((o) => (
+                      <Chip key={o.id} on={situacion === o.id} onClick={() => setSituacion(o.id)}>{o.emoji} {o.label}</Chip>
                     ))}
                   </div>
                 </>
               )}
 
-              {/* AHORRÁS */}
-              {currentKey === 'ahorra' && (
+              {/* CONVIVENCIA */}
+              {currentKey === 'convivencia' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Ahorrás?</h1>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Contanos un poco de tu día a día: ¿con quién compartís tu casa?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Elegí todas las que apliquen.</p>
+                  <MultiOtroChips base={CONVIVENCIA_OPCIONES} seleccion={convivencia} toggle={toggleConvivencia} otro={convivenciaOtro} />
+                </>
+              )}
+
+              {/* ZONA */}
+              {currentKey === 'zona' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿En dónde andás viviendo?</h1>
                   <div className="flex flex-wrap gap-2.5">
-                    {AHORRA.map((o) => (
-                      <Chip key={o.id} warm on={ahorra === o.id} onClick={() => setAhorra(o.id)}>{o.label}</Chip>
+                    {ZONAS.map((o) => (
+                      <Chip key={o.id} on={zona === o.id} onClick={() => setZona(o.id)}>{o.label}</Chip>
                     ))}
                   </div>
-                  {ahorra === 'otro' && (
-                    <input className={inputClass} placeholder="Contanos más" value={ahorraOtroTxt} onChange={(e) => setAhorraOtroTxt(e.target.value)} />
+                </>
+              )}
+
+              {/* INGRESOS */}
+              {currentKey === 'ingresos' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿De dónde vienen tus ingresos hoy?</h1>
+                  <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>🔒 Esto es solo tuyo — nadie más lo ve. Elegí todas las que apliquen.</p>
+                  <MultiOtroChips base={INGRESOS_OPCIONES} seleccion={ingresos} toggle={toggleIngresos} otro={ingresosOtro} />
+                </>
+              )}
+
+              {/* ESTABILIDAD DE INGRESOS */}
+              {currentKey === 'estabilidadIngresos' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Y te llega siempre parecido, o varía?</h1>
+                  <div className="flex flex-wrap gap-2.5">
+                    {ESTABILIDAD.map((o) => (
+                      <Chip key={o.id} on={estabilidadIngresos === o.id} onClick={() => setEstabilidadIngresos(o.id)}>{o.label}</Chip>
+                    ))}
+                  </div>
+                  {estabilidadIngresos === 'otro' && (
+                    <input className={inputClass} placeholder="Contanos más" value={estabilidadOtroTxt} onChange={(e) => setEstabilidadOtroTxt(e.target.value)} />
                   )}
                 </>
               )}
 
-              {/* INVERTÍS */}
-              {currentKey === 'invierte' && (
+              {/* GASTOS FIJOS */}
+              {currentKey === 'gastosFijos' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Invertís?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {INVIERTE.map((o) => (
-                      <Chip key={o.id} warm on={invierte === o.id} onClick={() => setInvierte(o.id)}>{o.label}</Chip>
-                    ))}
-                  </div>
-                  {invierte === 'otro' && (
-                    <input className={inputClass} placeholder="Contanos más" value={invierteOtroTxt} onChange={(e) => setInvierteOtroTxt(e.target.value)} />
-                  )}
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Tenés algún gasto grande que se te repite todos los meses?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>No hace falta el monto, solo si existe.</p>
+                  <MultiOtroChips base={GASTOS_FIJOS_OPCIONES} seleccion={gastosFijos} toggle={toggleGastosFijos} otro={gastosFijosOtro} />
                 </>
               )}
 
-              {/* CONTROLÁS TUS GASTOS */}
-              {currentKey === 'controlaGastos' && (
+              {/* CATEGORIAS DE GASTO */}
+              {currentKey === 'categoriasGasto' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Controlás tus gastos?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {CONTROLA.map((o) => (
-                      <Chip key={o.id} warm on={controlaGastos === o.id} onClick={() => setControlaGastos(o.id)}>{o.label}</Chip>
-                    ))}
-                  </div>
-                  {controlaGastos === 'otro' && (
-                    <input className={inputClass} placeholder="Contanos más" value={controlaOtroTxt} onChange={(e) => setControlaOtroTxt(e.target.value)} />
-                  )}
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿En qué se te suele ir la plata día a día?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Elegí las que quieras — con esto ya te armamos las secciones en Gastos.</p>
+                  <MultiOtroChips
+                    base={CATEGORIAS_GASTO_LABELS}
+                    seleccion={categoriasGasto}
+                    toggle={toggleCategoriaGasto}
+                    otro={categoriasOtro}
+                  />
                 </>
               )}
 
-              {/* INTERMEDIA — pantalla boceto aproximado */}
-              {currentKey === 'intermedia' && (
+              {/* CATEGORIAS A RECORTAR */}
+              {currentKey === 'categoriasRecortar' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Así se va a ir viendo tu progreso</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía estamos definiendo esta pantalla — este es un boceto aproximado.</p>
-                  <div className="relative flex-1 flex flex-col gap-2.5 bg-white border border-dashed border-[rgba(31,27,46,0.18)] rounded-[18px] p-4">
-                    <span className="absolute top-2.5 right-2.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>Boceto</span>
-                    {[{ w: 40, c: COLORS.brand }, { w: 65, c: COLORS.coral }, { w: 20, c: COLORS.gold }].map((row, i) => (
-                      <div key={i} className="flex items-center gap-2.5 rounded-xl px-3 py-2.5" style={{ background: COLORS.paper }}>
-                        <div className="w-5 h-5 rounded-full shrink-0" style={{ background: row.c }} />
-                        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(31,27,46,0.08)' }}>
-                          <div className="h-full rounded-full" style={{ width: `${row.w}%`, background: row.c }} />
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Hay alguna de estas en la que te gustaría gastar menos?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Así te avisamos si te conviene ponerle un tope.</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {categoriasElegidas.map((c) => (
+                      <Chip key={c} on={categoriasRecortarSel.includes(c)} onClick={() => toggleCategoriaRecortar(c)}>{c}</Chip>
+                    ))}
+                    <Chip on={recortarNinguna} onClick={() => { setRecortarNinguna(true); setCategoriasRecortarSel([]); }}>Ninguna por ahora</Chip>
+                  </div>
+                </>
+              )}
+
+              {/* ASIGNACIÓN DE LA PLATA — reemplaza a "cuánto es tuya" + ahorrás/invertís/controlás en una sola pantalla */}
+              {currentKey === 'asignacionPlata' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>De esta plata, ¿cuánto va a...?</h1>
+                  <div className="flex flex-col gap-4">
+                    {FILAS_ASIGNACION.map((fila) => (
+                      <div key={fila.id} className="flex flex-col gap-1.5">
+                        <p className="text-[14.5px] font-bold" style={{ color: COLORS.ink }}>{fila.titulo}</p>
+                        <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>{fila.ejemplo}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {NIVELES.map((n) => (
+                            <Chip key={n.id} on={asignacion[fila.id] === n.id} onClick={() => setAsignacion((a) => ({ ...a, [fila.id]: n.id }))}>{n.label}</Chip>
+                          ))}
                         </div>
                       </div>
                     ))}
-                    <p className="text-[14px] mt-auto" style={{ color: COLORS.inkSoft }}>Ya lo vamos a terminar de diseñar juntas — esto es solo para que veas la idea.</p>
+                  </div>
+                </>
+              )}
+
+              {/* TEDIOSO */}
+              {currentKey === 'tedioso' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Se te hace tedioso llevar el control de tu plata?</h1>
+                  <div className="flex flex-wrap gap-2.5">
+                    <Chip on={tedioso === 'si'} onClick={() => setTedioso('si')}>Sí</Chip>
+                    <Chip on={tedioso === 'no'} onClick={() => setTedioso('no')}>No</Chip>
+                  </div>
+                </>
+              )}
+
+              {/* COMPARACION ILUSTRATIVA — solo si dijo que sí */}
+              {currentKey === 'tediosoComparacion' && (
+                <>
+                  <h1 className="text-[23px] font-bold leading-snug" style={{ color: COLORS.ink }}>Con el bot, ni te das cuenta</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Le contás un gasto hablando y nosotras armamos el registro — vos seguís con tu día.</p>
+                  <div className="bg-white rounded-[18px] p-4 flex flex-col gap-3 shadow-[0_2px_20px_rgba(31,27,46,0.07)]">
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-[12.5px] font-semibold" style={{ color: COLORS.inkSoft }}>Por tu cuenta</p>
+                      <div className="h-3 rounded-full" style={{ width: '92%', background: COLORS.coral }} />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-[12.5px] font-semibold" style={{ color: COLORS.inkSoft }}>Con FINA y el bot</p>
+                      <div className="h-3 rounded-full" style={{ width: '18%', background: COLORS.green }} />
+                    </div>
+                    <p className="text-[11.5px]" style={{ color: COLORS.inkFaint }}>Ilustrativo — no es una medición real todavía.</p>
                   </div>
                 </>
               )}
@@ -974,6 +693,32 @@ export function OnboardingV2() {
                       {comoVieneMsg}
                     </div>
                   )}
+                </>
+              )}
+
+              {/* INTERMEDIA — previews esquemáticos ordenados por prioridad + explicación del bot */}
+              {currentKey === 'intermedia' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Así se va a ir viendo tu FINA</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>En el orden que nos dijiste que te importa.</p>
+                  <div className="flex flex-col gap-3">
+                    {previewsOrdenados.map((p) => (
+                      <div key={p.titulo} className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: p.bg }}>
+                        <span className="text-2xl shrink-0">{p.icon}</span>
+                        <div>
+                          <p className="font-bold text-[14px]" style={{ color: COLORS.ink }}>{p.titulo}</p>
+                          <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>{p.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: COLORS.ink }}>
+                      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(244,241,250,0.15)' }}>💬</span>
+                      <div>
+                        <p className="font-bold text-[14px]" style={{ color: '#fff' }}>Tu bot de WhatsApp</p>
+                        <p className="text-[12.5px]" style={{ color: 'rgba(244,241,250,0.7)' }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
+                      </div>
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -1015,19 +760,32 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {/* LOGIN — o confirmacion final */}
-              {currentKey === 'login' && !finished && (
+              {/* LOGIN — datos + verificación de teléfono (mock, no hay backend todavía) — o confirmación final */}
+              {currentKey === 'login' && !finished && pasoLogin === 'datos' && (
                 <>
                   <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Guardá tu progreso</h1>
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todos los meses vas a poder ver cómo venís.</p>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Mail o teléfono</label>
+                    <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Mail</label>
                     <input className={inputClass} placeholder="vos@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Contraseña</label>
                     <input type="password" className={inputClass} placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} />
                   </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Teléfono</label>
+                    <input className={inputClass} placeholder="+54 9 11 ...." value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+                  </div>
+                </>
+              )}
+
+              {currentKey === 'login' && !finished && pasoLogin === 'verificar' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Verificá tu teléfono</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Te mandamos un código a {telefono || 'tu teléfono'}.</p>
+                  <input className={inputClass} placeholder="Código" inputMode="numeric" value={codigoVerif} onChange={(e) => setCodigoVerif(e.target.value)} />
+                  <p className="text-[12px]" style={{ color: COLORS.inkFaint }}>Modo de prueba: todavía no mandamos SMS de verdad — escribí cualquier código de 4 a 6 dígitos.</p>
                 </>
               )}
 
@@ -1042,7 +800,7 @@ export function OnboardingV2() {
         </div>
 
         <div className="px-[22px] pt-2.5 pb-6 flex flex-col gap-1.5">
-          <Cta label={finished ? 'Ir a mi FINA' : CTA_LABELS[currentKey]} disabled={!finished && !stepValid(currentKey)} onClick={onNext} />
+          <Cta label={ctaLabel} disabled={!finished && !stepValid(currentKey)} onClick={onNext} />
           {!finished && SKIPPABLE.includes(currentKey) && (
             <button type="button" onClick={onSkip} className="text-[13.5px] font-semibold underline py-2 text-center" style={{ color: COLORS.inkSoft }}>
               Saltar por ahora
