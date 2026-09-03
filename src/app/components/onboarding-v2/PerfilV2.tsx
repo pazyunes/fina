@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ActionRow, COLORS, Face, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2ObjetivosState, saveV2Foto, saveV2Nombre } from './shared';
+import { ActionRow, Chip, COLORS, Face, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
-// persistidos, nunca con un contador inventado.
+// persistidos, nunca con un contador inventado. El nivel de conocimiento
+// financiero vive ACÁ adentro (no como cartel aparte arriba de todo en
+// Home, que no se entendía) — Home solo tiene la entrada a esta pantalla.
+const NIVELES_FINANCIEROS = ['Recién estoy arrancando', 'Sé lo básico, quiero mejorar', 'Me manejo bastante bien', 'Soy bastante experta/o en esto'];
 type GastosLite = { gastos: unknown[]; topes: Record<string, unknown> };
 type ObjetivoLite = { montoTotal: number };
 function itemsPerfil() {
@@ -26,8 +29,11 @@ export function PerfilV2() {
   const [foto, setFoto] = useState<string | null>(() => loadV2Foto());
   const [nombre, setNombre] = useState(() => loadV2Nombre());
   const [guardado, setGuardado] = useState(false);
+  const [nivel, setNivel] = useState<string | null>(() => loadV2NivelFinanciero());
+  const [abriendoNivel, setAbriendoNivel] = useState(false);
   const items = itemsPerfil();
   const faltan = items.filter((i) => !i.hecho);
+  const faltaNivel = !nivel;
 
   function elegirFoto() {
     fileRef.current?.click();
@@ -98,7 +104,7 @@ export function PerfilV2() {
         </div>
       </div>
 
-      {faltan.length > 0 && (
+      {(faltan.length > 0 || faltaNivel) && (
         <div className="flex flex-col gap-2">
           <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Completá tu perfil</p>
           {items.map((it) => (
@@ -120,6 +126,35 @@ export function PerfilV2() {
               </span>
             </button>
           ))}
+
+          {/* Nivel de conocimiento financiero — mismo checklist, sin cartel aparte */}
+          {!abriendoNivel ? (
+            <button
+              type="button"
+              onClick={() => setAbriendoNivel(true)}
+              className="w-full flex items-center gap-3 text-left bg-white rounded-2xl px-4 py-3 shadow-[0_2px_14px_rgba(31,27,46,0.06)] transition-all duration-100 active:scale-[0.99]"
+            >
+              <span
+                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
+                style={nivel ? { background: COLORS.green, color: '#fff' } : { border: '2px solid rgba(31,27,46,0.2)' }}
+              >
+                {nivel ? '✓' : ''}
+              </span>
+              <span className="flex-1 text-[13.5px] font-medium" style={{ color: nivel ? COLORS.inkFaint : COLORS.ink, textDecoration: nivel ? 'line-through' : 'none' }}>
+                Descubrí tu nivel de conocimiento financiero
+              </span>
+            </button>
+          ) : (
+            <div className="rounded-2xl p-4 flex flex-col gap-2.5" style={{ background: COLORS.skySoft }}>
+              <p className="font-bold text-[14px]" style={{ color: COLORS.ink }}>¿Cómo describirías lo que sabés hoy?</p>
+              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Así las recomendaciones te van a hablar en tu idioma, sin sonar ni muy básico ni muy técnico.</p>
+              <div className="flex flex-wrap gap-2">
+                {NIVELES_FINANCIEROS.map((n) => (
+                  <Chip key={n} on={nivel === n} onClick={() => { setNivel(n); saveV2NivelFinanciero(n); setAbriendoNivel(false); }}>{n}</Chip>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ActionRow, Chip, Coachmark, COLORS, Face, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosIniciales, loadV2ObjetivosState, saludoDelDia, saveV2NivelFinanciero } from './shared';
+import { ActionRow, Coachmark, COLORS, Face, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, saludoDelDia } from './shared';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
-const NIVELES = ['Recién estoy arrancando', 'Sé lo básico, quiero mejorar', 'Me manejo bastante bien', 'Soy bastante experta/o en esto'];
+const NIVEL_LABEL: Record<string, string> = { nada: 'Nada', poco: 'Un poco', bastante: 'Bastante', todo: 'Todo' };
 
 type Tip = { icon: string; texto: string; to: string };
 
@@ -111,50 +110,33 @@ function Arco({ radius, pct, color }: { radius: number; pct: number | null; colo
 // Saluda por nombre y según la hora (mismo detalle que Headspace/Cleo) —
 // es lo que más cambia que esto se sienta "alguien te habla" y no un
 // formulario. El avatar lleva a Perfil (foto + nombre + grupos).
-// CTA llamativo (no un Tip más) para el mini-quiz de nivel de conocimiento
-// financiero. Sin número inventado en la bajada: todavía no medimos cuánto
-// mejora la recomendación con esto, así que la promesa queda cualitativa
-// hasta que haya un dato real que mostrar.
-function NivelFinancieroCard() {
-  const [abierto, setAbierto] = useState(false);
-  const [nivel, setNivel] = useState<string | null>(() => loadV2NivelFinanciero());
-
-  if (nivel && !abierto) {
-    return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
-        style={{ background: COLORS.skySoft }}
-      >
-        <span className="text-lg shrink-0">🎓</span>
-        <span className="flex-1 min-w-0">
-          <span className="block text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tu nivel financiero</span>
-          <span className="block text-[13.5px] font-semibold truncate" style={{ color: COLORS.ink }}>{nivel}</span>
-        </span>
-        <span className="text-[12px] font-semibold shrink-0" style={{ color: COLORS.brand }}>Cambiar →</span>
-      </button>
-    );
-  }
-
+//
+// "Tu potencial" — a diferencia del anillo de bienestar (que solo aparece
+// con USO real), esto se arma con lo que la persona ya contó en el
+// onboarding (autopercepción de ahorro/inversión/control) y aparece desde
+// el primer segundo — le da algo de valor apenas entra, sin esperar a que
+// use la app.
+function PreviewSeccion({ icon, titulo, desc, bars, onClick }: { icon: string; titulo: string; desc: string; bars: { w: number; c: string }[]; onClick: () => void }) {
   return (
-    <div className="rounded-2xl p-4 flex flex-col gap-2.5" style={{ background: COLORS.skySoft }}>
-      {!abierto ? (
-        <button type="button" onClick={() => setAbierto(true)} className="text-left transition-transform duration-100 active:scale-[0.99]">
-          <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>🎓 Conocé tu nivel de conocimiento financiero</p>
-          <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>Así las recomendaciones te van a hablar en tu idioma, sin sonar ni muy básico ni muy técnico.</p>
-        </button>
-      ) : (
-        <>
-          <p className="font-bold text-[14.5px]" style={{ color: COLORS.ink }}>¿Cómo describirías lo que sabés hoy?</p>
-          <div className="flex flex-wrap gap-2">
-            {NIVELES.map((n) => (
-              <Chip key={n} on={nivel === n} onClick={() => { setNivel(n); saveV2NivelFinanciero(n); setAbierto(false); }}>{n}</Chip>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center gap-3.5 bg-white rounded-2xl px-4 py-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 active:scale-[0.98] text-left"
+    >
+      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft }}>
+        <span className="text-lg">{icon}</span>
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-[15px]" style={{ color: COLORS.ink }}>{titulo}</p>
+        <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{desc}</p>
+        <div className="flex gap-1 mt-1.5">
+          {bars.map((b, i) => (
+            <div key={i} className="h-1.5 rounded-full" style={{ width: `${b.w}%`, background: b.c, opacity: 0.55 }} />
+          ))}
+        </div>
+      </div>
+      <span style={{ color: COLORS.brand }}>→</span>
+    </button>
   );
 }
 
@@ -167,6 +149,14 @@ export function HomeV2() {
   const tips = tipsPara();
   const b = datosBienestar();
   const hayBienestar = b.gastosPct !== null || b.objetivosPct !== null || b.inversionPct !== null;
+  const perfil = loadV2PerfilOnboarding();
+  const potencial = perfil
+    ? [
+        { label: 'Control de gastos', valor: perfil.controlaGastos },
+        { label: 'Ahorro', valor: perfil.ahorra },
+        { label: 'Inversión', valor: perfil.invierte },
+      ].filter((p) => p.valor)
+    : [];
 
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-6 pb-4">
@@ -218,22 +208,45 @@ export function HomeV2() {
         </div>
       )}
 
-      <NivelFinancieroCard />
+      {/* Tu potencial — con lo que ya contaste en el onboarding, no con uso real todavía */}
+      {potencial.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-1.5">
+          <p className="text-[12px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSoft }}>Tu potencial</p>
+          {potencial.map((p) => (
+            <div key={p.label} className="flex items-center justify-between text-[13.5px]">
+              <span style={{ color: COLORS.ink }}>{p.label}</span>
+              <span className="font-semibold" style={{ color: COLORS.brand }}>{NIVEL_LABEL[p.valor as string] ?? p.valor}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ActionRow
+        icon={<span className="text-lg">📝</span>}
+        label="Completá tu perfil"
+        onClick={() => navigate('/onboarding-v2/perfil')}
+      />
 
       <div className="flex flex-col gap-3.5">
-        <ActionRow
-          icon={<span className="text-lg">💸</span>}
-          label="Registrá tu primer gasto"
+        <PreviewSeccion
+          icon="💸"
+          titulo="Gastos"
+          desc="Así vas a ver en qué se te va la plata, separado por sección."
+          bars={[{ w: 35, c: COLORS.coral }, { w: 22, c: COLORS.gold }, { w: 15, c: COLORS.sky }]}
           onClick={() => navigate('/onboarding-v2/gastos')}
         />
-        <ActionRow
-          icon={<span className="text-lg">🎯</span>}
-          label="Empezá a lograr algún objetivo"
+        <PreviewSeccion
+          icon="🎯"
+          titulo="Objetivos"
+          desc="Cada meta con su progreso, a tu ritmo."
+          bars={[{ w: 55, c: COLORS.gold }]}
           onClick={() => navigate('/onboarding-v2/objetivos')}
         />
-        <ActionRow
-          icon={<span className="text-lg">🌱</span>}
-          label="Empezá a invertir con FINA"
+        <PreviewSeccion
+          icon="🌱"
+          titulo="Inversiones"
+          desc="Te mostramos en qué te conviene poner tu plata."
+          bars={[{ w: 20, c: COLORS.green }, { w: 34, c: COLORS.green }, { w: 48, c: COLORS.green }]}
           onClick={() => navigate('/onboarding-v2/inversiones')}
         />
       </div>
