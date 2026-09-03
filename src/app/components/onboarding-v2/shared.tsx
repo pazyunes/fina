@@ -146,6 +146,26 @@ export function loadV2Grupo(): Grupo | null {
   }
 }
 
+// Invitar de verdad (share sheet nativo, o copiar al portapapeles si no hay)
+// — se usa desde Grupos y desde el flujo de crear un objetivo en conjunto.
+export async function invitarAGrupo(g: Grupo): Promise<'compartido' | 'copiado' | 'nada'> {
+  const texto = `Unite a "${g.nombre}" en FINA con el código ${g.codigo} 💜`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ text: texto });
+      return 'compartido';
+    } catch {
+      return 'nada'; // canceló el share sheet
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(texto);
+    return 'copiado';
+  } catch {
+    return 'nada'; // sin permiso de portapapeles — no es crítico
+  }
+}
+
 function codigoAlAzar(): string {
   const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let c = '';
@@ -396,7 +416,11 @@ export function CheckIcon() {
 // activo (violeta de marca, o coral en las preguntas "warm"), borde fino
 // cuando no. El feedback táctil es un scale-down breve (estilo Cleo), no
 // un desplazamiento con sombra que desaparece de golpe.
-export function Chip({ on, warm, onClick, children }: { on: boolean; warm?: boolean; onClick: () => void; children: React.ReactNode }) {
+//
+// `muted` es para las opciones "de escape" (Ninguno por ahora, Todavía no
+// lo pensé, No me interesa, etc.) — se ven grisáceas incluso activas, para
+// que no compitan visualmente con una respuesta real.
+export function Chip({ on, warm, muted, onClick, children }: { on: boolean; warm?: boolean; muted?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
@@ -404,11 +428,39 @@ export function Chip({ on, warm, onClick, children }: { on: boolean; warm?: bool
       className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14.5px] font-semibold select-none
         transition-all duration-100 ease-out active:scale-[0.96]
         ${on
-          ? (warm ? 'bg-[#FF5C7A] text-white' : 'bg-[#7626B3] text-white')
+          ? (muted ? 'bg-[#E7E2ED] text-[#6B647A]' : warm ? 'bg-[#FF5C7A] text-white' : 'bg-[#7626B3] text-white')
           : 'bg-white text-[#1F1B2E] border border-[rgba(31,27,46,0.14)]'}`}
     >
       {children}
     </button>
+  );
+}
+
+// Chip "Otro" — a propósito distinto de un chip de opción real: borde
+// punteado, sin relleno sólido ni cuando está abierto, para que se lea como
+// "acá se escribe" y no como una opción más ya elegida.
+export function OtroChip({ abierto, onClick }: { abierto: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[14.5px] font-semibold select-none
+        border border-dashed transition-all duration-100 ease-out active:scale-[0.96]
+        ${abierto ? 'bg-[#F0E7FA]' : 'bg-white'}`}
+      style={{ borderColor: 'rgba(118,38,179,0.45)', color: COLORS.brandDark }}
+    >
+      ✍️ Otro
+    </button>
+  );
+}
+
+// Caja de ayuda/ejemplo — para los textos grises que acompañan una
+// pregunta: más grandes y en una cajita, no una línea chiquita que se pierde.
+export function Nota({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl px-3.5 py-2.5" style={{ background: COLORS.tint }}>
+      <p className="text-[13.5px] font-semibold leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
+    </div>
   );
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Coachmark, COLORS, Grupo, crearGrupoDemo, loadV2Grupo, saveV2Grupo } from './shared';
+import { Coachmark, COLORS, Grupo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, saveV2Grupo } from './shared';
 
 // REDISEÑO v2 — Grupos: competir con amigas por actividad (cuánto
 // registraste) y, en Objetivos, armar metas grupales. Todavía no hay
@@ -43,21 +43,10 @@ export function GruposV2() {
 
   async function invitar() {
     if (!grupo) return;
-    const texto = `Unite a "${grupo.nombre}" en FINA con el código ${grupo.codigo} 💜`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: texto });
-      } catch {
-        // canceló el share sheet — no hacemos nada
-      }
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(texto);
+    const resultado = await invitarAGrupo(grupo);
+    if (resultado === 'copiado') {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 1800);
-    } catch {
-      // sin permiso de portapapeles — no es crítico
     }
   }
 
