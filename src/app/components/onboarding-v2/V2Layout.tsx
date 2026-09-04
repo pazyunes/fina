@@ -1,18 +1,35 @@
 import { Outlet } from 'react-router';
 import { BottomNavV2 } from './BottomNavV2';
-import { DeviceFrame } from './shared';
+import { SidebarV2 } from './SidebarV2';
+import { COLORS } from './shared';
 
-// REDISEÑO v2 — layout compartido por Home/Gastos/Objetivos/Inversiones:
-// el contenido cambia (Outlet), el menú de abajo se queda fijo dentro del
-// mismo marco (ver DeviceFrame — mobile-first: en mobile es la pantalla
-// completa, en desktop es una tarjeta con alto fijo tipo celular).
+// REDISEÑO v2 — layout compartido por Home/Gastos/Objetivos/Inversiones.
+// RESPONSIVE:
+//   - Mobile: pantalla completa + menú abajo (BottomNavV2). El contenido lleva
+//     padding-bottom para que la última tarjeta no quede tapada por el botón
+//     flotante del chat.
+//   - Desktop (lg+): menú LATERAL (SidebarV2) a la izquierda + contenido ancho
+//     centrado. Se deja atrás el "marco de teléfono". El menú de abajo se oculta.
 export function V2Layout() {
   return (
-    <DeviceFrame>
+    <div
+      className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col lg:flex-row overflow-hidden"
+      style={{ background: COLORS.paper }}
+    >
+      {/* Menú lateral — solo desktop */}
+      <SidebarV2 />
+
+      {/* Contenido */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <Outlet />
+        <div className="mx-auto w-full lg:max-w-2xl pb-10 lg:pb-12">
+          <Outlet />
+        </div>
       </div>
-      <BottomNavV2 />
-    </DeviceFrame>
+
+      {/* Menú de abajo — solo mobile */}
+      <div className="lg:hidden shrink-0">
+        <BottomNavV2 />
+      </div>
+    </div>
   );
 }
