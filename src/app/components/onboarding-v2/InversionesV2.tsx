@@ -160,7 +160,7 @@ export function InversionesV2() {
   // ── intro ──
   if (paso === 'intro') {
     return (
-      <div className="px-[22px] pt-8 flex flex-col gap-4">
+      <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
         <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Inversiones</h1>
         <Coachmark id="inversiones">Acá vas a poder armar tu perfil de riesgo y ver qué opciones tienen sentido para vos — nunca movemos tu plata, solo te orientamos.</Coachmark>
         <button
@@ -188,7 +188,7 @@ export function InversionesV2() {
 
     return (
       <div className="pb-6">
-        <div className="px-[22px] pt-8 flex flex-col gap-4">
+        <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
           <div className="flex items-center justify-between gap-2">
             <span
               className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
@@ -350,7 +350,7 @@ export function InversionesV2() {
 
   // ── q1 / q2 / yaInvierte / enQue / bancos comparten el layout del stepper ──
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4">
+    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
       <div className="flex justify-center gap-2">
         {pasos.map((p, i) => (
           <span key={p} className="w-2.5 h-2.5 rounded-full" style={{ background: i <= stepIndex ? COLORS.brand : 'rgba(31,27,46,0.14)' }} />

@@ -62,7 +62,7 @@ export function PerfilV2() {
   }
 
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-6">
+    <div className="px-[22px] pt-8 flex flex-col gap-6 lg:max-w-2xl lg:mx-auto">
       <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Tu perfil</h1>
 
       <div className="flex flex-col items-center gap-3">

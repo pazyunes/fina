@@ -151,7 +151,7 @@ const ACCESOS = [
 // grande (si ya hay datos reales) y una barrita del color de la sección.
 function AnalisisCard({ titulo, valor, sub, color }: { titulo: string; valor: string; sub: string; color: string }) {
   return (
-    <div className="w-[168px] shrink-0 bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-1.5">
+    <div className="max-lg:w-[168px] max-lg:shrink-0 lg:flex-1 lg:min-w-[150px] bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-1.5">
       <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>{titulo}</p>
       <p className="text-[24px] font-bold leading-none" style={{ color }}>{valor}</p>
       <p className="text-[11.5px] leading-snug" style={{ color: COLORS.inkSoft }}>{sub}</p>
@@ -201,8 +201,8 @@ export function HomeV2() {
   ];
 
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-6 pb-4">
-      <div className="flex items-center gap-3">
+    <div className="px-[22px] pt-8 pb-4 flex flex-col gap-6 lg:px-8 lg:pt-10 lg:grid lg:grid-cols-3 lg:gap-5 lg:gap-y-6 lg:grid-flow-row-dense lg:items-start">
+      <div className="flex items-center gap-3 lg:col-span-3">
         <button
           type="button"
           onClick={() => navigate('/onboarding-v2/perfil')}
@@ -219,7 +219,7 @@ export function HomeV2() {
 
       {/* Anillo de bienestar financiero — solo si hay algo real que mostrar */}
       {hayBienestar && (
-        <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex gap-4 items-center">
+        <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex gap-4 items-center lg:col-span-2 lg:h-full">
           <svg viewBox="0 0 120 120" className="w-[92px] h-[92px] shrink-0">
             <Arco radius={50} pct={b.gastosPct} color={COLORS.coral} />
             <Arco radius={38} pct={b.objetivosPct} color={COLORS.gold} />
@@ -248,7 +248,7 @@ export function HomeV2() {
 
       {/* Reservas (alcancía) — movida acá desde Gastos, arriba de todo,
           debajo del bienestar. Es plata que apartás para no gastarla. */}
-      <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)]">
+      <div className={`bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] lg:h-full ${hayBienestar ? 'lg:col-span-1' : 'lg:col-span-3'}`}>
         <div className="flex items-center gap-3">
           <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
           <div className="flex-1 min-w-0">
@@ -279,7 +279,7 @@ export function HomeV2() {
       {/* Así arrancás — mensajes motivadores con lo del onboarding. Card más
           chica y con una X para cerrarla (no vuelve a aparecer). */}
       {potencial.length > 0 && !arrancasOculto && (
-        <div className="rounded-2xl px-3.5 py-2.5 flex items-start gap-2.5" style={{ background: COLORS.brandSoft }}>
+        <div className="rounded-2xl px-3.5 py-2.5 flex items-start gap-2.5 lg:col-span-3" style={{ background: COLORS.brandSoft }}>
           <div className="flex-1 min-w-0 flex flex-col gap-0.5">
             <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: COLORS.brandDark }}>Así arrancás en FINA</p>
             {potencial.map((m) => (
@@ -298,14 +298,16 @@ export function HomeV2() {
         </div>
       )}
 
-      <ActionRow
-        icon={<span className="text-lg">📝</span>}
-        label="Completá tu perfil"
-        onClick={() => navigate('/onboarding-v2/perfil')}
-      />
+      <div className="lg:col-span-3">
+        <ActionRow
+          icon={<span className="text-lg">📝</span>}
+          label="Completá tu perfil"
+          onClick={() => navigate('/onboarding-v2/perfil')}
+        />
+      </div>
 
       {/* 3 accesos como cuadraditos en una línea */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3 lg:col-span-3">
         {ACCESOS.map((a) => (
           <button
             key={a.label}
@@ -321,10 +323,11 @@ export function HomeV2() {
         ))}
       </div>
 
-      {/* Mis análisis — carrusel horizontal de visualizaciones (simple) */}
-      <div className="flex flex-col gap-2">
+      {/* Mis análisis — carrusel horizontal en mobile; en desktop las tarjetas
+          se acomodan en la celda (sin salirse con margen negativo). */}
+      <div className="flex flex-col gap-2 lg:col-span-2">
         <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Mis análisis</p>
-        <div className="flex gap-3 overflow-x-auto -mx-[22px] px-[22px] pb-1" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex gap-3 overflow-x-auto -mx-[22px] px-[22px] pb-1 lg:mx-0 lg:px-0 lg:overflow-visible lg:flex-wrap" style={{ scrollbarWidth: 'none' }}>
           {analisis.map((a) => (
             <AnalisisCard key={a.titulo} titulo={a.titulo} valor={a.valor} sub={a.sub} color={a.color} />
           ))}
@@ -333,7 +336,7 @@ export function HomeV2() {
 
       {/* Mis competencias — ranking del grupo. Empieza simple: el nombre del
           grupo con una franja de color arriba y el ranking de actividad. */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 lg:col-span-1">
         <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Mis competencias</p>
         {grupo ? (
           <button
@@ -365,7 +368,7 @@ export function HomeV2() {
       </div>
 
       {/* Tips para vos — recomendaciones cortas según lo que ya sabemos de vos */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 lg:col-span-3">
         <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tips para vos</p>
         {tips.map((t) => (
           <button

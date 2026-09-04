@@ -19,9 +19,11 @@ export function V2Layout() {
       {/* Menú lateral — solo desktop */}
       <SidebarV2 />
 
-      {/* Contenido */}
+      {/* Contenido — lienzo ancho en desktop. Cada pantalla decide su propio
+          layout adentro (Home usa varias columnas; las demás se centran en una
+          columna legible con lg:max-w-2xl lg:mx-auto en su propio contenedor). */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto w-full lg:max-w-2xl pb-10 lg:pb-12">
+        <div className="mx-auto w-full lg:max-w-[1120px] pb-10 lg:pb-12">
           <Outlet />
         </div>
       </div>

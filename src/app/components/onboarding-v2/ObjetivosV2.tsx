@@ -446,7 +446,7 @@ export function ObjetivosV2() {
     const done = estado === 'definido' && acumulado >= total;
 
     return (
-      <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
+      <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
         {confirmarBorrarModal}
         <div className="flex items-center justify-between">
           <button type="button" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>← Volver</button>
@@ -693,7 +693,7 @@ export function ObjetivosV2() {
 
   // ── Vista: lista ──
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4">
+    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
       {modalCrear}
       {confirmarBorrarModal}
       <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Objetivos</h1>

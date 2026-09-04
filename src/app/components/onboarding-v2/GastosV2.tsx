@@ -154,7 +154,7 @@ export function GastosV2() {
   }
 
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
+    <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
       <div>
         <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Mis Gastos</h1>
         <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todo lo que vas registrando, en un solo lugar.</p>
