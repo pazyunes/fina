@@ -281,8 +281,10 @@ export function HomeV2() {
         ))}
       </div>
 
-      {/* Tu grupo — debajo del dashboard, no mezclado con los accesos de arriba */}
-      {grupo ? (
+      {/* Tu grupo — si ya hay uno armado (se crean desde Objetivos), mostramos
+          un resumen de la actividad. El botón para ARMAR un grupo vive solo en
+          Objetivos (para un objetivo grupal), ya no en Home. */}
+      {grupo && (
         <button
           type="button"
           onClick={() => navigate('/onboarding-v2/grupos')}
@@ -304,12 +306,6 @@ export function HomeV2() {
             ))}
           </div>
         </button>
-      ) : (
-        <ActionRow
-          icon={<span className="text-lg">👥</span>}
-          label="Armá un grupo con amigas"
-          onClick={() => navigate('/onboarding-v2/grupos')}
-        />
       )}
     </div>
   );

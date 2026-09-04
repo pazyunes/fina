@@ -34,6 +34,10 @@ export function PerfilV2() {
   const items = itemsPerfil();
   const faltan = items.filter((i) => !i.hecho);
   const faltaNivel = !nivel;
+  // Progreso del perfil (checklist + nivel financiero) → barra 0-100%.
+  const totalChecklist = items.length + 1;
+  const hechosChecklist = items.filter((i) => i.hecho).length + (nivel ? 1 : 0);
+  const pctPerfil = Math.round((hechosChecklist / totalChecklist) * 100);
 
   function elegirFoto() {
     fileRef.current?.click();
@@ -107,6 +111,12 @@ export function PerfilV2() {
       {(faltan.length > 0 || faltaNivel) && (
         <div className="flex flex-col gap-2">
           <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Completá tu perfil</p>
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.tint }}>
+              <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pctPerfil}%`, background: COLORS.brand }} />
+            </div>
+            <span className="text-[12.5px] font-bold tabular-nums shrink-0" style={{ color: COLORS.brand }}>{pctPerfil}%</span>
+          </div>
           {items.map((it) => (
             <button
               key={it.label}

@@ -65,20 +65,9 @@ function estadoInicial(): EstadoGastos {
   };
 }
 
-const LS_VIO_INTRO = 'fina_v2_gastos_intro_vista';
-function vioIntro(): boolean {
-  try { return localStorage.getItem(LS_VIO_INTRO) === '1'; } catch { return true; }
-}
-function marcarIntroVista() {
-  try { localStorage.setItem(LS_VIO_INTRO, '1'); } catch { /* no crítico */ }
-}
-
 export function GastosV2() {
   const [estado, setEstado] = useState<EstadoGastos>(estadoInicial);
   const { categorias, gastos, disponible, reserva, topes } = estado;
-  // Pantalla motivacional corta, una sola vez — solo si todavía no registró
-  // nada (si ya tiene gastos, no tiene sentido mostrarla).
-  const [mostrarIntro, setMostrarIntro] = useState(() => !vioIntro() && gastos.length === 0);
 
   useEffect(() => {
     saveV2GastosState(estado);
@@ -169,19 +158,6 @@ export function GastosV2() {
     setEstado((s) => ({ ...s, reserva: s.reserva + n, disponible: Math.max(s.disponible - n, 0) }));
     setReservaVal('');
     setReservaOpen(false);
-  }
-
-  if (mostrarIntro) {
-    return (
-      <div className="px-[22px] pt-10 flex flex-col gap-4 flex-1">
-        <span className="text-4xl">🔍</span>
-        <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Vas a poder controlar tus gastos de verdad</h1>
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Vas a ver en qué se te va la plata, separado por sección, y le podés poner un tope a lo que quieras recortar.</p>
-        <div className="mt-auto pb-4">
-          <Cta label="Empezar a controlar mis gastos" onClick={() => { marcarIntroVista(); setMostrarIntro(false); }} />
-        </div>
-      </div>
-    );
   }
 
   return (
