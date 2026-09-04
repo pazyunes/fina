@@ -188,7 +188,7 @@ export function InversionesV2() {
 
     return (
       <div className="pb-6">
-        <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
+        <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto lg:px-8 lg:pt-10">
           <div className="flex items-center justify-between gap-2">
             <span
               className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
@@ -240,6 +240,7 @@ export function InversionesV2() {
                   Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
                 </div>
               )}
+              <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:items-start">
               {recomendados.map((r) => {
                 const bancoMatch = bancos.find((b) => r.apps.includes(b));
                 const already = yaEnIds.has(r.id);
@@ -269,13 +270,15 @@ export function InversionesV2() {
                   </div>
                 );
               })}
+              </div>
               <p className="text-[11px] px-1" style={{ color: COLORS.inkFaint }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
             </div>
           )}
 
           {tab === 'mias' && (
             <div className="flex flex-col gap-3">
-              <div className={`${CARD} p-4 flex gap-4 items-center`}>
+              <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:items-stretch">
+              <div className={`${CARD} p-4 flex gap-4 items-center lg:h-full`}>
                 <Donut
                   segments={INSTRUMENTOS.map((i) => ({
                     color: i.riesgo === 'Bajo' ? '#2FAE66' : i.riesgo === 'Medio' ? '#E8A33D' : '#FF5C7A',
@@ -288,7 +291,7 @@ export function InversionesV2() {
                 <p className="flex-1 text-[13px]" style={{ color: COLORS.inkSoft }}>Vas registrando lo que ponés en cada instrumento acá abajo.</p>
               </div>
 
-              <div className={`${CARD} p-4 flex flex-col gap-2.5`}>
+              <div className={`${CARD} p-4 flex flex-col gap-2.5 lg:h-full`}>
                 <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Registrar un aporte</p>
                 <div className="flex flex-wrap gap-2">
                   {INSTRUMENTOS.map((i) => (
@@ -306,6 +309,7 @@ export function InversionesV2() {
                   />
                   <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>+</button>
                 </div>
+              </div>
               </div>
 
               <div className="flex flex-col gap-2">

@@ -154,15 +154,18 @@ export function GastosV2() {
   }
 
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
+    <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:px-8 lg:pt-10">
       <div>
         <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Mis Gastos</h1>
         <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todo lo que vas registrando, en un solo lugar.</p>
       </div>
       <Coachmark id="gastos">Acá vas viendo en qué se te va la plata, separado por sección. Podés ponerle un tope semanal o mensual a cada una.</Coachmark>
 
+      {/* En desktop, todo lo de abajo se acomoda en grilla; en mobile sigue
+          siendo una sola columna apilada (idéntico a antes). */}
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:gap-5 lg:gap-y-5 lg:grid-flow-row-dense lg:items-start">
       {/* Resumen: donut + disponible/gastado */}
-      <div className={`bg-white rounded-2xl p-4 ${CARD_SHADOW} flex gap-4 items-center`}>
+      <div className={`bg-white rounded-2xl p-4 ${CARD_SHADOW} flex gap-4 items-center lg:h-full ${porTipo.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
         <Donut segments={donutCategorias} centerLabel="Gastado" centerValue={fmtMoney(totalGastado)} />
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <div>
@@ -193,7 +196,7 @@ export function GastosV2() {
 
       {/* Distribución por tipo — la parte que agrega valor: cuánto es impulso vs necesidad */}
       {porTipo.length > 0 && (
-        <div className={`bg-white rounded-2xl p-3.5 flex flex-col gap-2 ${CARD_SHADOW}`}>
+        <div className={`bg-white rounded-2xl p-3.5 flex flex-col gap-2 ${CARD_SHADOW} lg:col-span-1 lg:h-full`}>
           <p className="text-[11.5px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>¿En qué tipo de gasto se te va?</p>
           <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: 'rgba(31,27,46,0.06)' }}>
             {porTipo.map((t) => (
@@ -212,6 +215,7 @@ export function GastosV2() {
       )}
 
       {/* Agregar gasto */}
+      <div className="lg:col-span-3">
       {!addingGasto ? (
         <Cta label="+ Agregar gasto" onClick={() => { setChooser(true); setWaStep(false); }} />
       ) : (
@@ -322,6 +326,7 @@ export function GastosV2() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Popup: ¿Desde FINA o Desde WhatsApp? */}
       {chooser && (
@@ -393,7 +398,7 @@ export function GastosV2() {
       )}
 
       {/* Sobres por categoría */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:col-span-2">
         {categorias.length === 0 && (
           <p className="text-[13px] px-1" style={{ color: COLORS.inkSoft }}>
             Todavía no tenés secciones — se crean solas cuando agregás tu primer gasto.
@@ -484,7 +489,7 @@ export function GastosV2() {
       </div>
 
       {/* Buscador de gastos — colapsado en una lupita, no ocupa lugar hasta que se usa */}
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2.5 lg:col-span-1">
         <div className="flex items-center justify-between">
           <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tus gastos</p>
           <button
@@ -576,7 +581,10 @@ export function GastosV2() {
         })}
       </div>
 
-      <ArmarGrupoBtn />
+      <div className="lg:col-span-3">
+        <ArmarGrupoBtn />
+      </div>
+      </div>
     </div>
   );
 }
