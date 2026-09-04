@@ -9,10 +9,8 @@ import { Chip, Coachmark, Cta, Donut, COLORS, fechaDisplay, fmtMoney, formatThou
 // la app real, adaptado a este sandbox sin backend.
 //
 // Una vez armado el perfil, la pantalla se divide en 3 (pedido explícito):
-// Mis inversiones / Recomendaciones / Mi evolución — y ahí sí, la sección
-// pasa a modo oscuro (Cleo/Nubank): el número manda, cero ruido de color.
-// El quiz en sí (antes de llegar al resultado) se queda en el mismo
-// lenguaje claro que el resto de la app.
+// Recomendaciones / Mis inversiones / Mi evolución. Todo en el diseño CLARO
+// de FINA (blanco + violeta), coherente con el resto de la app.
 
 type Paso = 'intro' | 'q1' | 'q2' | 'yaInvierte' | 'enQue' | 'bancos' | 'resultado';
 type PerfilId = 'conservador' | 'moderado' | 'arriesgado';
@@ -57,9 +55,16 @@ const INSTRUMENTOS: Instrumento[] = [
 ];
 
 const PERFILES: Record<PerfilId, { label: string; emoji: string; accent: string; copy: string; tasaMensual: number }> = {
-  conservador: { label: 'Conservador', emoji: '🌱', accent: '#34D399', copy: 'Preferís cuidar lo que tenés antes que arriesgar de más.', tasaMensual: 0.008 },
-  moderado: { label: 'Moderado', emoji: '🌿', accent: '#F5B94D', copy: 'Buscás un equilibrio entre seguridad y crecimiento.', tasaMensual: 0.015 },
-  arriesgado: { label: 'Arriesgado', emoji: '🚀', accent: '#FF8FA3', copy: 'Te bancás más vaivén a cambio de más potencial de crecimiento.', tasaMensual: 0.025 },
+  conservador: { label: 'Conservador', emoji: '🌱', accent: '#2FAE66', copy: 'Preferís cuidar lo que tenés antes que arriesgar de más.', tasaMensual: 0.008 },
+  moderado: { label: 'Moderado', emoji: '🌿', accent: '#E8A33D', copy: 'Buscás un equilibrio entre seguridad y crecimiento.', tasaMensual: 0.015 },
+  arriesgado: { label: 'Arriesgado', emoji: '🚀', accent: '#FF5C7A', copy: 'Te bancás más vaivén a cambio de más potencial de crecimiento.', tasaMensual: 0.025 },
+};
+
+// Colores claros por perfil (tinte suave de fondo + texto fuerte legible).
+const PERFIL_LIGHT: Record<PerfilId, { soft: string; strong: string }> = {
+  conservador: { soft: COLORS.greenSoft, strong: '#1E7A45' },
+  moderado: { soft: COLORS.goldSoft, strong: '#8A5E10' },
+  arriesgado: { soft: COLORS.coralSoft, strong: COLORS.coralDark },
 };
 
 type Moneda = 'ARS' | 'USD';
@@ -75,7 +80,8 @@ type PersistidoInv = {
   monedaInv?: Moneda;
 };
 
-const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors';
+// Tarjeta clara estándar de FINA v2.
+const CARD = 'bg-white rounded-2xl shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
 
 export function InversionesV2() {
   // Si ya había estado antes en esta pantalla y llegó al resultado, retoma
@@ -147,6 +153,10 @@ export function InversionesV2() {
     setAporteMonto('');
   }
 
+  // Toggle segmentado claro reutilizable (moneda / tabs / modo evolución).
+  const segWrap = 'flex gap-1.5 rounded-2xl p-1';
+  const segWrapStyle = { background: COLORS.tint } as const;
+
   // ── intro ──
   if (paso === 'intro') {
     return (
@@ -156,7 +166,7 @@ export function InversionesV2() {
         <button
           type="button"
           onClick={() => setPaso(pasos[0])}
-          className="text-left bg-white rounded-2xl p-5 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-2 transition-transform duration-100 active:scale-[0.99]"
+          className={`text-left ${CARD} p-5 flex flex-col gap-2 transition-transform duration-100 active:scale-[0.99]`}
         >
           <span className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Averiguá tu perfil de inversor</span>
           <span className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>
@@ -170,38 +180,39 @@ export function InversionesV2() {
     );
   }
 
-  // ── resultado: perfil + 3 pestañas, en modo oscuro ──
+  // ── resultado: perfil + 3 pestañas, en diseño claro de FINA ──
   if (paso === 'resultado') {
     const totalAportado = aportes.reduce((s, a) => s + a.monto, 0);
     const nombreInstr = (id: string) => INSTRUMENTOS.find((i) => i.id === id)?.nombre ?? id;
+    const pl = PERFIL_LIGHT[perfilId];
 
     return (
-      <div style={{ background: COLORS.dark, minHeight: '100%' }} className="pb-6">
+      <div className="pb-6">
         <div className="px-[22px] pt-8 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-2">
             <span
               className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
-              style={{ background: `${perfil.accent}26`, color: perfil.accent }}
+              style={{ background: pl.soft, color: pl.strong }}
             >
               {perfil.emoji} Perfil {perfil.label.toLowerCase()}
             </span>
-            <div className="flex rounded-full p-0.5 shrink-0" style={{ background: COLORS.darkCard }}>
+            <div className="flex rounded-full p-0.5 shrink-0" style={{ background: COLORS.tint }}>
               {(['ARS', 'USD'] as Moneda[]).map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMonedaInv(m)}
                   className="rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors duration-150"
-                  style={monedaInv === m ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.onDarkSoft }}
+                  style={monedaInv === m ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.inkSoft }}
                 >
                   {m === 'ARS' ? 'Pesos' : 'USD'}
                 </button>
               ))}
             </div>
           </div>
-          <p className="text-[13.5px] -mt-2" style={{ color: COLORS.onDarkSoft }}>{perfil.copy}</p>
+          <p className="text-[13.5px] -mt-2" style={{ color: COLORS.inkSoft }}>{perfil.copy}</p>
 
-          <div className="flex gap-1.5 rounded-2xl p-1" style={{ background: COLORS.darkCard }}>
+          <div className={segWrap} style={segWrapStyle}>
             {([
               ['recos', 'Recomendaciones'],
               ['mias', 'Mis inversiones'],
@@ -214,7 +225,7 @@ export function InversionesV2() {
                   type="button"
                   onClick={() => setTab(id)}
                   className="flex-1 rounded-xl py-2 text-[12px] font-bold transition-colors duration-150"
-                  style={sel ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.onDarkSoft }}
+                  style={sel ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.inkSoft }}
                 >
                   {label}
                 </button>
@@ -225,7 +236,7 @@ export function InversionesV2() {
           {tab === 'recos' && (
             <div className="flex flex-col gap-3">
               {enQue.length > 0 && (
-                <div className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold" style={{ background: 'rgba(52,211,153,0.14)', color: '#34D399' }}>
+                <div className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold" style={{ background: COLORS.greenSoft, color: '#1E7A45' }}>
                   Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
                 </div>
               )}
@@ -233,53 +244,52 @@ export function InversionesV2() {
                 const bancoMatch = bancos.find((b) => r.apps.includes(b));
                 const already = yaEnIds.has(r.id);
                 return (
-                  <div key={r.id} className="rounded-2xl p-4" style={{ background: COLORS.darkCard, opacity: already ? 0.6 : 1 }}>
+                  <div key={r.id} className={`${CARD} p-4`} style={{ opacity: already ? 0.7 : 1 }}>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-bold text-[14.5px]" style={{ color: COLORS.onDark }}>{r.nombre}</p>
-                      <span className="text-[10.5px] font-semibold rounded-full px-2 py-0.5 shrink-0" style={{ background: 'rgba(244,241,250,0.1)', color: COLORS.onDarkSoft }}>{r.riesgo} riesgo</span>
+                      <p className="font-bold text-[14.5px]" style={{ color: COLORS.ink }}>{r.nombre}</p>
+                      <span className="text-[10.5px] font-semibold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>{r.riesgo} riesgo</span>
                     </div>
                     {bancoMatch ? (
-                      <p className="text-[12.5px] font-semibold mt-1" style={{ color: '#34D399' }}>✓ Desde tu {bancoMatch}</p>
+                      <p className="text-[12.5px] font-semibold mt-1" style={{ color: '#1E7A45' }}>✓ Desde tu {bancoMatch}</p>
                     ) : (
-                      <p className="text-[12.5px] mt-1" style={{ color: COLORS.onDarkSoft }}>{r.desc}</p>
+                      <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>{r.desc}</p>
                     )}
-                    {already && <p className="text-[11.5px] font-semibold mt-1" style={{ color: COLORS.onDarkSoft }}>Ya lo hacés ✓</p>}
+                    {already && <p className="text-[11.5px] font-semibold mt-1" style={{ color: COLORS.inkSoft }}>Ya lo hacés ✓</p>}
                     <button
                       type="button"
                       onClick={() => setExpandido((s) => { const n = new Set(s); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
                       className="mt-2 text-[11.5px] font-bold underline"
-                      style={{ color: COLORS.onDarkSoft }}
+                      style={{ color: COLORS.brand }}
                     >
                       {expandido.has(r.id) ? 'Ocultar' : '¿Por qué te lo recomendamos?'}
                     </button>
                     {expandido.has(r.id) && (
-                      <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: COLORS.onDarkSoft }}>{r.porQue}</p>
+                      <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: COLORS.inkSoft }}>{r.porQue}</p>
                     )}
                   </div>
                 );
               })}
-              <p className="text-[11px] px-1" style={{ color: COLORS.onDarkSoft }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
+              <p className="text-[11px] px-1" style={{ color: COLORS.inkFaint }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
             </div>
           )}
 
           {tab === 'mias' && (
             <div className="flex flex-col gap-3">
-              <div className="rounded-2xl p-4 flex gap-4 items-center" style={{ background: COLORS.darkCard }}>
+              <div className={`${CARD} p-4 flex gap-4 items-center`}>
                 <Donut
-                  dark
                   segments={INSTRUMENTOS.map((i) => ({
-                    color: i.riesgo === 'Bajo' ? '#34D399' : i.riesgo === 'Medio' ? '#F5B94D' : '#FF8FA3',
+                    color: i.riesgo === 'Bajo' ? '#2FAE66' : i.riesgo === 'Medio' ? '#E8A33D' : '#FF5C7A',
                     pct: totalAportado > 0 ? (aportes.filter((a) => a.instrumentoId === i.id).reduce((s, a) => s + a.monto, 0) / totalAportado) * 100 : 0,
                   }))}
                   centerLabel="Invertido"
                   centerValue={fmtMoney(totalAportado)}
                   size={100}
                 />
-                <p className="flex-1 text-[13px]" style={{ color: COLORS.onDarkSoft }}>Vas registrando lo que ponés en cada instrumento acá abajo.</p>
+                <p className="flex-1 text-[13px]" style={{ color: COLORS.inkSoft }}>Vas registrando lo que ponés en cada instrumento acá abajo.</p>
               </div>
 
-              <div className="rounded-2xl p-4 flex flex-col gap-2.5" style={{ background: COLORS.darkCard }}>
-                <p className="text-[13px] font-bold" style={{ color: COLORS.onDark }}>Registrar un aporte</p>
+              <div className={`${CARD} p-4 flex flex-col gap-2.5`}>
+                <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Registrar un aporte</p>
                 <div className="flex flex-wrap gap-2">
                   {INSTRUMENTOS.map((i) => (
                     <Chip key={i.id} on={aporteInstrId === i.id} onClick={() => setAporteInstrId(i.id)}>{i.nombre}</Chip>
@@ -287,8 +297,8 @@ export function InversionesV2() {
                 </div>
                 <div className="flex gap-2">
                   <input
-                    className="flex-1 rounded-xl px-3 py-2 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none"
-                    style={{ background: 'rgba(244,241,250,0.08)', color: COLORS.onDark }}
+                    className="flex-1 rounded-xl px-3 py-2 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors focus:border-[#7626B3]"
+                    style={{ background: '#fff', color: COLORS.ink, borderColor: COLORS.lineStrong }}
                     placeholder="Monto"
                     inputMode="numeric"
                     value={aporteMonto}
@@ -299,11 +309,11 @@ export function InversionesV2() {
               </div>
 
               <div className="flex flex-col gap-2">
-                {aportes.length === 0 && <p className="text-[13px]" style={{ color: COLORS.onDarkSoft }}>Todavía no registraste aportes.</p>}
+                {aportes.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>}
                 {aportes.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between rounded-xl px-3.5 py-2.5" style={{ background: COLORS.darkCard }}>
-                    <span className="text-[13.5px]" style={{ color: COLORS.onDark }}>{nombreInstr(a.instrumentoId)} · {fechaDisplay(a.ts)}</span>
-                    <span className="font-['IBM_Plex_Mono'] font-semibold text-[13.5px] tabular-nums" style={{ color: COLORS.onDark }}>{fmtMoney(a.monto)}</span>
+                  <div key={a.id} className={`${CARD} flex items-center justify-between px-3.5 py-2.5`}>
+                    <span className="text-[13.5px]" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)} · {fechaDisplay(a.ts)}</span>
+                    <span className="font-['IBM_Plex_Mono'] font-semibold text-[13.5px] tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(a.monto)}</span>
                   </div>
                 ))}
               </div>
@@ -312,7 +322,7 @@ export function InversionesV2() {
 
           {tab === 'evolucion' && (
             <div className="flex flex-col gap-3">
-              <div className="flex gap-1.5 rounded-2xl p-1" style={{ background: COLORS.darkCard }}>
+              <div className={segWrap} style={segWrapStyle}>
                 {(['real', 'simulador'] as const).map((m) => {
                   const sel = modoEvolucion === m;
                   return (
@@ -321,7 +331,7 @@ export function InversionesV2() {
                       type="button"
                       onClick={() => setModoEvolucion(m)}
                       className="flex-1 rounded-xl py-2 text-[12px] font-bold transition-colors duration-150"
-                      style={sel ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.onDarkSoft }}
+                      style={sel ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.inkSoft }}
                     >
                       {m === 'real' ? 'Mis aportes' : 'Simular'}
                     </button>
@@ -412,14 +422,13 @@ export function InversionesV2() {
 
 // Línea de tiempo simple: lo aportado de verdad vs una proyección ilustrativa
 // a la tasa mensual del perfil (mismo criterio "orientativo" que el resto
-// de la app real — nunca una promesa de rendimiento). Vive en modo oscuro,
-// como el resto del resultado.
+// de la app real — nunca una promesa de rendimiento). Diseño claro de FINA.
 function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: number }) {
   const ordenado = [...aportes].reverse();
   if (ordenado.length === 0) {
     return (
-      <div className="rounded-2xl p-5 text-center border border-dashed" style={{ borderColor: COLORS.darkLine }}>
-        <p className="text-[13.5px]" style={{ color: COLORS.onDarkSoft }}>Registrá algún aporte en "Mis inversiones" para ver tu evolución acá.</p>
+      <div className="rounded-2xl p-5 text-center border border-dashed" style={{ borderColor: COLORS.lineStrong }}>
+        <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Registrá algún aporte en "Mis inversiones" para ver tu evolución acá.</p>
       </div>
     );
   }
@@ -436,24 +445,24 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
   };
   const pathReal = real.map((_, i) => xy(real, i).join(',')).join(' ');
   const pathProy = proyectado.map((_, i) => xy(proyectado, i).join(',')).join(' ');
-  const realColor = '#34D399';
-  const proyColor = '#F5B94D';
+  const realColor = '#2FAE66';
+  const proyColor = '#E8A33D';
 
   return (
-    <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.darkCard }}>
-      <p className="text-[13px] font-bold" style={{ color: COLORS.onDark }}>Tu evolución</p>
+    <div className={`${CARD} p-4 flex flex-col gap-3`}>
+      <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Tu evolución</p>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[130px]">
         <polyline points={pathProy} fill="none" stroke={proyColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         <polyline points={pathReal} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {/* Puntos: sin esto, un solo aporte no dibuja nada (una polyline de 1 punto no se ve). */}
-        {proyectado.map((_, i) => { const [x, y] = xy(proyectado, i); return <circle key={`p${i}`} cx={x} cy={y} r="3.5" fill={proyColor} stroke={COLORS.dark} strokeWidth="1.5" />; })}
-        {real.map((_, i) => { const [x, y] = xy(real, i); return <circle key={`r${i}`} cx={x} cy={y} r="3.5" fill={realColor} stroke={COLORS.dark} strokeWidth="1.5" />; })}
+        {proyectado.map((_, i) => { const [x, y] = xy(proyectado, i); return <circle key={`p${i}`} cx={x} cy={y} r="3.5" fill={proyColor} stroke="#fff" strokeWidth="1.5" />; })}
+        {real.map((_, i) => { const [x, y] = xy(real, i); return <circle key={`r${i}`} cx={x} cy={y} r="3.5" fill={realColor} stroke="#fff" strokeWidth="1.5" />; })}
       </svg>
       <div className="flex gap-4">
-        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.onDarkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Aportado real</span>
-        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.onDarkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: proyColor }} /> Proyección estimada</span>
+        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Aportado real</span>
+        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: proyColor }} /> Proyección estimada</span>
       </div>
-      <p className="text-[11px]" style={{ color: COLORS.onDarkSoft }}>Proyección ilustrativa a tu perfil — no es una promesa de rendimiento.</p>
+      <p className="text-[11px]" style={{ color: COLORS.inkFaint }}>Proyección ilustrativa a tu perfil — no es una promesa de rendimiento.</p>
     </div>
   );
 }
@@ -492,17 +501,17 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
   const w = 280, h = 130, pad = 10;
   const totalAportado = serieAportado[serieAportado.length - 1] ?? 0;
   const totalProyectado = serieProyectado[serieProyectado.length - 1] ?? 0;
-  const realColor = '#34D399';
-  const proyColor = '#F5B94D';
+  const realColor = '#2FAE66';
+  const proyColor = '#E8A33D';
 
   return (
-    <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.darkCard }}>
-      <p className="text-[13px] font-bold" style={{ color: COLORS.onDark }}>Probá antes de invertir plata real</p>
+    <div className={`${CARD} p-4 flex flex-col gap-3`}>
+      <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Probá antes de invertir plata real</p>
       <div className="relative">
-        <span className="absolute top-1/2 -translate-y-1/2 left-3" style={{ color: COLORS.onDarkSoft }}>$</span>
+        <span className="absolute top-1/2 -translate-y-1/2 left-3" style={{ color: COLORS.inkSoft }}>$</span>
         <input
-          className="w-full rounded-xl pl-7 pr-3 py-2.5 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none"
-          style={{ background: 'rgba(244,241,250,0.08)', color: COLORS.onDark }}
+          className="w-full rounded-xl pl-7 pr-3 py-2.5 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors focus:border-[#7626B3]"
+          style={{ background: '#fff', color: COLORS.ink, borderColor: COLORS.lineStrong }}
           placeholder="Cuánto pondrías por mes"
           inputMode="numeric"
           value={monto}
@@ -518,7 +527,7 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
               type="button"
               onClick={() => setMeses(m)}
               className="flex-1 rounded-xl py-2 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-              style={sel ? { background: COLORS.brand, color: '#fff' } : { background: 'rgba(244,241,250,0.08)', color: COLORS.onDarkSoft }}
+              style={sel ? { background: COLORS.brand, color: '#fff' } : { background: COLORS.tint, color: COLORS.inkSoft }}
             >
               {m} meses
             </button>
@@ -533,22 +542,22 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
             <polyline points={serieAPath(serieAportado, w, h, pad, max)} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div className="flex gap-4">
-            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.onDarkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Pondrías</span>
-            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.onDarkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: proyColor }} /> Tendrías (estimado)</span>
+            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Pondrías</span>
+            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: proyColor }} /> Tendrías (estimado)</span>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(244,241,250,0.06)' }}>
-              <p className="text-[11px]" style={{ color: COLORS.onDarkSoft }}>En {meses} meses pondrías</p>
-              <p className="font-['IBM_Plex_Mono'] font-bold text-[15px] tabular-nums" style={{ color: COLORS.onDark }}>{fmtMoney(totalAportado)}</p>
+            <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.tint }}>
+              <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>En {meses} meses pondrías</p>
+              <p className="font-['IBM_Plex_Mono'] font-bold text-[15px] tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(totalAportado)}</p>
             </div>
-            <div className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(244,241,250,0.06)' }}>
-              <p className="text-[11px]" style={{ color: COLORS.onDarkSoft }}>Podrías tener</p>
-              <p className="font-['IBM_Plex_Mono'] font-bold text-[15px] tabular-nums" style={{ color: proyColor }}>{fmtMoney(totalProyectado)}</p>
+            <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.tint }}>
+              <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>Podrías tener</p>
+              <p className="font-['IBM_Plex_Mono'] font-bold text-[15px] tabular-nums" style={{ color: '#8A5E10' }}>{fmtMoney(totalProyectado)}</p>
             </div>
           </div>
         </>
       )}
-      <p className="text-[11px]" style={{ color: COLORS.onDarkSoft }}>Es una simulación con números inventados — no es una promesa de rendimiento ni mueve plata real.</p>
+      <p className="text-[11px]" style={{ color: COLORS.inkFaint }}>Es una simulación con números inventados — no es una promesa de rendimiento ni mueve plata real.</p>
     </div>
   );
 }
