@@ -693,14 +693,12 @@ export function ObjetivosV2() {
 
   // ── Vista: lista ──
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:px-8 lg:pt-10">
+    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
       {modalCrear}
       {confirmarBorrarModal}
       <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Objetivos</h1>
       <Coachmark id="objetivos">Acá armás lo que querés lograr — solo o con tu grupo de amigas — y vas anotando lo que pagás o separás para cada uno.</Coachmark>
       {objetivos.length === 0 && <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todavía no armaste ningún objetivo.</p>}
-      {/* En desktop, los objetivos se ven en grilla; en mobile, apilados. */}
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:items-start">
       {objetivos.map((o) => {
         const estado = estadoMonto(o);
         return (
@@ -791,7 +789,6 @@ export function ObjetivosV2() {
       >
         + Agregar objetivo
       </button>
-      </div>
       <ArmarGrupoBtn />
     </div>
   );
