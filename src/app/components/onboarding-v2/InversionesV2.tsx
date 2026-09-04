@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Chip, Coachmark, Cta, Donut, COLORS, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2InversionesPerfil, loadV2InversionesState, saveV2InversionesState } from './shared';
+import { ArmarGrupoBtn, Chip, Coachmark, Cta, Donut, COLORS, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2InversionesPerfil, loadV2InversionesState, saveV2InversionesState } from './shared';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
 // explícito): un mini-quiz corto arma un perfil de riesgo real (no fijo),
@@ -558,6 +558,7 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
         </>
       )}
       <p className="text-[11px]" style={{ color: COLORS.inkFaint }}>Es una simulación con números inventados — no es una promesa de rendimiento ni mueve plata real.</p>
+      <ArmarGrupoBtn />
     </div>
   );
 }

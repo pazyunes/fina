@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 
 // REDISEÑO v2 (rama feat/rediseno-onboarding-v2) — piezas compartidas entre
 // el onboarding y las pantallas post-onboarding.
@@ -188,6 +189,29 @@ export function crearGrupoDemo(nombreGrupo: string): Grupo {
       { nombre: 'Juli', actividad: 1 },
     ],
   };
+}
+
+// Botón "armar grupo" reutilizable — va en TODAS las pantallas menos Home
+// (en Home, en cambio, se muestra directamente el ranking del grupo). Si ya
+// hay un grupo armado, lleva a verlo; si no, a la pantalla para crearlo.
+export function ArmarGrupoBtn() {
+  const navigate = useNavigate();
+  const grupo = loadV2Grupo();
+  return (
+    <button
+      type="button"
+      onClick={() => navigate('/onboarding-v2/grupos')}
+      className="w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
+      style={{ background: COLORS.brandSoft }}
+    >
+      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-lg" style={{ background: 'rgba(255,255,255,0.6)' }}>👥</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[14px] font-bold" style={{ color: COLORS.brandDark }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
+        <span className="block text-[11.5px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
+      </span>
+      <span className="shrink-0 font-bold" style={{ color: COLORS.brandDark }}>→</span>
+    </button>
+  );
 }
 
 // ── puente Onboarding → Gastos: las categorías de gasto que la persona

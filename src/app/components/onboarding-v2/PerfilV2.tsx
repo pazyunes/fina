@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ActionRow, Chip, COLORS, Face, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
+import { ArmarGrupoBtn, Chip, COLORS, Face, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
@@ -168,11 +168,7 @@ export function PerfilV2() {
         </div>
       )}
 
-      <ActionRow
-        icon={<span className="text-lg">👥</span>}
-        label="Mis grupos"
-        onClick={() => navigate('/onboarding-v2/grupos')}
-      />
+      <ArmarGrupoBtn />
 
       <div className="flex flex-col gap-1 pt-1">
         {['Términos y condiciones', 'Política de privacidad', 'Enviar feedback'].map((txt) => (

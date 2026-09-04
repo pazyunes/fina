@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Cta, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
+import { ArmarGrupoBtn, Cta, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
 // (ver ObjetivosPage.tsx / GoalEditModal.tsx) pasada a la estética nueva —
@@ -789,6 +789,7 @@ export function ObjetivosV2() {
       >
         + Agregar objetivo
       </button>
+      <ArmarGrupoBtn />
     </div>
   );
 }

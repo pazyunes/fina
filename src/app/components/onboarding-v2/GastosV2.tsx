@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Coachmark, Cta, Donut, COLORS, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
+import { ArmarGrupoBtn, Coachmark, Cta, Donut, COLORS, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
 import { WHATSAPP_URL } from '../WhatsAppFab';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
@@ -576,6 +576,7 @@ export function GastosV2() {
         })}
       </div>
 
+      <ArmarGrupoBtn />
     </div>
   );
 }
