@@ -84,6 +84,10 @@ export function GastosV2() {
   const [reservaVal, setReservaVal] = useState('');
 
   const [addingGasto, setAddingGasto] = useState(false);
+  // Popup al tocar "+ Agregar gasto": elegir registrar Desde FINA (a mano) o
+  // Desde WhatsApp (mini explicación → abre el bot).
+  const [chooser, setChooser] = useState(false);
+  const [waStep, setWaStep] = useState(false);
   const [ngMonto, setNgMonto] = useState('');
   const [ngMoneda, setNgMoneda] = useState<Moneda>('ARS');
   const [ngDesc, setNgDesc] = useState('');
@@ -164,7 +168,7 @@ export function GastosV2() {
     <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
       <div>
         <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Mis Gastos</h1>
-        <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Lo que fuiste contando por WhatsApp.</p>
+        <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todo lo que vas registrando, en un solo lugar.</p>
       </div>
       <Coachmark id="gastos">Acá vas viendo en qué se te va la plata, separado por sección. Podés ponerle un tope semanal o mensual a cada una.</Coachmark>
 
@@ -220,19 +224,7 @@ export function GastosV2() {
 
       {/* Agregar gasto */}
       {!addingGasto ? (
-        <>
-          <Cta label="+ Agregar gasto" onClick={() => setAddingGasto(true)} />
-          <a
-            href={WHATSAPP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2.5 rounded-2xl px-4 py-3 text-[13px] font-medium transition-all duration-100 active:scale-[0.99]"
-            style={{ background: COLORS.tint, color: COLORS.brandDark }}
-          >
-            <span className="text-lg shrink-0">💬</span>
-            <span className="flex-1">También los podés registrar hablándole a tu bot de WhatsApp — el mismo botón redondo de abajo.</span>
-          </a>
-        </>
+        <Cta label="+ Agregar gasto" onClick={() => { setChooser(true); setWaStep(false); }} />
       ) : (
         <div className={`bg-white rounded-2xl p-4 flex flex-col gap-3 ${CARD_SHADOW}`}>
           <div className="flex gap-2">
@@ -338,6 +330,75 @@ export function GastosV2() {
             >
               Agregar gasto
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Popup: ¿Desde FINA o Desde WhatsApp? */}
+      {chooser && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ background: 'rgba(31,27,46,0.45)' }}
+          onClick={() => setChooser(false)}
+        >
+          <div className="bg-white w-full max-w-md rounded-2xl p-5 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+            {!waStep ? (
+              <>
+                <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>¿Cómo querés registrar el gasto?</p>
+                <button
+                  type="button"
+                  onClick={() => { setChooser(false); setAddingGasto(true); }}
+                  className="text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
+                  style={{ borderColor: COLORS.line }}
+                >
+                  <span className="text-2xl shrink-0">📝</span>
+                  <span className="flex flex-col">
+                    <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde FINA</span>
+                    <span className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Lo cargás acá, a mano, en un toque.</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWaStep(true)}
+                  className="text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
+                  style={{ borderColor: COLORS.line }}
+                >
+                  <span className="text-2xl shrink-0">💬</span>
+                  <span className="flex flex-col">
+                    <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde WhatsApp</span>
+                    <span className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Se lo contás a FINA hablando, sin cargar nada.</span>
+                  </span>
+                </button>
+                <button type="button" onClick={() => setChooser(false)} className="text-[13.5px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>Cancelar</button>
+              </>
+            ) : (
+              <>
+                <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>Registrá tu gasto por WhatsApp</p>
+                <div className="rounded-2xl p-4 flex flex-col gap-2.5" style={{ background: COLORS.tint }}>
+                  {[
+                    'Abrí el chat de FINA en WhatsApp.',
+                    'Escribile tu gasto como se lo contarías a una amiga. Ej: "gasté 5.000 en el súper".',
+                    'FINA lo registra solo y lo ves acá en tus gastos.',
+                  ].map((t, i) => (
+                    <div key={i} className="flex gap-2.5 items-start">
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[12px] font-bold text-white" style={{ background: COLORS.brand }}>{i + 1}</span>
+                      <span className="flex-1 text-[13.5px]" style={{ color: COLORS.ink }}>{t}</span>
+                    </div>
+                  ))}
+                </div>
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setChooser(false)}
+                  className="w-full rounded-2xl py-3.5 text-center text-[15px] font-bold text-white transition-transform active:scale-[0.99]"
+                  style={{ background: COLORS.brand }}
+                >
+                  Ir a WhatsApp
+                </a>
+                <button type="button" onClick={() => setWaStep(false)} className="text-[13.5px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>← Volver</button>
+              </>
+            )}
           </div>
         </div>
       )}
