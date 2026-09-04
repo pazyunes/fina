@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ActionRow, COLORS, Face, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, saludoDelDia } from './shared';
+import { ActionRow, COLORS, Face, formatThousands, fmtMoney, loadV2ArrancasOculto, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2ArrancasOculto, saveV2Reserva } from './shared';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
 
@@ -138,27 +139,24 @@ function Arco({ radius, pct, color }: { radius: number; pct: number | null; colo
 // onboarding (autopercepción de ahorro/inversión/control) y aparece desde
 // el primer segundo — le da algo de valor apenas entra, sin esperar a que
 // use la app.
-function PreviewSeccion({ icon, titulo, desc, bars, onClick }: { icon: string; titulo: string; desc: string; bars: { w: number; c: string }[]; onClick: () => void }) {
+// Los 3 accesos principales, ahora como 3 cuadraditos en una sola línea
+// (ícono + nombre), en vez de 3 filas grandes.
+const ACCESOS = [
+  { icon: '💸', label: 'Gastos', to: '/onboarding-v2/gastos', color: COLORS.coral, soft: COLORS.coralSoft },
+  { icon: '🎯', label: 'Objetivos', to: '/onboarding-v2/objetivos', color: COLORS.gold, soft: COLORS.goldSoft },
+  { icon: '🌱', label: 'Inversiones', to: '/onboarding-v2/inversiones', color: COLORS.green, soft: COLORS.greenSoft },
+];
+
+// Una tarjeta chica de "Mis análisis" — arranca simple: un título, un dato
+// grande (si ya hay datos reales) y una barrita del color de la sección.
+function AnalisisCard({ titulo, valor, sub, color }: { titulo: string; valor: string; sub: string; color: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full flex items-center gap-3.5 bg-white rounded-2xl px-4 py-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 active:scale-[0.98] text-left"
-    >
-      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft }}>
-        <span className="text-lg">{icon}</span>
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-[15px]" style={{ color: COLORS.ink }}>{titulo}</p>
-        <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{desc}</p>
-        <div className="flex gap-1 mt-1.5">
-          {bars.map((b, i) => (
-            <div key={i} className="h-1.5 rounded-full" style={{ width: `${b.w}%`, background: b.c, opacity: 0.55 }} />
-          ))}
-        </div>
-      </div>
-      <span style={{ color: COLORS.brand }}>→</span>
-    </button>
+    <div className="w-[168px] shrink-0 bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-1.5">
+      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>{titulo}</p>
+      <p className="text-[24px] font-bold leading-none" style={{ color }}>{valor}</p>
+      <p className="text-[11.5px] leading-snug" style={{ color: COLORS.inkSoft }}>{sub}</p>
+      <div className="h-1.5 rounded-full mt-1" style={{ background: color, opacity: 0.25 }} />
+    </div>
   );
 }
 
@@ -177,6 +175,30 @@ export function HomeV2() {
         .map((key) => (perfil[key] ? MENSAJES_POTENCIAL[key]?.[perfil[key] as string] : null))
         .filter((m): m is string => !!m)
     : [];
+
+  // Reserva ("alcancía") — se movió acá desde Gastos.
+  const [reserva, setReserva] = useState(() => loadV2Reserva());
+  const [reservaOpen, setReservaOpen] = useState(false);
+  const [reservaVal, setReservaVal] = useState('');
+  function guardarReserva() {
+    const n = parseMoneyInput(reservaVal);
+    if (!n) return;
+    const nuevo = reserva + n;
+    setReserva(nuevo);
+    saveV2Reserva(nuevo);
+    setReservaVal('');
+    setReservaOpen(false);
+  }
+
+  // Cartel "Así arrancás" — se puede cerrar con la X.
+  const [arrancasOculto, setArrancasOculto] = useState(() => loadV2ArrancasOculto());
+
+  // "Mis análisis" — tarjetas simples con lo que ya hay de datos reales.
+  const analisis = [
+    { titulo: 'Gastos', valor: b.gastosPct !== null ? `${b.gastosPct}%` : '—', sub: b.gastosTexto || 'Poné topes en Gastos para ver este análisis.', color: COLORS.coral },
+    { titulo: 'Objetivos', valor: b.objetivosPct !== null ? `${b.objetivosPct}%` : '—', sub: b.objetivosTexto || 'Cargá un objetivo con monto para ver el progreso.', color: COLORS.gold },
+    { titulo: 'Inversiones', valor: b.inversionPct !== null ? (b.inversionPct >= 100 ? '✓' : '~') : '—', sub: b.inversionTexto || 'Sumá un aporte en Inversiones para ver este análisis.', color: COLORS.green },
+  ];
 
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-6 pb-4">
@@ -224,13 +246,55 @@ export function HomeV2() {
         </div>
       )}
 
-      {/* Así arrancás — mensajes motivadores con lo que ya contaste en el onboarding, no con uso real todavía */}
-      {potencial.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-2">
-          <p className="text-[12px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSoft }}>Así arrancás en FINA</p>
-          {potencial.map((m) => (
-            <p key={m} className="text-[13.5px] font-medium leading-snug" style={{ color: COLORS.ink }}>{m}</p>
-          ))}
+      {/* Reservas (alcancía) — movida acá desde Gastos, arriba de todo,
+          debajo del bienestar. Es plata que apartás para no gastarla. */}
+      <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)]">
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
+            <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{reserva > 0 ? `Tenés ${fmtMoney(reserva)} apartados` : 'Apartá plata para no gastarla — tipo alcancía.'}</p>
+          </div>
+          <button type="button" onClick={() => setReservaOpen((o) => !o)} className="text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
+            {reserva > 0 ? 'Sumar' : 'Reservar'}
+          </button>
+        </div>
+        {reservaOpen && (
+          <div className="mt-3 pt-3 border-t border-dashed flex gap-2" style={{ borderColor: 'rgba(31,27,46,0.14)' }}>
+            <input
+              autoFocus
+              className="flex-1 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
+              placeholder="¿Cuánto querés reservar?"
+              inputMode="numeric"
+              value={reservaVal}
+              onChange={(e) => setReservaVal(formatThousands(e.target.value))}
+            />
+            <button type="button" onClick={guardarReserva} className="rounded-xl px-3.5 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>
+              Guardar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Así arrancás — mensajes motivadores con lo del onboarding. Card más
+          chica y con una X para cerrarla (no vuelve a aparecer). */}
+      {potencial.length > 0 && !arrancasOculto && (
+        <div className="rounded-2xl px-3.5 py-2.5 flex items-start gap-2.5" style={{ background: COLORS.brandSoft }}>
+          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+            <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: COLORS.brandDark }}>Así arrancás en FINA</p>
+            {potencial.map((m) => (
+              <p key={m} className="text-[12px] font-medium leading-snug" style={{ color: COLORS.ink }}>{m}</p>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => { setArrancasOculto(true); saveV2ArrancasOculto(); }}
+            aria-label="Cerrar"
+            className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[12px] transition-all duration-100 active:scale-90"
+            style={{ background: 'rgba(255,255,255,0.7)', color: COLORS.inkSoft }}
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -240,28 +304,64 @@ export function HomeV2() {
         onClick={() => navigate('/onboarding-v2/perfil')}
       />
 
-      <div className="flex flex-col gap-3.5">
-        <PreviewSeccion
-          icon="💸"
-          titulo="Gastos"
-          desc="Así vas a ver en qué se te va la plata, separado por sección."
-          bars={[{ w: 35, c: COLORS.coral }, { w: 22, c: COLORS.gold }, { w: 15, c: COLORS.sky }]}
-          onClick={() => navigate('/onboarding-v2/gastos')}
-        />
-        <PreviewSeccion
-          icon="🎯"
-          titulo="Objetivos"
-          desc="Cada meta con su progreso, a tu ritmo."
-          bars={[{ w: 55, c: COLORS.gold }]}
-          onClick={() => navigate('/onboarding-v2/objetivos')}
-        />
-        <PreviewSeccion
-          icon="🌱"
-          titulo="Inversiones"
-          desc="Te mostramos en qué te conviene poner tu plata."
-          bars={[{ w: 20, c: COLORS.green }, { w: 34, c: COLORS.green }, { w: 48, c: COLORS.green }]}
-          onClick={() => navigate('/onboarding-v2/inversiones')}
-        />
+      {/* 3 accesos como cuadraditos en una línea */}
+      <div className="grid grid-cols-3 gap-3">
+        {ACCESOS.map((a) => (
+          <button
+            key={a.label}
+            type="button"
+            onClick={() => navigate(a.to)}
+            className="flex flex-col items-center gap-2 bg-white rounded-2xl py-4 px-2 shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 active:scale-[0.97]"
+          >
+            <span className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: a.soft }}>
+              <span className="text-xl">{a.icon}</span>
+            </span>
+            <span className="text-[12.5px] font-semibold" style={{ color: COLORS.ink }}>{a.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Mis análisis — carrusel horizontal de visualizaciones (simple) */}
+      <div className="flex flex-col gap-2">
+        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Mis análisis</p>
+        <div className="flex gap-3 overflow-x-auto -mx-[22px] px-[22px] pb-1" style={{ scrollbarWidth: 'none' }}>
+          {analisis.map((a) => (
+            <AnalisisCard key={a.titulo} titulo={a.titulo} valor={a.valor} sub={a.sub} color={a.color} />
+          ))}
+        </div>
+      </div>
+
+      {/* Mis competencias — ranking del grupo. Empieza simple: el nombre del
+          grupo con una franja de color arriba y el ranking de actividad. */}
+      <div className="flex flex-col gap-2">
+        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Mis competencias</p>
+        {grupo ? (
+          <button
+            type="button"
+            onClick={() => navigate('/onboarding-v2/grupos')}
+            className="text-left bg-white rounded-2xl overflow-hidden shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-transform duration-100 active:scale-[0.99]"
+          >
+            <div className="px-4 py-2 flex items-center justify-between" style={{ background: COLORS.brand }}>
+              <p className="font-bold text-[13.5px] text-white truncate">👥 {grupo.nombre}</p>
+              <span className="text-[11.5px] font-semibold text-white/90 shrink-0">Ver todo →</span>
+            </div>
+            <div className="p-4 flex flex-col gap-1.5">
+              {topGrupo.map((m, i) => (
+                <div key={m.nombre} className="flex items-center gap-2 text-[13px]">
+                  <span className="w-5 text-center shrink-0">{MEDALLAS[i]}</span>
+                  <span className="flex-1 truncate" style={{ color: m.sosVos ? COLORS.brand : COLORS.ink, fontWeight: m.sosVos ? 700 : 500 }}>
+                    {m.nombre}{m.sosVos ? ' (vos)' : ''}
+                  </span>
+                  <span style={{ color: COLORS.inkSoft }}>{m.actividad}</span>
+                </div>
+              ))}
+            </div>
+          </button>
+        ) : (
+          <div className="rounded-2xl px-4 py-3.5 text-[12.5px]" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>
+            Todavía no tenés un grupo. Armá uno desde <strong style={{ color: COLORS.brand }}>Objetivos</strong> para competir con tus amigas y amigos.
+          </div>
+        )}
       </div>
 
       {/* Tips para vos — recomendaciones cortas según lo que ya sabemos de vos */}
@@ -280,33 +380,6 @@ export function HomeV2() {
           </button>
         ))}
       </div>
-
-      {/* Tu grupo — si ya hay uno armado (se crean desde Objetivos), mostramos
-          un resumen de la actividad. El botón para ARMAR un grupo vive solo en
-          Objetivos (para un objetivo grupal), ya no en Home. */}
-      {grupo && (
-        <button
-          type="button"
-          onClick={() => navigate('/onboarding-v2/grupos')}
-          className="text-left bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-2.5 transition-transform duration-100 active:scale-[0.99]"
-        >
-          <div className="flex items-center justify-between">
-            <p className="font-bold text-[14.5px]" style={{ color: COLORS.ink }}>👥 {grupo.nombre}</p>
-            <span className="text-[12px] font-semibold" style={{ color: COLORS.brand }}>Ver todo →</span>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {topGrupo.map((m, i) => (
-              <div key={m.nombre} className="flex items-center gap-2 text-[13px]">
-                <span className="w-5 text-center shrink-0">{MEDALLAS[i]}</span>
-                <span className="flex-1 truncate" style={{ color: m.sosVos ? COLORS.brand : COLORS.ink, fontWeight: m.sosVos ? 700 : 500 }}>
-                  {m.nombre}{m.sosVos ? ' (vos)' : ''}
-                </span>
-                <span style={{ color: COLORS.inkSoft }}>{m.actividad}</span>
-              </div>
-            ))}
-          </div>
-        </button>
-      )}
     </div>
   );
 }

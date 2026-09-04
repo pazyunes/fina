@@ -625,6 +625,27 @@ const LS_INVERSIONES_STATE = 'fina_v2_inversiones_state';
 export const saveV2InversionesState = (s: unknown) => saveV2State(LS_INVERSIONES_STATE, s);
 export const loadV2InversionesState = <T,>() => loadV2State<T>(LS_INVERSIONES_STATE);
 
+// Reserva ("alcancía") — se movió de Gastos a Home (arriba de todo, al lado
+// del perfil). Vive en su propia clave, independiente del estado de Gastos,
+// para no pisar las categorías/gastos que administra esa pantalla.
+const LS_RESERVA = 'fina_v2_reserva';
+export function saveV2Reserva(monto: number) {
+  try { localStorage.setItem(LS_RESERVA, String(monto)); } catch { /* no crítico */ }
+}
+export function loadV2Reserva(): number {
+  try { return Number(localStorage.getItem(LS_RESERVA)) || 0; } catch { return 0; }
+}
+
+// Cartel "Así arrancás en FINA" de Home — se puede cerrar con la X y no
+// vuelve a aparecer en este navegador.
+const LS_ARRANCAS_OCULTO = 'fina_v2_arrancas_oculto';
+export function saveV2ArrancasOculto() {
+  try { localStorage.setItem(LS_ARRANCAS_OCULTO, '1'); } catch { /* no crítico */ }
+}
+export function loadV2ArrancasOculto(): boolean {
+  try { return localStorage.getItem(LS_ARRANCAS_OCULTO) === '1'; } catch { return false; }
+}
+
 // Formatea una fecha real (timestamp) como "Hoy" / "Ayer" / "12 ago" — para
 // que las listas de gastos/aportes se puedan ordenar y filtrar por fecha de
 // verdad, no por una etiqueta de texto fija.

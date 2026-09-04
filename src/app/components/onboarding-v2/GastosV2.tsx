@@ -67,7 +67,7 @@ function estadoInicial(): EstadoGastos {
 
 export function GastosV2() {
   const [estado, setEstado] = useState<EstadoGastos>(estadoInicial);
-  const { categorias, gastos, disponible, reserva, topes } = estado;
+  const { categorias, gastos, disponible, topes } = estado;
 
   useEffect(() => {
     saveV2GastosState(estado);
@@ -79,9 +79,6 @@ export function GastosV2() {
 
   const [addingDisponible, setAddingDisponible] = useState(false);
   const [addDispVal, setAddDispVal] = useState('');
-
-  const [reservaOpen, setReservaOpen] = useState(false);
-  const [reservaVal, setReservaVal] = useState('');
 
   const [addingGasto, setAddingGasto] = useState(false);
   // Popup al tocar "+ Agregar gasto": elegir registrar Desde FINA (a mano) o
@@ -154,14 +151,6 @@ export function GastosV2() {
     if (monto <= 0) return;
     const periodo = topeEditPeriodo[catId] || 'semana';
     setEstado((s) => ({ ...s, topes: { ...s.topes, [catId]: { monto, periodo } } }));
-  }
-
-  function reservar() {
-    const n = parseMoneyInput(reservaVal);
-    if (!n) return;
-    setEstado((s) => ({ ...s, reserva: s.reserva + n, disponible: Math.max(s.disponible - n, 0) }));
-    setReservaVal('');
-    setReservaOpen(false);
   }
 
   return (
@@ -587,47 +576,6 @@ export function GastosV2() {
         })}
       </div>
 
-      {/* Reserva tipo ahorro */}
-      <div className={`bg-white rounded-2xl p-4 ${CARD_SHADOW}`}>
-        <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
-          <p className="flex-1 text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reserva</p>
-          <button type="button" onClick={() => setReservaOpen((o) => !o)} className="text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
-            {reserva > 0 ? 'Editar' : 'Reservar'}
-          </button>
-        </div>
-
-        {reserva > 0 ? (
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.goldSoft }}>
-              <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>En reserva</p>
-              <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>{fmtMoney(reserva)}</p>
-            </div>
-            <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.paper }}>
-              <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>Disponible libre</p>
-              <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>{fmtMoney(disponible)}</p>
-            </div>
-          </div>
-        ) : (
-          <p className="mt-2 text-[12.5px]" style={{ color: COLORS.inkSoft }}>Apartá un monto para no gastarlo — tipo alcancía.</p>
-        )}
-
-        {reservaOpen && (
-          <div className="mt-3 pt-3 border-t border-dashed flex gap-2" style={{ borderColor: 'rgba(31,27,46,0.14)' }}>
-            <input
-              autoFocus
-              className="flex-1 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
-              placeholder="¿Cuánto querés reservar?"
-              inputMode="numeric"
-              value={reservaVal}
-              onChange={(e) => setReservaVal(formatThousands(e.target.value))}
-            />
-            <button type="button" onClick={reservar} className="rounded-xl px-3.5 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>
-              Guardar
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
