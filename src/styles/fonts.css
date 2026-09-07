@@ -1,5 +1,5 @@
-/* FINA · tipografía editorial (reglas-diseño.md)
-   - Fraunces  → display/títulos (serif con personalidad)
+/* FINA · tipografía
+   - Fredoka   → display/títulos (redondeada y cálida, va con la mascota Fini)
    - Figtree   → cuerpo / UI (sans-serif limpia)
    - IBM Plex Mono → montos y datos (tabular-nums) */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');

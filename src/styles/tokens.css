@@ -36,7 +36,7 @@
   --fina-error: #DD3350;         --fina-error-100: #FCE4E8;
 
   /* Tipografía editorial */
-  --fina-display: "Fraunces", ui-serif, Georgia, serif;
+  --fina-display: "Fredoka", ui-rounded, "Figtree", system-ui, sans-serif;
   --fina-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --fina-mono: "IBM Plex Mono", ui-monospace, monospace;
 
