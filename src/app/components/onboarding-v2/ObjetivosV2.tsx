@@ -3,7 +3,7 @@ import { ArmarGrupoBtn, Celebracion, Cta, Coachmark, COLORS, Donut, EstadoConfia
 
 // Sugerencias para arrancar cuando todavía no hay objetivos — le dan
 // emoción/juego a la pantalla vacía; tocás una y abre el modal precargado.
-import { IconBasura, IconCalendario, IconChevron, IconEditar, IconGrupo, IconMas } from './FinaIcons';
+import { IconBasura, IconCalendario, IconChevron, IconClose, IconEditar, IconGrupo, IconMas } from './FinaIcons';
 
 // Sin emoji (guía §2/§5.4): son chips de TEXTO. La categoría se dice con la
 // palabra, no con un pictograma.
@@ -757,7 +757,7 @@ export function ObjetivosV2() {
       <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto rounded-[24px] p-5 flex flex-col gap-3.5" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h1 className="text-[19px] font-bold" style={{ color: COLORS.ink }}>Nuevo objetivo</h1>
-          <button type="button" onClick={() => setCreating(false)} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>✕</button>
+          <button type="button" onClick={() => setCreating(false)} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />

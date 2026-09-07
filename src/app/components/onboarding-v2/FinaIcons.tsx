@@ -35,6 +35,15 @@ export function IconChevron(p: IconProps) {
   );
 }
 
+// Cerrar — X monolineal (reemplaza el glifo ✕, §2). Va con aria-label en el botón.
+export function IconClose(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </Svg>
+  );
+}
+
 // Home — techo + base (para el menú, reemplaza el ícono de librería).
 export function IconHome(p: IconProps) {
   return (

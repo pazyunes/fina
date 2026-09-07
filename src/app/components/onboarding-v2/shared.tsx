@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
-import { IconChevron, IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
+import { IconChevron, IconClose, IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
 import './onboarding-v2.css';
 
 // REDISEÑO v2 (rama feat/rediseno-onboarding-v2) — piezas compartidas entre
@@ -316,7 +316,7 @@ export function loadV2Grupo(): Grupo | null {
 // Invitar de verdad (share sheet nativo, o copiar al portapapeles si no hay)
 // — se usa desde Grupos y desde el flujo de crear un objetivo en conjunto.
 export async function invitarAGrupo(g: Grupo): Promise<'compartido' | 'copiado' | 'nada'> {
-  const texto = `Unite a "${g.nombre}" en FINA con el código ${g.codigo} 💜`;
+  const texto = `Unite a "${g.nombre}" en FINA con el código ${g.codigo}`;
   if (navigator.share) {
     try {
       await navigator.share({ text: texto });
@@ -552,7 +552,7 @@ export function Donut({
   return (
     <div
       className="relative rounded-full shrink-0"
-      style={{ width: size, height: size, background: stops || (dark ? COLORS.darkLine : '#ECE7F2') }}
+      style={{ width: size, height: size, background: stops || (dark ? COLORS.darkLine : COLORS.tint) }}
     >
       <div
         className="absolute rounded-full flex flex-col items-center justify-center"
@@ -770,10 +770,10 @@ export function Coachmark({ id, children }: { id: string; children: React.ReactN
           try { localStorage.setItem(coachmarkKey(id), '1'); } catch { /* no crítico */ }
           setVisto(true);
         }}
-        className="v2-focus shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold transition-transform duration-100 active:scale-90"
+        className="v2-focus shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-transform duration-100 active:scale-90"
         style={{ background: COLORS.lila, color: COLORS.brandDark }}
       >
-        ✕
+        <IconClose size={12} />
       </button>
     </div>
   );
