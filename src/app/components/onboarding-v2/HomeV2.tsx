@@ -263,13 +263,13 @@ export function HomeV2() {
           <div className="mt-3 pt-3 border-t border-dashed flex gap-2" style={{ borderColor: 'rgba(31,27,46,0.14)' }}>
             <input
               autoFocus
-              className="flex-1 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
+              className="flex-1 min-w-0 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
               placeholder="¿Cuánto querés reservar?"
               inputMode="numeric"
               value={reservaVal}
               onChange={(e) => setReservaVal(formatThousands(e.target.value))}
             />
-            <button type="button" onClick={guardarReserva} className="rounded-xl px-3.5 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>
+            <button type="button" onClick={guardarReserva} className="rounded-xl px-3.5 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}>
               Guardar
             </button>
           </div>

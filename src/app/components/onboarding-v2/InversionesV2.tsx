@@ -297,14 +297,14 @@ export function InversionesV2() {
                 </div>
                 <div className="flex gap-2">
                   <input
-                    className="flex-1 rounded-xl px-3 py-2 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors focus:border-[#7626B3]"
+                    className="flex-1 min-w-0 rounded-xl px-3 py-2 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors focus:border-[#7626B3]"
                     style={{ background: '#fff', color: COLORS.ink, borderColor: COLORS.lineStrong }}
                     placeholder="Monto"
                     inputMode="numeric"
                     value={aporteMonto}
                     onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
                   />
-                  <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>+</button>
+                  <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}>+</button>
                 </div>
               </div>
 

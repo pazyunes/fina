@@ -247,7 +247,7 @@ function MontoPicker({
 
       {modo === 'rango' && (
         <div className="flex gap-2">
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
             <input
               className={`w-full ${inputClass} pl-8`}
@@ -257,7 +257,7 @@ function MontoPicker({
               onChange={(e) => setMinTxt(formatThousands(e.target.value))}
             />
           </div>
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
             <input
               className={`w-full ${inputClass} pl-8`}
@@ -309,6 +309,10 @@ export function ObjetivosV2() {
   const [editMoneda, setEditMoneda] = useState<Moneda>('ARS');
   const [editHorizonte, setEditHorizonte] = useState<string | null>(null);
   const [editHorizonteFecha, setEditHorizonteFecha] = useState('');
+  // Monto editable al editar el objetivo (mismo picker que al crearlo).
+  const [editMontoModo, setEditMontoModo] = useState<MontoModo>('exacto');
+  const [editMontoTotal, setEditMontoTotal] = useState('');
+  const [editMontoMin, setEditMontoMin] = useState('');
   // Objetivo pendiente de confirmar borrado (id) → abre el diálogo sí/no.
   const [confirmarBorrar, setConfirmarBorrar] = useState<string | null>(null);
 
@@ -361,13 +365,18 @@ export function ObjetivosV2() {
     setEditMoneda(obj.moneda);
     setEditHorizonte(obj.horizonte ?? null);
     setEditHorizonteFecha('');
+    // Precargamos el monto tal como estaba, para poder editarlo.
+    setEditMontoModo(obj.montoModo ?? 'exacto');
+    setEditMontoTotal(obj.montoTotal > 0 ? formatThousands(String(obj.montoTotal)) : '');
+    setEditMontoMin(obj.montoMin ? formatThousands(String(obj.montoMin)) : '');
     setOpenId(obj.id);
     setEditando(true);
   }
   function guardarEdicion() {
     if (!abierto || !editNombre.trim()) return;
     const horizonteFinal = editHorizonteFecha ? new Date(editHorizonteFecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) : editHorizonte;
-    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, nombre: editNombre.trim(), descripcion: editDescripcion.trim(), tipo: editTipo, moneda: editMoneda, horizonte: horizonteFinal } : o)));
+    const monto = buildMonto(editMontoModo, editMontoTotal, editMontoMin);
+    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, nombre: editNombre.trim(), descripcion: editDescripcion.trim(), tipo: editTipo, moneda: editMoneda, horizonte: horizonteFinal, montoMin: undefined, ...monto } : o)));
     setEditando(false);
   }
 
@@ -472,6 +481,12 @@ export function ObjetivosV2() {
               <p className="text-[13px] font-semibold" style={{ color: COLORS.ink }}>Moneda</p>
               <MonedaDropdown value={editMoneda} onChange={setEditMoneda} />
             </div>
+            <p className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Cuánto necesitás?</p>
+            <MontoPicker
+              modo={editMontoModo} setModo={setEditMontoModo}
+              montoTxt={editMontoTotal} setMontoTxt={setEditMontoTotal}
+              minTxt={editMontoMin} setMinTxt={setEditMontoMin}
+            />
             <p className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Para cuándo?</p>
             <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} />
             <div className="flex gap-2 mt-1">
@@ -594,18 +609,18 @@ export function ObjetivosV2() {
           />
           <div className="flex gap-2">
             <input
-              className={`flex-1 ${inputClass}`}
+              className={`flex-1 min-w-0 ${inputClass}`}
               placeholder="Monto"
               inputMode="numeric"
               value={regMonto}
               onChange={(e) => setRegMonto(formatThousands(e.target.value))}
             />
-            <MonedaDropdown value={regMoneda} onChange={setRegMoneda} />
+            <div className="shrink-0"><MonedaDropdown value={regMoneda} onChange={setRegMoneda} /></div>
             <button
               type="button"
               onClick={agregarRegistro}
               disabled={parseMoneyInput(regMonto) <= 0}
-              className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95"
+              className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0"
               style={{ background: COLORS.brand }}
             >
               +

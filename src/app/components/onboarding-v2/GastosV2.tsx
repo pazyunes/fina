@@ -221,7 +221,7 @@ export function GastosV2() {
       ) : (
         <div className={`bg-white rounded-2xl p-4 flex flex-col gap-3 ${CARD_SHADOW}`}>
           <div className="flex gap-2">
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-0">
               <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{ngMoneda === 'USD' ? 'US$' : '$'}</span>
               <input
                 autoFocus
