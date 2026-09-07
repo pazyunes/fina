@@ -62,7 +62,7 @@ export function PerfilV2() {
   }
 
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-6 lg:max-w-2xl lg:mx-auto lg:pt-10">
+    <div className="px-[22px] pt-8 flex flex-col gap-6 lg:max-w-3xl lg:mx-auto lg:pt-10">
       {/* Banda editorial full-bleed (violeta) + mascota */}
       <div className="-mx-[22px] -mt-8 px-[22px] pt-9 lg:pt-10 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.brandSoft }}>
         <div className="flex-1 min-w-0">
