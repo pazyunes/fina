@@ -1,0 +1,47 @@
+/* ─────────────────────────────────────────────────────────────────────
+   FINA · Design Tokens (fuente de verdad)
+   Según reglas-diseño.md + css-nuevo.css. Estos tokens son la paleta y la
+   tipografía "oficial"; theme.css los consume para mapear las variables
+   que ya usa la app (--primary, --font-sans, etc.).
+   ───────────────────────────────────────────────────────────────────── */
+:root {
+  /* Marca */
+  --fina-violeta: #7626B3;
+  --fina-violeta-700: #5C1B8E;
+  --fina-violeta-100: #F0E7FA;
+  --fina-amarillo: #FFC93C;
+  --fina-amarillo-100: #FFF3D1;
+  --fina-fideo: #C23FA8;
+
+  /* Neutros */
+  --fina-tinta: #1F1B2E;
+  --fina-gris: #6B647A;
+  --fina-linea: #E9E3F1;
+  --fina-tinte: #F5F1FA;
+  --fina-papel: #FBFAF8;
+  --fina-blanco: #FFFFFF;
+
+  /* Semánticos (una categoría, un color) */
+  --fina-gastos: #F4557A;
+  --fina-objetivos: #16A97A;
+  --fina-inversiones: #3D6FF5;
+  --fina-grupos: #E8952B;
+
+  /* Softs semánticos — para bloques tintados (variedad de contenedores) */
+  --fina-gastos-100: #FDE4EA;
+  --fina-objetivos-100: #D8F3EA;
+  --fina-inversiones-100: #E1EAFE;
+  --fina-grupos-100: #FBEBD3;
+
+  /* Tipografía editorial */
+  --fina-display: "Fraunces", ui-serif, Georgia, serif;
+  --fina-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --fina-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Radios */
+  --fina-r-xs: 8px;
+  --fina-r-sm: 12px;
+  --fina-r-md: 18px;
+  --fina-r-lg: 24px;
+  --fina-r-full: 999px;
+}
