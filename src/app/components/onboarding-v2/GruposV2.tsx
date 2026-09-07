@@ -61,7 +61,7 @@ export function GruposV2() {
             <button
               type="button"
               onClick={() => setModo('crear')}
-              className="w-full text-left bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 active:scale-[0.99]"
+              className="w-full text-left bg-white rounded-2xl p-4 border transition-all duration-100 active:scale-[0.99]"
             >
               <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>Crear un grupo</p>
               <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>Le ponés nombre y invitás con un código.</p>
@@ -69,7 +69,7 @@ export function GruposV2() {
             <button
               type="button"
               onClick={() => setModo('unirse')}
-              className="w-full text-left bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 active:scale-[0.99]"
+              className="w-full text-left bg-white rounded-2xl p-4 border transition-all duration-100 active:scale-[0.99]"
             >
               <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>Unirme con un código</p>
               <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>Si una amiga ya te invitó.</p>
@@ -153,7 +153,7 @@ export function GruposV2() {
         {ordenados.map((m, i) => (
           <div
             key={m.nombre}
-            className="flex items-center gap-3 bg-white rounded-2xl p-3.5 shadow-[0_2px_18px_rgba(31,27,46,0.07)]"
+            className="flex items-center gap-3 bg-white rounded-2xl p-3.5 border"
             style={m.sosVos ? { outline: `2px solid ${COLORS.brand}` } : undefined}
           >
             <span className="text-[18px] w-6 text-center shrink-0">{MEDALLAS[i] ?? i + 1}</span>

@@ -102,7 +102,7 @@ type Objetivo = {
 
 // Nota Tailwind: la clase completa tiene que aparecer en el archivo (aunque
 // sea dentro de este string) para que el scanner de Tailwind la detecte.
-const CARD_SHADOW = 'shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
+const CARD_SHADOW = 'border';
 const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-xl px-3 py-2.5 text-[14px] outline-none transition-colors';
 
 const HORIZONTE_OPCIONES = ['Lo antes posible', 'Todavía no lo pensé'];

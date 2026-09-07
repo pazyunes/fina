@@ -81,7 +81,7 @@ type PersistidoInv = {
 };
 
 // Tarjeta clara estándar de FINA v2.
-const CARD = 'bg-white rounded-2xl shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
+const CARD = 'bg-white rounded-2xl border';
 
 export function InversionesV2() {
   // Si ya había estado antes en esta pantalla y llegó al resultado, retoma

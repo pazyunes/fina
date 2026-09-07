@@ -545,7 +545,7 @@ export function OnboardingV2() {
                   <h1 className="text-[28px] font-bold leading-tight pt-2" style={{ color: COLORS.ink }}>
                     Llegó tu momento de cambiar la historia de tus finanzas 💪
                   </h1>
-                  <div className="flex flex-col gap-4 bg-white rounded-[18px] p-5 shadow-[0_2px_20px_rgba(31,27,46,0.07)]">
+                  <div className="flex flex-col gap-4 bg-white rounded-[18px] p-5 border">
                     {['Conocé tus gastos', 'Lográ tus objetivos', 'Cuidá tu bienestar financiero'].map((txt) => (
                       <div key={txt} className="flex items-center gap-3 text-[16px] font-semibold" style={{ color: COLORS.ink }}>
                         <span className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brand }}>
@@ -608,7 +608,7 @@ export function OnboardingV2() {
                   </div>
                   <div className="flex justify-center py-1"><Face color={FACE_COLOR} size={90} mood="happy" /></div>
                   {meta && (
-                    <div className="self-center max-w-[82%] text-center bg-white rounded-2xl px-4 py-3 text-[13.5px] font-semibold shadow-[0_2px_16px_rgba(31,27,46,0.06)]" style={{ color: COLORS.ink }}>
+                    <div className="self-center max-w-[82%] text-center bg-white rounded-2xl px-4 py-3 text-[13.5px] font-semibold border" style={{ color: COLORS.ink }}>
                       {objetivoBubble}
                     </div>
                   )}
@@ -865,7 +865,7 @@ export function OnboardingV2() {
                   <button
                     type="button"
                     onClick={() => setAceptoTerminos((v) => !v)}
-                    className="flex items-center gap-3 text-left bg-white rounded-2xl p-4 shadow-[0_2px_16px_rgba(31,27,46,0.06)] transition-all duration-100 active:scale-[0.99]"
+                    className="flex items-center gap-3 text-left bg-white rounded-2xl p-4 border transition-all duration-100 active:scale-[0.99]"
                   >
                     <span
                       className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"

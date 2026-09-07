@@ -47,7 +47,7 @@ const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.
 // Nota Tailwind: la clase tiene que aparecer COMPLETA en el archivo (aunque
 // sea adentro de este string) para que el scanner de Tailwind la detecte —
 // por eso no se arma por partes con interpolación.
-const CARD_SHADOW = 'shadow-[0_2px_18px_rgba(31,27,46,0.07)]';
+const CARD_SHADOW = 'border';
 
 // Cuenta nueva: acá solo entra lo que la persona puso en el onboarding — sin
 // categorías ni gastos de ejemplo inventados. Si ya había estado antes en

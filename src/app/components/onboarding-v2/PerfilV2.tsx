@@ -123,7 +123,7 @@ export function PerfilV2() {
               type="button"
               onClick={() => navigate(it.to)}
               disabled={it.hecho}
-              className="w-full flex items-center gap-3 text-left bg-white rounded-2xl px-4 py-3 shadow-[0_2px_14px_rgba(31,27,46,0.06)] transition-all duration-100 active:scale-[0.99] disabled:active:scale-100"
+              className="w-full flex items-center gap-3 text-left bg-white rounded-2xl px-4 py-3 border transition-all duration-100 active:scale-[0.99] disabled:active:scale-100"
             >
               <span
                 className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
@@ -142,7 +142,7 @@ export function PerfilV2() {
             <button
               type="button"
               onClick={() => setAbriendoNivel(true)}
-              className="w-full flex items-center gap-3 text-left bg-white rounded-2xl px-4 py-3 shadow-[0_2px_14px_rgba(31,27,46,0.06)] transition-all duration-100 active:scale-[0.99]"
+              className="w-full flex items-center gap-3 text-left bg-white rounded-2xl px-4 py-3 border transition-all duration-100 active:scale-[0.99]"
             >
               <span
                 className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"

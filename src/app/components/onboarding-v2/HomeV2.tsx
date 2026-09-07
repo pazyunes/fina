@@ -288,7 +288,7 @@ export function HomeV2() {
           <button
             type="button"
             onClick={() => navigate('/onboarding-v2/grupos')}
-            className="text-left bg-white rounded-2xl overflow-hidden shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-transform duration-100 active:scale-[0.99]"
+            className="text-left bg-white rounded-2xl overflow-hidden border transition-transform duration-100 active:scale-[0.99]"
           >
             <div className="px-4 py-2 flex items-center justify-between" style={{ background: COLORS.brand }}>
               <p className="font-bold text-[13.5px] text-white truncate">👥 {grupo.nombre}</p>

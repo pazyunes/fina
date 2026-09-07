@@ -576,7 +576,7 @@ export function ActionRow({ icon, label, onClick }: { icon: React.ReactNode; lab
       type="button"
       onClick={onClick}
       className="w-full flex items-center gap-3.5 bg-white rounded-2xl px-4 py-4
-        shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 ease-out active:scale-[0.98] text-left"
+        border transition-all duration-100 ease-out active:scale-[0.98] text-left"
     >
       <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft }}>
         {icon}
