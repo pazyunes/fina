@@ -302,6 +302,7 @@ export type PerfilOnboarding = {
   invierte: string | null;
   controlaGastos: string | null;
   comoConocio: string | null;
+  meta?: string | null;
 };
 const LS_PERFIL_ONB = 'fina_v2_perfil_onboarding';
 export function saveV2PerfilOnboarding(p: PerfilOnboarding) {

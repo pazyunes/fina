@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
   COLORS, DeviceFrame, Face, CheckIcon, Chip, OtroChip, Nota, Cta,
+  formatThousands, parseMoneyInput,
   saveV2Categorias, saveV2Nombre,
   saveV2PerfilOnboarding, saveV2TerminosAceptados,
+  saveV2InversionesPerfil, saveV2ObjetivosState,
 } from './shared';
 
 // REDISEÑO — Onboarding v2 (rama dev)
@@ -25,15 +27,15 @@ import {
 type Genero = 'femenino' | 'masculino' | 'otro' | 'prefiero_no_decir' | null;
 type Edad = '18-24' | '25-34' | '35-44' | '45-54' | '55-64' | '65+' | null;
 type Situacion = 'trabaja' | 'estudia' | 'ambas' | 'ninguna' | null;
-type ObjetivoId = 'ahorrar' | 'invertir' | 'controlar' | 'objetivo' | 'otro';
+type ObjetivoId = 'invertir' | 'ahorrar' | 'objetivo' | 'no_claro';
 type ComoVieneId = 'justo' | 'sobra' | 'no_llega' | 'hago_lo_que_quiero' | 'no_lo_tengo_en_cuenta' | 'prefiero_no_decir' | 'otro';
 type Nivel = 'nada' | 'poco' | 'bastante' | 'todo';
 type PasoLogin = 'datos' | 'verificar';
 
 type StepKey =
-  | 'intro' | 'nombre' | 'generoEdad' | 'objetivo' | 'situacion' | 'convivencia' | 'zona'
-  | 'ingresos' | 'estabilidadIngresos' | 'gastosFijos' | 'categoriasGasto' | 'categoriasRecortar'
-  | 'asignacionPlata' | 'tedioso' | 'comoViene'
+  | 'intro' | 'nombre' | 'generoEdad' | 'objetivo' | 'situacion' | 'zona'
+  | 'ingresos' | 'estabilidadIngresos' | 'tedioso'
+  | 'perfilInversor' | 'objetivoInversion' | 'definirObjetivo'
   | 'intermedia' | 'comoConocio' | 'terminos' | 'login';
 
 const CTA_LABELS: Record<StepKey, string> = {
@@ -42,24 +44,20 @@ const CTA_LABELS: Record<StepKey, string> = {
   generoEdad: 'Continuar',
   objetivo: 'Continuar',
   situacion: 'Continuar',
-  convivencia: 'Continuar',
   zona: 'Continuar',
   ingresos: 'Continuar',
   estabilidadIngresos: 'Continuar',
-  gastosFijos: 'Continuar',
-  categoriasGasto: 'Continuar',
-  categoriasRecortar: 'Continuar',
-  asignacionPlata: 'Continuar',
   tedioso: 'Continuar',
-  comoViene: 'Continuar',
+  perfilInversor: 'Continuar',
+  objetivoInversion: 'Continuar',
+  definirObjetivo: 'Guardar objetivo',
   intermedia: 'Genial, sigamos',
   comoConocio: 'Continuar',
   terminos: 'Aceptar y continuar',
   login: 'Continuar',
 };
 const SKIPPABLE: StepKey[] = [
-  'convivencia', 'zona', 'ingresos', 'estabilidadIngresos', 'gastosFijos',
-  'categoriasGasto', 'categoriasRecortar', 'asignacionPlata', 'tedioso', 'comoConocio',
+  'zona', 'ingresos', 'estabilidadIngresos', 'comoConocio',
 ];
 
 type SeccionId = 'bienvenida' | 'vos' | 'diaadia' | 'cierre';
@@ -71,10 +69,9 @@ const SECCION_INFO: Record<SeccionId, { label: string; bg: string }> = {
 };
 const SECCION_DE: Record<StepKey, SeccionId> = {
   intro: 'bienvenida', nombre: 'bienvenida',
-  generoEdad: 'vos', objetivo: 'vos', situacion: 'vos', convivencia: 'vos', zona: 'vos',
-  ingresos: 'diaadia', estabilidadIngresos: 'diaadia', gastosFijos: 'diaadia',
-  categoriasGasto: 'diaadia', categoriasRecortar: 'diaadia', asignacionPlata: 'diaadia',
-  tedioso: 'diaadia', comoViene: 'diaadia',
+  generoEdad: 'vos', objetivo: 'vos', situacion: 'vos', zona: 'vos',
+  ingresos: 'diaadia', estabilidadIngresos: 'diaadia', tedioso: 'diaadia',
+  perfilInversor: 'diaadia', objetivoInversion: 'diaadia', definirObjetivo: 'diaadia',
   intermedia: 'cierre', comoConocio: 'cierre', terminos: 'cierre', login: 'cierre',
 };
 
@@ -104,19 +101,17 @@ const SITUACIONES: { id: Situacion; label: string; emoji: string }[] = [
 ];
 
 const OBJETIVOS: { id: ObjetivoId; label: string; emoji: string }[] = [
-  { id: 'ahorrar', label: 'Ahorrar', emoji: '🐷' },
   { id: 'invertir', label: 'Invertir', emoji: '🌱' },
-  { id: 'controlar', label: 'Controlar mis gastos', emoji: '🔍' },
-  { id: 'objetivo', label: 'Lograr objetivos puntuales', emoji: '🎯' },
-  { id: 'otro', label: 'Otro', emoji: '✍️' },
+  { id: 'ahorrar', label: 'Ahorrar', emoji: '🐷' },
+  { id: 'objetivo', label: 'Lograr un objetivo puntual', emoji: '🎯' },
+  { id: 'no_claro', label: 'Todavía no lo tengo claro', emoji: '🤔' },
 ];
 
 const BUBBLE_POR_TOP: Record<ObjetivoId, string> = {
-  ahorrar: 'Modo ahorro: ON',
-  invertir: 'Vos sí que sabés lo que es bueno para vos',
-  controlar: 'Ocuparte de esto ya es un montón — arranquemos.',
-  objetivo: 'Con la mira puesta en lo que importa, siempre.',
-  otro: 'Lo que sea, te acompañamos a lograrlo.',
+  invertir: 'Buenísimo — te ayudamos a que tu plata trabaje para vos.',
+  ahorrar: 'Modo ahorro activado. Lo vamos a hacer fácil.',
+  objetivo: 'Con la mira puesta en lo que de verdad te importa.',
+  no_claro: 'Tranqui — lo vamos descubriendo juntas, a tu ritmo.',
 };
 
 const CONVIVENCIA_OPCIONES = ['Vivo sola/o', 'Con mi pareja', 'Con mi familia', 'Con roommates', 'Tengo hijos/as a cargo', 'Tengo otras personas a cargo'];
@@ -129,13 +124,22 @@ const ZONAS: { id: string; label: string; muted?: boolean }[] = [
   { id: 'Prefiero no decir', label: 'Prefiero no decir', muted: true },
 ];
 
-const INGRESOS_OPCIONES = ['Relación de dependencia', 'Changas o freelance', 'Mi propio emprendimiento', 'Beca', 'Mis papás/familia me bancan', 'Por ahora casi no manejo plata propia'];
+const INGRESOS_OPCIONES = [
+  'Sueldo en relación de dependencia',
+  'Trabajo independiente / freelance',
+  'Ingresos de mi propio emprendimiento',
+  'Honorarios profesionales',
+  'Beca o ayuda de estudio',
+  'Aporte de mi familia',
+  'Rentas o inversiones',
+  'Todavía no genero ingresos propios',
+];
 
 const ESTABILIDAD: { id: string; label: string }[] = [
-  { id: 'Todos los meses, más o menos lo mismo', label: 'Todos los meses, más o menos lo mismo' },
-  { id: 'Todos los meses, pero varía bastante', label: 'Todos los meses, pero varía bastante' },
-  { id: 'Depende de cuándo sale trabajo', label: 'Depende de cuándo sale trabajo' },
-  { id: 'Todavía no es algo regular', label: 'Todavía no es algo regular' },
+  { id: 'Monto fijo y previsible todos los meses', label: 'Monto fijo y previsible todos los meses' },
+  { id: 'Regular, pero con variaciones mes a mes', label: 'Regular, pero con variaciones mes a mes' },
+  { id: 'Variable según el trabajo de cada mes', label: 'Variable según el trabajo de cada mes' },
+  { id: 'De forma ocasional o esporádica', label: 'De forma ocasional o esporádica' },
 ];
 
 // Gastos fijos — combina lo que ya usa la app real (Alquiler/expensas,
@@ -204,11 +208,10 @@ const COMO_CONOCIO: { id: string; label: string }[] = [
 ];
 
 const PREVIEW_INFO: Record<ObjetivoId, { icon: string; titulo: string; desc: string; bg: string }> = {
-  controlar: { icon: '🔍', titulo: 'Gastos', desc: 'Vas a ver en qué se te va la plata, separado por sección.', bg: COLORS.coralSoft },
-  objetivo: { icon: '🎯', titulo: 'Objetivos', desc: 'Cada meta con su progreso, a tu ritmo.', bg: COLORS.goldSoft },
-  ahorrar: { icon: '🐷', titulo: 'Objetivos', desc: 'Vas a ver cuánto llevás ahorrado para lo que te propongas.', bg: COLORS.goldSoft },
-  invertir: { icon: '🌱', titulo: 'Inversiones', desc: 'Te va a mostrar en qué te conviene poner tu plata según tu perfil.', bg: COLORS.skySoft },
-  otro: { icon: '✨', titulo: 'Tu FINA', desc: 'Armada a tu manera, con lo que nos fuiste contando.', bg: COLORS.tint },
+  invertir: { icon: '🌱', titulo: 'Inversiones', desc: 'Según tu perfil, te mostramos en qué te conviene poner tu plata para que rinda.', bg: COLORS.skySoft },
+  ahorrar: { icon: '🐷', titulo: 'Ahorro', desc: 'Apartás plata en tu reserva y ves crecer cuánto llevás guardado, sin tentarte.', bg: COLORS.goldSoft },
+  objetivo: { icon: '🎯', titulo: 'Objetivos', desc: 'Tu meta con su progreso — vas viendo cuánto te falta para lograrla.', bg: COLORS.goldSoft },
+  no_claro: { icon: '✨', titulo: 'Tu FINA', desc: 'Gastos, ahorro, objetivos e inversiones — todo en un lugar, a tu ritmo.', bg: COLORS.tint },
 };
 
 const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors';
@@ -287,8 +290,20 @@ export function OnboardingV2() {
   const [edad, setEdad] = useState<Edad>(null);
   const [situacion, setSituacion] = useState<Situacion>(null);
 
-  const [rank, setRank] = useState<ObjetivoId[]>([]);
-  const [objetivoOtroTxt, setObjetivoOtroTxt] = useState('');
+  // "¿Qué querés lograr?" — ahora es UNA sola opción (no ranking).
+  const [meta, setMeta] = useState<ObjetivoId | null>(null);
+
+  // Rama "Invertir": mini perfil de inversor — se guarda con las MISMAS
+  // opciones que usa InversionesV2, así esa pantalla arranca precargada.
+  const [invReaccion, setInvReaccion] = useState<string | null>(null);
+  const [invYaInvierte, setInvYaInvierte] = useState<'si' | 'no' | null>(null);
+  const [invPorQue, setInvPorQue] = useState<string | null>(null);
+
+  // Rama "Objetivo puntual": se define acá y aparece ya cargado en Objetivos.
+  const [objNombre, setObjNombre] = useState('');
+  const [objMonto, setObjMonto] = useState('');
+  const [objMoneda, setObjMoneda] = useState<'ARS' | 'USD'>('ARS');
+  const [objFecha, setObjFecha] = useState('');
 
   const [convivencia, setConvivencia] = useState<string[]>([]);
   const convivenciaOtro = useOtroMulti();
@@ -329,19 +344,19 @@ export function OnboardingV2() {
 
   const flow = useMemo<StepKey[]>(() => {
     const f: StepKey[] = [
-      'intro', 'nombre', 'generoEdad', 'objetivo', 'situacion', 'convivencia', 'zona',
-      'ingresos', 'estabilidadIngresos', 'gastosFijos', 'categoriasGasto',
+      'intro', 'nombre', 'generoEdad', 'objetivo', 'situacion', 'zona',
+      'ingresos', 'estabilidadIngresos', 'tedioso',
     ];
-    if (categoriasGasto.length > 0 || categoriasOtro.custom.length > 0) f.push('categoriasRecortar');
-    f.push('asignacionPlata', 'tedioso', 'comoViene', 'intermedia', 'comoConocio', 'terminos', 'login');
+    // Ramas según lo que quiere lograr:
+    if (meta === 'invertir') f.push('perfilInversor', 'objetivoInversion');
+    else if (meta === 'objetivo') f.push('definirObjetivo');
+    // 'ahorrar' y 'no_claro' siguen el flujo normal, sin pasos extra.
+    f.push('intermedia', 'comoConocio', 'terminos', 'login');
     return f;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoriasGasto, categoriasOtro.custom]);
+  }, [meta]);
   const currentKey = flow[Math.min(currentIdx, flow.length - 1)];
   const seccionActual = SECCION_INFO[SECCION_DE[currentKey]];
 
-  const toggleRank = (id: ObjetivoId) =>
-    setRank((r) => (r.includes(id) ? r.filter((x) => x !== id) : [...r, id]));
   const toggleMulti = (setter: (fn: (v: string[]) => string[]) => void) => (id: string) =>
     setter((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
   const toggleConvivencia = toggleMulti(setConvivencia);
@@ -355,7 +370,7 @@ export function OnboardingV2() {
     setCategoriasRecortarSel((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
   };
 
-  const objetivoBubble = rank.length ? BUBBLE_POR_TOP[rank[0]] : 'No te vas a arrepentir...';
+  const objetivoBubble = meta ? BUBBLE_POR_TOP[meta] : 'No te vas a arrepentir...';
   const categoriasElegidas = [...categoriasGasto, ...categoriasOtro.custom];
   const sufijoGenero = genero === 'masculino' ? 'os' : genero === 'femenino' ? 'as' : '@s';
 
@@ -366,8 +381,11 @@ export function OnboardingV2() {
   function stepValid(key: StepKey): boolean {
     if (key === 'nombre') return nombre.trim().length > 0;
     if (key === 'generoEdad') return !!genero && !!edad;
-    if (key === 'objetivo') return rank.length > 0;
+    if (key === 'objetivo') return !!meta;
     if (key === 'situacion') return !!situacion;
+    if (key === 'perfilInversor') return !!invReaccion && !!invYaInvierte;
+    if (key === 'objetivoInversion') return !!invPorQue;
+    if (key === 'definirObjetivo') return objNombre.trim().length > 0 && parseMoneyInput(objMonto) > 0;
     if (key === 'terminos') return aceptoTerminos;
     if (key === 'login') {
       if (pasoLogin === 'datos') return emailOk && passwordOk && telefonoOk;
@@ -396,8 +414,33 @@ export function OnboardingV2() {
       invierte: asignacion.inversiones,
       controlaGastos: asignacion.gastosFijos,
       comoConocio: resuelto(comoConocio, comoConocioOtroTxt),
+      meta,
     });
     saveV2TerminosAceptados(aceptoTerminos);
+
+    // Rama "Invertir" → dejamos el perfil listo para que Inversiones arranque
+    // ya calculado (mismas opciones que usa esa pantalla).
+    if (meta === 'invertir' && invReaccion && invPorQue) {
+      saveV2InversionesPerfil({ porQue: invPorQue, reaccion: invReaccion, yaInvierte: invYaInvierte ?? undefined });
+    }
+
+    // Rama "Objetivo puntual" → creamos el objetivo ya cargado en Objetivos.
+    if (meta === 'objetivo' && objNombre.trim() && parseMoneyInput(objMonto) > 0) {
+      const horizonte = objFecha
+        ? new Date(objFecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+        : 'Lo antes posible';
+      saveV2ObjetivosState([{
+        id: `onb-${Date.now()}`,
+        nombre: objNombre.trim(),
+        descripcion: '',
+        tipo: 'individual',
+        moneda: objMoneda,
+        horizonte,
+        montoModo: 'exacto',
+        montoTotal: parseMoneyInput(objMonto),
+        contribuciones: [],
+      }]);
+    }
   }
 
   function onNext() {
@@ -444,8 +487,16 @@ export function OnboardingV2() {
       ? (pasoLogin === 'datos' ? 'Continuar' : 'Verificar y empezar')
       : CTA_LABELS[currentKey];
 
+  // La pantalla intermedia se arma según lo que eligió — mostramos primero
+  // la función más relevante a su elección, para generar ganas de entrar.
   const previewsOrdenados = (() => {
-    const ids = rank.length > 0 ? rank : (['controlar', 'objetivo', 'invertir'] as ObjetivoId[]);
+    const orden: Record<ObjetivoId, ObjetivoId[]> = {
+      invertir: ['invertir', 'objetivo', 'ahorrar'],
+      ahorrar: ['ahorrar', 'objetivo', 'invertir'],
+      objetivo: ['objetivo', 'ahorrar', 'invertir'],
+      no_claro: ['ahorrar', 'objetivo', 'invertir'],
+    };
+    const ids = meta ? orden[meta] : (['ahorrar', 'objetivo', 'invertir'] as ObjetivoId[]);
     const vistos = new Set<string>();
     return ids
       .map((id) => PREVIEW_INFO[id])
@@ -546,28 +597,17 @@ export function OnboardingV2() {
 
               {currentKey === 'objetivo' && (
                 <>
-                  <h1 className="text-[23px] font-bold leading-snug" style={{ color: COLORS.ink }}>¿Hacia qué objetivos/logros deberíamos trabajar junt{sufijoGenero}?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Tocá en el orden que más te represente.</p>
+                  <h1 className="text-[23px] font-bold leading-snug" style={{ color: COLORS.ink }}>¿Qué es lo que más querés lograr con tu plata?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Elegí la que mejor te represente hoy — después vas a poder hacer todo lo demás igual.</p>
                   <div className="flex flex-wrap gap-2.5">
-                    {OBJETIVOS.map((o) => {
-                      const idx = rank.indexOf(o.id);
-                      return (
-                        <Chip key={o.id} on={idx >= 0} onClick={() => toggleRank(o.id)}>
-                          {idx >= 0 && (
-                            <span className="w-[19px] h-[19px] rounded-full bg-white/25 text-white text-[11px] font-extrabold flex items-center justify-center shrink-0">
-                              {idx + 1}
-                            </span>
-                          )}
-                          {o.emoji} {o.label}
-                        </Chip>
-                      );
-                    })}
+                    {OBJETIVOS.map((o) => (
+                      <Chip key={o.id} on={meta === o.id} onClick={() => setMeta(o.id)}>
+                        {o.emoji} {o.label}
+                      </Chip>
+                    ))}
                   </div>
-                  {rank.includes('otro') && (
-                    <input className={inputClass} placeholder="Contanos qué querés lograr" value={objetivoOtroTxt} onChange={(e) => setObjetivoOtroTxt(e.target.value)} />
-                  )}
                   <div className="flex justify-center py-1"><Face color={FACE_COLOR} size={90} mood="happy" /></div>
-                  {rank.length > 0 && (
+                  {meta && (
                     <div className="self-center max-w-[82%] text-center bg-white rounded-2xl px-4 py-3 text-[13.5px] font-semibold shadow-[0_2px_16px_rgba(31,27,46,0.06)]" style={{ color: COLORS.ink }}>
                       {objetivoBubble}
                     </div>
@@ -692,10 +732,20 @@ export function OnboardingV2() {
                     <Chip on={tedioso === 'no'} onClick={() => setTedioso('no')}>No</Chip>
                   </div>
                   {tedioso && (
-                    <div className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: COLORS.ink }}>
-                      <span className="text-2xl shrink-0">💬</span>
-                      <p className="text-[14px] font-semibold" style={{ color: '#fff' }}>
-                        {tedioso === 'si' ? 'Con el bot es facilísimo — se lo contás hablando y listo.' : 'Con el bot es mucho mejor de lo que te imaginás.'}
+                    <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.ink }}>
+                      <div className="flex items-center gap-3">
+                        <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-2xl" style={{ background: 'rgba(244,241,250,0.15)' }}>💬</span>
+                        <div className="flex flex-col">
+                          <p className="text-[15px] font-bold" style={{ color: '#fff' }}>
+                            {tedioso === 'si' ? 'Tranqui — para eso está tu FINA en WhatsApp' : 'Igual te va a encantar tu FINA en WhatsApp'}
+                          </p>
+                          <p className="text-[12.5px]" style={{ color: 'rgba(244,241,250,0.75)' }}>Sin planillas, sin abrir la app.</p>
+                        </div>
+                      </div>
+                      <p className="text-[13.5px] leading-relaxed" style={{ color: 'rgba(244,241,250,0.9)' }}>
+                        Le escribís tu gasto como se lo contarías a una amiga —{' '}
+                        <span className="font-semibold" style={{ color: '#fff' }}>“gasté 5.000 en el súper”</span>{' '}
+                        — y FINA lo registra sola, al toque. También te responde dudas y te avisa cómo venís. 💜
                       </p>
                     </div>
                   )}
@@ -718,10 +768,63 @@ export function OnboardingV2() {
                 </>
               )}
 
+              {currentKey === 'perfilInversor' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Armemos tu perfil de inversor</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Dos preguntas rápidas para recomendarte según vos — nunca movemos tu plata, solo te orientamos.</p>
+                  <p className="text-[14.5px] font-bold mt-1 leading-snug" style={{ color: COLORS.ink }}>Estás en una inversión que sube y baja en el camino, pero promete crecer a 5 años a una tasa razonable. ¿Qué hacés?</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {['Lo saco todo', 'Lo dejo y espero', 'Pongo más'].map((o) => (
+                      <Chip key={o} on={invReaccion === o} onClick={() => setInvReaccion(o)}>{o}</Chip>
+                    ))}
+                  </div>
+                  <p className="text-[14.5px] font-bold mt-2" style={{ color: COLORS.ink }}>¿Ya invertís hoy en algo?</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {(['si', 'no'] as const).map((o) => (
+                      <Chip key={o} on={invYaInvierte === o} onClick={() => setInvYaInvierte(o)}>{o === 'si' ? 'Sí' : 'No'}</Chip>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {currentKey === 'objetivoInversion' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Con qué objetivo querés invertir esa plata?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Con esto afinamos qué opciones tienen más sentido para vos.</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {['Sacarla pronto (corto plazo)', 'Dejarla que rinda (largo plazo)'].map((o) => (
+                      <Chip key={o} on={invPorQue === o} onClick={() => setInvPorQue(o)}>{o}</Chip>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {currentKey === 'definirObjetivo' && (
+                <>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Cuál es ese objetivo?</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.</p>
+                  <input autoFocus className={inputClass} placeholder="Ej: Viaje a Bariloche" value={objNombre} onChange={(e) => setObjNombre(e.target.value)} />
+                  <div className="flex items-center justify-between">
+                    <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+                    <div className="flex rounded-full p-0.5" style={{ background: COLORS.tint }}>
+                      {(['ARS', 'USD'] as const).map((m) => (
+                        <button key={m} type="button" onClick={() => setObjMoneda(m)} className="rounded-full px-3 py-1 text-[12px] font-bold transition-colors" style={objMoneda === m ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.inkSoft }}>{m}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{objMoneda === 'USD' ? 'US$' : '$'}</span>
+                    <input className={`${inputClass} pl-11`} placeholder="Monto total" inputMode="numeric" value={objMonto} onChange={(e) => setObjMonto(formatThousands(e.target.value))} />
+                  </div>
+                  <p className="text-[14px] font-bold mt-1" style={{ color: COLORS.ink }}>¿Para cuándo? <span className="font-normal text-[13px]" style={{ color: COLORS.inkSoft }}>(opcional)</span></p>
+                  <input type="date" className={inputClass} value={objFecha} onChange={(e) => setObjFecha(e.target.value)} />
+                </>
+              )}
+
               {currentKey === 'intermedia' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Así se va a ir viendo tu FINA</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>En el orden que nos dijiste que te importa.</p>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>{meta === 'invertir' ? 'Tu plata, lista para crecer' : meta === 'ahorrar' ? 'Tu ahorro, siempre a la vista' : meta === 'objetivo' ? '¡Tu objetivo ya está en marcha!' : 'Así se va a ir viendo tu FINA'}</h1>
+                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{meta === 'invertir' ? 'Con tu perfil listo, esto es lo que te espera adentro.' : meta === 'ahorrar' ? 'Esto es lo que vas a poder hacer para que te sobre cada vez más.' : meta === 'objetivo' ? 'Lo vas a ver con su progreso, y todo esto además.' : 'Todo lo que FINA va a hacer por vos.'}</p>
                   <div className="flex flex-col gap-3">
                     {previewsOrdenados.map((p) => (
                       <div key={p.titulo} className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: p.bg }}>
