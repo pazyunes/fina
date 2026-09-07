@@ -523,22 +523,45 @@ export function ActionRow({ icon, label, onClick }: { icon: React.ReactNode; lab
   );
 }
 
-// "Marco" de la pantalla — mobile-first: en mobile es simplemente la
-// pantalla completa (sin marco, como cualquier página real), y solo en
-// desktop se convierte en una tarjeta con alto fijo tipo celular, centrada
-// sobre un fondo neutro. Sin esto, en una ventana de escritorio alta el
-// contenido corto queda pegado arriba con medio monitor vacío abajo.
+// "Marco" de la pantalla del onboarding.
+//   - Mobile: pantalla completa, sin marco (como cualquier página real).
+//   - Desktop (lg+): PANEL DIVIDIDO — a la izquierda un panel de marca fijo
+//     (FINA + los 3 pilares) y a la derecha el flujo de preguntas ocupando el
+//     resto. Así se siente onboarding de app moderna y no un "teléfono
+//     chiquito" centrado con medio monitor vacío.
 export function DeviceFrame({ children }: { children: React.ReactNode }) {
+  const PILARES = [
+    { e: '🔍', t: 'Conocé tus gastos' },
+    { e: '🎯', t: 'Lográ tus objetivos' },
+    { e: '💜', t: 'Cuidá tu bienestar financiero' },
+  ];
   return (
     <div
-      className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col overflow-hidden lg:items-center lg:justify-center lg:py-10"
-      style={{ background: COLORS.frameBg }}
+      className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col overflow-hidden lg:flex-row"
+      style={{ background: COLORS.paper }}
     >
-      <div
-        className="w-full flex flex-col flex-1 min-h-0 lg:flex-none lg:h-[860px] lg:max-w-[430px]
-          lg:rounded-[36px] lg:shadow-[0_25px_70px_-15px_rgba(20,14,32,0.35)] overflow-hidden"
-        style={{ background: COLORS.paper }}
+      {/* Panel de marca — solo desktop */}
+      <aside
+        className="hidden lg:flex lg:flex-col lg:justify-between lg:w-[40%] lg:max-w-[520px] shrink-0 px-12 py-14"
+        style={{ background: COLORS.brand, color: '#fff' }}
       >
+        <div className="text-[26px] font-bold tracking-tight">FINA</div>
+        <div className="flex flex-col gap-7">
+          <p className="text-[30px] font-bold leading-[1.15]">Ordená tu plata,<br />a tu ritmo.</p>
+          <ul className="flex flex-col gap-4">
+            {PILARES.map((p) => (
+              <li key={p.t} className="flex items-center gap-3 text-[16px] font-semibold">
+                <span className="w-9 h-9 rounded-full flex items-center justify-center text-[18px] shrink-0" style={{ background: 'rgba(255,255,255,0.18)' }}>{p.e}</span>
+                {p.t}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="text-[12.5px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu información es privada — no la compartimos con nadie.</p>
+      </aside>
+
+      {/* Flujo de preguntas */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {children}
       </div>
     </div>

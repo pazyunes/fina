@@ -460,7 +460,7 @@ export function OnboardingV2() {
     <DeviceFrame>
       <div className="flex-1 min-h-0 flex flex-col transition-colors duration-300" style={{ background: seccionActual.bg }}>
         {showTop && (
-          <div className="px-[22px] pt-5 pb-1 flex items-center gap-3">
+          <div className="px-[22px] pt-5 pb-1 flex items-center gap-3 w-full lg:max-w-xl lg:mx-auto lg:pt-10">
             {currentIdx > 0 && (
               <button type="button" onClick={onBack} aria-label="Volver a la pregunta anterior" className="shrink-0 w-9 h-9 -ml-1.5 flex items-center justify-center text-[22px] font-bold rounded-full transition-all duration-100 active:scale-90" style={{ color: COLORS.ink }}>
                 ←
@@ -481,7 +481,7 @@ export function OnboardingV2() {
           </div>
         )}
 
-        <div className="flex-1 min-h-0 flex flex-col px-[22px] py-4 overflow-y-auto gap-4">
+        <div className="flex-1 min-h-0 flex flex-col px-[22px] py-4 overflow-y-auto gap-4 w-full lg:max-w-xl lg:mx-auto">
           <motion.div
               key={finished ? 'finished' : currentKey}
               initial={{ opacity: 0, y: 12 }}
@@ -822,7 +822,7 @@ export function OnboardingV2() {
             </motion.div>
         </div>
 
-        <div className="px-[22px] pt-2.5 pb-6 flex flex-col gap-1.5">
+        <div className="px-[22px] pt-2.5 pb-6 flex flex-col gap-1.5 w-full lg:max-w-xl lg:mx-auto lg:pb-10">
           <Cta label={ctaLabel} disabled={!finished && currentKey !== 'login' && !stepValid(currentKey)} onClick={onNext} />
           {!finished && SKIPPABLE.includes(currentKey) && (
             <button type="button" onClick={onSkip} className="text-[13.5px] font-semibold underline py-2 text-center" style={{ color: COLORS.inkSoft }}>
