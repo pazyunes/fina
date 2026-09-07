@@ -735,7 +735,7 @@ export function ObjetivosV2() {
 
   // ── Vista: lista ──
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
+    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto">
       {modalCrear}
       {confirmarBorrarModal}
 
@@ -751,6 +751,11 @@ export function ObjetivosV2() {
         </div>
         <div className="shrink-0"><Face color={COLORS.brand} size={68} mood="happy" /></div>
       </div>
+
+      {/* Desktop: 2 columnas (lista principal + barra lateral). Mobile: apilado. */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-6 lg:items-start">
+      {/* Columna principal */}
+      <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0">
 
       {/* Estado vacío con onda: sugerencias para arrancar (abren el modal) */}
       {objetivos.length === 0 && (
@@ -862,7 +867,31 @@ export function ObjetivosV2() {
       >
         + Agregar objetivo
       </button>
-      <ArmarGrupoBtn />
+      </div>{/* /columna principal */}
+
+      {/* Barra lateral */}
+      <div className="flex flex-col gap-4 lg:w-[300px] lg:shrink-0">
+        {objetivos.length > 0 && (
+          <div className="hidden lg:flex flex-col gap-2.5 rounded-2xl p-4 border" style={{ background: COLORS.surface }}>
+            <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>¿Sumás otro?</p>
+            <div className="flex flex-wrap gap-2">
+              {SUGERENCIAS_OBJETIVO.slice(0, 4).map((s) => (
+                <button
+                  key={s.nombre}
+                  type="button"
+                  onClick={() => { setNombre(s.nombre); setCreating(true); }}
+                  className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+                  style={{ background: COLORS.tint, color: COLORS.ink }}
+                >
+                  {s.emoji} {s.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <ArmarGrupoBtn />
+      </div>
+      </div>{/* /2 columnas */}
     </div>
   );
 }
