@@ -1,0 +1,15 @@
+/* onboarding-v2 — estilos base scopeados al sandbox del rediseño.
+   No toca la app real: solo aplica a los elementos con estas clases, que
+   viven únicamente dentro de onboarding-v2. Alineado a la guía de frontend
+   (§11 accesibilidad): foco SIEMPRE visible, nunca outline:none sin reemplazo. */
+
+/* Foco visible (guía §4 --focus-ring). Se aplica a cualquier control
+   interactivo de v2 que lleve la clase .v2-focus. */
+.v2-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(126, 93, 168, 0.45);
+}
+/* Cuando el control ya tiene su propia sombra, el anillo se suma sin pisarla. */
+.v2-focus {
+  outline: none;
+}

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
-import { IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
+import { IconChevron, IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
+import './onboarding-v2.css';
 
 // REDISEÑO v2 (rama feat/rediseno-onboarding-v2) — piezas compartidas entre
 // el onboarding y las pantallas post-onboarding.
@@ -15,59 +16,82 @@ import { IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
 // inventado. La energía sigue cambiando por sección (Gastos colorido,
 // Inversiones serio en modo oscuro), pero ya no via sombra de cómic.
 
-// Paleta alineada a la guía de frontend (src/styles/frontend.md §3-§4).
-// Regla dura: los colores de marca (lima/star/naranja/lila) son de RELLENO,
-// no de texto — sobre ellos el texto va en `ink`, nunca en blanco. El púrpura
-// queda degradado a rol estructural (bordes/foco/recuadros), no es la marca.
-// El color que se recuerda es el LIMA en el momento de valor (objetivo que
-// avanza). Los gastos se muestran NEUTRALES (tinta), nunca en color de alerta.
+// Tokens de onboarding-v2 — fuente de verdad de color del sandbox (no tocamos
+// styles/tokens.css, que es de la app real). Alineado a la guía de frontend
+// (src/styles/frontend.md §3-§4). Reglas duras que respeta esta paleta:
+//   · Los colores de marca (lima/star/naranja/lila) son de RELLENO, no de
+//     texto: sobre ellos el texto va en `ink`, nunca en blanco. Cuando el
+//     color tiene que ir en tipografía, se usa su token `-Text` (≥6:1).
+//   · El púrpura queda degradado a rol ESTRUCTURAL (bordes/foco/recuadros/
+//     botones); no es "la marca".
+//   · El color que se recuerda es el LIMA, en el momento de valor (un objetivo
+//     que avanza).
+//   · Los gastos se muestran NEUTRALES (tinta), nunca en color de alerta.
+// El fondo se bajó de intensidad respecto del crema del manual (#FFF4E4) a un
+// casi-blanco cálido, por pedido de diseño.
 export const COLORS = {
   // Neutros / superficies
-  ink: '#2B2118',        // tinta — texto y montos
-  inkSoft: '#5F5346',    // tinta-media — labels, fechas
+  ink: '#2B2118',        // tinta — texto y montos (14:1+ sobre papel)
+  inkSoft: '#5F5346',    // tinta-media — labels, fechas (6.9:1)
   inkFaint: '#7A6A58',   // tinta-suave — auxiliar (mínimo AA)
-  paper: '#FFF4E4',      // papel crema — fondo general
-  surface: '#FFFDF7',    // superficie elevada — tarjetas
-  tint: '#F6E9D4',       // hueco — bloque tintado / hundido
-  line: '#E8D9C0',       // hairline — separadores
-  lineStrong: '#D8C4A5', // separador más marcado
+  paper: '#FAF7F1',      // fondo general — casi blanco, apenas cálido
+  surface: '#FFFFFF',    // superficie elevada — tarjetas
+  tint: '#F1EBDF',       // hueco — bloque tintado / hundido
+  line: '#E7DFD1',       // hairline — separadores
+  lineStrong: '#D6CBB8', // separador más marcado
 
   // Acento estructural (púrpura, NO es la marca)
-  brand: '#7E5DA8',      // púrpura — botones, progreso, foco, bordes
-  brandSoft: '#EDE4F7',  // lila muy suave — bandas / recuadros
+  brand: '#7E5DA8',      // púrpura — botones, progreso, foco, bordes (5.2:1 con blanco)
+  brandSoft: '#EEE7F6',  // lila muy suave — bandas / recuadros
   brandDark: '#3D2A55',  // noche — fondos oscuros, texto fuerte
 
   // Fondo del "marco" que envuelve la pantalla en desktop — ver DeviceFrame.
-  frameBg: '#EFE6D6',
+  frameBg: '#EFEAE0',
 
-  // Colores de marca (RELLENO). Cada uno con su -Soft y su -Text (≥6:1) para
-  // cuando el color tiene que ir en tipografía.
-  lima: '#B0E150', limaSoft: '#EBF6D2', limaText: '#41660F',        // valor / éxito / objetivo que avanza
-  star: '#FFC457', starSoft: '#FFEFD0', starText: '#7A4F00',        // Fini, medallitas, destacados
-  naranja: '#FF7B4F', naranjaSoft: '#FFE4D8', naranjaText: '#A83208', // atención accionable
+  // Colores de marca (RELLENO). Cada uno con su -Soft (superficie) y su -Text
+  // (≥6:1) para cuando el color tiene que ir en tipografía o ícono fino.
+  lima: '#B0E150', limaSoft: '#EAF5D0', limaText: '#41660F',        // valor / éxito / objetivo que avanza
+  star: '#FFC457', starSoft: '#FFEECB', starText: '#7A4F00',        // Fini, medallitas, destacados
+  naranja: '#FF7B4F', naranjaSoft: '#FFE3D6', naranjaText: '#A83208', // atención accionable
   lila: '#CB9EFF', lilaBorde: '#9A6BD1',
 
   // ── Aliases de compatibilidad: keys viejas → paleta de la guía ──
-  green: '#B0E150', greenSoft: '#EBF6D2',                  // éxito/valor → lima
-  coral: '#FF7B4F', coralSoft: '#FFE4D8', coralDark: '#A83208', // atención → naranja
-  gold: '#FFC457', goldSoft: '#FFEFD0',                    // destacado → star
+  green: '#B0E150', greenSoft: '#EAF5D0',                  // éxito/valor → lima
+  coral: '#FF7B4F', coralSoft: '#FFE3D6', coralDark: '#A83208', // atención → naranja
+  gold: '#FFC457', goldSoft: '#FFEECB',                    // destacado → star
   amarillo: '#FFC457', fideo: '#FF7B4F',
-  sky: '#7E5DA8', skySoft: '#EDE4F7',                      // inversiones sin ruido de color → estructural
+  sky: '#7E5DA8', skySoft: '#EEE7F6',                      // inversiones sin ruido de color → estructural
   // La guía no usa color por sección: gastos neutral, objetivos = lima (valor),
   // inversiones = estructural, grupos = star.
-  gastos: '#2B2118', gastosSoft: '#F6E9D4',
-  objetivos: '#41660F', objetivosSoft: '#EBF6D2',
-  inversiones: '#7E5DA8', inversionesSoft: '#EDE4F7',
-  grupos: '#7A4F00', gruposSoft: '#FFEFD0',
+  gastos: '#2B2118', gastosSoft: '#F1EBDF',
+  objetivos: '#41660F', objetivosSoft: '#EAF5D0',
+  inversiones: '#7E5DA8', inversionesSoft: '#EEE7F6',
+  grupos: '#7A4F00', gruposSoft: '#FFEECB',
 
   // Inversiones vive en modo oscuro — la plata seria se muestra sin ruido de
   // color, sobre la "noche" de la guía.
   dark: '#3D2A55',
   darkCard: '#4A3663',
-  darkLine: 'rgba(255,244,228,0.12)',
-  onDark: '#FFF4E4',
-  onDarkSoft: 'rgba(255,244,228,0.6)',
+  darkLine: 'rgba(250,247,241,0.12)',
+  onDark: '#FAF7F1',
+  onDarkSoft: 'rgba(250,247,241,0.6)',
 };
+
+// Tipografía de onboarding-v2 (guía §3.4): Outfit títulos, Figtree cuerpo,
+// IBM Plex Mono montos. Se aplican SCOPEADAS al subárbol de v2 sobrescribiendo
+// las CSS vars que ya usan los <h1..h4> y el body — así la app real sigue en
+// Baloo 2 sin tocarla. Ver FONT_VARS.
+export const FONTS = {
+  display: "'Outfit', system-ui, sans-serif",
+  body: "'Figtree', system-ui, sans-serif",
+  mono: "'IBM Plex Mono', ui-monospace, monospace",
+};
+// Se pega en el root de V2Layout y DeviceFrame (style={{ ...FONT_VARS }}).
+export const FONT_VARS = {
+  '--font-serif': FONTS.display,
+  '--font-sans': FONTS.body,
+  '--font-mono': FONTS.mono,
+} as React.CSSProperties;
 
 // ── plata: formateo + parseo de inputs ──
 export function fmtMoney(n: number): string {
@@ -283,15 +307,15 @@ export function ArmarGrupoBtn() {
     <button
       type="button"
       onClick={() => navigate('/onboarding-v2/grupos')}
-      className="w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
+      className="v2-focus w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
       style={{ background: COLORS.brandSoft }}
     >
-      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.6)', color: COLORS.brand }}><IconGrupo size={18} /></span>
+      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.surface, color: COLORS.brand }}><IconGrupo size={18} /></span>
       <span className="flex-1 min-w-0">
         <span className="block text-[14px] font-bold" style={{ color: COLORS.brandDark }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
         <span className="block text-[11.5px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
       </span>
-      <span className="shrink-0 font-bold" style={{ color: COLORS.brandDark }}>→</span>
+      <span className="shrink-0" style={{ color: COLORS.brand }}><IconChevron size={18} /></span>
     </button>
   );
 }
@@ -527,16 +551,24 @@ export function CheckIcon() {
 // `muted` es para las opciones "de escape" (Ninguno por ahora, Todavía no
 // lo pensé, No me interesa, etc.) — se ven grisáceas incluso activas, para
 // que no compitan visualmente con una respuesta real.
-export function Chip({ on, warm, muted, onClick, children }: { on: boolean; warm?: boolean; muted?: boolean; onClick: () => void; children: React.ReactNode }) {
+export function Chip({ on, warm: _warm, muted, onClick, children }: { on: boolean; warm?: boolean; muted?: boolean; onClick: () => void; children: React.ReactNode }) {
+  // Seleccionado = relleno púrpura estructural + texto blanco (5.2:1). Las
+  // opciones "de escape" (muted) se rellenan de hueco con tinta-media, para
+  // que no compitan con una respuesta real. Sin seleccionar = superficie con
+  // hairline. (Se dejó de usar el coral decorativo: la guía reserva el naranja
+  // para atención accionable, no para dar énfasis a una pregunta.)
+  const style: React.CSSProperties = on
+    ? muted
+      ? { background: COLORS.tint, color: COLORS.inkSoft }
+      : { background: COLORS.brand, color: '#fff' }
+    : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` };
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14.5px] font-semibold select-none
-        transition-all duration-100 ease-out active:scale-[0.96]
-        ${on
-          ? (muted ? 'bg-[#E7E2ED] text-[#6B647A]' : warm ? 'bg-[#FF5C7A] text-white' : 'bg-[#7626B3] text-white')
-          : 'bg-white text-[#1F1B2E] border border-[rgba(31,27,46,0.14)]'}`}
+      style={style}
+      className="v2-focus inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14.5px] font-semibold select-none
+        transition-all duration-100 ease-out active:scale-[0.96]"
     >
       {children}
     </button>
@@ -551,10 +583,9 @@ export function OtroChip({ abierto, onClick }: { abierto: boolean; onClick: () =
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[14.5px] font-semibold select-none
-        border border-dashed transition-all duration-100 ease-out active:scale-[0.96]
-        ${abierto ? 'bg-[#F0E7FA]' : 'bg-white'}`}
-      style={{ borderColor: 'rgba(118,38,179,0.45)', color: COLORS.brandDark }}
+      className="v2-focus inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[14.5px] font-semibold select-none
+        border border-dashed transition-all duration-100 ease-out active:scale-[0.96]"
+      style={{ borderColor: COLORS.lilaBorde, color: COLORS.brandDark, background: abierto ? COLORS.brandSoft : COLORS.surface }}
     >
       + Otro
     </button>
@@ -577,11 +608,12 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full rounded-2xl py-4 text-[16px] font-bold select-none
+      style={disabled
+        ? { background: COLORS.tint, color: COLORS.inkFaint }
+        : { background: COLORS.brand, color: '#fff', boxShadow: '0 10px 24px -8px rgba(61,42,85,0.45)' }}
+      className={`v2-focus w-full rounded-2xl py-4 text-[16px] font-bold select-none
         transition-all duration-100 ease-out active:scale-[0.98]
-        ${disabled
-          ? 'bg-[#E7E2ED] text-[#A29BB3] cursor-not-allowed'
-          : 'bg-[#7626B3] text-white shadow-[0_10px_24px_-8px_rgba(118,38,179,0.55)] hover:bg-[#68219E]'}`}
+        ${disabled ? 'cursor-not-allowed' : ''}`}
     >
       {label}
     </button>
@@ -594,14 +626,15 @@ export function ActionRow({ icon, label, onClick }: { icon: React.ReactNode; lab
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-3.5 bg-white rounded-2xl px-4 py-4
-        border transition-all duration-100 ease-out active:scale-[0.98] text-left"
+      style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
+      className="v2-focus w-full flex items-center gap-3.5 rounded-2xl px-4 py-4
+        transition-all duration-100 ease-out active:scale-[0.98] text-left"
     >
-      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft }}>
+      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}>
         {icon}
       </span>
       <span className="flex-1 font-semibold text-[15px]" style={{ color: COLORS.ink }}>{label}</span>
-      <span style={{ color: COLORS.brand }}>→</span>
+      <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
     </button>
   );
 }
@@ -621,7 +654,7 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col overflow-hidden lg:flex-row"
-      style={{ background: COLORS.paper }}
+      style={{ background: COLORS.paper, ...FONT_VARS }}
     >
       {/* Panel de marca — solo desktop */}
       <aside
@@ -677,8 +710,8 @@ export function Coachmark({ id, children }: { id: string; children: React.ReactN
           try { localStorage.setItem(coachmarkKey(id), '1'); } catch { /* no crítico */ }
           setVisto(true);
         }}
-        className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold transition-transform duration-100 active:scale-90"
-        style={{ background: 'rgba(67,28,114,0.12)', color: COLORS.brandDark }}
+        className="v2-focus shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold transition-transform duration-100 active:scale-90"
+        style={{ background: COLORS.lila, color: COLORS.brandDark }}
       >
         ✕
       </button>
@@ -709,7 +742,7 @@ export function SegmentedTab<T extends string>({
             onClick={() => onChange(o.id)}
             className="flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-150"
             style={sel
-              ? { background: '#fff', color: COLORS.ink, boxShadow: '0 2px 8px rgba(31,27,46,0.12)' }
+              ? { background: COLORS.surface, color: COLORS.ink, boxShadow: '0 2px 8px rgba(43,33,24,0.12)' }
               : { background: 'transparent', color: COLORS.ink, opacity: 0.75 }}
           >
             {o.label}

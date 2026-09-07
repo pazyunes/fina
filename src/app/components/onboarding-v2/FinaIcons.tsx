@@ -26,6 +26,15 @@ function Svg({ size = 24, className, style, children }: IconProps & { children: 
   );
 }
 
+// Chevron — afordancia de navegación (reemplaza al "→" de plantilla, §2).
+export function IconChevron(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M9 5l7 7-7 7" />
+    </Svg>
+  );
+}
+
 // Gastos — billete
 export function IconGastos(p: IconProps) {
   return (

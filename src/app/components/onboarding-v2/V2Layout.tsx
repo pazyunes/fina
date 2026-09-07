@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { BottomNavV2 } from './BottomNavV2';
 import { SidebarV2 } from './SidebarV2';
-import { COLORS } from './shared';
+import { COLORS, FONT_VARS } from './shared';
 
 // REDISEÑO v2 — layout compartido por Home/Gastos/Objetivos/Inversiones.
 // RESPONSIVE:
@@ -25,7 +25,7 @@ export function V2Layout() {
   return (
     <div
       className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col lg:flex-row overflow-hidden"
-      style={{ background: COLORS.paper }}
+      style={{ background: COLORS.paper, ...FONT_VARS }}
     >
       {/* Menú lateral — solo desktop */}
       <SidebarV2 />
