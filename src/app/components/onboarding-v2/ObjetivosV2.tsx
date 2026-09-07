@@ -3,7 +3,7 @@ import { ArmarGrupoBtn, Celebracion, Cta, Coachmark, COLORS, Donut, Face, Segmen
 
 // Sugerencias para arrancar cuando todavía no hay objetivos — le dan
 // emoción/juego a la pantalla vacía; tocás una y abre el modal precargado.
-import { IconBasura, IconEditar, IconMas } from './FinaIcons';
+import { IconBasura, IconCalendario, IconEditar, IconGrupo, IconMas } from './FinaIcons';
 
 const SUGERENCIAS_OBJETIVO = [
   { emoji: '✈️', nombre: 'Un viaje' },
@@ -48,9 +48,6 @@ const MONEDAS: { code: string; flag: string; label: string }[] = [
   { code: 'GBP', flag: '🇬🇧', label: 'Libra esterlina' },
   { code: 'MXN', flag: '🇲🇽', label: 'Peso mexicano' },
 ];
-function monedaFlag(code: string): string {
-  return MONEDAS.find((m) => m.code === code)?.flag ?? '🏳️';
-}
 // Formatea un monto en la moneda dada. ARS usa el símbolo $; el resto se
 // muestra con su código (ej: "USD 1.200") para no inventar símbolos.
 function fmtMonto(monto: number, moneda: Moneda): string {
@@ -71,7 +68,6 @@ function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Mone
         className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors"
         style={{ background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
       >
-        <span className="text-[15px]">{actual.flag}</span>
         <span>{actual.code}</span>
         <span style={{ color: COLORS.inkFaint }}>▾</span>
       </button>
@@ -87,7 +83,6 @@ function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Mone
                 className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-[13.5px] transition-colors hover:bg-[#F3EEFA]"
                 style={{ color: COLORS.ink }}
               >
-                <span className="text-[16px]">{m.flag}</span>
                 <span className="font-semibold w-9 shrink-0">{m.code}</span>
                 <span className="truncate" style={{ color: COLORS.inkSoft }}>{m.label}</span>
                 {value === m.code && <span className="ml-auto shrink-0" style={{ color: COLORS.brand }}>✓</span>}
@@ -145,7 +140,7 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
           className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
           style={fechaElegida || valor === null ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
         >
-          <span aria-hidden>📅</span> Fecha exacta
+<IconCalendario size={15} /> Fecha exacta
         </button>
       </div>
       {(valor === null || fechaElegida) && (
@@ -205,7 +200,7 @@ function consejoPara(o: Objetivo, estado: 'definido' | 'desconocido' | 'incomple
   const perfil = loadV2PerfilOnboarding();
   const categoria = perfil?.categoriasRecortar?.[0];
   if (!categoria) return null;
-  return `💡 Nos dijiste que querías gastar menos en ${categoria} — cada peso que ahorres ahí puede ir directo a "${o.nombre}".`;
+  return `Nos dijiste que querías gastar menos en ${categoria} — cada peso que ahorres ahí puede ir directo a "${o.nombre}".`;
 }
 
 function montoLabel(o: Objetivo): string {
@@ -537,13 +532,13 @@ export function ObjetivosV2() {
             <div className="flex items-center gap-2">
               <p className="text-[18px] font-bold truncate" style={{ color: COLORS.ink }}>{abierto.nombre}</p>
               {abierto.tipo === 'grupal' && (
-                <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
-                  👥 Grupal
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
+                  <IconGrupo size={11} /> Grupal
                 </span>
               )}
               {abierto.moneda !== 'ARS' && (
                 <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.skySoft, color: COLORS.ink }}>
-                  {monedaFlag(abierto.moneda)} {abierto.moneda}
+                  {abierto.moneda}
                 </span>
               )}
               {estado === 'incompleto' && (
@@ -559,7 +554,7 @@ export function ObjetivosV2() {
             </div>
             {abierto.descripcion && <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>{abierto.descripcion}</p>}
             {abierto.horizonte && (
-              <p className="text-[11.5px] mt-0.5" style={{ color: COLORS.inkFaint }}>📅 {abierto.horizonte}</p>
+              <p className="text-[11.5px] mt-0.5 flex items-center gap-1" style={{ color: COLORS.inkFaint }}><IconCalendario size={13} /> {abierto.horizonte}</p>
             )}
             {estado === 'definido' && (
               <>
@@ -601,7 +596,7 @@ export function ObjetivosV2() {
 
         {done && (
           <div className="rounded-2xl px-4 py-3 text-[13.5px] font-semibold text-center" style={{ background: COLORS.greenSoft, color: COLORS.ink }}>
-            🎉 ¡Ya juntaste todo lo que necesitás para este objetivo!
+            ¡Ya juntaste todo lo que necesitás para este objetivo!
           </div>
         )}
 
@@ -742,12 +737,12 @@ export function ObjetivosV2() {
       {confirmarBorrarModal}
 
       {/* Banda editorial full-bleed (desencajonado) + mascota que acompaña */}
-      <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.goldSoft }}>
+      <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.objetivosSoft }}>
         <div className="flex-1 min-w-0">
           <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Tus objetivos</h1>
           <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>
             {objetivos.length > 0
-              ? `Vas por ${objetivos.length} objetivo${objetivos.length > 1 ? 's' : ''} — no aflojes 💪`
+              ? `Vas por ${objetivos.length} objetivo${objetivos.length > 1 ? 's' : ''} — no aflojes`
               : 'Ponéle nombre a eso que querés lograr. Lo hacemos juntas, a tu ritmo.'}
           </p>
         </div>
@@ -772,7 +767,7 @@ export function ObjetivosV2() {
                 className="rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
                 style={{ background: COLORS.tint, color: COLORS.ink }}
               >
-                {s.emoji} {s.nombre}
+                {s.nombre}
               </button>
             ))}
           </div>
@@ -808,8 +803,8 @@ export function ObjetivosV2() {
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-[15px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
                   {o.tipo === 'grupal' && (
-                    <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
-                      👥
+                    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
+                      <IconGrupo size={12} />
                     </span>
                   )}
                   {estado === 'incompleto' && (
@@ -885,7 +880,7 @@ export function ObjetivosV2() {
                   className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
                   style={{ background: COLORS.tint, color: COLORS.ink }}
                 >
-                  {s.emoji} {s.nombre}
+                  {s.nombre}
                 </button>
               ))}
             </div>

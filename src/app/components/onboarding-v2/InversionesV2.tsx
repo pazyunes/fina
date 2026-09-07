@@ -162,7 +162,7 @@ export function InversionesV2() {
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
         {/* Banda editorial full-bleed (color de Inversiones) + mascota */}
-        <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.skySoft }}>
+        <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.inversionesSoft }}>
           <div className="flex-1 min-w-0">
             <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
             <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
@@ -196,7 +196,7 @@ export function InversionesV2() {
       <div className="pb-6">
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
           {/* Banda editorial full-bleed (color de Inversiones) + mascota */}
-          <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.skySoft }}>
+          <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.inversionesSoft }}>
             <div className="flex-1 min-w-0">
               <h1 className="text-[26px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
               <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
@@ -208,7 +208,7 @@ export function InversionesV2() {
               className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
               style={{ background: pl.soft, color: pl.strong }}
             >
-              {perfil.emoji} Perfil {perfil.label.toLowerCase()}
+              Perfil {perfil.label.toLowerCase()}
             </span>
             <div className="flex rounded-full p-0.5 shrink-0" style={{ background: COLORS.tint }}>
               {(['ARS', 'USD'] as Moneda[]).map((m) => (

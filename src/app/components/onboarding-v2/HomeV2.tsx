@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Celebracion, CountUp, COLORS, Face, formatThousands, fmtMoney, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
-import { IconGastos, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
+import { IconFuego, IconGastos, IconGrupo, IconIdea, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
 import type { ComponentType } from 'react';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
@@ -172,9 +172,9 @@ export function HomeV2() {
   // Un solo lugar por sección: cada tarjeta muestra su dato y lleva a su
   // pantalla (fusiona los viejos "accesos" + "bienestar" + "Mis análisis").
   const secciones: { Icon: ComponentType<{ size?: number }>; label: string; to: string; soft: string; accent: string; metric: string }[] = [
-    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', soft: COLORS.coralSoft, accent: COLORS.coral, metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá' },
-    { Icon: IconObjetivos, label: 'Objetivos', to: '/onboarding-v2/objetivos', soft: COLORS.goldSoft, accent: COLORS.gold, metric: b.objetivosPct !== null ? `${b.objetivosPct}%` : 'Sumá uno' },
-    { Icon: IconInversiones, label: 'Inversiones', to: '/onboarding-v2/inversiones', soft: COLORS.greenSoft, accent: COLORS.green, metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
+    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', soft: COLORS.gastosSoft, accent: COLORS.gastos, metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá' },
+    { Icon: IconObjetivos, label: 'Objetivos', to: '/onboarding-v2/objetivos', soft: COLORS.objetivosSoft, accent: COLORS.objetivos, metric: b.objetivosPct !== null ? `${b.objetivosPct}%` : 'Sumá uno' },
+    { Icon: IconInversiones, label: 'Inversiones', to: '/onboarding-v2/inversiones', soft: COLORS.inversionesSoft, accent: COLORS.inversiones, metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
   ];
 
   return (
@@ -194,7 +194,7 @@ export function HomeV2() {
         </div>
         {/* Racha 🔥 — hábito estilo Duolingo */}
         <div className="flex flex-col items-center shrink-0 rounded-2xl px-3 py-1.5" style={{ background: COLORS.brandSoft }}>
-          <span className="text-[15px] font-bold leading-none" style={{ color: COLORS.brandDark }}>🔥 {racha}</span>
+          <span className="flex items-center gap-1 text-[15px] font-bold leading-none" style={{ color: COLORS.brandDark }}><IconFuego size={15} /> {racha}</span>
           <span className="text-[9.5px] font-semibold" style={{ color: COLORS.brand }}>{racha === 1 ? 'día' : 'días'}</span>
         </div>
       </div>
@@ -294,13 +294,13 @@ export function HomeV2() {
             className="text-left bg-white rounded-2xl overflow-hidden border transition-transform duration-100 active:scale-[0.99]"
           >
             <div className="px-4 py-2 flex items-center justify-between" style={{ background: COLORS.brand }}>
-              <p className="font-bold text-[13.5px] text-white truncate">👥 {grupo.nombre}</p>
+              <p className="font-bold text-[13.5px] text-white truncate flex items-center gap-1.5"><IconGrupo size={16} /> {grupo.nombre}</p>
               <span className="text-[11.5px] font-semibold text-white/90 shrink-0">Ver todo →</span>
             </div>
             <div className="p-4 flex flex-col gap-1.5">
               {topGrupo.map((m, i) => (
                 <div key={m.nombre} className="flex items-center gap-2 text-[13px]">
-                  <span className="w-5 text-center shrink-0">{MEDALLAS[i]}</span>
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>{i + 1}</span>
                   <span className="flex-1 truncate" style={{ color: m.sosVos ? COLORS.brand : COLORS.ink, fontWeight: m.sosVos ? 700 : 500 }}>
                     {m.nombre}{m.sosVos ? ' (vos)' : ''}
                   </span>
@@ -327,7 +327,7 @@ export function HomeV2() {
             className="w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
             style={{ background: COLORS.goldSoft }}
           >
-            <span className="text-lg shrink-0">{t.icon}</span>
+            <span className="shrink-0" style={{ color: COLORS.gold }}><IconIdea size={20} /></span>
             <span className="flex-1 text-[13px] font-medium" style={{ color: COLORS.ink }}>{t.texto}</span>
           </button>
         ))}

@@ -8,6 +8,7 @@ import {
   saveV2PerfilOnboarding, saveV2TerminosAceptados,
   saveV2InversionesPerfil, saveV2ObjetivosState,
 } from './shared';
+import { IconChat } from './FinaIcons';
 
 // REDISEÑO — Onboarding v2 (rama dev)
 //
@@ -147,32 +148,32 @@ const ESTABILIDAD: { id: string; label: string }[] = [
 // Estudios, Transporte — ver ExpensesFixed.tsx) con lo que todavía no
 // registra pero un asesor necesita saber (tarjeta, préstamo, ayuda familiar).
 const GASTOS_FIJOS_OPCIONES: { value: string; display: string; muted?: boolean }[] = [
-  { value: 'Alquiler o expensas', display: '🏠 Alquiler o expensas' },
-  { value: 'Suscripciones', display: '📺 Suscripciones' },
-  { value: 'Supermercado', display: '🛒 Supermercado' },
-  { value: 'Prepaga u obra social', display: '🩺 Prepaga u obra social' },
-  { value: 'Belleza y cuidado personal', display: '💅 Belleza y cuidado personal' },
-  { value: 'Psicóloga o terapia', display: '🧠 Psicóloga o terapia' },
-  { value: 'Gimnasio', display: '🏋️ Gimnasio' },
-  { value: 'Estudios', display: '🎓 Estudios' },
-  { value: 'Transporte (seguro, nafta, boleto)', display: '🚗 Transporte (seguro, nafta, boleto)' },
-  { value: 'Tarjeta de crédito', display: '💳 Tarjeta de crédito' },
-  { value: 'Cuota de préstamo', display: '🏦 Cuota de préstamo' },
-  { value: 'Ayuda a familiares', display: '🤝 Ayuda a familiares' },
+  { value: 'Alquiler o expensas', display: 'Alquiler o expensas' },
+  { value: 'Suscripciones', display: 'Suscripciones' },
+  { value: 'Supermercado', display: 'Supermercado' },
+  { value: 'Prepaga u obra social', display: 'Prepaga u obra social' },
+  { value: 'Belleza y cuidado personal', display: 'Belleza y cuidado personal' },
+  { value: 'Psicóloga o terapia', display: 'Psicóloga o terapia' },
+  { value: 'Gimnasio', display: 'Gimnasio' },
+  { value: 'Estudios', display: 'Estudios' },
+  { value: 'Transporte (seguro, nafta, boleto)', display: 'Transporte (seguro, nafta, boleto)' },
+  { value: 'Tarjeta de crédito', display: 'Tarjeta de crédito' },
+  { value: 'Cuota de préstamo', display: 'Cuota de préstamo' },
+  { value: 'Ayuda a familiares', display: 'Ayuda a familiares' },
   { value: 'Ninguno por ahora', display: 'Ninguno por ahora', muted: true },
 ];
 
 const CATEGORIAS_GASTO: { value: string; display: string }[] = [
-  { value: 'Delivery', display: '🛵 Delivery' },
-  { value: 'Restaurantes', display: '🍽️ Restaurantes' },
-  { value: 'Cafeterías', display: '☕ Cafeterías' },
-  { value: 'Salidas y entretenimiento', display: '🎉 Salidas y entretenimiento' },
-  { value: 'Supermercado', display: '🛒 Supermercado' },
-  { value: 'Transporte', display: '🚌 Transporte' },
-  { value: 'Belleza y cuidado personal', display: '💅 Belleza y cuidado personal' },
-  { value: 'Ropa', display: '👕 Ropa' },
-  { value: 'Suscripciones', display: '📺 Suscripciones' },
-  { value: 'Compras online', display: '📦 Compras online' },
+  { value: 'Delivery', display: 'Delivery' },
+  { value: 'Restaurantes', display: 'Restaurantes' },
+  { value: 'Cafeterías', display: 'Cafeterías' },
+  { value: 'Salidas y entretenimiento', display: 'Salidas y entretenimiento' },
+  { value: 'Supermercado', display: 'Supermercado' },
+  { value: 'Transporte', display: 'Transporte' },
+  { value: 'Belleza y cuidado personal', display: 'Belleza y cuidado personal' },
+  { value: 'Ropa', display: 'Ropa' },
+  { value: 'Suscripciones', display: 'Suscripciones' },
+  { value: 'Compras online', display: 'Compras online' },
 ];
 
 const NIVELES: { id: Nivel; label: string }[] = [
@@ -543,7 +544,7 @@ export function OnboardingV2() {
               {currentKey === 'intro' && (
                 <>
                   <h1 className="text-[28px] font-bold leading-tight pt-2" style={{ color: COLORS.ink }}>
-                    Llegó tu momento de cambiar la historia de tus finanzas 💪
+                    Llegó tu momento de cambiar la historia de tus finanzas
                   </h1>
                   <div className="flex flex-col gap-4 bg-white rounded-[18px] p-5 border">
                     {['Conocé tus gastos', 'Lográ tus objetivos', 'Cuidá tu bienestar financiero'].map((txt) => (
@@ -602,7 +603,7 @@ export function OnboardingV2() {
                   <div className="flex flex-wrap gap-2.5">
                     {OBJETIVOS.map((o) => (
                       <Chip key={o.id} on={meta === o.id} onClick={() => setMeta(o.id)}>
-                        {o.emoji} {o.label}
+                        {o.label}
                       </Chip>
                     ))}
                   </div>
@@ -620,7 +621,7 @@ export function OnboardingV2() {
                   <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Contanos, ¿en qué andás?</h1>
                   <div className="flex flex-wrap gap-2.5">
                     {SITUACIONES.map((o) => (
-                      <Chip key={o.id} on={situacion === o.id} onClick={() => setSituacion(o.id)}>{o.emoji} {o.label}</Chip>
+                      <Chip key={o.id} on={situacion === o.id} onClick={() => setSituacion(o.id)}>{o.label}</Chip>
                     ))}
                   </div>
                 </>
@@ -648,7 +649,7 @@ export function OnboardingV2() {
               {currentKey === 'ingresos' && (
                 <>
                   <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿De dónde vienen tus ingresos hoy?</h1>
-                  <Nota>🔒 Esto es solo tuyo — nadie más lo ve. Elegí todas las que apliquen.</Nota>
+                  <Nota>Esto es solo tuyo — nadie más lo ve. Elegí todas las que apliquen.</Nota>
                   <MultiOtroChips opciones={INGRESOS_OPCIONES.map((v) => ({ value: v, display: v }))} seleccion={ingresos} toggle={toggleIngresos} otro={ingresosOtro} />
                 </>
               )}
@@ -734,7 +735,7 @@ export function OnboardingV2() {
                   {tedioso && (
                     <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.ink }}>
                       <div className="flex items-center gap-3">
-                        <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-2xl" style={{ background: 'rgba(244,241,250,0.15)' }}>💬</span>
+                        <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white" style={{ background: 'rgba(244,241,250,0.15)' }}><IconChat size={24} /></span>
                         <div className="flex flex-col">
                           <p className="text-[15px] font-bold" style={{ color: '#fff' }}>
                             {tedioso === 'si' ? 'Tranqui — para eso está tu FINA en WhatsApp' : 'Igual te va a encantar tu FINA en WhatsApp'}
@@ -745,7 +746,7 @@ export function OnboardingV2() {
                       <p className="text-[13.5px] leading-relaxed" style={{ color: 'rgba(244,241,250,0.9)' }}>
                         Le escribís tu gasto como se lo contarías a una amiga —{' '}
                         <span className="font-semibold" style={{ color: '#fff' }}>“gasté 5.000 en el súper”</span>{' '}
-                        — y FINA lo registra sola, al toque. También te responde dudas y te avisa cómo venís. 💜
+                        — y FINA lo registra sola, al toque. También te responde dudas y te avisa cómo venís.
                       </p>
                     </div>
                   )}
@@ -828,7 +829,6 @@ export function OnboardingV2() {
                   <div className="flex flex-col gap-3">
                     {previewsOrdenados.map((p) => (
                       <div key={p.titulo} className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: p.bg }}>
-                        <span className="text-2xl shrink-0">{p.icon}</span>
                         <div>
                           <p className="font-bold text-[14px]" style={{ color: COLORS.ink }}>{p.titulo}</p>
                           <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>{p.desc}</p>
@@ -836,7 +836,7 @@ export function OnboardingV2() {
                       </div>
                     ))}
                     <div className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: COLORS.ink }}>
-                      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(244,241,250,0.15)' }}>💬</span>
+                      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white" style={{ background: 'rgba(244,241,250,0.15)' }}><IconChat size={24} /></span>
                       <div>
                         <p className="font-bold text-[14px]" style={{ color: '#fff' }}>Tu bot de WhatsApp</p>
                         <p className="text-[12.5px]" style={{ color: 'rgba(244,241,250,0.7)' }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
@@ -892,7 +892,7 @@ export function OnboardingV2() {
                   </Campo>
                   <Campo label="Teléfono" error={intentoLogin && !telefonoOk ? 'Campo obligatorio' : undefined}>
                     <div className="flex gap-2">
-                      <span className={`flex items-center gap-1.5 px-3 rounded-2xl text-[15px] font-semibold shrink-0 ${inputClassErr(false)}`}>🇦🇷 +54</span>
+                      <span className={`flex items-center gap-1.5 px-3 rounded-2xl text-[15px] font-semibold shrink-0 ${inputClassErr(false)}`}>+54</span>
                       <input
                         className={`flex-1 ${inputClassErr(intentoLogin && !telefonoOk)}`}
                         placeholder="9 11 1234-5678"
@@ -918,7 +918,7 @@ export function OnboardingV2() {
               {currentKey === 'login' && finished && (
                 <>
                   <div className="flex justify-center py-2"><Face color={FACE_COLOR} mood="happy" /></div>
-                  <h1 className="text-[23px] font-bold text-center" style={{ color: COLORS.ink }}>¡Llegaste a FINA, {nombre.trim().split(' ')[0]}! 🎉</h1>
+                  <h1 className="text-[23px] font-bold text-center" style={{ color: COLORS.ink }}>¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</h1>
                   <p className="text-[14px] text-center" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
                 </>
               )}

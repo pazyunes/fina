@@ -156,7 +156,7 @@ export function GruposV2() {
             className="flex items-center gap-3 bg-white rounded-2xl p-3.5 border"
             style={m.sosVos ? { outline: `2px solid ${COLORS.brand}` } : undefined}
           >
-            <span className="text-[18px] w-6 text-center shrink-0">{MEDALLAS[i] ?? i + 1}</span>
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0" style={{ background: i === 0 ? COLORS.amarillo : COLORS.tint, color: i === 0 ? COLORS.ink : COLORS.inkSoft }}>{i + 1}</span>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-[14.5px] truncate" style={{ color: COLORS.ink }}>{m.nombre}{m.sosVos ? ' (vos)' : ''}</p>
               <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: 'rgba(31,27,46,0.08)' }}>

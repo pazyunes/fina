@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
+import { IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
 
 // REDISEÑO v2 (rama feat/rediseno-onboarding-v2) — piezas compartidas entre
 // el onboarding y las pantallas post-onboarding.
@@ -40,6 +41,13 @@ export const COLORS = {
   greenSoft: '#E1F3E7',
   sky: '#4C8DFF',
   skySoft: '#E3ECFF',
+
+  // Semánticos por sección (Manual v2.0) — un color por sección + su soft.
+  gastos: '#F4557A', gastosSoft: '#FFE7EC',
+  objetivos: '#16A97A', objetivosSoft: '#DFF4EC',
+  inversiones: '#3D6FF5', inversionesSoft: '#E2EAFF',
+  grupos: '#E8952B', gruposSoft: '#FDEEDA',
+  amarillo: '#FFC93C', fideo: '#C23FA8',
 
   // Inversiones vive en modo oscuro — el mismo criterio "Nubank/Cleo": la
   // plata seria se muestra sin ruido de color, en un fondo casi negro.
@@ -267,7 +275,7 @@ export function ArmarGrupoBtn() {
       className="w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
       style={{ background: COLORS.brandSoft }}
     >
-      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-lg" style={{ background: 'rgba(255,255,255,0.6)' }}>👥</span>
+      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.6)', color: COLORS.brand }}><IconGrupo size={18} /></span>
       <span className="flex-1 min-w-0">
         <span className="block text-[14px] font-bold" style={{ color: COLORS.brandDark }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
         <span className="block text-[11.5px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
@@ -537,7 +545,7 @@ export function OtroChip({ abierto, onClick }: { abierto: boolean; onClick: () =
         ${abierto ? 'bg-[#F0E7FA]' : 'bg-white'}`}
       style={{ borderColor: 'rgba(118,38,179,0.45)', color: COLORS.brandDark }}
     >
-      ✍️ Otro
+      + Otro
     </button>
   );
 }
@@ -595,9 +603,9 @@ export function ActionRow({ icon, label, onClick }: { icon: React.ReactNode; lab
 //     chiquito" centrado con medio monitor vacío.
 export function DeviceFrame({ children }: { children: React.ReactNode }) {
   const PILARES = [
-    { e: '🔍', t: 'Conocé tus gastos' },
-    { e: '🎯', t: 'Lográ tus objetivos' },
-    { e: '💜', t: 'Cuidá tu bienestar financiero' },
+    { Icon: IconGastos, t: 'Conocé tus gastos' },
+    { Icon: IconObjetivos, t: 'Lográ tus objetivos' },
+    { Icon: IconSparkle, t: 'Cuidá tu bienestar financiero' },
   ];
   return (
     <div
@@ -615,7 +623,7 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
           <ul className="flex flex-col gap-4">
             {PILARES.map((p) => (
               <li key={p.t} className="flex items-center gap-3 text-[16px] font-semibold">
-                <span className="w-9 h-9 rounded-full flex items-center justify-center text-[18px] shrink-0" style={{ background: 'rgba(255,255,255,0.18)' }}>{p.e}</span>
+                <span className="w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: 'rgba(255,255,255,0.18)' }}><p.Icon size={18} /></span>
                 {p.t}
               </li>
             ))}
