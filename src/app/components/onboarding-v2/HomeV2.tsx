@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Celebracion, CountUp, COLORS, Face, formatThousands, fmtMoney, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
-import { IconFuego, IconGastos, IconGrupo, IconIdea, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
+import { Celebracion, COLORS, EstadoConfianza, Monto, formatThousands, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { IconChevron, IconFuego, IconGastos, IconGrupo, IconIdea, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
 import type { ComponentType } from 'react';
 
-const MEDALLAS = ['🥇', '🥈', '🥉'];
-
-type Tip = { icon: string; texto: string; to: string };
+type Tip = { texto: string; to: string };
 
 // "Tu próximo paso" — el hilo estilo Duolingo: una sola acción, la más útil
 // según en qué punto está la persona. Da coherencia al dashboard sin
@@ -56,16 +54,16 @@ function rachaDeGastos(): number {
 function tipsPara(): Tip[] {
   const tips: Tip[] = [];
   if (loadV2Categorias().length === 0) {
-    tips.push({ icon: '💸', texto: 'Registrá tu primer gasto y armamos tus secciones solas, a partir de eso.', to: '/onboarding-v2/gastos' });
+    tips.push({ texto: 'Registrá tu primer gasto y armamos tus secciones solas, a partir de eso.', to: '/onboarding-v2/gastos' });
   }
   if (loadV2ObjetivosIniciales().length > 0) {
-    tips.push({ icon: '🎯', texto: 'Tenés objetivos anotados del onboarding — ponéles un monto para ver el progreso.', to: '/onboarding-v2/objetivos' });
+    tips.push({ texto: 'Tenés objetivos anotados del onboarding — ponéles un monto para ver el progreso.', to: '/onboarding-v2/objetivos' });
   }
   if (loadV2InversionesPerfil()) {
-    tips.push({ icon: '🌱', texto: 'Ya nos contaste algo de tu perfil inversor — terminalo en Inversiones para ver recomendaciones.', to: '/onboarding-v2/inversiones' });
+    tips.push({ texto: 'Ya nos contaste algo de tu perfil inversor — terminalo en Inversiones para ver recomendaciones.', to: '/onboarding-v2/inversiones' });
   }
   if (tips.length === 0) {
-    tips.push({ icon: '👀', texto: 'Explorá Gastos, Objetivos e Inversiones — cuanto más uses FINA, más te vamos a poder ayudar.', to: '/onboarding-v2/gastos' });
+    tips.push({ texto: 'Explorá Gastos, Objetivos e Inversiones — cuanto más uses FINA, más te vamos a poder ayudar.', to: '/onboarding-v2/gastos' });
   }
   return tips.slice(0, 1);
 }
@@ -183,37 +181,49 @@ export function HomeV2() {
         <button
           type="button"
           onClick={() => navigate('/onboarding-v2/perfil')}
-          className="w-12 h-12 rounded-full overflow-hidden shrink-0 shadow-[0_2px_10px_rgba(31,27,46,0.08)] transition-transform duration-100 active:scale-95"
+          className="v2-focus w-12 h-12 rounded-full overflow-hidden shrink-0 flex items-center justify-center shadow-[0_2px_10px_rgba(31,27,46,0.08)] transition-transform duration-100 active:scale-95"
+          style={foto ? undefined : { background: COLORS.brandSoft, color: COLORS.brand }}
           aria-label="Ver tu perfil"
         >
-          {foto ? <img src={foto} alt="" className="w-full h-full object-cover" /> : <Face color={COLORS.brand} size={48} mood="happy" />}
+          {foto ? <img src={foto} alt="" className="w-full h-full object-cover" /> : <IconPerfil size={22} />}
         </button>
         <div className="flex-1 min-w-0">
           <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>{saludoDelDia()}{nombre ? `, ${nombre}` : ''}</p>
           <p className="text-[19px] font-bold leading-tight" style={{ color: COLORS.ink }}>Tu FINA</p>
         </div>
-        {/* Racha 🔥 — hábito estilo Duolingo */}
-        <div className="flex flex-col items-center shrink-0 rounded-2xl px-3 py-1.5" style={{ background: COLORS.brandSoft }}>
-          <span className="flex items-center gap-1 text-[15px] font-bold leading-none" style={{ color: COLORS.brandDark }}><IconFuego size={15} /> {racha}</span>
-          <span className="text-[9.5px] font-semibold" style={{ color: COLORS.brand }}>{racha === 1 ? 'día' : 'días'}</span>
-        </div>
+        {/* Racha — hábito estilo Duolingo, con IconFuego. Con 0 días todavía no
+            es un dato: se muestra tenue como invitación (por-descubrir), no como
+            un cero que parece un error. */}
+        {racha > 0 ? (
+          <div className="flex flex-col items-center shrink-0 rounded-2xl px-3 py-1.5" style={{ background: COLORS.brandSoft }}>
+            <span className="flex items-center gap-1 text-[15px] font-bold leading-none" style={{ color: COLORS.brandDark }}><IconFuego size={15} /> <span className="font-mono tabular-nums">{racha}</span></span>
+            <span className="text-[9.5px] font-semibold" style={{ color: COLORS.brand }}>{racha === 1 ? 'día' : 'días'}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 shrink-0 rounded-2xl px-3 py-2" style={{ background: COLORS.tint, color: COLORS.inkFaint }} aria-label="Todavía no arrancaste tu racha">
+            <IconFuego size={15} />
+            <span className="text-[11px] font-semibold leading-none">Racha</span>
+          </div>
+        )}
       </div>
 
-      {/* Tu próximo paso — HERO de color: el foco de la pantalla, no una caja más */}
-      <div className="rounded-[26px] p-5 flex flex-col gap-4" style={{ background: COLORS.brand }}>
+      {/* Tu próximo paso — bloque tintado que lidera la pantalla (el púrpura es
+          estructural, §3.3: recuadro, no un hero de color saturado). Es la
+          única acción sugerida a la vez, estilo Duolingo. */}
+      <div className="rounded-[22px] p-5 flex flex-col gap-4" style={{ background: COLORS.brandSoft }}>
         <div className="flex items-center gap-3.5">
-          <span className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-white" style={{ background: 'rgba(255,255,255,0.18)' }}><IconSparkle size={24} /></span>
+          <span className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: COLORS.surface, color: COLORS.brand }}><IconSparkle size={24} /></span>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu próximo paso</p>
-            <p className="font-bold text-[17px] leading-tight text-white">{paso.titulo}</p>
-            <p className="text-[13px] leading-snug" style={{ color: 'rgba(255,255,255,0.88)' }}>{paso.msg}</p>
+            <p className="text-[12px] font-semibold" style={{ color: COLORS.brand }}>Tu próximo paso</p>
+            <p className="font-bold text-[17px] leading-tight" style={{ color: COLORS.brandDark }}>{paso.titulo}</p>
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{paso.msg}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={() => navigate(paso.to)}
-          className="w-full rounded-2xl py-3.5 text-[15px] font-bold transition-transform duration-100 active:scale-[0.99]"
-          style={{ background: '#fff', color: COLORS.brand }}
+          className="v2-focus w-full rounded-2xl py-3.5 text-[15px] font-bold text-white transition-transform duration-100 active:scale-[0.99]"
+          style={{ background: COLORS.brand }}
         >
           {paso.cta}
         </button>
@@ -228,10 +238,12 @@ export function HomeV2() {
           <div className="flex-1 min-w-0">
             <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
             <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>
-              {reserva > 0 ? <>Tenés <CountUp value={reserva} format={fmtMoney} /> apartados</> : 'Apartá plata para no gastarla — tipo alcancía.'}
+              {reserva > 0 ? <>Tenés <Monto value={reserva} className="text-[12px]" /> apartados</> : 'Apartá plata para no gastarla — tipo alcancía.'}
             </p>
+            {/* La reserva la cargó la persona: dato declarado (§5.1). */}
+            {reserva > 0 && <EstadoConfianza estado="declarado" className="mt-1" />}
           </div>
-          <button type="button" onClick={() => setReservaOpen((o) => !o)} className="text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
+          <button type="button" onClick={() => setReservaOpen((o) => !o)} className="v2-focus flex items-center justify-center min-h-[44px] px-2 text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
             {reserva > 0 ? 'Sumar' : 'Reservar'}
           </button>
         </div>
@@ -239,13 +251,14 @@ export function HomeV2() {
           <div className="pb-3 flex gap-2">
             <input
               autoFocus
-              className="flex-1 min-w-0 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
+              className="v2-focus flex-1 min-w-0 rounded-xl px-3 py-2 min-h-[44px] text-[13.5px] outline-none"
+              style={{ border: `1px solid ${COLORS.line}`, color: COLORS.ink }}
               placeholder="¿Cuánto querés reservar?"
-              inputMode="numeric"
+              inputMode="decimal"
               value={reservaVal}
               onChange={(e) => setReservaVal(formatThousands(e.target.value))}
             />
-            <button type="button" onClick={guardarReserva} className="rounded-xl px-3.5 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}>
+            <button type="button" onClick={guardarReserva} className="v2-focus rounded-xl px-3.5 min-h-[44px] text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}>
               Guardar
             </button>
           </div>
@@ -253,12 +266,12 @@ export function HomeV2() {
         <button
           type="button"
           onClick={() => navigate('/onboarding-v2/perfil')}
-          className="flex items-center gap-3 py-3 text-left border-t"
+          className="v2-focus flex items-center gap-3 py-3 text-left border-t"
           style={{ borderColor: COLORS.line }}
         >
           <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}><IconPerfil size={18} /></span>
           <span className="flex-1 text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Completá tu perfil</span>
-          <span className="shrink-0 font-bold" style={{ color: COLORS.brand }}>→</span>
+          <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
         </button>
       </div>
 
@@ -269,10 +282,10 @@ export function HomeV2() {
             key={s.label}
             type="button"
             onClick={() => navigate(s.to)}
-            className="flex flex-col items-center gap-2 text-center rounded-2xl px-2 py-4 transition-all duration-100 active:scale-[0.97]"
+            className="v2-focus flex flex-col items-center gap-2 text-center rounded-2xl px-2 py-4 transition-all duration-100 active:scale-[0.97]"
             style={{ background: s.soft }}
           >
-            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white/70" style={{ color: s.accent }}>
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: COLORS.surface, color: s.accent }}>
               <s.Icon size={22} />
             </span>
             <span className="flex flex-col gap-0.5">
@@ -286,16 +299,17 @@ export function HomeV2() {
       {/* Mis competencias — ranking del grupo. Empieza simple: el nombre del
           grupo con una franja de color arriba y el ranking de actividad. */}
       <div className="flex flex-col gap-2 lg:col-span-1">
-        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Mis competencias</p>
+        <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Mis competencias</p>
         {grupo ? (
           <button
             type="button"
             onClick={() => navigate('/onboarding-v2/grupos')}
-            className="text-left bg-white rounded-2xl overflow-hidden border transition-transform duration-100 active:scale-[0.99]"
+            className="v2-focus text-left rounded-2xl overflow-hidden border transition-transform duration-100 active:scale-[0.99]"
+            style={{ background: COLORS.surface, borderColor: COLORS.line }}
           >
             <div className="px-4 py-2 flex items-center justify-between" style={{ background: COLORS.brand }}>
               <p className="font-bold text-[13.5px] text-white truncate flex items-center gap-1.5"><IconGrupo size={16} /> {grupo.nombre}</p>
-              <span className="text-[11.5px] font-semibold text-white/90 shrink-0">Ver todo →</span>
+              <span className="text-[11.5px] font-semibold text-white/90 shrink-0 flex items-center gap-0.5">Ver todo <IconChevron size={13} /></span>
             </div>
             <div className="p-4 flex flex-col gap-1.5">
               {topGrupo.map((m, i) => (
@@ -318,13 +332,13 @@ export function HomeV2() {
 
       {/* Tips para vos — recomendaciones cortas según lo que ya sabemos de vos */}
       <div className="flex flex-col gap-2 lg:col-span-3">
-        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tips para vos</p>
+        <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Tips para vos</p>
         {tips.map((t) => (
           <button
             key={t.texto}
             type="button"
             onClick={() => navigate(t.to)}
-            className="w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
+            className="v2-focus w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
             style={{ background: COLORS.goldSoft }}
           >
             <span className="shrink-0" style={{ color: COLORS.starText }}><IconIdea size={20} /></span>

@@ -8,6 +8,16 @@ import { ArmarGrupoBtn, Chip, COLORS, Face, loadV2Foto, loadV2GastosState, loadV
 // financiero vive ACÁ adentro (no como cartel aparte arriba de todo en
 // Home, que no se entendía) — Home solo tiene la entrada a esta pantalla.
 const NIVELES_FINANCIEROS = ['Recién estoy arrancando', 'Sé lo básico, quiero mejorar', 'Me manejo bastante bien', 'Soy bastante experta/o en esto'];
+
+// Check propio (currentColor) — el color lo pone el contenedor para respetar
+// el contraste (§3.3: sobre relleno de color, tinta; nunca blanco sobre lima).
+function Check({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={Math.round(size * (11 / 14))} viewBox="0 0 14 11" fill="none" aria-hidden>
+      <path d="M1 5.5L5 9.5L13 1.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 type GastosLite = { gastos: unknown[]; topes: Record<string, unknown> };
 type ObjetivoLite = { montoTotal: number };
 function itemsPerfil() {
@@ -76,7 +86,7 @@ export function PerfilV2() {
         <button
           type="button"
           onClick={elegirFoto}
-          className="relative w-24 h-24 rounded-full overflow-hidden shrink-0 shadow-[0_2px_14px_rgba(31,27,46,0.12)] transition-transform duration-100 active:scale-95"
+          className="v2-focus relative w-24 h-24 rounded-full overflow-hidden shrink-0 shadow-[0_2px_14px_rgba(31,27,46,0.12)] transition-transform duration-100 active:scale-95"
           aria-label="Cambiar foto de perfil"
         >
           {foto ? (
@@ -84,21 +94,25 @@ export function PerfilV2() {
           ) : (
             <Face color={COLORS.brand} size={96} mood="happy" />
           )}
+          {/* Scrim de tinta sobre la foto para que la etiqueta se lea (media
+              overlay, no decoración de color). */}
           <span
             className="absolute bottom-0 left-0 right-0 text-center text-[10px] font-bold py-1"
-            style={{ background: 'rgba(31,27,46,0.55)', color: '#fff' }}
+            style={{ background: 'rgba(31,27,46,0.55)', color: COLORS.surface }}
           >
             Cambiar
           </span>
         </button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFotoElegida} />
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" aria-label="Elegir foto de perfil" onChange={onFotoElegida} />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu nombre</label>
+        <label htmlFor="perfil-nombre" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu nombre</label>
         <div className="flex gap-2">
           <input
-            className="flex-1 border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors"
+            id="perfil-nombre"
+            className="v2-focus flex-1 rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
+            style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, color: COLORS.ink }}
             placeholder="Tu nombre"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
@@ -107,17 +121,18 @@ export function PerfilV2() {
             type="button"
             onClick={guardarNombre}
             disabled={!nombre.trim()}
-            className="rounded-2xl px-4 font-bold disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0"
-            style={{ background: guardado ? COLORS.lima : COLORS.brand, color: guardado ? COLORS.ink : '#fff' }}
+            aria-label={guardado ? 'Nombre guardado' : 'Guardar nombre'}
+            className="v2-focus rounded-2xl px-4 font-bold disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0 inline-flex items-center justify-center"
+            style={{ background: guardado ? COLORS.lima : COLORS.brand, color: guardado ? COLORS.ink : COLORS.surface }}
           >
-            {guardado ? '✓' : 'Guardar'}
+            {guardado ? <Check size={15} /> : 'Guardar'}
           </button>
         </div>
       </div>
 
       {(faltan.length > 0 || faltaNivel) && (
         <div className="flex flex-col gap-2">
-          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Completá tu perfil</p>
+          <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Completá tu perfil</p>
           <div className="flex items-center gap-2.5 mb-1">
             <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.tint }}>
               <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pctPerfil}%`, background: COLORS.brand }} />
@@ -130,13 +145,15 @@ export function PerfilV2() {
               type="button"
               onClick={() => navigate(it.to)}
               disabled={it.hecho}
-              className="w-full flex items-center gap-3 text-left bg-white rounded-2xl px-4 py-3 border transition-all duration-100 active:scale-[0.99] disabled:active:scale-100"
+              className="v2-focus w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3 transition-all duration-100 active:scale-[0.99] disabled:active:scale-100"
+              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
             >
               <span
-                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
-                style={it.hecho ? { background: COLORS.lima, color: COLORS.ink } : { border: '2px solid rgba(31,27,46,0.2)' }}
+                aria-label={it.hecho ? 'Hecho' : 'Pendiente'}
+                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                style={it.hecho ? { background: COLORS.lima, color: COLORS.ink } : { border: `2px solid ${COLORS.lineStrong}` }}
               >
-                {it.hecho ? '✓' : ''}
+                {it.hecho ? <Check size={11} /> : null}
               </span>
               <span className="flex-1 text-[13.5px] font-medium" style={{ color: it.hecho ? COLORS.inkFaint : COLORS.ink, textDecoration: it.hecho ? 'line-through' : 'none' }}>
                 {it.label}
@@ -149,13 +166,15 @@ export function PerfilV2() {
             <button
               type="button"
               onClick={() => setAbriendoNivel(true)}
-              className="w-full flex items-center gap-3 text-left bg-white rounded-2xl px-4 py-3 border transition-all duration-100 active:scale-[0.99]"
+              className="v2-focus w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3 transition-all duration-100 active:scale-[0.99]"
+              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
             >
               <span
-                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
-                style={nivel ? { background: COLORS.lima, color: COLORS.ink } : { border: '2px solid rgba(31,27,46,0.2)' }}
+                aria-label={nivel ? 'Hecho' : 'Pendiente'}
+                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                style={nivel ? { background: COLORS.lima, color: COLORS.ink } : { border: `2px solid ${COLORS.lineStrong}` }}
               >
-                {nivel ? '✓' : ''}
+                {nivel ? <Check size={11} /> : null}
               </span>
               <span className="flex-1 text-[13.5px] font-medium" style={{ color: nivel ? COLORS.inkFaint : COLORS.ink, textDecoration: nivel ? 'line-through' : 'none' }}>
                 Descubrí tu nivel de conocimiento financiero
@@ -179,7 +198,7 @@ export function PerfilV2() {
 
       <div className="flex flex-col gap-1 pt-1">
         {['Términos y condiciones', 'Política de privacidad', 'Enviar feedback'].map((txt) => (
-          <button key={txt} type="button" className="text-left text-[13px] font-medium py-2" style={{ color: COLORS.inkSoft }}>
+          <button key={txt} type="button" className="v2-focus text-left text-[13px] font-medium py-3 rounded-lg" style={{ color: COLORS.inkSoft }}>
             {txt}
           </button>
         ))}

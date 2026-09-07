@@ -8,7 +8,7 @@ import {
   saveV2PerfilOnboarding, saveV2TerminosAceptados,
   saveV2InversionesPerfil, saveV2ObjetivosState,
 } from './shared';
-import { IconChat } from './FinaIcons';
+import { IconChat, IconChevron, IconBasura } from './FinaIcons';
 
 // REDISEÑO — Onboarding v2 (rama dev)
 //
@@ -94,18 +94,20 @@ const EDADES: { id: Edad; label: string }[] = [
   { id: '65+', label: '65 o más' },
 ];
 
-const SITUACIONES: { id: Situacion; label: string; emoji: string }[] = [
-  { id: 'trabaja', label: 'Laburando', emoji: '💼' },
-  { id: 'estudia', label: 'Estudiando', emoji: '📚' },
-  { id: 'ambas', label: 'Ambas', emoji: '💼📚' },
-  { id: 'ninguna', label: 'Ninguna', emoji: '🌤️' },
+// Texto puro, sin emoji como marcador de opción (§2, §5.4). El chip ya es
+// texto — la opción se distingue por la palabra, no por un pictograma.
+const SITUACIONES: { id: Situacion; label: string }[] = [
+  { id: 'trabaja', label: 'Laburando' },
+  { id: 'estudia', label: 'Estudiando' },
+  { id: 'ambas', label: 'Ambas' },
+  { id: 'ninguna', label: 'Ninguna' },
 ];
 
-const OBJETIVOS: { id: ObjetivoId; label: string; emoji: string }[] = [
-  { id: 'invertir', label: 'Invertir', emoji: '🌱' },
-  { id: 'ahorrar', label: 'Ahorrar', emoji: '🐷' },
-  { id: 'objetivo', label: 'Lograr un objetivo puntual', emoji: '🎯' },
-  { id: 'no_claro', label: 'Todavía no lo tengo claro', emoji: '🤔' },
+const OBJETIVOS: { id: ObjetivoId; label: string }[] = [
+  { id: 'invertir', label: 'Invertir' },
+  { id: 'ahorrar', label: 'Ahorrar' },
+  { id: 'objetivo', label: 'Lograr un objetivo puntual' },
+  { id: 'no_claro', label: 'Todavía no lo tengo claro' },
 ];
 
 const BUBBLE_POR_TOP: Record<ObjetivoId, string> = {
@@ -208,16 +210,20 @@ const COMO_CONOCIO: { id: string; label: string }[] = [
   { id: 'Una charla o evento', label: 'Una charla o evento' },
 ];
 
-const PREVIEW_INFO: Record<ObjetivoId, { icon: string; titulo: string; desc: string; bg: string }> = {
-  invertir: { icon: '🌱', titulo: 'Inversiones', desc: 'Según tu perfil, te mostramos en qué te conviene poner tu plata para que rinda.', bg: COLORS.skySoft },
-  ahorrar: { icon: '🐷', titulo: 'Ahorro', desc: 'Apartás plata en tu reserva y ves crecer cuánto llevás guardado, sin tentarte.', bg: COLORS.goldSoft },
-  objetivo: { icon: '🎯', titulo: 'Objetivos', desc: 'Tu meta con su progreso — vas viendo cuánto te falta para lograrla.', bg: COLORS.goldSoft },
-  no_claro: { icon: '✨', titulo: 'Tu FINA', desc: 'Gastos, ahorro, objetivos e inversiones — todo en un lugar, a tu ritmo.', bg: COLORS.tint },
+const PREVIEW_INFO: Record<ObjetivoId, { titulo: string; desc: string; bg: string }> = {
+  invertir: { titulo: 'Inversiones', desc: 'Según tu perfil, te mostramos en qué te conviene poner tu plata para que rinda.', bg: COLORS.skySoft },
+  ahorrar: { titulo: 'Ahorro', desc: 'Apartás plata en tu reserva y ves crecer cuánto llevás guardado, sin tentarte.', bg: COLORS.goldSoft },
+  objetivo: { titulo: 'Objetivos', desc: 'Tu meta con su progreso — vas viendo cuánto te falta para lograrla.', bg: COLORS.goldSoft },
+  no_claro: { titulo: 'Tu FINA', desc: 'Gastos, ahorro, objetivos e inversiones — todo en un lugar, a tu ritmo.', bg: COLORS.tint },
 };
 
-const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors';
-function inputClassErr(err: boolean) {
-  return err ? inputClass.replace('border-[rgba(31,27,46,0.16)]', 'border-[#FF5C7A]') : inputClass;
+// Inputs: la clase solo lleva forma/espacio; el color sale de COLORS (sin hex
+// crudo, §3.3). El foco visible lo da .v2-focus (--focus-ring, §11), así no hace
+// falta el `focus:border-...` con hex. El borde de error usa naranja (atención
+// accionable real, §3.3), nunca un rojo de alerta.
+const inputClass = 'v2-focus rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors';
+function inputStyle(err = false): React.CSSProperties {
+  return { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${err ? COLORS.naranja : COLORS.line}` };
 }
 
 function useOtroMulti() {
@@ -243,14 +249,19 @@ function MultiOtroChips({ opciones, seleccion, toggle, otro }: { opciones: Opcio
           <Chip key={o.value} on={seleccion.includes(o.value)} muted={o.muted} onClick={() => toggle(o.value)}>{o.display}</Chip>
         ))}
         {otro.custom.map((txt) => (
-          <Chip key={txt} on onClick={() => otro.quitar(txt)}>✍️ {txt} ✕</Chip>
+          <Chip key={txt} on onClick={() => otro.quitar(txt)}>
+            {txt}
+            <span aria-label="Quitar" className="inline-flex"><IconBasura size={14} /></span>
+          </Chip>
         ))}
         <OtroChip abierto={otro.abierto} onClick={() => otro.setAbierto((v) => !v)} />
       </div>
       {otro.abierto && (
         <input
           autoFocus
+          aria-label="Escribí tu opción"
           className={inputClass}
+          style={inputStyle()}
           placeholder="Escribí y separá con comas si son varias"
           value={otro.txt}
           onChange={(e) => otro.setTxt(e.target.value)}
@@ -514,17 +525,17 @@ export function OnboardingV2() {
         {showTop && (
           <div className="px-[22px] pt-5 pb-1 flex items-center gap-3 w-full lg:max-w-xl lg:mx-auto lg:pt-10">
             {currentIdx > 0 && (
-              <button type="button" onClick={onBack} aria-label="Volver a la pregunta anterior" className="shrink-0 w-9 h-9 -ml-1.5 flex items-center justify-center text-[22px] font-bold rounded-full transition-all duration-100 active:scale-90" style={{ color: COLORS.ink }}>
-                ←
+              <button type="button" onClick={onBack} aria-label="Volver a la pregunta anterior" className="v2-focus shrink-0 w-11 h-11 -ml-1.5 flex items-center justify-center rounded-full transition-all duration-100 active:scale-90" style={{ color: COLORS.ink }}>
+                <IconChevron size={22} style={{ transform: 'rotate(180deg)' }} />
               </button>
             )}
             <div className="flex-1 flex flex-col gap-1">
               {seccionActual.label && (
-                <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>{seccionActual.label}</p>
+                <p className="text-[11.5px] font-semibold" style={{ color: COLORS.inkSoft }}>{seccionActual.label}</p>
               )}
               <div className="flex gap-1">
                 {segmentos.map((s) => (
-                  <div key={s} className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: 'rgba(31,27,46,0.1)' }}>
+                  <div key={s} className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: COLORS.lineStrong }}>
                     <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${fillDeSeccion(s)}%`, background: COLORS.brand }} />
                   </div>
                 ))}
@@ -546,7 +557,7 @@ export function OnboardingV2() {
                   <h1 className="text-[28px] font-bold leading-tight pt-2" style={{ color: COLORS.ink }}>
                     Llegó tu momento de cambiar la historia de tus finanzas
                   </h1>
-                  <div className="flex flex-col gap-4 bg-white rounded-[18px] p-5 border">
+                  <div className="flex flex-col gap-4 rounded-[18px] p-5" style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
                     {['Conocé tus gastos', 'Lográ tus objetivos', 'Cuidá tu bienestar financiero'].map((txt) => (
                       <div key={txt} className="flex items-center gap-3 text-[16px] font-semibold" style={{ color: COLORS.ink }}>
                         <span className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brand }}>
@@ -566,7 +577,9 @@ export function OnboardingV2() {
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Así te vamos a hablar de acá en adelante.</p>
                   <input
                     autoFocus
+                    aria-label="Tu nombre"
                     className={inputClass}
+                    style={inputStyle()}
                     placeholder="Tu nombre"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
@@ -585,7 +598,7 @@ export function OnboardingV2() {
                     <OtroChip abierto={genero === 'otro'} onClick={() => setGenero('otro')} />
                   </div>
                   {genero === 'otro' && (
-                    <input autoFocus className={inputClass} placeholder="Contanos cómo te identificás" value={generoOtroTxt} onChange={(e) => setGeneroOtroTxt(e.target.value)} />
+                    <input autoFocus aria-label="Contanos cómo te identificás" className={inputClass} style={inputStyle()} placeholder="Contanos cómo te identificás" value={generoOtroTxt} onChange={(e) => setGeneroOtroTxt(e.target.value)} />
                   )}
                   <h1 className="text-[23px] font-bold mt-2.5" style={{ color: COLORS.ink }}>¿Qué edad tenés?</h1>
                   <div className="flex flex-wrap gap-2.5">
@@ -609,7 +622,7 @@ export function OnboardingV2() {
                   </div>
                   <div className="flex justify-center py-1"><Face color={FACE_COLOR} size={90} mood="happy" /></div>
                   {meta && (
-                    <div className="self-center max-w-[82%] text-center bg-white rounded-2xl px-4 py-3 text-[13.5px] font-semibold border" style={{ color: COLORS.ink }}>
+                    <div className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[13.5px] font-semibold" style={{ color: COLORS.ink, background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
                       {objetivoBubble}
                     </div>
                   )}
@@ -664,7 +677,7 @@ export function OnboardingV2() {
                     <OtroChip abierto={estabilidadIngresos === 'otro'} onClick={() => setEstabilidadIngresos('otro')} />
                   </div>
                   {estabilidadIngresos === 'otro' && (
-                    <input autoFocus className={inputClass} placeholder="Contanos más" value={estabilidadOtroTxt} onChange={(e) => setEstabilidadOtroTxt(e.target.value)} />
+                    <input autoFocus aria-label="Contanos más sobre tus ingresos" className={inputClass} style={inputStyle()} placeholder="Contanos más" value={estabilidadOtroTxt} onChange={(e) => setEstabilidadOtroTxt(e.target.value)} />
                   )}
                 </>
               )}
@@ -712,8 +725,8 @@ export function OnboardingV2() {
                               key={n.id}
                               type="button"
                               onClick={() => setAsignacion((a) => ({ ...a, [fila.id]: n.id }))}
-                              className="flex-1 rounded-xl py-2.5 text-[12.5px] font-bold transition-all duration-100 active:scale-95"
-                              style={asignacion[fila.id] === n.id ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                              className="v2-focus flex-1 rounded-xl py-2.5 text-[12.5px] font-bold transition-all duration-100 active:scale-95"
+                              style={asignacion[fila.id] === n.id ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
                             >
                               {n.label}
                             </button>
@@ -735,17 +748,17 @@ export function OnboardingV2() {
                   {tedioso && (
                     <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.ink }}>
                       <div className="flex items-center gap-3">
-                        <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white" style={{ background: 'rgba(244,241,250,0.15)' }}><IconChat size={24} /></span>
+                        <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.darkLine, color: COLORS.onDark }}><IconChat size={24} /></span>
                         <div className="flex flex-col">
-                          <p className="text-[15px] font-bold" style={{ color: '#fff' }}>
+                          <p className="text-[15px] font-bold" style={{ color: COLORS.onDark }}>
                             {tedioso === 'si' ? 'Tranqui — para eso está tu FINA en WhatsApp' : 'Igual te va a encantar tu FINA en WhatsApp'}
                           </p>
-                          <p className="text-[12.5px]" style={{ color: 'rgba(244,241,250,0.75)' }}>Sin planillas, sin abrir la app.</p>
+                          <p className="text-[12.5px]" style={{ color: COLORS.onDarkSoft }}>Sin planillas, sin abrir la app.</p>
                         </div>
                       </div>
-                      <p className="text-[13.5px] leading-relaxed" style={{ color: 'rgba(244,241,250,0.9)' }}>
+                      <p className="text-[13.5px] leading-relaxed" style={{ color: COLORS.onDark }}>
                         Le escribís tu gasto como se lo contarías a una amiga —{' '}
-                        <span className="font-semibold" style={{ color: '#fff' }}>“gasté 5.000 en el súper”</span>{' '}
+                        <span className="font-semibold" style={{ color: COLORS.onDark }}>“gasté 5.000 en el súper”</span>{' '}
                         — y FINA lo registra sola, al toque. También te responde dudas y te avisa cómo venís.
                       </p>
                     </div>
@@ -764,7 +777,7 @@ export function OnboardingV2() {
                     <OtroChip abierto={comoViene.includes('otro')} onClick={() => toggleComoViene('otro')} />
                   </div>
                   {comoViene.includes('otro') && (
-                    <input autoFocus className={inputClass} placeholder="Contanos más" value={comoVieneOtroTxt} onChange={(e) => setComoVieneOtroTxt(e.target.value)} />
+                    <input autoFocus aria-label="Contanos más sobre cómo venís" className={inputClass} style={inputStyle()} placeholder="Contanos más" value={comoVieneOtroTxt} onChange={(e) => setComoVieneOtroTxt(e.target.value)} />
                   )}
                 </>
               )}
@@ -804,21 +817,21 @@ export function OnboardingV2() {
                 <>
                   <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Cuál es ese objetivo?</h1>
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.</p>
-                  <input autoFocus className={inputClass} placeholder="Ej: Viaje a Bariloche" value={objNombre} onChange={(e) => setObjNombre(e.target.value)} />
+                  <input autoFocus aria-label="Nombre de tu objetivo" className={inputClass} style={inputStyle()} placeholder="Ej: Viaje a Bariloche" value={objNombre} onChange={(e) => setObjNombre(e.target.value)} />
                   <div className="flex items-center justify-between">
                     <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
                     <div className="flex rounded-full p-0.5" style={{ background: COLORS.tint }}>
                       {(['ARS', 'USD'] as const).map((m) => (
-                        <button key={m} type="button" onClick={() => setObjMoneda(m)} className="rounded-full px-3 py-1 text-[12px] font-bold transition-colors" style={objMoneda === m ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.inkSoft }}>{m}</button>
+                        <button key={m} type="button" aria-pressed={objMoneda === m} onClick={() => setObjMoneda(m)} className="v2-focus rounded-full px-3 py-1 text-[12px] font-bold transition-colors" style={objMoneda === m ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}>{m}</button>
                       ))}
                     </div>
                   </div>
                   <div className="relative">
                     <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{objMoneda === 'USD' ? 'US$' : '$'}</span>
-                    <input className={`${inputClass} pl-11`} placeholder="Monto total" inputMode="numeric" value={objMonto} onChange={(e) => setObjMonto(formatThousands(e.target.value))} />
+                    <input aria-label="Monto total del objetivo" className={`${inputClass} pl-11`} style={inputStyle()} placeholder="Monto total" inputMode="decimal" value={objMonto} onChange={(e) => setObjMonto(formatThousands(e.target.value))} />
                   </div>
                   <p className="text-[14px] font-bold mt-1" style={{ color: COLORS.ink }}>¿Para cuándo? <span className="font-normal text-[13px]" style={{ color: COLORS.inkSoft }}>(opcional)</span></p>
-                  <input type="date" className={inputClass} value={objFecha} onChange={(e) => setObjFecha(e.target.value)} />
+                  <input type="date" aria-label="Fecha del objetivo (opcional)" className={inputClass} style={inputStyle()} value={objFecha} onChange={(e) => setObjFecha(e.target.value)} />
                 </>
               )}
 
@@ -836,10 +849,10 @@ export function OnboardingV2() {
                       </div>
                     ))}
                     <div className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: COLORS.ink }}>
-                      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-white" style={{ background: 'rgba(244,241,250,0.15)' }}><IconChat size={24} /></span>
+                      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.darkLine, color: COLORS.onDark }}><IconChat size={24} /></span>
                       <div>
-                        <p className="font-bold text-[14px]" style={{ color: '#fff' }}>Tu bot de WhatsApp</p>
-                        <p className="text-[12.5px]" style={{ color: 'rgba(244,241,250,0.7)' }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
+                        <p className="font-bold text-[14px]" style={{ color: COLORS.onDark }}>Tu bot de WhatsApp</p>
+                        <p className="text-[12.5px]" style={{ color: COLORS.onDarkSoft }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
                       </div>
                     </div>
                   </div>
@@ -864,12 +877,15 @@ export function OnboardingV2() {
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Tus datos son privados — solo se usan para darte recomendaciones a vos. Nunca los compartimos ni los vendemos.</p>
                   <button
                     type="button"
+                    role="checkbox"
+                    aria-checked={aceptoTerminos}
                     onClick={() => setAceptoTerminos((v) => !v)}
-                    className="flex items-center gap-3 text-left bg-white rounded-2xl p-4 border transition-all duration-100 active:scale-[0.99]"
+                    className="v2-focus flex items-center gap-3 text-left rounded-2xl p-4 transition-all duration-100 active:scale-[0.99]"
+                    style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
                   >
                     <span
                       className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: aceptoTerminos ? COLORS.brand : 'transparent', border: aceptoTerminos ? 'none' : '2px solid rgba(31,27,46,0.25)' }}
+                      style={{ background: aceptoTerminos ? COLORS.brand : 'transparent', border: aceptoTerminos ? 'none' : `2px solid ${COLORS.lineStrong}` }}
                     >
                       {aceptoTerminos && <CheckIcon />}
                     </span>
@@ -885,16 +901,17 @@ export function OnboardingV2() {
                   <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Guardá tu progreso</h1>
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todos los meses vas a poder ver cómo venís.</p>
                   <Campo label="Mail" error={intentoLogin && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Campo obligatorio') : undefined}>
-                    <input className={inputClassErr(intentoLogin && !emailOk)} placeholder="vos@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                    <input className={inputClass} style={inputStyle(intentoLogin && !emailOk)} placeholder="vos@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
                   </Campo>
                   <Campo label="Contraseña" error={intentoLogin && !passwordOk ? 'Mínimo 8 caracteres, con una mayúscula, un número y un carácter especial' : undefined}>
-                    <input type="password" className={inputClassErr(intentoLogin && !passwordOk)} placeholder="Elegí una contraseña segura" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+                    <input type="password" className={inputClass} style={inputStyle(intentoLogin && !passwordOk)} placeholder="Elegí una contraseña segura" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
                   </Campo>
                   <Campo label="Teléfono" error={intentoLogin && !telefonoOk ? 'Campo obligatorio' : undefined}>
                     <div className="flex gap-2">
-                      <span className={`flex items-center gap-1.5 px-3 rounded-2xl text-[15px] font-semibold shrink-0 ${inputClassErr(false)}`}>+54</span>
+                      <span className={`flex items-center gap-1.5 px-3 rounded-2xl text-[15px] font-semibold shrink-0 ${inputClass}`} style={inputStyle(false)}>+54</span>
                       <input
-                        className={`flex-1 ${inputClassErr(intentoLogin && !telefonoOk)}`}
+                        className={`flex-1 ${inputClass}`}
+                        style={inputStyle(intentoLogin && !telefonoOk)}
                         placeholder="9 11 1234-5678"
                         inputMode="numeric"
                         value={telefono}
@@ -910,7 +927,7 @@ export function OnboardingV2() {
                 <>
                   <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Verificá tu teléfono</h1>
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Te mandamos un código a +54 {telefono || 'tu teléfono'}.</p>
-                  <input className={inputClass} placeholder="Código" inputMode="numeric" value={codigoVerif} onChange={(e) => setCodigoVerif(e.target.value)} />
+                  <input aria-label="Código de verificación" className={inputClass} style={inputStyle()} placeholder="Código" inputMode="numeric" value={codigoVerif} onChange={(e) => setCodigoVerif(e.target.value)} />
                   <p className="text-[12px]" style={{ color: COLORS.inkFaint }}>Modo de prueba: todavía no mandamos SMS de verdad — escribí cualquier código de 4 a 6 dígitos.</p>
                 </>
               )}
@@ -928,7 +945,7 @@ export function OnboardingV2() {
         <div className="px-[22px] pt-2.5 pb-6 flex flex-col gap-1.5 w-full lg:max-w-xl lg:mx-auto lg:pb-10">
           <Cta label={ctaLabel} disabled={!finished && currentKey !== 'login' && !stepValid(currentKey)} onClick={onNext} />
           {!finished && SKIPPABLE.includes(currentKey) && (
-            <button type="button" onClick={onSkip} className="text-[13.5px] font-semibold underline py-2 text-center" style={{ color: COLORS.inkSoft }}>
+            <button type="button" onClick={onSkip} className="v2-focus text-[13.5px] font-semibold underline py-2 text-center" style={{ color: COLORS.inkSoft }}>
               Saltar por ahora
             </button>
           )}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Coachmark, COLORS, Grupo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, saveV2Grupo } from './shared';
+import { COLORS, Face, Grupo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, saveV2Grupo } from './shared';
+import { IconChevron } from './FinaIcons';
 
 // REDISEÑO v2 — Grupos: competir con amigas por actividad (cuánto
 // registraste) y, en Objetivos, armar metas grupales. Todavía no hay
@@ -11,7 +12,15 @@ import { Coachmark, COLORS, Grupo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, s
 // nativo del celular — lo que no hay todavía es el otro lado (que una
 // amiga entre con ese código desde su propio teléfono y sincronice).
 
-const MEDALLAS = ['🥇', '🥈', '🥉'];
+// Check propio (currentColor) — el color lo pone el contenedor para
+// respetar el contraste (§3.3: sobre relleno, tinta; nunca blanco sobre lima).
+function Check({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={Math.round(size * (11 / 14))} viewBox="0 0 14 11" fill="none" aria-hidden>
+      <path d="M1 5.5L5 9.5L13 1.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export function GruposV2() {
   const [grupo, setGrupo] = useState<Grupo | null>(() => loadV2Grupo());
@@ -50,26 +59,76 @@ export function GruposV2() {
     }
   }
 
+  // Botón "Volver" reutilizable — sin flecha de plantilla (§2): chevron
+  // del set propio, girado, y target táctil cómodo.
+  function Volver() {
+    return (
+      <button
+        type="button"
+        className="v2-focus inline-flex items-center gap-1.5 self-start text-[13px] font-semibold rounded-full py-2 pr-3 pl-1 -ml-1"
+        style={{ color: COLORS.inkSoft }}
+        onClick={() => setModo('elegir')}
+      >
+        <span className="rotate-180"><IconChevron size={16} /></span>
+        Volver
+      </button>
+    );
+  }
+
   if (!grupo) {
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4">
         <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Grupos</h1>
-        <Coachmark id="grupos">Armá un grupo con amigas para verse la actividad entre todas, motivarse, y más adelante armar objetivos en conjunto.</Coachmark>
+
+        {/* Vidriera vacía = promesa (§10): mostramos qué va a haber acá y una
+            acción clara para empezar. Fini (la estrella) sí puede acompañar un
+            estado vacío — no hay ningún dato al lado. */}
+        {modo === 'elegir' && (
+          <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ background: COLORS.brandSoft }}>
+            <div className="flex items-center gap-3">
+              <div className="shrink-0"><Face color={COLORS.star} size={56} mood="happy" /></div>
+              <div className="min-w-0">
+                <p className="font-bold text-[16px] leading-tight" style={{ color: COLORS.ink }}>Armá tu primer grupo</p>
+                <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Con amigas y amigos para verse la actividad de la semana y motivarse entre todas.</p>
+              </div>
+            </div>
+            {/* Preview de "así se va a ver" en estado por-descubrir: contorno
+                tenue, sin relleno — no son datos reales, son la promesa. */}
+            <div className="flex flex-col gap-2" aria-hidden>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0"
+                    style={{ border: `1.5px dashed ${COLORS.lineStrong}`, color: COLORS.inkFaint }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span
+                    className="flex-1 h-1.5 rounded-full"
+                    style={{ border: `1.5px dashed ${COLORS.lineStrong}`, opacity: 0.7 }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {modo === 'elegir' && (
           <div className="flex flex-col gap-2.5">
             <button
               type="button"
               onClick={() => setModo('crear')}
-              className="w-full text-left bg-white rounded-2xl p-4 border transition-all duration-100 active:scale-[0.99]"
+              className="v2-focus w-full text-left rounded-2xl p-4 transition-all duration-100 active:scale-[0.99]"
+              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
             >
               <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>Crear un grupo</p>
-              <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>Le ponés nombre y invitás con un código.</p>
+              <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>Le ponés nombre e invitás con un código.</p>
             </button>
             <button
               type="button"
               onClick={() => setModo('unirse')}
-              className="w-full text-left bg-white rounded-2xl p-4 border transition-all duration-100 active:scale-[0.99]"
+              className="v2-focus w-full text-left rounded-2xl p-4 transition-all duration-100 active:scale-[0.99]"
+              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
             >
               <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>Unirme con un código</p>
               <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>Si una amiga ya te invitó.</p>
@@ -79,11 +138,14 @@ export function GruposV2() {
 
         {modo === 'crear' && (
           <div className="flex flex-col gap-2.5">
-            <button type="button" className="text-[13px] font-semibold self-start" style={{ color: COLORS.inkSoft }} onClick={() => setModo('elegir')}>← Volver</button>
+            <Volver />
+            <label htmlFor="grupo-nombre" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Nombre del grupo</label>
             <input
+              id="grupo-nombre"
               autoFocus
-              className="border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors"
-              placeholder="Nombre del grupo (ej: Ahorrando juntas)"
+              className="v2-focus rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
+              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, color: COLORS.ink }}
+              placeholder="Ej: Ahorrando juntas"
               value={nombreGrupo}
               onChange={(e) => setNombreGrupo(e.target.value)}
             />
@@ -91,8 +153,8 @@ export function GruposV2() {
               type="button"
               onClick={crear}
               disabled={!nombreGrupo.trim()}
-              className="rounded-2xl py-3.5 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-[0.98]"
-              style={{ background: COLORS.brand }}
+              className="v2-focus rounded-2xl py-3.5 font-bold disabled:opacity-40 transition-all duration-100 active:scale-[0.98]"
+              style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Crear grupo
             </button>
@@ -101,11 +163,14 @@ export function GruposV2() {
 
         {modo === 'unirse' && (
           <div className="flex flex-col gap-2.5">
-            <button type="button" className="text-[13px] font-semibold self-start" style={{ color: COLORS.inkSoft }} onClick={() => setModo('elegir')}>← Volver</button>
+            <Volver />
+            <label htmlFor="grupo-codigo" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Código del grupo</label>
             <input
+              id="grupo-codigo"
               autoFocus
-              className="border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-3 text-[15px] bg-white outline-none transition-colors uppercase"
-              placeholder="Código (ej: FINA-AB12C)"
+              className="v2-focus rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors uppercase"
+              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, color: COLORS.ink }}
+              placeholder="Ej: FINA-AB12C"
               value={codigoTxt}
               onChange={(e) => setCodigoTxt(e.target.value)}
             />
@@ -113,8 +178,8 @@ export function GruposV2() {
               type="button"
               onClick={unirse}
               disabled={!codigoTxt.trim()}
-              className="rounded-2xl py-3.5 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-[0.98]"
-              style={{ background: COLORS.brand }}
+              className="v2-focus rounded-2xl py-3.5 font-bold disabled:opacity-40 transition-all duration-100 active:scale-[0.98]"
+              style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Unirme
             </button>
@@ -131,39 +196,49 @@ export function GruposV2() {
     <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>{grupo.nombre}</h1>
-        <button type="button" onClick={salir} className="text-[12.5px] font-semibold underline" style={{ color: COLORS.inkSoft }}>Salir</button>
+        <button type="button" onClick={salir} className="v2-focus text-[12.5px] font-semibold underline rounded-full px-2 py-2" style={{ color: COLORS.inkSoft }}>Salir</button>
       </div>
 
       <button
         type="button"
         onClick={invitar}
-        className="flex items-center justify-between rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
+        className="v2-focus flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
         style={{ background: COLORS.brandSoft }}
       >
-        <span className="text-[13.5px] font-semibold" style={{ color: COLORS.brandDark }}>
-          {copiado ? '✓ Código copiado' : `Invitar amigas · ${grupo.codigo}`}
-        </span>
-        <span className="text-[13px] font-bold" style={{ color: COLORS.brandDark }}>
+        {copiado ? (
+          <span className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold" style={{ color: COLORS.brandDark }}>
+            <Check size={13} /> Código copiado
+          </span>
+        ) : (
+          <span className="min-w-0 text-left">
+            <span className="block text-[13.5px] font-semibold" style={{ color: COLORS.brandDark }}>Invitar amigas</span>
+            <span className="block text-[12px] font-mono tabular-nums truncate" style={{ color: COLORS.inkSoft }}>{grupo.codigo}</span>
+          </span>
+        )}
+        <span className="text-[13px] font-bold shrink-0" style={{ color: COLORS.brandDark }}>
           {typeof navigator !== 'undefined' && navigator.share ? 'Compartir' : 'Copiar'}
         </span>
       </button>
 
       <div className="flex flex-col gap-2.5">
-        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Actividad de la semana</p>
+        <p className="text-[12px] font-bold" style={{ color: COLORS.inkSoft }}>Actividad de la semana</p>
         {ordenados.map((m, i) => (
           <div
             key={m.nombre}
-            className="flex items-center gap-3 bg-white rounded-2xl p-3.5 border"
-            style={m.sosVos ? { outline: `2px solid ${COLORS.brand}` } : undefined}
+            className="flex items-center gap-3 rounded-2xl p-3.5"
+            style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, ...(m.sosVos ? { outline: `2px solid ${COLORS.brand}` } : null) }}
           >
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0" style={{ background: i === 0 ? COLORS.amarillo : COLORS.tint, color: i === 0 ? COLORS.ink : COLORS.inkSoft }}>{i + 1}</span>
+            {/* Ranking = secuencia real, la numeración sí es válida (§2). El 1º
+                resalta con star + tinta; el resto, hueco + tinta-media. */}
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0" style={{ background: i === 0 ? COLORS.star : COLORS.tint, color: i === 0 ? COLORS.ink : COLORS.inkSoft }}>{i + 1}</span>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-[14.5px] truncate" style={{ color: COLORS.ink }}>{m.nombre}{m.sosVos ? ' (vos)' : ''}</p>
-              <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: 'rgba(31,27,46,0.08)' }}>
-                <div className="h-full rounded-full" style={{ width: `${(m.actividad / max) * 100}%`, background: m.sosVos ? COLORS.brand : COLORS.gold }} />
+              {/* Barra de ACTIVIDAD (registros de la semana), no de plata. */}
+              <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: COLORS.tint }}>
+                <div className="h-full rounded-full" style={{ width: `${(m.actividad / max) * 100}%`, background: m.sosVos ? COLORS.brand : COLORS.star }} />
               </div>
             </div>
-            <span className="text-[13px] font-bold shrink-0" style={{ color: COLORS.ink }}>{m.actividad}</span>
+            <span className="text-[13px] font-bold shrink-0 tabular-nums" style={{ color: COLORS.ink }}>{m.actividad}</span>
           </div>
         ))}
       </div>

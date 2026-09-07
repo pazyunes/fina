@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Coachmark, Cta, Donut, COLORS, Face, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
-import { IconChat, IconEditar, IconLupa } from './FinaIcons';
+import { ArmarGrupoBtn, Cta, Donut, COLORS, EstadoConfianza, Face, Monto, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
+import { IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { WHATSAPP_URL } from '../WhatsAppFab';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
@@ -9,10 +9,11 @@ import { WHATSAPP_URL } from '../WhatsAppFab';
 // de gastos, y una reserva tipo ahorro (mismo concepto que
 // ReserveControl.tsx de la app real, pasado a esta estética).
 //
-// Es el extremo "llamativo" del espectro (Gastos grita, Inversiones
-// susurra): tarjetas blancas con sombra suave y buen color variado por
-// categoría/tipo, pero sin el borde negro grueso ni la sombra de sticker
-// de la v1 — eso es lo que se sacó de la mesa.
+// Alineado a la guía (src/styles/frontend.md): todo el color sale de COLORS
+// (cero hex/rgba crudo salvo sombras basadas en tinta); los gastos se muestran
+// NEUTRALES (montos en tinta, nunca color de alerta); cada dato declara su
+// estado de confianza (§5); y se alterna el contenedor (§3.5): elevada solo
+// para el dato central, hairline para las listas, tint para lo agrupado.
 //
 // Las categorías que la persona marcó en el onboarding ("¿en qué se te
 // suele ir la plata?") ya aparecen acá como secciones — ver shared.tsx.
@@ -36,19 +37,29 @@ function fmtGasto(g: { monto: number; moneda: Moneda }): string {
 }
 type EstadoGastos = { categorias: Categoria[]; gastos: Gasto[]; disponible: number; reserva: number; topes: Record<string, Tope> };
 
+// El "tipo de gasto" es una CLASIFICACIÓN que eligió la persona, no un juicio:
+// las etiquetas son hues categóricos de identidad (para distinguir en la barra
+// y los puntitos), no estados de alerta. El monto siempre va en tinta neutral,
+// así ningún gasto queda pintado como error (§3.3). Se evita el naranja acá
+// —reservado a atención accionable— para que "urgente" no lea como reto.
 const TIPO_INFO: Record<TipoGasto, { label: string; color: string }> = {
-  urgente: { label: 'Urgente', color: COLORS.coral },
+  urgente: { label: 'Urgente', color: COLORS.lila },
   impulsivo: { label: 'Impulsivo', color: COLORS.gold },
   necesario: { label: 'Necesario', color: COLORS.green },
   otro: { label: 'Otro', color: COLORS.sky },
 };
 const TIPOS: TipoGasto[] = ['necesario', 'urgente', 'impulsivo', 'otro'];
 
-const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.green, '#C9A6F5'];
-// Nota Tailwind: la clase tiene que aparecer COMPLETA en el archivo (aunque
-// sea adentro de este string) para que el scanner de Tailwind la detecte —
-// por eso no se arma por partes con interpolación.
-const CARD_SHADOW = 'border';
+// Hues categóricos por sección — identidad para el donut y los puntitos. Los
+// montos nunca toman estos colores: siempre tinta neutral.
+const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.green, COLORS.lila];
+
+// Tratamiento de contenedores (§3.5): variedad, no card-grid spam. Una sola
+// sombra suave basada en tinta; hairline para listas; tint para bloques
+// agrupados; elevada SOLO para el dato central.
+const CARD_ELEVADA: React.CSSProperties = { background: COLORS.surface, boxShadow: '0 2px 8px rgba(43,33,24,0.08)' };
+const CARD_HAIRLINE: React.CSSProperties = { background: COLORS.surface, border: `1px solid ${COLORS.line}` };
+const INPUT_STYLE: React.CSSProperties = { background: COLORS.surface, border: `1px solid ${COLORS.line}` };
 
 // Cuenta nueva: acá solo entra lo que la persona puso en el onboarding — sin
 // categorías ni gastos de ejemplo inventados. Si ya había estado antes en
@@ -157,53 +168,55 @@ export function GastosV2() {
 
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-4xl lg:mx-auto lg:pt-10">
-      {/* Banda editorial full-bleed (color de Gastos) + mascota */}
-      <div className="-mx-[22px] -mt-8 lg:-mt-10 px-[22px] pt-9 lg:pt-10 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.gastosSoft }}>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Mis gastos</h1>
-          <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Todo lo que registrás, en un solo lugar. Ponéle un tope a cada sección.</p>
-        </div>
-        <div className="shrink-0"><Face color={COLORS.brand} size={64} mood="happy" /></div>
+      {/* Banda editorial full-bleed. Sin Fini: esta pantalla está llena de
+          números y el personaje no va cerca de datos (§6). */}
+      <div className="-mx-[22px] -mt-8 lg:-mt-10 px-[22px] pt-9 lg:pt-10 pb-6 rounded-b-[28px]" style={{ background: COLORS.gastosSoft }}>
+        <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Mis gastos</h1>
+        <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Todo lo que registrás, en un solo lugar. Ponéle un tope a cada sección.</p>
       </div>
 
       {/* En desktop, todo lo de abajo se acomoda en grilla; en mobile sigue
           siendo una sola columna apilada (idéntico a antes). */}
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:gap-5 lg:gap-y-5 lg:grid-flow-row-dense lg:items-start">
-      {/* Resumen: donut + disponible/gastado */}
-      <div className={`bg-white rounded-2xl p-4 ${CARD_SHADOW} flex gap-4 items-center lg:h-full ${porTipo.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+      {/* Resumen: donut + disponible/gastado — el DATO CENTRAL, única tarjeta elevada */}
+      <div className={`rounded-2xl p-4 flex gap-4 items-center lg:h-full ${porTipo.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`} style={CARD_ELEVADA}>
         <Donut segments={donutCategorias} centerLabel="Gastado" centerValue={fmtMoney(totalGastado)} />
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <div>
             <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Dinero disponible</p>
-            <p className="font-bold text-[19px]" style={{ color: COLORS.ink }}>{fmtMoney(disponible)}</p>
+            <Monto value={disponible} size={19} className="font-bold" />
           </div>
           {!addingDisponible ? (
-            <button type="button" onClick={() => setAddingDisponible(true)} className="self-start text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }}>
+            <button type="button" onClick={() => setAddingDisponible(true)} className="v2-focus self-start text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }}>
               + Agregar dinero disponible
             </button>
           ) : (
             <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
               <input
                 autoFocus
-                className="flex-1 min-w-0 border border-[rgba(31,27,46,0.16)] rounded-xl px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#7626B3] transition-colors"
+                aria-label="Monto a agregar a tu dinero disponible"
+                className="v2-focus flex-1 min-w-0 rounded-xl px-2.5 py-1.5 text-[12.5px] transition-colors"
+                style={INPUT_STYLE}
                 placeholder="Monto"
-                inputMode="numeric"
+                inputMode="decimal"
                 value={addDispVal}
                 onChange={(e) => setAddDispVal(formatThousands(e.target.value))}
               />
-              <button type="button" onClick={agregarDinero} className="rounded-xl px-2.5 text-[12px] font-bold shrink-0 text-white transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>
+              <button type="button" onClick={agregarDinero} className="v2-focus rounded-xl px-2.5 text-[12px] font-bold shrink-0 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
                 Ok
               </button>
             </div>
           )}
+          {/* Total y disponible los cargó la persona → declarado (§5.1). */}
+          {(disponible > 0 || totalGastado > 0) && <EstadoConfianza estado="declarado" />}
         </div>
       </div>
 
-      {/* Distribución por tipo — la parte que agrega valor: cuánto es impulso vs necesidad */}
+      {/* Distribución por tipo — bloque tintado (§3.5): cuánto es impulso vs necesidad */}
       {porTipo.length > 0 && (
-        <div className={`bg-white rounded-2xl p-3.5 flex flex-col gap-2 ${CARD_SHADOW} lg:col-span-1 lg:h-full`}>
-          <p className="text-[11.5px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>¿En qué tipo de gasto se te va?</p>
-          <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: 'rgba(31,27,46,0.06)' }}>
+        <div className="rounded-2xl p-3.5 flex flex-col gap-2 lg:col-span-1 lg:h-full" style={{ background: COLORS.tint }}>
+          <p className="text-[11.5px] font-bold" style={{ color: COLORS.inkSoft }}>¿En qué tipo de gasto se te va?</p>
+          <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: COLORS.surface }}>
             {porTipo.map((t) => (
               <div key={t.tipo} style={{ width: `${(t.monto / totalGastado) * 100}%`, background: TIPO_INFO[t.tipo].color }} />
             ))}
@@ -212,7 +225,8 @@ export function GastosV2() {
             {porTipo.map((t) => (
               <span key={t.tipo} className="flex items-center gap-1.5 text-[11.5px]" style={{ color: COLORS.inkSoft }}>
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: TIPO_INFO[t.tipo].color }} />
-                {TIPO_INFO[t.tipo].label} · {fmtMoney(t.monto)}
+                <span>{TIPO_INFO[t.tipo].label}</span>
+                <Monto value={t.monto} className="text-[11.5px] font-semibold" />
               </span>
             ))}
           </div>
@@ -224,27 +238,29 @@ export function GastosV2() {
       {!addingGasto ? (
         <Cta label="+ Agregar gasto" onClick={() => { setChooser(true); setWaStep(false); }} />
       ) : (
-        <div className={`bg-white rounded-2xl p-4 flex flex-col gap-3 ${CARD_SHADOW}`}>
+        <div className="rounded-2xl p-4 flex flex-col gap-3" style={CARD_HAIRLINE}>
           <div className="flex gap-2">
             <div className="relative flex-1 min-w-0">
               <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{ngMoneda === 'USD' ? 'US$' : '$'}</span>
               <input
                 autoFocus
-                className="w-full border border-[rgba(31,27,46,0.16)] rounded-xl pl-10 pr-3 py-2.5 text-[14.5px] outline-none focus:border-[#7626B3] transition-colors"
+                aria-label="Monto del gasto"
+                className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[14.5px] transition-colors"
+                style={INPUT_STYLE}
                 placeholder="Monto"
-                inputMode="numeric"
+                inputMode="decimal"
                 value={ngMonto}
                 onChange={(e) => setNgMonto(formatThousands(e.target.value))}
               />
             </div>
-            <div className="flex rounded-xl overflow-hidden border border-[rgba(31,27,46,0.16)] shrink-0">
+            <div className="flex rounded-xl overflow-hidden shrink-0" style={{ border: `1px solid ${COLORS.line}` }}>
               {(['ARS', 'USD'] as Moneda[]).map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setNgMoneda(m)}
-                  className="px-2.5 text-[12px] font-bold transition-colors"
-                  style={ngMoneda === m ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink }}
+                  className="v2-focus px-2.5 text-[12px] font-bold transition-colors"
+                  style={ngMoneda === m ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink }}
                 >
                   {m}
                 </button>
@@ -252,7 +268,9 @@ export function GastosV2() {
             </div>
           </div>
           <input
-            className="border border-[rgba(31,27,46,0.16)] rounded-xl px-3.5 py-2.5 text-[14.5px] outline-none focus:border-[#7626B3] transition-colors"
+            aria-label="Descripción del gasto"
+            className="v2-focus rounded-xl px-3.5 py-2.5 text-[14.5px] transition-colors"
+            style={INPUT_STYLE}
             placeholder="Descripción (ej: PedidosYa)"
             value={ngDesc}
             onChange={(e) => setNgDesc(e.target.value)}
@@ -268,8 +286,8 @@ export function GastosV2() {
                     key={c.id}
                     type="button"
                     onClick={() => { setNgCatId(c.id); setNgNuevaCat(''); }}
-                    className="rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                    style={sel ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                    className="v2-focus rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                    style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
                   >
                     {c.nombre}
                   </button>
@@ -278,8 +296,8 @@ export function GastosV2() {
               <button
                 type="button"
                 onClick={() => { setNgCatId(null); setNgNuevaCat(' '); }}
-                className="rounded-xl px-3 py-1.5 text-[13px] font-semibold border border-dashed transition-all duration-100 active:scale-95"
-                style={{ background: ngNuevaCat ? COLORS.brandSoft : '#fff', color: ngNuevaCat ? COLORS.brandDark : COLORS.ink, borderColor: 'rgba(31,27,46,0.25)' }}
+                className="v2-focus rounded-xl px-3 py-1.5 text-[13px] font-semibold border border-dashed transition-all duration-100 active:scale-95"
+                style={{ background: ngNuevaCat ? COLORS.brandSoft : COLORS.surface, color: ngNuevaCat ? COLORS.brandDark : COLORS.ink, borderColor: COLORS.lineStrong }}
               >
                 + Nueva
               </button>
@@ -287,7 +305,9 @@ export function GastosV2() {
             {ngNuevaCat && (
               <input
                 autoFocus
-                className="mt-2 w-full border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
+                aria-label="Nombre de la nueva sección"
+                className="v2-focus mt-2 w-full rounded-xl px-3 py-2 text-[13.5px] transition-colors"
+                style={INPUT_STYLE}
                 placeholder="Nombre de la sección"
                 value={ngNuevaCat.trim()}
                 onChange={(e) => setNgNuevaCat(e.target.value || ' ')}
@@ -305,8 +325,8 @@ export function GastosV2() {
                     key={t}
                     type="button"
                     onClick={() => setNgTipo(t)}
-                    className="rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                    style={sel ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                    className="v2-focus rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                    style={sel ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
                   >
                     {TIPO_INFO[t].label}
                   </button>
@@ -316,15 +336,15 @@ export function GastosV2() {
           </div>
 
           <div className="flex gap-2 mt-1">
-            <button type="button" onClick={() => setAddingGasto(false)} className="flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold border border-[rgba(31,27,46,0.16)]" style={{ color: COLORS.ink }}>
+            <button type="button" onClick={() => setAddingGasto(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold" style={{ color: COLORS.ink, border: `1px solid ${COLORS.line}` }}>
               Cancelar
             </button>
             <button
               type="button"
               onClick={agregarGasto}
               disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim())}
-              className="flex-[2] rounded-xl py-2.5 text-[13.5px] font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95"
-              style={{ background: COLORS.brand }}
+              className="v2-focus flex-[2] rounded-xl py-2.5 text-[13.5px] font-bold disabled:opacity-40 transition-all duration-100 active:scale-95"
+              style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Agregar gasto
             </button>
@@ -333,21 +353,21 @@ export function GastosV2() {
       )}
       </div>
 
-      {/* Popup: ¿Desde FINA o Desde WhatsApp? */}
+      {/* Popup: ¿Desde FINA o Desde WhatsApp? Scrim = velo de tinta translúcido. */}
       {chooser && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ background: 'rgba(31,27,46,0.45)' }}
+          style={{ background: 'rgba(43,33,24,0.45)' }}
           onClick={() => setChooser(false)}
         >
-          <div className="bg-white w-full max-w-md rounded-2xl p-5 flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-2xl p-5 flex flex-col gap-3" style={{ background: COLORS.surface, boxShadow: '0 12px 40px -8px rgba(43,33,24,0.35)' }} onClick={(e) => e.stopPropagation()}>
             {!waStep ? (
               <>
                 <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>¿Cómo querés registrar el gasto?</p>
                 <button
                   type="button"
                   onClick={() => { setChooser(false); setAddingGasto(true); }}
-                  className="text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
+                  className="v2-focus text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
                   style={{ borderColor: COLORS.line }}
                 >
                   <span className="shrink-0" style={{ color: COLORS.brand }}><IconEditar size={22} /></span>
@@ -359,7 +379,7 @@ export function GastosV2() {
                 <button
                   type="button"
                   onClick={() => setWaStep(true)}
-                  className="text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
+                  className="v2-focus text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
                   style={{ borderColor: COLORS.line }}
                 >
                   <span className="shrink-0" style={{ color: COLORS.brand }}><IconChat size={22} /></span>
@@ -368,7 +388,7 @@ export function GastosV2() {
                     <span className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Se lo contás a FINA hablando, sin cargar nada.</span>
                   </span>
                 </button>
-                <button type="button" onClick={() => setChooser(false)} className="text-[13.5px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>Cancelar</button>
+                <button type="button" onClick={() => setChooser(false)} className="v2-focus text-[13.5px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>Cancelar</button>
               </>
             ) : (
               <>
@@ -380,7 +400,7 @@ export function GastosV2() {
                     'FINA lo registra solo y lo ves acá en tus gastos.',
                   ].map((t, i) => (
                     <div key={i} className="flex gap-2.5 items-start">
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[12px] font-bold text-white" style={{ background: COLORS.brand }}>{i + 1}</span>
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[12px] font-bold" style={{ background: COLORS.brand, color: COLORS.surface }}>{i + 1}</span>
                       <span className="flex-1 text-[13.5px]" style={{ color: COLORS.ink }}>{t}</span>
                     </div>
                   ))}
@@ -390,24 +410,36 @@ export function GastosV2() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setChooser(false)}
-                  className="w-full rounded-2xl py-3.5 text-center text-[15px] font-bold text-white transition-transform active:scale-[0.99]"
-                  style={{ background: COLORS.brand }}
+                  className="v2-focus w-full rounded-2xl py-3.5 text-center text-[15px] font-bold transition-transform active:scale-[0.99]"
+                  style={{ background: COLORS.brand, color: COLORS.surface }}
                 >
                   Ir a WhatsApp
                 </a>
-                <button type="button" onClick={() => setWaStep(false)} className="text-[13.5px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>← Volver</button>
+                <button type="button" onClick={() => setWaStep(false)} className="v2-focus inline-flex items-center justify-center gap-1 text-[13.5px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>
+                  <IconChevron size={14} style={{ transform: 'rotate(180deg)' }} /> Volver
+                </button>
               </>
             )}
           </div>
         </div>
       )}
 
-      {/* Sobres por categoría */}
+      {/* Sobres por categoría — lista con hairline, no card-grid (§3.5) */}
       <div className="flex flex-col gap-3 lg:col-span-2">
         {categorias.length === 0 && (
-          <p className="text-[13px] px-1" style={{ color: COLORS.inkSoft }}>
-            Todavía no tenés secciones — se crean solas cuando agregás tu primer gasto.
-          </p>
+          // Vidriera vacía (§10): promesa, no falla. Se muestra qué va a haber
+          // (en 'por-descubrir') + la acción (el CTA "+ Agregar gasto" de arriba).
+          // Único lugar de esta pantalla donde Fini puede aparecer (§6).
+          <div className="rounded-2xl p-5 flex flex-col items-center text-center gap-3" style={{ background: COLORS.tint }}>
+            <Face color={COLORS.brand} size={56} mood="happy" />
+            <div className="flex flex-col gap-1">
+              <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Acá van a vivir tus secciones</p>
+              <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                Cuando registres tu primer gasto, cada sección aparece sola con su tope. Todavía no lo sabemos: contame un par y se arma.
+              </p>
+            </div>
+            <EstadoConfianza estado="por-descubrir" />
+          </div>
         )}
         {categorias.map((cat) => {
           const open = openCatId === cat.id;
@@ -415,44 +447,56 @@ export function GastosV2() {
           const tope = topes[cat.id];
           const movs = gastos.filter((g) => g.categoriaId === cat.id);
           return (
-            <div key={cat.id} className={`bg-white rounded-2xl p-4 ${CARD_SHADOW}`}>
-              <button type="button" className="w-full flex items-center justify-between" onClick={() => setOpenCatId(open ? null : cat.id)}>
+            <div key={cat.id} className="rounded-2xl p-4" style={CARD_HAIRLINE}>
+              <button type="button" aria-expanded={open} className="v2-focus w-full flex items-center justify-between rounded-xl" onClick={() => setOpenCatId(open ? null : cat.id)}>
                 <div className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: colorDe(cat.id) }} />
                   <div className="text-left">
                     <p className="font-semibold text-[14.5px]" style={{ color: COLORS.ink }}>{cat.nombre}</p>
-                    <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>{gastado > 0 ? fmtMoney(gastado) : 'Sin registros todavía'}</p>
+                    {gastado > 0
+                      ? <Monto value={gastado} className="text-[12.5px]" />
+                      : <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Sin registros todavía</p>}
                   </div>
                 </div>
-                <span style={{ color: COLORS.inkFaint }}>{open ? '▲' : '▼'}</span>
+                <span className="shrink-0" style={{ color: COLORS.inkFaint }}>
+                  <IconChevron size={16} style={{ transform: open ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 120ms' }} />
+                </span>
               </button>
 
               {tope ? (
                 <div className="mt-3">
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(31,27,46,0.06)' }}>
+                  {/* Barra de tope: llega hasta 100% y no más. Un tope excedido NO
+                      se pinta de alerta — sigue en el hue de la sección (§3.3). */}
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: COLORS.tint }}>
                     <div className="h-full rounded-full" style={{ width: `${Math.min((gastado / tope.monto) * 100, 100)}%`, background: colorDe(cat.id) }} />
                   </div>
                   <div className="flex items-center justify-between mt-1.5 text-[12px]">
-                    <span style={{ color: COLORS.inkSoft }}>Tope: {fmtMoney(tope.monto)}/{tope.periodo === 'semana' ? 'sem' : 'mes'}</span>
-                    <button type="button" className="font-semibold underline" style={{ color: COLORS.brand }} onClick={() => setOpenCatId(cat.id)}>Editar</button>
+                    <span className="flex items-center gap-1" style={{ color: COLORS.inkSoft }}>Tope: <Monto value={tope.monto} className="text-[12px]" />/{tope.periodo === 'semana' ? 'sem' : 'mes'}</span>
+                    <button type="button" className="v2-focus font-semibold underline" style={{ color: COLORS.brand }} onClick={() => setOpenCatId(cat.id)}>Editar</button>
                   </div>
                 </div>
               ) : (
-                <div className="mt-3 rounded-xl px-3 py-2 text-[12px] font-semibold" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>
-                  👀 Por ahora, estamos mirando cómo es tu {cat.nombre.toLowerCase()}
+                // Tope sin definir = 'por-descubrir' (§5.1): invitación, no error.
+                // Sin naranja ni gold de alerta; tint neutral + ícono monolineal.
+                <div className="mt-3 rounded-xl px-3 py-2.5 flex items-center gap-2" style={{ background: COLORS.tint }}>
+                  <span className="shrink-0" style={{ color: COLORS.inkSoft }}><IconLupa size={16} /></span>
+                  <p className="text-[12px] font-medium" style={{ color: COLORS.inkSoft }}>
+                    Por ahora estamos mirando cómo es tu {cat.nombre.toLowerCase()}. Cuando quieras, ponéle un tope.
+                  </p>
                 </div>
               )}
 
               {open && (
-                <div className="mt-3 pt-3 border-t border-dashed flex flex-col gap-2" style={{ borderColor: 'rgba(31,27,46,0.14)' }}>
+                <div className="mt-3 pt-3 border-t border-dashed flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
                   {movs.length === 0 && <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Todavía no hay movimientos acá.</p>}
                   {movs.map((m) => (
                     <div key={m.id} className="flex items-center justify-between text-[13px] gap-2" style={{ color: COLORS.ink }}>
                       <span className="flex items-center gap-1.5 min-w-0">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TIPO_INFO[m.tipo].color }} />
-                        <span className="truncate">{m.descripcion} · {fechaDisplay(m.ts)}</span>
+                        <span className="truncate">{m.descripcion}</span>
+                        <span className="shrink-0 text-[11.5px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(m.ts)}</span>
                       </span>
-                      <span className="shrink-0" style={{ color: COLORS.inkSoft }}>{fmtGasto(m)}</span>
+                      <span className="shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtGasto(m)}</span>
                     </div>
                   ))}
                   <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
@@ -460,9 +504,11 @@ export function GastosV2() {
                     <div className="relative">
                       <span className="absolute top-1/2 -translate-y-1/2 left-3.5" style={{ color: COLORS.inkSoft }}>$</span>
                       <input
-                        className="w-full border border-[rgba(31,27,46,0.16)] rounded-xl pl-7 pr-3 py-2 text-[13px] outline-none focus:border-[#7626B3] transition-colors"
+                        aria-label={`Tope de ${cat.nombre}`}
+                        className="v2-focus w-full rounded-xl pl-7 pr-3 py-2 text-[13px] transition-colors"
+                        style={INPUT_STYLE}
                         placeholder="Monto"
-                        inputMode="numeric"
+                        inputMode="decimal"
                         value={topeEditMonto[cat.id] ?? (tope ? String(tope.monto) : '')}
                         onChange={(e) => setTopeEditMonto((v) => ({ ...v, [cat.id]: formatThousands(e.target.value) }))}
                       />
@@ -478,8 +524,8 @@ export function GastosV2() {
                       </div>
                       <button
                         type="button"
-                        className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95 shrink-0"
-                        style={{ background: COLORS.brand }}
+                        className="v2-focus rounded-xl px-3.5 py-2.5 text-[12.5px] font-bold transition-all duration-100 active:scale-95 shrink-0"
+                        style={{ background: COLORS.brand, color: COLORS.surface }}
                         onClick={() => guardarTope(cat.id)}
                       >
                         Guardar
@@ -496,21 +542,24 @@ export function GastosV2() {
       {/* Buscador de gastos — colapsado en una lupita, no ocupa lugar hasta que se usa */}
       <div className="flex flex-col gap-2.5 lg:col-span-1">
         <div className="flex items-center justify-between">
-          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tus gastos</p>
+          <p className="text-[12px] font-bold" style={{ color: COLORS.inkSoft }}>Tus gastos</p>
           <button
             type="button"
             onClick={() => setBusquedaAbierta((v) => !v)}
             aria-label="Buscar gastos"
-            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
-            style={busquedaAbierta ? { background: COLORS.brand, color: '#fff' } : { background: COLORS.tint, color: COLORS.brand }}
+            aria-pressed={busquedaAbierta}
+            className="v2-focus w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+            style={busquedaAbierta ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.tint, color: COLORS.brand }}
           >
-            <IconLupa size={16} />
+            <IconLupa size={18} />
           </button>
         </div>
         {busquedaAbierta && (
           <input
             autoFocus
-            className="border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-2xl px-4 py-2.5 text-[14px] bg-white outline-none transition-colors"
+            aria-label="Buscar gastos por nombre"
+            className="v2-focus rounded-2xl px-4 py-2.5 text-[14px] transition-colors"
+            style={INPUT_STYLE}
             placeholder="Buscar por nombre (ej: Rappi)"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
@@ -521,8 +570,8 @@ export function GastosV2() {
             <button
               type="button"
               onClick={() => setFiltroSeccion('todas')}
-              className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-              style={filtroSeccion === 'todas' ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+              className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+              style={filtroSeccion === 'todas' ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
             >
               Todas las secciones
             </button>
@@ -531,8 +580,8 @@ export function GastosV2() {
                 key={c.id}
                 type="button"
                 onClick={() => setFiltroSeccion(c.id)}
-                className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-                style={filtroSeccion === c.id ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+                style={filtroSeccion === c.id ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
               >
                 {c.nombre}
               </button>
@@ -543,8 +592,8 @@ export function GastosV2() {
           <button
             type="button"
             onClick={() => setFiltroTipo('todos')}
-            className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-            style={filtroTipo === 'todos' ? { background: COLORS.ink, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+            className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+            style={filtroTipo === 'todos' ? { background: COLORS.ink, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
           >
             Todos los tipos
           </button>
@@ -553,8 +602,8 @@ export function GastosV2() {
               key={t}
               type="button"
               onClick={() => setFiltroTipo(t)}
-              className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-              style={filtroTipo === t ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+              className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+              style={filtroTipo === t ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
             >
               {TIPO_INFO[t].label}
             </button>
@@ -574,13 +623,16 @@ export function GastosV2() {
         {gastosFiltrados.slice(0, hayFiltrosActivos ? 50 : 6).map((g) => {
           const cat = categorias.find((c) => c.id === g.categoriaId);
           return (
-            <div key={g.id} className={`flex items-center gap-2.5 bg-white rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`}>
+            <div key={g.id} className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5" style={CARD_HAIRLINE}>
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[g.tipo].color }} />
               <div className="flex-1 min-w-0">
                 <p className="text-[13.5px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
-                <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{cat?.nombre ?? 'Sin sección'} · {fechaDisplay(g.ts)}</p>
+                <p className="text-[11.5px] flex items-center gap-1.5" style={{ color: COLORS.inkSoft }}>
+                  <span className="truncate">{cat?.nombre ?? 'Sin sección'}</span>
+                  <span className="shrink-0">{fechaDisplay(g.ts)}</span>
+                </p>
               </div>
-              <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
+              <span className="font-mono tabular-nums text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
             </div>
           );
         })}

@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Celebracion, Cta, Coachmark, COLORS, Donut, Face, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, useCountUp, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
+import { ArmarGrupoBtn, Celebracion, Cta, Coachmark, COLORS, Donut, EstadoConfianza, Face, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, useCountUp, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
 
 // Sugerencias para arrancar cuando todavía no hay objetivos — le dan
 // emoción/juego a la pantalla vacía; tocás una y abre el modal precargado.
-import { IconBasura, IconCalendario, IconEditar, IconGrupo, IconMas } from './FinaIcons';
+import { IconBasura, IconCalendario, IconChevron, IconEditar, IconGrupo, IconMas } from './FinaIcons';
 
+// Sin emoji (guía §2/§5.4): son chips de TEXTO. La categoría se dice con la
+// palabra, no con un pictograma.
 const SUGERENCIAS_OBJETIVO = [
-  { emoji: '✈️', nombre: 'Un viaje' },
-  { emoji: '🛟', nombre: 'Fondo de emergencia' },
-  { emoji: '💻', nombre: 'Una compra grande' },
-  { emoji: '🏡', nombre: 'Mudanza' },
-  { emoji: '🎓', nombre: 'Estudios' },
-  { emoji: '🎁', nombre: 'Un regalo' },
+  { nombre: 'Un viaje' },
+  { nombre: 'Fondo de emergencia' },
+  { nombre: 'Una compra grande' },
+  { nombre: 'Mudanza' },
+  { nombre: 'Estudios' },
+  { nombre: 'Un regalo' },
 ];
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
@@ -35,18 +37,20 @@ type TipoObjetivo = 'individual' | 'grupal';
 type Moneda = string;
 
 // Catálogo de monedas — las más usadas acá arriba (ARS/USD) y después
-// cualquier otra, para el dropdown con banderitas al elegir la moneda de
-// un objetivo. Es un demo local, así que no cotizamos entre monedas: cada
-// objetivo simplemente lleva su moneda y sus montos se muestran en ella.
-const MONEDAS: { code: string; flag: string; label: string }[] = [
-  { code: 'ARS', flag: '🇦🇷', label: 'Peso argentino' },
-  { code: 'USD', flag: '🇺🇸', label: 'Dólar' },
-  { code: 'EUR', flag: '🇪🇺', label: 'Euro' },
-  { code: 'BRL', flag: '🇧🇷', label: 'Real brasileño' },
-  { code: 'CLP', flag: '🇨🇱', label: 'Peso chileno' },
-  { code: 'UYU', flag: '🇺🇾', label: 'Peso uruguayo' },
-  { code: 'GBP', flag: '🇬🇧', label: 'Libra esterlina' },
-  { code: 'MXN', flag: '🇲🇽', label: 'Peso mexicano' },
+// cualquier otra, para el dropdown al elegir la moneda de un objetivo. Sin
+// banderas (guía §2/§5.4): la moneda se identifica por su CÓDIGO en texto
+// (ARS/USD…), no con un emoji de bandera. Es un demo local, así que no
+// cotizamos entre monedas: cada objetivo lleva su moneda y sus montos se
+// muestran en ella.
+const MONEDAS: { code: string; label: string }[] = [
+  { code: 'ARS', label: 'Peso argentino' },
+  { code: 'USD', label: 'Dólar' },
+  { code: 'EUR', label: 'Euro' },
+  { code: 'BRL', label: 'Real brasileño' },
+  { code: 'CLP', label: 'Peso chileno' },
+  { code: 'UYU', label: 'Peso uruguayo' },
+  { code: 'GBP', label: 'Libra esterlina' },
+  { code: 'MXN', label: 'Peso mexicano' },
 ];
 // Formatea un monto en la moneda dada. ARS usa el símbolo $; el resto se
 // muestra con su código (ej: "USD 1.200") para no inventar símbolos.
@@ -55,8 +59,53 @@ function fmtMonto(monto: number, moneda: Moneda): string {
   return `${moneda} ${Math.round(monto).toLocaleString('es-AR')}`;
 }
 
-// Dropdown de moneda con banderitas. Las más usadas ya vienen primero en
-// MONEDAS. Se cierra al elegir o al tocar afuera.
+// Monto de objetivo — cumple la regla dura de la guía (§3.4): TODO número
+// comparable va en cifras tabulares mono. El primitivo <Monto> de shared solo
+// sabe pesos; acá los objetivos pueden estar en otra moneda, así que este
+// wrapper mantiene el mismo tratamiento (mono tabular, tinta neutral) y encima
+// respeta la moneda. Neutral por defecto: un monto no es una alerta.
+function MontoObj({
+  monto, moneda, className = '', style,
+}: { monto: number; moneda: Moneda; className?: string; style?: React.CSSProperties }) {
+  return (
+    <span className={`font-mono tabular-nums ${className}`} style={{ color: COLORS.ink, ...style }}>
+      {fmtMonto(monto, moneda)}
+    </span>
+  );
+}
+
+// Check fino (reemplaza al ✓ emoji, guía §2/§5.4). Hereda el color del
+// contenedor vía currentColor, como el resto de la iconografía de línea.
+function CheckMini({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 11" fill="none" aria-hidden>
+      <path d="M1 5.5L5 9.5L13 1.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Estilos scopeados que necesitan pseudo-clases (:focus / :hover) y por eso no
+// se pueden poner inline. TODO color sale de COLORS (no hay hex crudo): esto
+// mantiene los inputs y el menú de moneda dentro de la paleta de la guía.
+const V2_STYLES = (
+  <style>{`
+    .ov2-input { border: 1px solid ${COLORS.line}; }
+    .ov2-input:focus { border-color: ${COLORS.brand}; }
+    .ov2-menu-item:hover { background: ${COLORS.brandSoft}; }
+  `}</style>
+);
+
+// Aporte real de los últimos 7 días — sale de los registros que cargó la
+// persona (dato DECLARADO), es el "delta" de la semana que pide la guía (§5.3)
+// para que el avance chico igual se lea como avance.
+function aporteUltimaSemana(o: Objetivo): number {
+  const desde = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  return o.contribuciones.filter((c) => c.ts >= desde).reduce((s, c) => s + c.monto, 0);
+}
+
+// Dropdown de moneda — cada opción se identifica por su código (ARS/USD…),
+// sin banderas. Las más usadas ya vienen primero en MONEDAS. Se cierra al
+// elegir o al tocar afuera.
 function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Moneda) => void }) {
   const [open, setOpen] = useState(false);
   const actual = MONEDAS.find((m) => m.code === value) ?? MONEDAS[0];
@@ -65,27 +114,28 @@ function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Mone
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors"
-        style={{ background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+        aria-label={`Moneda: ${actual.code}`}
+        className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors"
+        style={{ background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
       >
         <span>{actual.code}</span>
-        <span style={{ color: COLORS.inkFaint }}>▾</span>
+        <IconChevron size={14} style={{ transform: 'rotate(90deg)', color: COLORS.inkFaint }} />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute z-50 mt-1 right-0 w-56 max-h-60 overflow-y-auto bg-white rounded-xl border shadow-[0_6px_24px_rgba(31,27,46,0.16)]" style={{ borderColor: COLORS.line }}>
+          <div className="absolute z-50 mt-1 right-0 w-56 max-h-60 overflow-y-auto rounded-xl border shadow-[0_6px_24px_rgba(43,33,24,0.16)]" style={{ background: COLORS.surface, borderColor: COLORS.line }}>
             {MONEDAS.map((m) => (
               <button
                 key={m.code}
                 type="button"
                 onClick={() => { onChange(m.code); setOpen(false); }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-[13.5px] transition-colors hover:bg-[#F3EEFA]"
+                className="ov2-menu-item v2-focus w-full flex items-center gap-2 px-3 py-2.5 text-left text-[13.5px] transition-colors"
                 style={{ color: COLORS.ink }}
               >
                 <span className="font-semibold w-9 shrink-0">{m.code}</span>
                 <span className="truncate" style={{ color: COLORS.inkSoft }}>{m.label}</span>
-                {value === m.code && <span className="ml-auto shrink-0" style={{ color: COLORS.brand }}>✓</span>}
+                {value === m.code && <span className="ml-auto shrink-0 inline-flex" style={{ color: COLORS.brand }}><CheckMini /></span>}
               </button>
             ))}
           </div>
@@ -111,7 +161,10 @@ type Objetivo = {
 // Nota Tailwind: la clase completa tiene que aparecer en el archivo (aunque
 // sea dentro de este string) para que el scanner de Tailwind la detecte.
 const CARD_SHADOW = 'border';
-const inputClass = 'border border-[rgba(31,27,46,0.16)] focus:border-[#7626B3] rounded-xl px-3 py-2.5 text-[14px] outline-none transition-colors';
+// Borde + foco por CSS (ov2-input, ver V2_STYLES) para que el color salga de
+// COLORS y no de un hex crudo en la clase de Tailwind. v2-focus agrega el
+// anillo de foco de la guía (§11).
+const inputClass = 'ov2-input v2-focus rounded-xl px-3 py-2.5 text-[14px] outline-none transition-colors';
 
 const HORIZONTE_OPCIONES = ['Lo antes posible', 'Todavía no lo pensé'];
 
@@ -128,8 +181,8 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
             key={o}
             type="button"
             onClick={() => { setValor(o); setFecha(''); }}
-            className="rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-            style={valor === o && !fechaElegida ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+            className="v2-focus rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+            style={valor === o && !fechaElegida ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
           >
             {o}
           </button>
@@ -137,8 +190,8 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
         <button
           type="button"
           onClick={() => setValor(null)}
-          className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-          style={fechaElegida || valor === null ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+          className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+          style={fechaElegida || valor === null ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
         >
 <IconCalendario size={15} /> Fecha exacta
         </button>
@@ -231,8 +284,8 @@ function MontoPicker({
               key={m}
               type="button"
               onClick={() => setModo(m)}
-              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-              style={sel ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+              className="v2-focus flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+              style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
             >
               {label}
             </button>
@@ -246,7 +299,7 @@ function MontoPicker({
           <input
             className={`w-full ${inputClass} pl-8`}
             placeholder="¿Cuánto necesitás en total?"
-            inputMode="numeric"
+            inputMode="decimal"
             value={montoTxt}
             onChange={(e) => setMontoTxt(formatThousands(e.target.value))}
           />
@@ -260,7 +313,7 @@ function MontoPicker({
             <input
               className={`w-full ${inputClass} pl-8`}
               placeholder="Desde"
-              inputMode="numeric"
+              inputMode="decimal"
               value={minTxt}
               onChange={(e) => setMinTxt(formatThousands(e.target.value))}
             />
@@ -270,7 +323,7 @@ function MontoPicker({
             <input
               className={`w-full ${inputClass} pl-8`}
               placeholder="Hasta"
-              inputMode="numeric"
+              inputMode="decimal"
               value={montoTxt}
               onChange={(e) => setMontoTxt(formatThousands(e.target.value))}
             />
@@ -432,11 +485,12 @@ export function ObjetivosV2() {
   const pct = (o: Objetivo) => (o.montoTotal > 0 ? Math.min(Math.round((saved(o) / o.montoTotal) * 100), 100) : 0);
 
   // Diálogo de confirmación de borrado — se muestra tanto en la lista como
-  // en el detalle. "Sí, borrar" en rojo, "No" en gris.
+  // en el detalle. El naranja (atención accionable) va de RELLENO con texto en
+  // tinta (guía §3.3: los acentos nunca llevan texto blanco); "No" en hueco.
   const objAConfirmar = objetivos.find((o) => o.id === confirmarBorrar) || null;
   const confirmarBorrarModal = objAConfirmar && (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-6" style={{ background: 'rgba(31,27,46,0.5)' }} onClick={() => setConfirmarBorrar(null)}>
-      <div className="w-full max-w-[320px] bg-white rounded-2xl p-5 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-6" style={{ background: `${COLORS.ink}80` }} onClick={() => setConfirmarBorrar(null)}>
+      <div className="w-full max-w-[320px] rounded-2xl p-5 flex flex-col gap-4" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col gap-1">
           <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>¿Borrar este objetivo?</p>
           <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Se va a eliminar “{objAConfirmar.nombre}” y todos sus registros. No se puede deshacer.</p>
@@ -445,7 +499,7 @@ export function ObjetivosV2() {
           <button
             type="button"
             onClick={() => setConfirmarBorrar(null)}
-            className="flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-100 active:scale-95"
+            className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-100 active:scale-95"
             style={{ background: COLORS.tint, color: COLORS.inkSoft }}
           >
             No
@@ -453,8 +507,8 @@ export function ObjetivosV2() {
           <button
             type="button"
             onClick={() => { borrarObjetivo(objAConfirmar.id); setConfirmarBorrar(null); }}
-            className="flex-1 rounded-xl py-2.5 text-[14px] font-bold text-white transition-all duration-100 active:scale-95"
-            style={{ background: COLORS.coral }}
+            className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-100 active:scale-95"
+            style={{ background: COLORS.naranja, color: COLORS.ink }}
           >
             Sí, borrar
           </button>
@@ -476,23 +530,34 @@ export function ObjetivosV2() {
     const restante = Math.max(total - acumulado, 0);
     const porcentaje = pct(abierto);
     const done = estado === 'definido' && acumulado >= total;
+    // Aporte real de la última semana (dato declarado) → el "delta" de §5.3.
+    const aporteSemana = aporteUltimaSemana(abierto);
+    // Cuándo llegás: lo CALCULAMOS nosotras a partir del ritmo reciente, así
+    // que es un ESTIMADO (§5.1) y se muestra como rango de semanas con su
+    // marca, nunca como un número exacto (§5.2).
+    const semanasEstimadas = estado === 'definido' && !done && aporteSemana > 0 && restante > 0
+      ? { lo: Math.max(1, Math.floor(restante / aporteSemana)), hi: Math.ceil(restante / aporteSemana) + 1 }
+      : null;
 
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
+        {V2_STYLES}
         {confirmarBorrarModal}
         <div className="flex items-center justify-between">
-          <button type="button" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>← Volver</button>
+          <button type="button" className="v2-focus inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>
+            <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} /> Volver
+          </button>
           <div className="flex items-center gap-3">
             {abierto.tipo === 'grupal' && grupo && (
-              <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }} onClick={invitarGente}>{invitado ? '✓ Copiado' : 'Invitar'}</button>
+              <button type="button" className="v2-focus inline-flex items-center gap-1 text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }} onClick={invitarGente}>{invitado ? <><CheckMini /> Copiado</> : 'Invitar'}</button>
             )}
-            <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }} onClick={() => empezarEdicion()}>Editar</button>
-            <button type="button" className="text-[12.5px] font-semibold underline" style={{ color: COLORS.coralDark }} onClick={() => setConfirmarBorrar(abierto.id)}>Borrar</button>
+            <button type="button" className="v2-focus text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }} onClick={() => empezarEdicion()}>Editar</button>
+            <button type="button" className="v2-focus text-[12.5px] font-semibold underline" style={{ color: COLORS.coralDark }} onClick={() => setConfirmarBorrar(abierto.id)}>Borrar</button>
           </div>
         </div>
 
         {editando ? (
-          <div className={`bg-white rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`}>
+          <div className={`rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
             <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Editar objetivo</p>
             <input className={inputClass} placeholder="Nombre" value={editNombre} onChange={(e) => setEditNombre(e.target.value)} />
             <input className={inputClass} placeholder="Descripción (opcional)" value={editDescripcion} onChange={(e) => setEditDescripcion(e.target.value)} />
@@ -513,16 +578,16 @@ export function ObjetivosV2() {
             <p className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Para cuándo?</p>
             <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} />
             <div className="flex gap-2 mt-1">
-              <button type="button" onClick={() => setEditando(false)} className="flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold border border-[rgba(31,27,46,0.16)]" style={{ color: COLORS.ink }}>Cancelar</button>
-              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="flex-[2] rounded-xl py-2.5 text-[13.5px] font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand }}>Guardar cambios</button>
+              <button type="button" onClick={() => setEditando(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
+              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="v2-focus flex-[2] rounded-xl py-2.5 text-[13.5px] font-bold disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
             </div>
           </div>
         ) : (
-        <div className={`relative bg-white rounded-2xl p-4 flex gap-4 items-center ${CARD_SHADOW}`}>
+        <div className={`relative rounded-2xl p-4 flex gap-4 items-center ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
           <Celebracion show={celebrar} big={celebrarBig} />
           {estado === 'definido' && (
             <Donut
-              segments={[{ color: done ? COLORS.green : COLORS.gold, pct: Math.round(animPct) }]}
+              segments={[{ color: COLORS.lima, pct: Math.round(animPct) }]}
               centerLabel={done ? '¡Lograste!' : 'Logrado'}
               centerValue={`${Math.round(animPct)}%`}
               size={96}
@@ -541,16 +606,10 @@ export function ObjetivosV2() {
                   {abierto.moneda}
                 </span>
               )}
-              {estado === 'incompleto' && (
-                <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}>
-                  Incompleto
-                </span>
-              )}
-              {estado === 'desconocido' && (
-                <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>
-                  Por definir
-                </span>
-              )}
+              {/* Sin monto todavía = dato "por descubrir" (guía §5.1): una
+                  invitación, nunca un error. Se marca con el trazo tenue de
+                  EstadoConfianza, no con un badge de alerta. */}
+              {estado !== 'definido' && <EstadoConfianza estado="por-descubrir" />}
             </div>
             {abierto.descripcion && <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>{abierto.descripcion}</p>}
             {abierto.horizonte && (
@@ -559,23 +618,36 @@ export function ObjetivosV2() {
             {estado === 'definido' && (
               <>
                 <p className="text-[13px] mt-1.5" style={{ color: COLORS.ink }}>
-                  Llevás <strong>{fmtMonto(Math.round(animAcum), abierto.moneda)}</strong> de {montoLabel(abierto)}
+                  Llevás <MontoObj monto={Math.round(animAcum)} moneda={abierto.moneda} className="font-semibold" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(abierto)}</span>
                 </p>
-                {!done && <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Te falta {fmtMonto(restante, abierto.moneda)}</p>}
+                {/* El total es lo que la persona nos declaró (§5.1). */}
+                <EstadoConfianza estado="declarado" className="mt-0.5" />
+                {!done && <p className="text-[12px] mt-1" style={{ color: COLORS.inkSoft }}>Te falta <MontoObj monto={restante} moneda={abierto.moneda} /></p>}
+                {/* Delta de la semana en LIMA: el avance chico igual se lee
+                    como avance (§5.3), y el lima es el color del avance. */}
+                {aporteSemana > 0 && (
+                  <p className="text-[12.5px] mt-1 font-semibold inline-flex items-center" style={{ color: COLORS.limaText }}>
+                    +<MontoObj monto={aporteSemana} moneda={abierto.moneda} style={{ color: COLORS.limaText }} />&nbsp;esta semana
+                  </p>
+                )}
+                {/* Cuándo llegás: estimado → rango de semanas + marca. */}
+                {semanasEstimadas && (
+                  <span className="mt-1 flex flex-col gap-0.5">
+                    <span className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>A este ritmo, entre {semanasEstimadas.lo} y {semanasEstimadas.hi} semanas para lograrlo.</span>
+                    <EstadoConfianza estado="estimado" />
+                  </span>
+                )}
               </>
             )}
-            {estado === 'incompleto' && (
-              <p className="text-[12.5px] mt-1 font-medium" style={{ color: COLORS.coralDark }}>Falta ponerle un monto — completalo para ver el progreso.</p>
-            )}
-            {estado === 'desconocido' && (
-              <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>Todavía no definiste cuánto necesitás.</p>
+            {estado !== 'definido' && (
+              <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>Todavía no le pusimos un monto. Cuando lo tengas te muestro el progreso — y si querés lo afinamos juntas.</p>
             )}
           </div>
         </div>
         )}
 
         {estado !== 'definido' && (
-          <div className={`bg-white rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`}>
+          <div className={`rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
             <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
             <MontoPicker
               modo={montoModoEdit} setModo={setMontoModoEdit}
@@ -586,8 +658,8 @@ export function ObjetivosV2() {
               type="button"
               onClick={completarMontoTotal}
               disabled={montoModoEdit !== 'desconocido' && parseMoneyInput(montoTotalEdit) <= 0}
-              className="rounded-xl px-4 py-2.5 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95"
-              style={{ background: COLORS.brand }}
+              className="v2-focus rounded-xl px-4 py-2.5 font-bold disabled:opacity-40 transition-all duration-100 active:scale-95"
+              style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Guardar
             </button>
@@ -607,7 +679,7 @@ export function ObjetivosV2() {
         )}
 
         {/* Registrar un pago o un ahorro */}
-        <div className={`bg-white rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`}>
+        <div className={`rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
           <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Sumar un registro</p>
           <div className="grid grid-cols-2 gap-2">
             {(['paid', 'saved'] as const).map((k) => {
@@ -617,8 +689,8 @@ export function ObjetivosV2() {
                   key={k}
                   type="button"
                   onClick={() => setKind(k)}
-                  className="py-2 rounded-xl text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                  style={sel ? { background: COLORS.brand, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                  className="v2-focus py-2 rounded-xl text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                  style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
                 >
                   {k === 'paid' ? 'Ya lo pagué' : 'Lo separé'}
                 </button>
@@ -635,7 +707,7 @@ export function ObjetivosV2() {
             <input
               className={`flex-1 min-w-0 ${inputClass}`}
               placeholder="Monto"
-              inputMode="numeric"
+              inputMode="decimal"
               value={regMonto}
               onChange={(e) => setRegMonto(formatThousands(e.target.value))}
             />
@@ -644,20 +716,21 @@ export function ObjetivosV2() {
               type="button"
               onClick={agregarRegistro}
               disabled={parseMoneyInput(regMonto) <= 0}
-              className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0"
-              style={{ background: COLORS.brand }}
+              aria-label="Sumar registro"
+              className="v2-focus rounded-xl px-4 flex items-center justify-center font-bold disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0"
+              style={{ background: COLORS.brand, color: COLORS.surface }}
             >
-              +
+              <IconMas size={18} />
             </button>
           </div>
         </div>
 
         {/* Historial de registros */}
         <div className="flex flex-col gap-2">
-          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Registros</p>
+          <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Registros</p>
           {abierto.contribuciones.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste nada.</p>}
           {abierto.contribuciones.map((c) => (
-            <div key={c.id} className={`flex items-center gap-2.5 bg-white rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`}>
+            <div key={c.id} className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
               <span
                 className="text-[10.5px] font-bold rounded-full px-2 py-0.5 shrink-0"
                 style={{ background: c.kind === 'paid' ? COLORS.greenSoft : COLORS.goldSoft, color: COLORS.ink }}
@@ -668,8 +741,8 @@ export function ObjetivosV2() {
                 <span className="text-[13.5px]" style={{ color: COLORS.ink }}>{c.label}</span>
               </span>
               <span className="text-[12px] shrink-0" style={{ color: COLORS.inkSoft }}>{fechaDisplay(c.ts)}</span>
-              <span className="font-semibold text-[13.5px] shrink-0" style={{ color: COLORS.ink }}>{fmtMonto(c.monto, c.moneda)}</span>
-              <button type="button" onClick={() => borrarRegistro(c.id)} className="shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Borrar registro">✕</button>
+              <MontoObj monto={c.monto} moneda={c.moneda} className="font-semibold text-[13.5px] shrink-0" />
+              <button type="button" onClick={() => borrarRegistro(c.id)} className="v2-focus shrink-0 w-8 h-8 flex items-center justify-center rounded-full" style={{ color: COLORS.inkFaint }} aria-label="Borrar registro"><IconBasura size={15} /></button>
             </div>
           ))}
         </div>
@@ -680,11 +753,11 @@ export function ObjetivosV2() {
   // ── Modal: crear objetivo — un box flotante sobre Objetivos, no otra
   // pantalla, para que quede claro que es "agregar uno más" acá mismo.
   const modalCrear = creating && (
-    <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: 'rgba(31,27,46,0.45)' }} onClick={() => setCreating(false)}>
-      <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto bg-white rounded-[24px] p-5 flex flex-col gap-3.5" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: `${COLORS.ink}73` }} onClick={() => setCreating(false)}>
+      <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto rounded-[24px] p-5 flex flex-col gap-3.5" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h1 className="text-[19px] font-bold" style={{ color: COLORS.ink }}>Nuevo objetivo</h1>
-          <button type="button" onClick={() => setCreating(false)} aria-label="Cerrar" className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>✕</button>
+          <button type="button" onClick={() => setCreating(false)} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>✕</button>
         </div>
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
@@ -733,16 +806,19 @@ export function ObjetivosV2() {
   // ── Vista: lista ──
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto">
+      {V2_STYLES}
       {modalCrear}
       {confirmarBorrarModal}
 
-      {/* Banda editorial full-bleed (desencajonado) + mascota que acompaña */}
+      {/* Banda editorial full-bleed (desencajonado). Fini acompaña en el
+          encabezado (§6: onboarding/estados vacíos) — sin montos ni progreso
+          al lado, así que no compite con ningún dato. */}
       <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.objetivosSoft }}>
         <div className="flex-1 min-w-0">
           <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Tus objetivos</h1>
           <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>
             {objetivos.length > 0
-              ? `Vas por ${objetivos.length} objetivo${objetivos.length > 1 ? 's' : ''} — no aflojes`
+              ? `Vas por ${objetivos.length} objetivo${objetivos.length > 1 ? 's' : ''}, a tu ritmo.`
               : 'Ponéle nombre a eso que querés lograr. Lo hacemos juntas, a tu ritmo.'}
           </p>
         </div>
@@ -764,7 +840,7 @@ export function ObjetivosV2() {
                 key={s.nombre}
                 type="button"
                 onClick={() => { setNombre(s.nombre); setCreating(true); }}
-                className="rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                className="v2-focus rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
                 style={{ background: COLORS.tint, color: COLORS.ink }}
               >
                 {s.nombre}
@@ -777,26 +853,25 @@ export function ObjetivosV2() {
       {objetivos.map((o) => {
         const estado = estadoMonto(o);
         return (
-          <div key={o.id} className={`relative w-full bg-white rounded-2xl p-4 ${CARD_SHADOW}`}>
+          <div key={o.id} className={`relative w-full rounded-2xl p-4 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
             <button
               type="button"
               onClick={() => setOpenId(o.id)}
-              className="w-full flex items-center gap-3.5 text-left pr-[76px]"
+              className="v2-focus w-full flex items-center gap-3.5 text-left pr-[92px]"
             >
               {estado === 'definido' ? (
                 <Donut
-                  segments={[{ color: pct(o) >= 100 ? COLORS.green : COLORS.gold, pct: pct(o) }]}
+                  segments={[{ color: COLORS.lima, pct: pct(o) }]}
                   centerLabel=""
                   centerValue={`${pct(o)}%`}
                   size={56}
                 />
-              ) : estado === 'desconocido' ? (
-                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-bold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.star, color: COLORS.starText }}>
-                  por<br />definir
-                </span>
               ) : (
-                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-bold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.naranja, color: COLORS.coralDark }}>
-                  falta<br />monto
+                // Sin monto = "por descubrir": contorno tenue, sin relleno,
+                // sin color de alerta (guía §5.1). Mismo trato para "todavía
+                // no sé" y para el que llegó sin completar del onboarding.
+                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-semibold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.lineStrong, color: COLORS.inkSoft }}>
+                  a<br />definir
                 </span>
               )}
               <div className="min-w-0 flex-1">
@@ -807,20 +882,16 @@ export function ObjetivosV2() {
                       <IconGrupo size={12} />
                     </span>
                   )}
-                  {estado === 'incompleto' && (
-                    <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}>
-                      Incompleto
-                    </span>
-                  )}
-                  {estado === 'desconocido' && (
-                    <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>
-                      Por definir
-                    </span>
-                  )}
                 </div>
-                {estado === 'definido' && <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Llevás {fmtMonto(saved(o), o.moneda)} de {montoLabel(o)}</p>}
-                {estado === 'incompleto' && <p className="text-[12.5px] font-medium" style={{ color: COLORS.coralDark }}>Falta completar el monto</p>}
-                {estado === 'desconocido' && <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Todavía no definiste cuánto necesitás</p>}
+                {estado === 'definido' ? (
+                  <>
+                    <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Llevás <MontoObj monto={saved(o)} moneda={o.moneda} className="text-[12.5px]" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(o)}</span></p>
+                    <EstadoConfianza estado="declarado" className="mt-0.5" />
+                  </>
+                ) : (
+                  // Invitación, no error (§5.1).
+                  <EstadoConfianza estado="por-descubrir" className="mt-0.5" />
+                )}
               </div>
             </button>
             {/* Acciones rápidas del objetivo (editar / sumar registro / borrar) */}
@@ -829,7 +900,7 @@ export function ObjetivosV2() {
                 type="button"
                 onClick={() => empezarEdicion(o)}
                 aria-label="Editar objetivo"
-                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+                className="v2-focus w-8 h-8 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
                 style={{ background: COLORS.tint, color: COLORS.brand }}
               >
                 <IconEditar size={15} />
@@ -838,7 +909,7 @@ export function ObjetivosV2() {
                 type="button"
                 onClick={() => setOpenId(o.id)}
                 aria-label="Sumar un registro"
-                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+                className="v2-focus w-8 h-8 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
                 style={{ background: COLORS.brandSoft, color: COLORS.brand }}
               >
                 <IconMas size={16} />
@@ -847,7 +918,7 @@ export function ObjetivosV2() {
                 type="button"
                 onClick={() => setConfirmarBorrar(o.id)}
                 aria-label="Borrar objetivo"
-                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+                className="v2-focus w-8 h-8 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
                 style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}
               >
                 <IconBasura size={15} />
@@ -859,25 +930,25 @@ export function ObjetivosV2() {
       <button
         type="button"
         onClick={() => setCreating(true)}
-        className="w-full rounded-2xl border border-dashed py-4 text-[15px] font-bold transition-all duration-100 active:scale-[0.99]"
-        style={{ borderColor: 'rgba(31,27,46,0.25)', color: COLORS.ink }}
+        className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-4 text-[15px] font-bold transition-all duration-100 active:scale-[0.99]"
+        style={{ borderColor: COLORS.lineStrong, color: COLORS.ink }}
       >
-        + Agregar objetivo
+        <IconMas size={17} /> Agregar objetivo
       </button>
       </div>{/* /columna principal */}
 
       {/* Barra lateral */}
       <div className="flex flex-col gap-4 lg:w-[300px] lg:shrink-0">
         {objetivos.length > 0 && (
-          <div className="hidden lg:flex flex-col gap-2.5 rounded-2xl p-4 border" style={{ background: COLORS.surface }}>
-            <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>¿Sumás otro?</p>
+          <div className="hidden lg:flex flex-col gap-2.5 rounded-2xl p-4 border" style={{ background: COLORS.surface, borderColor: COLORS.line }}>
+            <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Sumás otro?</p>
             <div className="flex flex-wrap gap-2">
               {SUGERENCIAS_OBJETIVO.slice(0, 4).map((s) => (
                 <button
                   key={s.nombre}
                   type="button"
                   onClick={() => { setNombre(s.nombre); setCreating(true); }}
-                  className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+                  className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
                   style={{ background: COLORS.tint, color: COLORS.ink }}
                 >
                   {s.nombre}

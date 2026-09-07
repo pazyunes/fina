@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { Home, Receipt, MessageCircle, Target, TrendingUp } from 'lucide-react';
 import { WHATSAPP_URL } from '../WhatsAppFab';
 import { COLORS } from './shared';
+import { IconChat, IconGastos, IconHome, IconInversiones, IconObjetivos } from './FinaIcons';
 
 // REDISEÑO v2 — menú de abajo pedido explícitamente: Home, Gastos, Chat
 // (resaltado con colores invertidos, no es una pantalla — abre el bot de
@@ -14,10 +14,10 @@ import { COLORS } from './shared';
 // primera vez, un pulso alrededor que llama la atención sin explicar nada.
 
 const TABS = [
-  { to: '/onboarding-v2/home', label: 'Home', icon: Home },
-  { to: '/onboarding-v2/gastos', label: 'Gastos', icon: Receipt },
-  { to: '/onboarding-v2/objetivos', label: 'Objetivos', icon: Target },
-  { to: '/onboarding-v2/inversiones', label: 'Inversiones', icon: TrendingUp },
+  { to: '/onboarding-v2/home', label: 'Home', icon: IconHome },
+  { to: '/onboarding-v2/gastos', label: 'Gastos', icon: IconGastos },
+  { to: '/onboarding-v2/objetivos', label: 'Objetivos', icon: IconObjetivos },
+  { to: '/onboarding-v2/inversiones', label: 'Inversiones', icon: IconInversiones },
 ];
 
 const LS_FAB_VISTO = 'fina_v2_fab_bot_tocado';
@@ -35,8 +35,8 @@ export function BottomNavV2() {
 
   return (
     <nav
-      className="shrink-0 flex items-stretch justify-around bg-white px-1 shadow-[0_-2px_20px_rgba(31,27,46,0.06)]"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="shrink-0 flex items-stretch justify-around px-1 shadow-[0_-2px_20px_rgba(43,33,24,0.06)]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)', background: COLORS.surface }}
     >
       {TABS.slice(0, 2).map((tab) => {
         const active = pathname === tab.to;
@@ -46,10 +46,12 @@ export function BottomNavV2() {
             key={tab.to}
             type="button"
             onClick={() => navigate(tab.to)}
-            className="flex-1 flex flex-col items-center gap-1 py-2.5 transition-colors duration-150"
+            aria-label={tab.label}
+            aria-current={active ? 'page' : undefined}
+            className="v2-focus flex-1 flex flex-col items-center gap-1 py-2.5 min-h-[44px] transition-colors duration-150"
             style={{ color: active ? COLORS.brand : COLORS.inkFaint }}
           >
-            <Icon className="w-5 h-5" strokeWidth={active ? 2.4 : 2} />
+            <Icon size={22} />
             <span className="text-[10.5px] font-semibold">{tab.label}</span>
           </button>
         );
@@ -63,11 +65,11 @@ export function BottomNavV2() {
           rel="noopener noreferrer"
           aria-label="Hablar con FINA por WhatsApp"
           onClick={() => { if (pulsar) { marcarFabVisto(); setPulsar(false); } }}
-          className="relative -mt-5 w-14 h-14 rounded-full flex items-center justify-center shrink-0 transition-transform duration-100 active:scale-95"
-          style={{ background: COLORS.ink, boxShadow: '0 8px 20px -4px rgba(31,27,46,0.45)' }}
+          className="v2-focus relative -mt-5 w-14 h-14 rounded-full flex items-center justify-center shrink-0 transition-transform duration-100 active:scale-95"
+          style={{ background: COLORS.ink, boxShadow: '0 8px 20px -4px rgba(43,33,24,0.45)' }}
         >
           {pulsar && <span className="absolute inset-0 rounded-full animate-ping" style={{ background: COLORS.ink, opacity: 0.4 }} />}
-          <MessageCircle className="w-6 h-6 relative" style={{ color: COLORS.onDark }} strokeWidth={2.4} />
+          <span className="relative" style={{ color: COLORS.onDark }}><IconChat size={24} /></span>
         </a>
       </div>
 
@@ -79,10 +81,12 @@ export function BottomNavV2() {
             key={tab.to}
             type="button"
             onClick={() => navigate(tab.to)}
-            className="flex-1 flex flex-col items-center gap-1 py-2.5 transition-colors duration-150"
+            aria-label={tab.label}
+            aria-current={active ? 'page' : undefined}
+            className="v2-focus flex-1 flex flex-col items-center gap-1 py-2.5 min-h-[44px] transition-colors duration-150"
             style={{ color: active ? COLORS.brand : COLORS.inkFaint }}
           >
-            <Icon className="w-5 h-5" strokeWidth={active ? 2.4 : 2} />
+            <Icon size={22} />
             <span className="text-[10.5px] font-semibold">{tab.label}</span>
           </button>
         );

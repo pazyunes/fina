@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Chip, Coachmark, Cta, Donut, COLORS, Face, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2InversionesPerfil, loadV2InversionesState, saveV2InversionesState } from './shared';
+import { ArmarGrupoBtn, Chip, Cta, Donut, COLORS, EstadoConfianza, fechaDisplay, fmtMoney, formatThousands, Monto, parseMoneyInput, Rango, loadV2InversionesPerfil, loadV2InversionesState, saveV2InversionesState } from './shared';
+import { IconChevron, IconMas } from './FinaIcons';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
 // explícito): un mini-quiz corto arma un perfil de riesgo real (no fijo),
@@ -54,17 +55,29 @@ const INSTRUMENTOS: Instrumento[] = [
   },
 ];
 
-const PERFILES: Record<PerfilId, { label: string; emoji: string; accent: string; copy: string; tasaMensual: number }> = {
-  conservador: { label: 'Conservador', emoji: '🌱', accent: '#2FAE66', copy: 'Preferís cuidar lo que tenés antes que arriesgar de más.', tasaMensual: 0.008 },
-  moderado: { label: 'Moderado', emoji: '🌿', accent: '#E8A33D', copy: 'Buscás un equilibrio entre seguridad y crecimiento.', tasaMensual: 0.015 },
-  arriesgado: { label: 'Arriesgado', emoji: '🚀', accent: '#FF5C7A', copy: 'Te bancás más vaivén a cambio de más potencial de crecimiento.', tasaMensual: 0.025 },
+// Sin emoji de nivel de riesgo (guía §2/§5.4: nunca un emoji, menos en un dato).
+// El nivel se dice con palabra y con el relleno de la paleta, no con dibujitos.
+const PERFILES: Record<PerfilId, { label: string; copy: string; tasaMensual: number }> = {
+  conservador: { label: 'Conservador', copy: 'Preferís cuidar lo que tenés antes que arriesgar de más.', tasaMensual: 0.008 },
+  moderado: { label: 'Moderado', copy: 'Buscás un equilibrio entre seguridad y crecimiento.', tasaMensual: 0.015 },
+  arriesgado: { label: 'Arriesgado', copy: 'Te bancás más vaivén a cambio de más potencial de crecimiento.', tasaMensual: 0.025 },
 };
 
-// Colores claros por perfil (tinte suave de fondo + texto fuerte legible).
+// Tinte + texto por perfil, todo desde la paleta de la guía (§3.3): relleno
+// suave de fondo + su token -Text (≥6:1) para la tipografía. Nada de hex crudo.
 const PERFIL_LIGHT: Record<PerfilId, { soft: string; strong: string }> = {
-  conservador: { soft: COLORS.greenSoft, strong: '#1E7A45' },
-  moderado: { soft: COLORS.goldSoft, strong: '#8A5E10' },
-  arriesgado: { soft: COLORS.coralSoft, strong: COLORS.coralDark },
+  conservador: { soft: COLORS.limaSoft, strong: COLORS.limaText },
+  moderado: { soft: COLORS.starSoft, strong: COLORS.starText },
+  arriesgado: { soft: COLORS.naranjaSoft, strong: COLORS.naranjaText },
+};
+
+// Color de relleno por nivel de riesgo (segmentos del donut, puntos de leyenda).
+// Es una distinción categórica, no un juicio: usa rellenos de la paleta en
+// rampa cálida lima / star / naranja, nunca verde ni coral neón fuera de tokens.
+const RIESGO_FILL: Record<Instrumento['riesgo'], string> = {
+  Bajo: COLORS.lima,
+  Medio: COLORS.star,
+  Alto: COLORS.naranja,
 };
 
 type Moneda = 'ARS' | 'USD';
@@ -80,8 +93,10 @@ type PersistidoInv = {
   monedaInv?: Moneda;
 };
 
-// Tarjeta clara estándar de FINA v2.
+// Tarjeta clara estándar de FINA v2. El borde va por token (hairline), no por
+// el color por defecto de Tailwind, para no dejar un color fuera de la paleta.
 const CARD = 'bg-white rounded-2xl border';
+const cardStyle = { borderColor: COLORS.line } as const;
 
 export function InversionesV2() {
   // Si ya había estado antes en esta pantalla y llegó al resultado, retoma
@@ -161,18 +176,17 @@ export function InversionesV2() {
   if (paso === 'intro') {
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
-        {/* Banda editorial full-bleed (color de Inversiones) + mascota */}
-        <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.inversionesSoft }}>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
-            <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
-          </div>
-          <div className="shrink-0"><Face color={COLORS.brand} size={64} mood="happy" /></div>
+        {/* Banda editorial full-bleed. Sin Fini: la guía §6 dice que el
+            personaje NO aparece en inversiones (plata seria). */}
+        <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px]" style={{ background: COLORS.inversionesSoft }}>
+          <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
+          <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
         </div>
         <button
           type="button"
           onClick={() => setPaso(pasos[0])}
-          className={`text-left ${CARD} p-5 flex flex-col gap-2 transition-transform duration-100 active:scale-[0.99]`}
+          style={cardStyle}
+          className={`v2-focus text-left ${CARD} p-5 flex flex-col gap-2 transition-transform duration-100 active:scale-[0.99]`}
         >
           <span className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Averiguá tu perfil de inversor</span>
           <span className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>
@@ -180,7 +194,7 @@ export function InversionesV2() {
               ? 'Ya nos contaste algo de esto en el onboarding — te faltan un par de preguntas más.'
               : '2 minutos, para que las recomendaciones tengan que ver con vos — sin comprometerte a nada.'}
           </span>
-          <span className="self-end text-[20px]" style={{ color: COLORS.brand }}>→</span>
+          <span className="self-end" style={{ color: COLORS.brand }}><IconChevron size={20} /></span>
         </button>
       </div>
     );
@@ -195,13 +209,11 @@ export function InversionesV2() {
     return (
       <div className="pb-6">
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
-          {/* Banda editorial full-bleed (color de Inversiones) + mascota */}
-          <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.inversionesSoft }}>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-[26px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
-              <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
-            </div>
-            <div className="shrink-0"><Face color={COLORS.brand} size={60} mood="happy" /></div>
+          {/* Banda editorial full-bleed. Sin Fini (guía §6): el personaje nunca
+              va cerca de un dato, y menos en inversiones. */}
+          <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px]" style={{ background: COLORS.inversionesSoft }}>
+            <h1 className="text-[26px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
+            <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
           </div>
           <div className="flex items-center justify-between gap-2">
             <span
@@ -216,8 +228,10 @@ export function InversionesV2() {
                   key={m}
                   type="button"
                   onClick={() => setMonedaInv(m)}
-                  className="rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors duration-150"
-                  style={monedaInv === m ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.inkSoft }}
+                  aria-label={m === 'ARS' ? 'Ver en pesos' : 'Ver en dólares'}
+                  aria-pressed={monedaInv === m}
+                  className="v2-focus rounded-full px-3 py-1.5 text-[11px] font-bold transition-colors duration-150"
+                  style={monedaInv === m ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}
                 >
                   {m === 'ARS' ? 'Pesos' : 'USD'}
                 </button>
@@ -238,8 +252,9 @@ export function InversionesV2() {
                   key={id}
                   type="button"
                   onClick={() => setTab(id)}
-                  className="flex-1 rounded-xl py-2 text-[12px] font-bold transition-colors duration-150"
-                  style={sel ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.inkSoft }}
+                  aria-pressed={sel}
+                  className="v2-focus flex-1 rounded-xl py-2.5 text-[12px] font-bold transition-colors duration-150"
+                  style={sel ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}
                 >
                   {label}
                 </button>
@@ -250,7 +265,7 @@ export function InversionesV2() {
           {tab === 'recos' && (
             <div className="flex flex-col gap-3">
               {enQue.length > 0 && (
-                <div className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold" style={{ background: COLORS.greenSoft, color: '#1E7A45' }}>
+                <div className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
                   Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
                 </div>
               )}
@@ -258,21 +273,27 @@ export function InversionesV2() {
                 const bancoMatch = bancos.find((b) => r.apps.includes(b));
                 const already = yaEnIds.has(r.id);
                 return (
-                  <div key={r.id} className={`${CARD} p-4`} style={{ opacity: already ? 0.7 : 1 }}>
+                  <div key={r.id} className={`${CARD} p-4`} style={{ ...cardStyle, opacity: already ? 0.7 : 1 }}>
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-bold text-[14.5px]" style={{ color: COLORS.ink }}>{r.nombre}</p>
-                      <span className="text-[10.5px] font-semibold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>{r.riesgo} riesgo</span>
+                      <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>
+                        <span className="w-2 h-2 rounded-full" style={{ background: RIESGO_FILL[r.riesgo] }} aria-hidden />
+                        Riesgo {r.riesgo.toLowerCase()}
+                      </span>
                     </div>
                     {bancoMatch ? (
-                      <p className="text-[12.5px] font-semibold mt-1" style={{ color: '#1E7A45' }}>✓ Desde tu {bancoMatch}</p>
+                      <p className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold mt-1" style={{ color: COLORS.limaText }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: COLORS.limaText }} aria-hidden />
+                        Lo tenés a mano desde tu {bancoMatch}
+                      </p>
                     ) : (
                       <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>{r.desc}</p>
                     )}
-                    {already && <p className="text-[11.5px] font-semibold mt-1" style={{ color: COLORS.inkSoft }}>Ya lo hacés ✓</p>}
+                    {already && <p className="text-[11.5px] font-semibold mt-1" style={{ color: COLORS.inkSoft }}>Ya lo hacés</p>}
                     <button
                       type="button"
                       onClick={() => setExpandido((s) => { const n = new Set(s); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
-                      className="mt-2 text-[11.5px] font-bold underline"
+                      className="v2-focus mt-2 text-[11.5px] font-bold underline rounded"
                       style={{ color: COLORS.brand }}
                     >
                       {expandido.has(r.id) ? 'Ocultar' : '¿Por qué te lo recomendamos?'}
@@ -289,20 +310,24 @@ export function InversionesV2() {
 
           {tab === 'mias' && (
             <div className="flex flex-col gap-3">
-              <div className={`${CARD} p-4 flex gap-4 items-center`}>
+              <div className={`${CARD} p-4 flex gap-4 items-center`} style={cardStyle}>
                 <Donut
                   segments={INSTRUMENTOS.map((i) => ({
-                    color: i.riesgo === 'Bajo' ? '#2FAE66' : i.riesgo === 'Medio' ? '#E8A33D' : '#FF5C7A',
+                    color: RIESGO_FILL[i.riesgo],
                     pct: totalAportado > 0 ? (aportes.filter((a) => a.instrumentoId === i.id).reduce((s, a) => s + a.monto, 0) / totalAportado) * 100 : 0,
                   }))}
                   centerLabel="Invertido"
                   centerValue={fmtMoney(totalAportado)}
                   size={100}
                 />
-                <p className="flex-1 text-[13px]" style={{ color: COLORS.inkSoft }}>Vas registrando lo que ponés en cada instrumento acá abajo.</p>
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Vas registrando lo que ponés en cada instrumento acá abajo.</p>
+                  {/* Lo invertido es lo que la persona cargó: dato declarado (§5). */}
+                  <EstadoConfianza estado="declarado" />
+                </div>
               </div>
 
-              <div className={`${CARD} p-4 flex flex-col gap-2.5`}>
+              <div className={`${CARD} p-4 flex flex-col gap-2.5`} style={cardStyle}>
                 <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Registrar un aporte</p>
                 <div className="flex flex-wrap gap-2">
                   {INSTRUMENTOS.map((i) => (
@@ -311,23 +336,26 @@ export function InversionesV2() {
                 </div>
                 <div className="flex gap-2">
                   <input
-                    className="flex-1 min-w-0 rounded-xl px-3 py-2 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors focus:border-[#7626B3]"
-                    style={{ background: '#fff', color: COLORS.ink, borderColor: COLORS.lineStrong }}
+                    className="v2-focus flex-1 min-w-0 rounded-xl px-3 py-2.5 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors"
+                    style={{ background: COLORS.surface, color: COLORS.ink, borderColor: COLORS.lineStrong }}
                     placeholder="Monto"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={aporteMonto}
                     onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
                   />
-                  <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} className="rounded-xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}>+</button>
+                  <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} aria-label="Registrar aporte" className="v2-focus rounded-xl w-12 flex items-center justify-center text-white disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}><IconMas size={20} /></button>
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
                 {aportes.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>}
                 {aportes.map((a) => (
-                  <div key={a.id} className={`${CARD} flex items-center justify-between px-3.5 py-2.5`}>
-                    <span className="text-[13.5px]" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)} · {fechaDisplay(a.ts)}</span>
-                    <span className="font-['IBM_Plex_Mono'] font-semibold text-[13.5px] tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(a.monto)}</span>
+                  <div key={a.id} className={`${CARD} flex items-center justify-between gap-3 px-3.5 py-2.5`} style={cardStyle}>
+                    <span className="flex-1 min-w-0 flex flex-col">
+                      <span className="text-[13.5px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
+                      <span className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
+                    </span>
+                    <Monto value={a.monto} className="text-[13.5px] font-semibold shrink-0" />
                   </div>
                 ))}
               </div>
@@ -344,8 +372,9 @@ export function InversionesV2() {
                       key={m}
                       type="button"
                       onClick={() => setModoEvolucion(m)}
-                      className="flex-1 rounded-xl py-2 text-[12px] font-bold transition-colors duration-150"
-                      style={sel ? { background: COLORS.brand, color: '#fff' } : { color: COLORS.inkSoft }}
+                      aria-pressed={sel}
+                      className="v2-focus flex-1 rounded-xl py-2.5 text-[12px] font-bold transition-colors duration-150"
+                      style={sel ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}
                     >
                       {m === 'real' ? 'Mis aportes' : 'Simular'}
                     </button>
@@ -367,7 +396,7 @@ export function InversionesV2() {
     <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
       <div className="flex justify-center gap-2">
         {pasos.map((p, i) => (
-          <span key={p} className="w-2.5 h-2.5 rounded-full" style={{ background: i <= stepIndex ? COLORS.brand : 'rgba(31,27,46,0.14)' }} />
+          <span key={p} className="w-2.5 h-2.5 rounded-full" style={{ background: i <= stepIndex ? COLORS.brand : COLORS.lineStrong }} />
         ))}
       </div>
 
@@ -459,22 +488,24 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
   };
   const pathReal = real.map((_, i) => xy(real, i).join(',')).join(' ');
   const pathProy = proyectado.map((_, i) => xy(proyectado, i).join(',')).join(' ');
-  const realColor = '#2FAE66';
-  const proyColor = '#E8A33D';
+  // Aportado = dato declarado (línea llena, neutral). Proyección = estimado
+  // (línea PUNTEADA, guía §5.1): el trazo, no el color, dice la confianza.
+  const realColor = COLORS.ink;
+  const proyColor = COLORS.brand;
 
   return (
-    <div className={`${CARD} p-4 flex flex-col gap-3`}>
+    <div className={`${CARD} p-4 flex flex-col gap-3`} style={cardStyle}>
       <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Tu evolución</p>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[130px]">
-        <polyline points={pathProy} fill="none" stroke={proyColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={pathProy} fill="none" stroke={proyColor} strokeWidth="3" strokeDasharray="2 4" strokeLinecap="round" strokeLinejoin="round" />
         <polyline points={pathReal} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {/* Puntos: sin esto, un solo aporte no dibuja nada (una polyline de 1 punto no se ve). */}
-        {proyectado.map((_, i) => { const [x, y] = xy(proyectado, i); return <circle key={`p${i}`} cx={x} cy={y} r="3.5" fill={proyColor} stroke="#fff" strokeWidth="1.5" />; })}
-        {real.map((_, i) => { const [x, y] = xy(real, i); return <circle key={`r${i}`} cx={x} cy={y} r="3.5" fill={realColor} stroke="#fff" strokeWidth="1.5" />; })}
+        {proyectado.map((_, i) => { const [x, y] = xy(proyectado, i); return <circle key={`p${i}`} cx={x} cy={y} r="3.5" fill={proyColor} stroke={COLORS.surface} strokeWidth="1.5" />; })}
+        {real.map((_, i) => { const [x, y] = xy(real, i); return <circle key={`r${i}`} cx={x} cy={y} r="3.5" fill={realColor} stroke={COLORS.surface} strokeWidth="1.5" />; })}
       </svg>
       <div className="flex gap-4">
         <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Aportado real</span>
-        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: proyColor }} /> Proyección estimada</span>
+        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-4 h-0.5 rounded-full" style={{ background: proyColor }} /> Proyección estimada</span>
       </div>
       <p className="text-[11px]" style={{ color: COLORS.inkFaint }}>Proyección ilustrativa a tu perfil — no es una promesa de rendimiento.</p>
     </div>
@@ -505,29 +536,39 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
   const serieProyectado: number[] = [];
   let acumAp = 0;
   let acumProy = 0;
+  // Banda de estimación: la proyección nunca es un número exacto (§5.2), así
+  // que además del punto medio calculamos un piso y un techo (media tasa /
+  // tasa y media) para mostrar el resultado como RANGO, no como certeza.
+  let acumLo = 0;
+  let acumHi = 0;
   for (let i = 0; i < meses; i++) {
     acumAp += montoNum;
     acumProy = (acumProy + montoNum) * (1 + tasaMensual);
+    acumLo = (acumLo + montoNum) * (1 + tasaMensual * 0.5);
+    acumHi = (acumHi + montoNum) * (1 + tasaMensual * 1.5);
     serieAportado.push(acumAp);
     serieProyectado.push(acumProy);
   }
   const max = Math.max(...serieAportado, ...serieProyectado, 1);
   const w = 280, h = 130, pad = 10;
   const totalAportado = serieAportado[serieAportado.length - 1] ?? 0;
-  const totalProyectado = serieProyectado[serieProyectado.length - 1] ?? 0;
-  const realColor = '#2FAE66';
-  const proyColor = '#E8A33D';
+  const proyeccionLo = acumLo;
+  const proyeccionHi = acumHi;
+  // Aportado = declarado (línea llena, neutral); proyección = estimado
+  // (línea punteada). El trazo dice la confianza, no el color (§5.1).
+  const realColor = COLORS.ink;
+  const proyColor = COLORS.brand;
 
   return (
-    <div className={`${CARD} p-4 flex flex-col gap-3`}>
+    <div className={`${CARD} p-4 flex flex-col gap-3`} style={cardStyle}>
       <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Probá antes de invertir plata real</p>
       <div className="relative">
         <span className="absolute top-1/2 -translate-y-1/2 left-3" style={{ color: COLORS.inkSoft }}>$</span>
         <input
-          className="w-full rounded-xl pl-7 pr-3 py-2.5 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors focus:border-[#7626B3]"
-          style={{ background: '#fff', color: COLORS.ink, borderColor: COLORS.lineStrong }}
+          className="v2-focus w-full rounded-xl pl-7 pr-3 py-2.5 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors"
+          style={{ background: COLORS.surface, color: COLORS.ink, borderColor: COLORS.lineStrong }}
           placeholder="Cuánto pondrías por mes"
-          inputMode="numeric"
+          inputMode="decimal"
           value={monto}
           onChange={(e) => setMonto(formatThousands(e.target.value))}
         />
@@ -540,8 +581,9 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
               key={m}
               type="button"
               onClick={() => setMeses(m)}
-              className="flex-1 rounded-xl py-2 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-              style={sel ? { background: COLORS.brand, color: '#fff' } : { background: COLORS.tint, color: COLORS.inkSoft }}
+              aria-pressed={sel}
+              className="v2-focus flex-1 rounded-xl py-2.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+              style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.tint, color: COLORS.inkSoft }}
             >
               {m} meses
             </button>
@@ -552,21 +594,25 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
       {montoNum > 0 && (
         <>
           <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[130px]">
-            <polyline points={serieAPath(serieProyectado, w, h, pad, max)} fill="none" stroke={proyColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={serieAPath(serieProyectado, w, h, pad, max)} fill="none" stroke={proyColor} strokeWidth="3" strokeDasharray="2 4" strokeLinecap="round" strokeLinejoin="round" />
             <polyline points={serieAPath(serieAportado, w, h, pad, max)} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div className="flex gap-4">
             <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Pondrías</span>
-            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: proyColor }} /> Tendrías (estimado)</span>
+            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-4 h-0.5 rounded-full" style={{ background: proyColor }} /> Tendrías (estimado)</span>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="flex flex-col gap-2.5">
+            {/* Lo que pondrías es aritmética de lo que dijiste: declarado, exacto. */}
             <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.tint }}>
               <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>En {meses} meses pondrías</p>
-              <p className="font-['IBM_Plex_Mono'] font-bold text-[15px] tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(totalAportado)}</p>
+              <Monto value={totalAportado} className="font-bold text-[15px]" />
             </div>
-            <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.tint }}>
+            {/* Lo que tendrías es una PROYECCIÓN: se muestra como rango, nunca
+                como número exacto (§5.2). Se angosta cuando hay más certeza. */}
+            <div className="rounded-xl px-3 py-2.5 flex flex-col gap-1.5" style={{ background: COLORS.tint }}>
               <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>Podrías tener</p>
-              <p className="font-['IBM_Plex_Mono'] font-bold text-[15px] tabular-nums" style={{ color: '#8A5E10' }}>{fmtMoney(totalProyectado)}</p>
+              <Rango min={proyeccionLo} max={proyeccionHi} />
+              <EstadoConfianza estado="estimado" />
             </div>
           </div>
         </>

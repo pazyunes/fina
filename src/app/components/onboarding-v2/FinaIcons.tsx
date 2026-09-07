@@ -35,6 +35,17 @@ export function IconChevron(p: IconProps) {
   );
 }
 
+// Home — techo + base (para el menú, reemplaza el ícono de librería).
+export function IconHome(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 10.5 12 4l8 6.5" />
+      <path d="M6 9.5V19a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9.5" />
+      <path d="M10 20v-5h4v5" />
+    </Svg>
+  );
+}
+
 // Gastos — billete
 export function IconGastos(p: IconProps) {
   return (
