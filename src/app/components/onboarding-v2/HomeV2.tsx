@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ActionRow, COLORS, Cta, Face, formatThousands, fmtMoney, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { COLORS, Face, formatThousands, fmtMoney, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
 
@@ -167,14 +167,14 @@ export function HomeV2() {
   // Un solo lugar por sección: cada tarjeta muestra su dato y lleva a su
   // pantalla (fusiona los viejos "accesos" + "bienestar" + "Mis análisis").
   const secciones = [
-    { icon: '💸', label: 'Gastos', to: '/onboarding-v2/gastos', soft: COLORS.coralSoft, metric: b.gastosPct !== null ? b.gastosTexto : 'Registrá para ver tu resumen' },
-    { icon: '🎯', label: 'Objetivos', to: '/onboarding-v2/objetivos', soft: COLORS.goldSoft, metric: b.objetivosPct !== null ? `${b.objetivosPct}% de progreso` : 'Ponéle un monto a un objetivo' },
-    { icon: '🌱', label: 'Inversiones', to: '/onboarding-v2/inversiones', soft: COLORS.greenSoft, metric: b.inversionPct !== null ? b.inversionTexto : 'Sumá tu primer aporte' },
+    { icon: '💸', label: 'Gastos', to: '/onboarding-v2/gastos', soft: COLORS.coralSoft, accent: COLORS.coral, metric: b.gastosPct !== null ? b.gastosTexto : 'Registrá para ver tu resumen' },
+    { icon: '🎯', label: 'Objetivos', to: '/onboarding-v2/objetivos', soft: COLORS.goldSoft, accent: COLORS.gold, metric: b.objetivosPct !== null ? `${b.objetivosPct}% de progreso` : 'Ponéle un monto a un objetivo' },
+    { icon: '🌱', label: 'Inversiones', to: '/onboarding-v2/inversiones', soft: COLORS.greenSoft, accent: COLORS.green, metric: b.inversionPct !== null ? b.inversionTexto : 'Sumá tu primer aporte' },
   ];
 
   return (
-    <div className="px-[22px] pt-8 pb-4 flex flex-col gap-6 lg:px-8 lg:pt-10 lg:grid lg:grid-cols-3 lg:gap-5 lg:gap-y-6 lg:grid-flow-row-dense lg:items-start">
-      <div className="flex items-center gap-3 lg:col-span-3">
+    <div className="px-[22px] pt-8 pb-4 flex flex-col gap-6 lg:max-w-2xl lg:mx-auto lg:pt-10">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => navigate('/onboarding-v2/perfil')}
@@ -194,22 +194,30 @@ export function HomeV2() {
         </div>
       </div>
 
-      {/* Tu próximo paso — lidera el dashboard con UNA acción clara */}
-      <div className="bg-white rounded-2xl p-4 flex flex-col gap-3 shadow-[0_2px_18px_rgba(31,27,46,0.07)] lg:col-span-3">
+      {/* Tu próximo paso — HERO de color: el foco de la pantalla, no una caja más */}
+      <div className="rounded-[26px] p-5 flex flex-col gap-4" style={{ background: COLORS.brand }}>
         <div className="flex items-center gap-3.5">
-          <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-lg" style={{ background: COLORS.brandSoft }}>✨</span>
+          <span className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-2xl" style={{ background: 'rgba(255,255,255,0.18)' }}>✨</span>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.brand }}>Tu próximo paso</p>
-            <p className="font-bold text-[15px] leading-tight" style={{ color: COLORS.ink }}>{paso.titulo}</p>
-            <p className="text-[12.5px] leading-snug" style={{ color: COLORS.inkSoft }}>{paso.msg}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu próximo paso</p>
+            <p className="font-bold text-[17px] leading-tight text-white">{paso.titulo}</p>
+            <p className="text-[13px] leading-snug" style={{ color: 'rgba(255,255,255,0.88)' }}>{paso.msg}</p>
           </div>
         </div>
-        <Cta label={paso.cta} onClick={() => navigate(paso.to)} />
+        <button
+          type="button"
+          onClick={() => navigate(paso.to)}
+          className="w-full rounded-2xl py-3.5 text-[15px] font-bold transition-transform duration-100 active:scale-[0.99]"
+          style={{ background: '#fff', color: COLORS.brand }}
+        >
+          {paso.cta}
+        </button>
       </div>
 
-      {/* Reservas (alcancía) — plata que apartás para no gastarla. */}
-      <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] lg:col-span-3">
-        <div className="flex items-center gap-3">
+      {/* Reservas + Completá tu perfil — lista PLANA (sin caja individual),
+          filas apoyadas sobre el fondo y separadas por una línea fina. */}
+      <div className="flex flex-col">
+        <div className="flex items-center gap-3 py-3">
           <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
           <div className="flex-1 min-w-0">
             <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
@@ -220,7 +228,7 @@ export function HomeV2() {
           </button>
         </div>
         {reservaOpen && (
-          <div className="mt-3 pt-3 border-t border-dashed flex gap-2" style={{ borderColor: 'rgba(31,27,46,0.14)' }}>
+          <div className="pb-3 flex gap-2">
             <input
               autoFocus
               className="flex-1 min-w-0 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
@@ -234,31 +242,34 @@ export function HomeV2() {
             </button>
           </div>
         )}
-      </div>
-
-      <div className="lg:col-span-3">
-        <ActionRow
-          icon={<span className="text-lg">📝</span>}
-          label="Completá tu perfil"
+        <button
+          type="button"
           onClick={() => navigate('/onboarding-v2/perfil')}
-        />
+          className="flex items-center gap-3 py-3 text-left border-t"
+          style={{ borderColor: COLORS.line }}
+        >
+          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft }}>📝</span>
+          <span className="flex-1 text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Completá tu perfil</span>
+          <span className="shrink-0 font-bold" style={{ color: COLORS.brand }}>→</span>
+        </button>
       </div>
 
-      {/* 3 secciones — un solo lugar por sección: dato + acceso a su pantalla */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:col-span-3">
+      {/* 3 secciones — fichas con color (una por sección): dato + acceso */}
+      <div className="flex flex-col gap-3">
         {secciones.map((s) => (
           <button
             key={s.label}
             type="button"
             onClick={() => navigate(s.to)}
-            className="flex items-center gap-3 text-left bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 active:scale-[0.98]"
+            className="flex items-center gap-3.5 text-left rounded-2xl p-4 transition-all duration-100 active:scale-[0.98]"
+            style={{ background: s.soft }}
           >
-            <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-lg" style={{ background: s.soft }}>{s.icon}</span>
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-lg bg-white/70">{s.icon}</span>
             <span className="flex-1 min-w-0">
-              <span className="block font-semibold text-[15px]" style={{ color: COLORS.ink }}>{s.label}</span>
-              <span className="block text-[12px] leading-snug" style={{ color: COLORS.inkSoft }}>{s.metric}</span>
+              <span className="block font-bold text-[15px]" style={{ color: COLORS.ink }}>{s.label}</span>
+              <span className="block text-[12.5px] leading-snug" style={{ color: COLORS.inkSoft }}>{s.metric}</span>
             </span>
-            <span className="shrink-0 font-bold" style={{ color: COLORS.brand }}>→</span>
+            <span className="shrink-0 font-bold text-[18px]" style={{ color: s.accent }}>→</span>
           </button>
         ))}
       </div>
