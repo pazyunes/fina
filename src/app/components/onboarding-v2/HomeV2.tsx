@@ -1,33 +1,50 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ActionRow, COLORS, Face, formatThousands, fmtMoney, loadV2ArrancasOculto, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2ArrancasOculto, saveV2Reserva } from './shared';
+import { ActionRow, COLORS, Cta, Face, formatThousands, fmtMoney, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
 
-// Mensajes motivadores, no un "Control: Bastante" a secas — la idea es que
-// se sienta un acompañamiento, no una planilla de datos sobre uno mismo.
-const MENSAJES_POTENCIAL: Record<string, Record<string, string>> = {
-  controlaGastos: {
-    todo: '🔍 Tenés muy controlados tus gastos — seguí así.',
-    bastante: '🔍 Ya controlás bastante bien tus gastos — vamos por más.',
-    poco: '🔍 Vas controlando de a poco tus gastos — te lo hacemos más fácil.',
-    nada: '🔍 Todavía no controlás mucho tus gastos — arrancamos juntas.',
-  },
-  ahorra: {
-    todo: '🐷 Gran parte de tu plata ya va al ahorro — ¡buenísimo!',
-    bastante: '🐷 Ya le destinás bastante al ahorro — vamos por más.',
-    poco: '🐷 Estás arrancando a ahorrar — de a poco se llega lejos.',
-    nada: '🐷 Todavía no ahorrás nada — es un buen momento para arrancar.',
-  },
-  invierte: {
-    todo: '🌱 Gran parte de tu plata ya está invirtiendo — ¡que siga rindiendo!',
-    bastante: '🌱 Ya invertís bastante — vamos por más.',
-    poco: '🌱 Diste el primer paso invirtiendo — vamos por más.',
-    nada: '🌱 Todavía no invertís nada — es un buen momento para arrancar.',
-  },
-};
-
 type Tip = { icon: string; texto: string; to: string };
+
+// "Tu próximo paso" — el hilo estilo Duolingo: una sola acción, la más útil
+// según en qué punto está la persona. Da coherencia al dashboard sin
+// despojarlo: es la tarjeta que lidera, y el resto queda como estaba.
+type EstadoPaso = { gastos: { ts?: number }[]; topes: Record<string, unknown> };
+type ObjPaso = { nombre: string; montoTotal: number; montoModo: string | null; contribuciones: { monto: number }[] };
+function proximoPaso(): { titulo: string; msg: string; cta: string; to: string } {
+  const g = loadV2GastosState<EstadoPaso>();
+  const objetivos = loadV2ObjetivosState<ObjPaso[]>() ?? [];
+  const invPerfil = loadV2InversionesPerfil();
+  if (!g || g.gastos.length === 0) {
+    return { titulo: 'Registrá tu primer gasto', msg: 'Con eso ya te armamos tus secciones y tu análisis solo.', cta: 'Registrar un gasto', to: '/onboarding-v2/gastos' };
+  }
+  const objIncompleto = objetivos.find((o) => o.montoModo === null || (o.montoModo !== 'desconocido' && !(o.montoTotal > 0)));
+  if (objIncompleto) {
+    return { titulo: `Completá “${objIncompleto.nombre}”`, msg: 'Ponéle un monto para empezar a ver tu progreso.', cta: 'Completar objetivo', to: '/onboarding-v2/objetivos' };
+  }
+  const objCerca = objetivos.find((o) => {
+    const s = o.contribuciones.reduce((a, c) => a + c.monto, 0);
+    return o.montoTotal > 0 && s / o.montoTotal >= 0.7 && s < o.montoTotal;
+  });
+  if (objCerca) {
+    return { titulo: `¡Estás cerca de “${objCerca.nombre}”!`, msg: 'Sumá lo último que separaste y llegás.', cta: 'Ver mi objetivo', to: '/onboarding-v2/objetivos' };
+  }
+  if (!invPerfil) {
+    return { titulo: 'Descubrí cómo invertir tu plata', msg: 'Armá tu perfil y te decimos qué te conviene según vos.', cta: 'Armar mi perfil inversor', to: '/onboarding-v2/inversiones' };
+  }
+  return { titulo: '¡Venís al día!', msg: 'Registrá lo de hoy para no cortar la racha.', cta: 'Registrar un gasto', to: '/onboarding-v2/gastos' };
+}
+
+// Racha: días consecutivos (terminando hoy) con al menos un gasto.
+function rachaDeGastos(): number {
+  const g = loadV2GastosState<{ gastos: { ts?: number }[] }>();
+  if (!g) return 0;
+  const dias = new Set(g.gastos.filter((x) => x.ts).map((x) => new Date(x.ts as number).toDateString()));
+  let s = 0;
+  const d = new Date();
+  while (dias.has(d.toDateString())) { s++; d.setDate(d.getDate() - 1); }
+  return s;
+}
 
 // Tips reales, no inventados — el mismo espíritu que las "ideas para
 // llegar más rápido" que ya tiene ObjetivosPage.tsx en la app real, pero
@@ -48,7 +65,7 @@ function tipsPara(): Tip[] {
   if (tips.length === 0) {
     tips.push({ icon: '👀', texto: 'Explorá Gastos, Objetivos e Inversiones — cuanto más uses FINA, más te vamos a poder ayudar.', to: '/onboarding-v2/gastos' });
   }
-  return tips.slice(0, 2);
+  return tips.slice(0, 1);
 }
 
 // ── Anillo de bienestar financiero (estilo Headspace/Apple Watch) ──────
@@ -169,12 +186,8 @@ export function HomeV2() {
   const tips = tipsPara();
   const b = datosBienestar();
   const hayBienestar = b.gastosPct !== null || b.objetivosPct !== null || b.inversionPct !== null;
-  const perfil = loadV2PerfilOnboarding();
-  const potencial = perfil
-    ? (['controlaGastos', 'ahorra', 'invierte'] as const)
-        .map((key) => (perfil[key] ? MENSAJES_POTENCIAL[key]?.[perfil[key] as string] : null))
-        .filter((m): m is string => !!m)
-    : [];
+  const paso = proximoPaso();
+  const racha = rachaDeGastos();
 
   // Reserva ("alcancía") — se movió acá desde Gastos.
   const [reserva, setReserva] = useState(() => loadV2Reserva());
@@ -189,9 +202,6 @@ export function HomeV2() {
     setReservaVal('');
     setReservaOpen(false);
   }
-
-  // Cartel "Así arrancás" — se puede cerrar con la X.
-  const [arrancasOculto, setArrancasOculto] = useState(() => loadV2ArrancasOculto());
 
   // "Mis análisis" — tarjetas simples con lo que ya hay de datos reales.
   const analisis = [
@@ -211,10 +221,28 @@ export function HomeV2() {
         >
           {foto ? <img src={foto} alt="" className="w-full h-full object-cover" /> : <Face color={COLORS.brand} size={48} mood="happy" />}
         </button>
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>{saludoDelDia()}{nombre ? `, ${nombre}` : ''}</p>
           <p className="text-[19px] font-bold leading-tight" style={{ color: COLORS.ink }}>Tu FINA</p>
         </div>
+        {/* Racha 🔥 — hábito estilo Duolingo */}
+        <div className="flex flex-col items-center shrink-0 rounded-2xl px-3 py-1.5" style={{ background: COLORS.brandSoft }}>
+          <span className="text-[15px] font-bold leading-none" style={{ color: COLORS.brandDark }}>🔥 {racha}</span>
+          <span className="text-[9.5px] font-semibold" style={{ color: COLORS.brand }}>{racha === 1 ? 'día' : 'días'}</span>
+        </div>
+      </div>
+
+      {/* Tu próximo paso — lidera el dashboard con UNA acción clara */}
+      <div className="bg-white rounded-2xl p-4 flex flex-col gap-3 shadow-[0_2px_18px_rgba(31,27,46,0.07)] lg:col-span-3">
+        <div className="flex items-center gap-3.5">
+          <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-lg" style={{ background: COLORS.brandSoft }}>✨</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.brand }}>Tu próximo paso</p>
+            <p className="font-bold text-[15px] leading-tight" style={{ color: COLORS.ink }}>{paso.titulo}</p>
+            <p className="text-[12.5px] leading-snug" style={{ color: COLORS.inkSoft }}>{paso.msg}</p>
+          </div>
+        </div>
+        <Cta label={paso.cta} onClick={() => navigate(paso.to)} />
       </div>
 
       {/* Anillo de bienestar financiero — solo si hay algo real que mostrar */}
@@ -275,28 +303,6 @@ export function HomeV2() {
           </div>
         )}
       </div>
-
-      {/* Así arrancás — mensajes motivadores con lo del onboarding. Card más
-          chica y con una X para cerrarla (no vuelve a aparecer). */}
-      {potencial.length > 0 && !arrancasOculto && (
-        <div className="rounded-2xl px-3.5 py-2.5 flex items-start gap-2.5 lg:col-span-3" style={{ background: COLORS.brandSoft }}>
-          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-            <p className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: COLORS.brandDark }}>Así arrancás en FINA</p>
-            {potencial.map((m) => (
-              <p key={m} className="text-[12px] font-medium leading-snug" style={{ color: COLORS.ink }}>{m}</p>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => { setArrancasOculto(true); saveV2ArrancasOculto(); }}
-            aria-label="Cerrar"
-            className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[12px] transition-all duration-100 active:scale-90"
-            style={{ background: 'rgba(255,255,255,0.7)', color: COLORS.inkSoft }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       <div className="lg:col-span-3">
         <ActionRow
