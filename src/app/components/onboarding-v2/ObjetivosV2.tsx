@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Celebracion, Cta, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, useCountUp, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
+import { ArmarGrupoBtn, Celebracion, Cta, Coachmark, COLORS, Donut, Face, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, useCountUp, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
+
+// Sugerencias para arrancar cuando todavía no hay objetivos — le dan
+// emoción/juego a la pantalla vacía; tocás una y abre el modal precargado.
+const SUGERENCIAS_OBJETIVO = [
+  { emoji: '✈️', nombre: 'Un viaje' },
+  { emoji: '🛟', nombre: 'Fondo de emergencia' },
+  { emoji: '💻', nombre: 'Una compra grande' },
+  { emoji: '🏡', nombre: 'Mudanza' },
+  { emoji: '🎓', nombre: 'Estudios' },
+  { emoji: '🎁', nombre: 'Un regalo' },
+];
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
 // (ver ObjetivosPage.tsx / GoalEditModal.tsx) pasada a la estética nueva —
@@ -727,9 +738,40 @@ export function ObjetivosV2() {
     <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
       {modalCrear}
       {confirmarBorrarModal}
-      <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Objetivos</h1>
-      <Coachmark id="objetivos">Acá armás lo que querés lograr — solo o con tu grupo de amigas — y vas anotando lo que pagás o separás para cada uno.</Coachmark>
-      {objetivos.length === 0 && <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todavía no armaste ningún objetivo.</p>}
+
+      {/* Banda editorial full-bleed (desencajonado) + mascota que acompaña */}
+      <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.goldSoft }}>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Tus objetivos</h1>
+          <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>
+            {objetivos.length > 0
+              ? `Vas por ${objetivos.length} objetivo${objetivos.length > 1 ? 's' : ''} — no aflojes 💪`
+              : 'Ponéle nombre a eso que querés lograr. Lo hacemos juntas, a tu ritmo.'}
+          </p>
+        </div>
+        <div className="shrink-0"><Face color={COLORS.brand} size={68} mood="happy" /></div>
+      </div>
+
+      {/* Estado vacío con onda: sugerencias para arrancar (abren el modal) */}
+      {objetivos.length === 0 && (
+        <div className="flex flex-col gap-2.5 pt-1">
+          <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Con qué arrancás?</p>
+          <div className="flex flex-wrap gap-2">
+            {SUGERENCIAS_OBJETIVO.map((s) => (
+              <button
+                key={s.nombre}
+                type="button"
+                onClick={() => { setNombre(s.nombre); setCreating(true); }}
+                className="rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                style={{ background: COLORS.tint, color: COLORS.ink }}
+              >
+                {s.emoji} {s.nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {objetivos.map((o) => {
         const estado = estadoMonto(o);
         return (

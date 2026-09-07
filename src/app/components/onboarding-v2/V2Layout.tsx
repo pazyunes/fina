@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { Outlet, useLocation } from 'react-router';
 import { BottomNavV2 } from './BottomNavV2';
 import { SidebarV2 } from './SidebarV2';
 import { COLORS } from './shared';
@@ -11,6 +12,16 @@ import { COLORS } from './shared';
 //   - Desktop (lg+): menú LATERAL (SidebarV2) a la izquierda + contenido ancho
 //     centrado. Se deja atrás el "marco de teléfono". El menú de abajo se oculta.
 export function V2Layout() {
+  const { pathname } = useLocation();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Al cambiar de pantalla, volver SIEMPRE al principio. El scroll vive en
+  // este contenedor (no en window), así que hay que resetearlo a mano — si no,
+  // al entrar a Gastos/Objetivos aparecías a la mitad (posición de la anterior).
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, left: 0 });
+  }, [pathname]);
+
   return (
     <div
       className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col lg:flex-row overflow-hidden"
@@ -22,7 +33,7 @@ export function V2Layout() {
       {/* Contenido — lienzo ancho en desktop. Cada pantalla decide su propio
           layout adentro (Home usa varias columnas; las demás se centran en una
           columna legible con lg:max-w-2xl lg:mx-auto en su propio contenedor). */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto w-full lg:max-w-[1120px] pb-10 lg:pb-12">
           <Outlet />
         </div>
