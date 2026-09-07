@@ -224,7 +224,7 @@ export function HomeV2() {
       <div className="flex flex-col">
         <div className="relative flex items-center gap-3 py-3">
           <Celebracion show={celebrarReserva} />
-          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft, color: COLORS.gold }}><IconReserva size={18} /></span>
+          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft, color: COLORS.starText }}><IconReserva size={18} /></span>
           <div className="flex-1 min-w-0">
             <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
             <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>
@@ -327,7 +327,7 @@ export function HomeV2() {
             className="w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
             style={{ background: COLORS.goldSoft }}
           >
-            <span className="shrink-0" style={{ color: COLORS.gold }}><IconIdea size={20} /></span>
+            <span className="shrink-0" style={{ color: COLORS.starText }}><IconIdea size={20} /></span>
             <span className="flex-1 text-[13px] font-medium" style={{ color: COLORS.ink }}>{t.texto}</span>
           </button>
         ))}

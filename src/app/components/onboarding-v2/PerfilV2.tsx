@@ -107,8 +107,8 @@ export function PerfilV2() {
             type="button"
             onClick={guardarNombre}
             disabled={!nombre.trim()}
-            className="rounded-2xl px-4 font-bold text-white disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0"
-            style={{ background: guardado ? COLORS.green : COLORS.brand }}
+            className="rounded-2xl px-4 font-bold disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0"
+            style={{ background: guardado ? COLORS.lima : COLORS.brand, color: guardado ? COLORS.ink : '#fff' }}
           >
             {guardado ? '✓' : 'Guardar'}
           </button>
@@ -134,7 +134,7 @@ export function PerfilV2() {
             >
               <span
                 className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
-                style={it.hecho ? { background: COLORS.green, color: '#fff' } : { border: '2px solid rgba(31,27,46,0.2)' }}
+                style={it.hecho ? { background: COLORS.lima, color: COLORS.ink } : { border: '2px solid rgba(31,27,46,0.2)' }}
               >
                 {it.hecho ? '✓' : ''}
               </span>
@@ -153,7 +153,7 @@ export function PerfilV2() {
             >
               <span
                 className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
-                style={nivel ? { background: COLORS.green, color: '#fff' } : { border: '2px solid rgba(31,27,46,0.2)' }}
+                style={nivel ? { background: COLORS.lima, color: COLORS.ink } : { border: '2px solid rgba(31,27,46,0.2)' }}
               >
                 {nivel ? '✓' : ''}
               </span>

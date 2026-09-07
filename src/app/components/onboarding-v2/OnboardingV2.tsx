@@ -277,7 +277,7 @@ function Campo({ label, error, children }: { label: string; error?: string; chil
     <div className="flex flex-col gap-1.5">
       <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</label>
       {children}
-      {error && <p className="text-[12px] font-semibold" style={{ color: COLORS.coral }}>{error}</p>}
+      {error && <p className="text-[12px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
     </div>
   );
 }

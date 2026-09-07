@@ -306,7 +306,7 @@ export function GastosV2() {
                     type="button"
                     onClick={() => setNgTipo(t)}
                     className="rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                    style={sel ? { background: TIPO_INFO[t].color, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+                    style={sel ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
                   >
                     {TIPO_INFO[t].label}
                   </button>
@@ -554,7 +554,7 @@ export function GastosV2() {
               type="button"
               onClick={() => setFiltroTipo(t)}
               className="rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-              style={filtroTipo === t ? { background: TIPO_INFO[t].color, color: '#fff' } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
+              style={filtroTipo === t ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: '#fff', color: COLORS.ink, border: '1px solid rgba(31,27,46,0.16)' }}
             >
               {TIPO_INFO[t].label}
             </button>

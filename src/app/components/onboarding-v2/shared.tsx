@@ -15,47 +15,58 @@ import { IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
 // inventado. La energía sigue cambiando por sección (Gastos colorido,
 // Inversiones serio en modo oscuro), pero ya no via sombra de cómic.
 
+// Paleta alineada a la guía de frontend (src/styles/frontend.md §3-§4).
+// Regla dura: los colores de marca (lima/star/naranja/lila) son de RELLENO,
+// no de texto — sobre ellos el texto va en `ink`, nunca en blanco. El púrpura
+// queda degradado a rol estructural (bordes/foco/recuadros), no es la marca.
+// El color que se recuerda es el LIMA en el momento de valor (objetivo que
+// avanza). Los gastos se muestran NEUTRALES (tinta), nunca en color de alerta.
 export const COLORS = {
-  ink: '#1F1B2E',
-  inkSoft: '#6B647A',
-  inkFaint: '#A29BB3',
-  paper: '#FBFAF8',
-  surface: '#FFFFFF',
-  tint: '#F3EEFA',
-  line: 'rgba(31,27,46,0.09)',
-  lineStrong: 'rgba(31,27,46,0.16)',
+  // Neutros / superficies
+  ink: '#2B2118',        // tinta — texto y montos
+  inkSoft: '#5F5346',    // tinta-media — labels, fechas
+  inkFaint: '#7A6A58',   // tinta-suave — auxiliar (mínimo AA)
+  paper: '#FFF4E4',      // papel crema — fondo general
+  surface: '#FFFDF7',    // superficie elevada — tarjetas
+  tint: '#F6E9D4',       // hueco — bloque tintado / hundido
+  line: '#E8D9C0',       // hairline — separadores
+  lineStrong: '#D8C4A5', // separador más marcado
 
-  brand: '#7626B3',
-  brandSoft: '#F0E7FA',
-  brandDark: '#431C72',
+  // Acento estructural (púrpura, NO es la marca)
+  brand: '#7E5DA8',      // púrpura — botones, progreso, foco, bordes
+  brandSoft: '#EDE4F7',  // lila muy suave — bandas / recuadros
+  brandDark: '#3D2A55',  // noche — fondos oscuros, texto fuerte
 
   // Fondo del "marco" que envuelve la pantalla en desktop — ver DeviceFrame.
-  frameBg: '#E8E4F0',
+  frameBg: '#EFE6D6',
 
-  coral: '#FF5C7A',
-  coralSoft: '#FFE3E9',
-  coralDark: '#B3324D',
-  gold: '#E8A33D',
-  goldSoft: '#FBEDD3',
-  green: '#2FAE66',
-  greenSoft: '#E1F3E7',
-  sky: '#4C8DFF',
-  skySoft: '#E3ECFF',
+  // Colores de marca (RELLENO). Cada uno con su -Soft y su -Text (≥6:1) para
+  // cuando el color tiene que ir en tipografía.
+  lima: '#B0E150', limaSoft: '#EBF6D2', limaText: '#41660F',        // valor / éxito / objetivo que avanza
+  star: '#FFC457', starSoft: '#FFEFD0', starText: '#7A4F00',        // Fini, medallitas, destacados
+  naranja: '#FF7B4F', naranjaSoft: '#FFE4D8', naranjaText: '#A83208', // atención accionable
+  lila: '#CB9EFF', lilaBorde: '#9A6BD1',
 
-  // Semánticos por sección (Manual v2.0) — un color por sección + su soft.
-  gastos: '#F4557A', gastosSoft: '#FFE7EC',
-  objetivos: '#16A97A', objetivosSoft: '#DFF4EC',
-  inversiones: '#3D6FF5', inversionesSoft: '#E2EAFF',
-  grupos: '#E8952B', gruposSoft: '#FDEEDA',
-  amarillo: '#FFC93C', fideo: '#C23FA8',
+  // ── Aliases de compatibilidad: keys viejas → paleta de la guía ──
+  green: '#B0E150', greenSoft: '#EBF6D2',                  // éxito/valor → lima
+  coral: '#FF7B4F', coralSoft: '#FFE4D8', coralDark: '#A83208', // atención → naranja
+  gold: '#FFC457', goldSoft: '#FFEFD0',                    // destacado → star
+  amarillo: '#FFC457', fideo: '#FF7B4F',
+  sky: '#7E5DA8', skySoft: '#EDE4F7',                      // inversiones sin ruido de color → estructural
+  // La guía no usa color por sección: gastos neutral, objetivos = lima (valor),
+  // inversiones = estructural, grupos = star.
+  gastos: '#2B2118', gastosSoft: '#F6E9D4',
+  objetivos: '#41660F', objetivosSoft: '#EBF6D2',
+  inversiones: '#7E5DA8', inversionesSoft: '#EDE4F7',
+  grupos: '#7A4F00', gruposSoft: '#FFEFD0',
 
-  // Inversiones vive en modo oscuro — el mismo criterio "Nubank/Cleo": la
-  // plata seria se muestra sin ruido de color, en un fondo casi negro.
-  dark: '#17132A',
-  darkCard: '#221C38',
-  darkLine: 'rgba(244,241,250,0.12)',
-  onDark: '#F4F1FA',
-  onDarkSoft: 'rgba(244,241,250,0.6)',
+  // Inversiones vive en modo oscuro — la plata seria se muestra sin ruido de
+  // color, sobre la "noche" de la guía.
+  dark: '#3D2A55',
+  darkCard: '#4A3663',
+  darkLine: 'rgba(255,244,228,0.12)',
+  onDark: '#FFF4E4',
+  onDarkSoft: 'rgba(255,244,228,0.6)',
 };
 
 // ── plata: formateo + parseo de inputs ──

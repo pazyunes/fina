@@ -724,7 +724,7 @@ export function ObjetivosV2() {
         />
         <Cta label="Agregar objetivo" disabled={!nombre.trim() || (tipo === 'grupal' && !grupo && !invitarNombre.trim())} onClick={crearObjetivo} />
         {tipo === 'grupal' && !grupo && !invitarNombre.trim() && (
-          <p className="text-[12px] text-center" style={{ color: COLORS.coral }}>Ponele nombre al grupo para poder invitar gente.</p>
+          <p className="text-[12px] text-center" style={{ color: COLORS.coralDark }}>Ponele nombre al grupo para poder invitar gente.</p>
         )}
       </div>
     </div>
@@ -791,11 +791,11 @@ export function ObjetivosV2() {
                   size={56}
                 />
               ) : estado === 'desconocido' ? (
-                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-bold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.gold, color: COLORS.gold }}>
+                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-bold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.star, color: COLORS.starText }}>
                   por<br />definir
                 </span>
               ) : (
-                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-bold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.coral, color: COLORS.coral }}>
+                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-bold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.naranja, color: COLORS.coralDark }}>
                   falta<br />monto
                 </span>
               )}
