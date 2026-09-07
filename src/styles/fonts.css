@@ -1,5 +1,5 @@
 /* FINA · tipografía
-   - Bricolage Grotesque → display/títulos (grotesque humanista con carácter)
+   - Baloo 2   → display/títulos (redondeada y con cuerpo, va con la mascota)
    - Figtree   → cuerpo / UI (sans-serif limpia)
    - IBM Plex Mono → montos y datos (tabular-nums) */
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
