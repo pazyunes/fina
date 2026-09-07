@@ -105,6 +105,66 @@ export function formatThousands(v: string): string {
   return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
 }
 
+// ── Sistema propietario de confianza del dato (guía frontend.md §5) ─────
+// Es lo que diferencia a FINA: cada dato dice lo que sabe con la seguridad
+// que tiene. El estado se lee en el TRAZO (no en el color), así funciona en
+// escala de grises y no gasta el recurso cromático; y SIEMPRE lleva texto,
+// para que un lector de pantalla lo perciba (§11).
+export type Confianza = 'confirmado' | 'declarado' | 'estimado' | 'por-descubrir';
+
+// Monto: TODO número comparable va en cifras tabulares mono (§3.4). Neutral
+// (tinta) por defecto — un gasto no es un error, no se pinta de alerta.
+export function Monto({
+  value, className = '', style, size,
+}: { value: number; className?: string; style?: React.CSSProperties; size?: number }) {
+  return (
+    <span
+      className={`font-mono tabular-nums ${className}`}
+      style={{ color: COLORS.ink, ...(size ? { fontSize: size } : null), ...style }}
+    >
+      {fmtMoney(value)}
+    </span>
+  );
+}
+
+// Trazo + microcopy fijo de cada estado (§5.1). 'confirmado' no lleva marca.
+const CONFIANZA_META: Record<Exclude<Confianza, 'confirmado'>, { texto: string; dash?: string; w: number; op: number }> = {
+  declarado: { texto: 'según lo que nos contaste', w: 2, op: 1 },
+  estimado: { texto: 'estimado', dash: '2 3', w: 2, op: 1 },
+  'por-descubrir': { texto: 'todavía no lo sabemos', dash: '0.1 3.5', w: 1.6, op: 0.55 },
+};
+export function EstadoConfianza({ estado, className = '' }: { estado: Confianza; className?: string }) {
+  if (estado === 'confirmado') return null; // verificado: sin marca
+  const m = CONFIANZA_META[estado];
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[11.5px] font-medium ${className}`} style={{ color: COLORS.inkSoft }}>
+      <svg width="18" height="6" viewBox="0 0 18 6" fill="none" aria-hidden style={{ opacity: m.op }}>
+        <line x1="1" y1="3" x2="17" y2="3" stroke="currentColor" strokeWidth={m.w} strokeDasharray={m.dash} strokeLinecap="round" />
+      </svg>
+      {m.texto}
+    </span>
+  );
+}
+
+// Rango (§5.2): cuando no hay certeza, se dibuja el rango COMO rango — "entre
+// $X y $Y" + una barra con extremos. Nunca "~$X" ni "$X*". Se acompaña de qué
+// lo va a mejorar; a medida que entran datos, el rango se angosta.
+export function Rango({ min, max, nota, className = '' }: { min: number; max: number; nota?: string; className?: string }) {
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <p className="font-mono tabular-nums text-[15px] font-semibold" style={{ color: COLORS.ink }}>
+        entre {fmtMoney(min)} y {fmtMoney(max)}
+      </p>
+      <div className="relative h-1.5 rounded-full" style={{ background: COLORS.tint }}>
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ background: COLORS.lineStrong }} />
+        <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ background: COLORS.lineStrong }} />
+        <span className="absolute left-1 right-1 top-1/2 -translate-y-1/2 h-[3px] rounded-full" style={{ background: COLORS.lineStrong, opacity: 0.5 }} />
+      </div>
+      {nota && <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{nota}</p>}
+    </div>
+  );
+}
+
 // ── Capa de movimiento: emoción y celebración en el flujo ──────────────
 // Números que "cuentan" (estilo Mercado Pago cuando rinden tus intereses):
 // animan de un valor al siguiente (y de 0 al entrar). Devuelve el número
