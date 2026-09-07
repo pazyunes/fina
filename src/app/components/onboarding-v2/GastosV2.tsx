@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Coachmark, Cta, Donut, COLORS, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
+import { ArmarGrupoBtn, Coachmark, Cta, Donut, COLORS, Face, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
 import { WHATSAPP_URL } from '../WhatsAppFab';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
@@ -73,7 +73,8 @@ export function GastosV2() {
     saveV2GastosState(estado);
   }, [estado]);
 
-  const [openCatId, setOpenCatId] = useState<string | null>(categorias[0]?.id ?? null);
+  // Los sobres arrancan SIEMPRE cerrados (antes se abría el primero solo).
+  const [openCatId, setOpenCatId] = useState<string | null>(null);
   const [topeEditMonto, setTopeEditMonto] = useState<Record<string, string>>({});
   const [topeEditPeriodo, setTopeEditPeriodo] = useState<Record<string, Periodo>>({});
 
@@ -155,11 +156,14 @@ export function GastosV2() {
 
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:px-8 lg:pt-10">
-      <div>
-        <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Mis Gastos</h1>
-        <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Todo lo que vas registrando, en un solo lugar.</p>
+      {/* Banda editorial full-bleed (color de Gastos) + mascota */}
+      <div className="-mx-[22px] -mt-8 lg:-mx-8 lg:-mt-10 px-[22px] lg:px-8 pt-9 lg:pt-10 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.coralSoft }}>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Mis gastos</h1>
+          <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Todo lo que registrás, en un solo lugar. Ponéle un tope a cada sección.</p>
+        </div>
+        <div className="shrink-0"><Face color={COLORS.brand} size={64} mood="happy" /></div>
       </div>
-      <Coachmark id="gastos">Acá vas viendo en qué se te va la plata, separado por sección. Podés ponerle un tope semanal o mensual a cada una.</Coachmark>
 
       {/* En desktop, todo lo de abajo se acomoda en grilla; en mobile sigue
           siendo una sola columna apilada (idéntico a antes). */}

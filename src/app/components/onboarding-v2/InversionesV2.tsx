@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Chip, Coachmark, Cta, Donut, COLORS, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2InversionesPerfil, loadV2InversionesState, saveV2InversionesState } from './shared';
+import { ArmarGrupoBtn, Chip, Coachmark, Cta, Donut, COLORS, Face, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2InversionesPerfil, loadV2InversionesState, saveV2InversionesState } from './shared';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
 // explícito): un mini-quiz corto arma un perfil de riesgo real (no fijo),
@@ -161,8 +161,14 @@ export function InversionesV2() {
   if (paso === 'intro') {
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
-        <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Inversiones</h1>
-        <Coachmark id="inversiones">Acá vas a poder armar tu perfil de riesgo y ver qué opciones tienen sentido para vos — nunca movemos tu plata, solo te orientamos.</Coachmark>
+        {/* Banda editorial full-bleed (color de Inversiones) + mascota */}
+        <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.skySoft }}>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
+            <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
+          </div>
+          <div className="shrink-0"><Face color={COLORS.brand} size={64} mood="happy" /></div>
+        </div>
         <button
           type="button"
           onClick={() => setPaso(pasos[0])}
@@ -189,6 +195,14 @@ export function InversionesV2() {
     return (
       <div className="pb-6">
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
+          {/* Banda editorial full-bleed (color de Inversiones) + mascota */}
+          <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.skySoft }}>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-[26px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
+              <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
+            </div>
+            <div className="shrink-0"><Face color={COLORS.brand} size={60} mood="happy" /></div>
+          </div>
           <div className="flex items-center justify-between gap-2">
             <span
               className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
