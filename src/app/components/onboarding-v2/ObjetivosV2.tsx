@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Cta, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
+import { ArmarGrupoBtn, Celebracion, Cta, Coachmark, COLORS, Donut, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, useCountUp, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
 // (ver ObjetivosPage.tsx / GoalEditModal.tsx) pasada a la estética nueva —
@@ -315,6 +315,9 @@ export function ObjetivosV2() {
   const [editMontoMin, setEditMontoMin] = useState('');
   // Objetivo pendiente de confirmar borrado (id) → abre el diálogo sí/no.
   const [confirmarBorrar, setConfirmarBorrar] = useState<string | null>(null);
+  // Celebración al sumar un registro (burst); `big` al llegar a la meta.
+  const [celebrar, setCelebrar] = useState(false);
+  const [celebrarBig, setCelebrarBig] = useState(false);
 
   const [grupo, setGrupoLocal] = useState(() => loadV2Grupo());
   const [invitado, setInvitado] = useState(false);
@@ -395,6 +398,13 @@ export function ObjetivosV2() {
     };
     setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, contribuciones: [nuevo, ...o.contribuciones] } : o)));
     setRegLabel(''); setRegMonto('');
+    // Celebración: burst normal, o grande si con este registro llegás a la meta.
+    const prevSaved = saved(abierto);
+    const total = abierto.montoTotal;
+    const llegasteALaMeta = total > 0 && prevSaved < total && prevSaved + monto >= total;
+    setCelebrarBig(llegasteALaMeta);
+    setCelebrar(true);
+    setTimeout(() => setCelebrar(false), llegasteALaMeta ? 1100 : 800);
   }
 
   function borrarRegistro(regId: string) {
@@ -444,6 +454,11 @@ export function ObjetivosV2() {
       </div>
     </div>
   );
+
+  // Valores animados del objetivo abierto (números que cuentan + dona que
+  // se llena). Los hooks van SIEMPRE acá arriba, antes de cualquier return.
+  const animAcum = useCountUp(abierto ? saved(abierto) : 0);
+  const animPct = useCountUp(abierto ? pct(abierto) : 0);
 
   // ── Vista: detalle de un objetivo ──
   if (abierto) {
@@ -495,12 +510,13 @@ export function ObjetivosV2() {
             </div>
           </div>
         ) : (
-        <div className={`bg-white rounded-2xl p-4 flex gap-4 items-center ${CARD_SHADOW}`}>
+        <div className={`relative bg-white rounded-2xl p-4 flex gap-4 items-center ${CARD_SHADOW}`}>
+          <Celebracion show={celebrar} big={celebrarBig} />
           {estado === 'definido' && (
             <Donut
-              segments={[{ color: done ? COLORS.green : COLORS.gold, pct: porcentaje }]}
+              segments={[{ color: done ? COLORS.green : COLORS.gold, pct: Math.round(animPct) }]}
               centerLabel={done ? '¡Lograste!' : 'Logrado'}
-              centerValue={`${porcentaje}%`}
+              centerValue={`${Math.round(animPct)}%`}
               size={96}
             />
           )}
@@ -535,7 +551,7 @@ export function ObjetivosV2() {
             {estado === 'definido' && (
               <>
                 <p className="text-[13px] mt-1.5" style={{ color: COLORS.ink }}>
-                  Llevás <strong>{fmtMonto(acumulado, abierto.moneda)}</strong> de {montoLabel(abierto)}
+                  Llevás <strong>{fmtMonto(Math.round(animAcum), abierto.moneda)}</strong> de {montoLabel(abierto)}
                 </p>
                 {!done && <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Te falta {fmtMonto(restante, abierto.moneda)}</p>}
               </>

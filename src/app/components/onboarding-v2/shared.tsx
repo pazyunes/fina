@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { AnimatePresence, motion } from 'motion/react';
 
 // REDISEÑO v2 (rama feat/rediseno-onboarding-v2) — piezas compartidas entre
 // el onboarding y las pantallas post-onboarding.
@@ -59,6 +60,68 @@ export function parseMoneyInput(v: string): number {
 export function formatThousands(v: string): string {
   const digits = v.replace(/\D/g, '').replace(/^0+/, '');
   return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+}
+
+// ── Capa de movimiento: emoción y celebración en el flujo ──────────────
+// Números que "cuentan" (estilo Mercado Pago cuando rinden tus intereses):
+// animan de un valor al siguiente (y de 0 al entrar). Devuelve el número
+// que se está mostrando en cada frame.
+export function useCountUp(value: number, duration = 650): number {
+  const [display, setDisplay] = useState(0);
+  const fromRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = value;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      setDisplay(from + (to - from) * eased);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+      else fromRef.current = to;
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); fromRef.current = to; };
+  }, [value, duration]);
+  return display;
+}
+
+// Número animado listo para usar. `format` recibe el número en curso.
+export function CountUp({ value, format }: { value: number; format?: (n: number) => string }) {
+  const n = useCountUp(value);
+  return <>{format ? format(n) : Math.round(n).toLocaleString('es-AR')}</>;
+}
+
+// Celebración: un burst de partículas de colores que sale del centro del
+// contenedor (el padre tiene que ser position:relative). `big` para logros
+// grandes (ej: llegar a la meta). Se dispara mostrando show=true un rato.
+export function Celebracion({ show, big = false }: { show: boolean; big?: boolean }) {
+  const n = big ? 22 : 12;
+  const colores = [COLORS.brand, COLORS.gold, COLORS.green, COLORS.coral, COLORS.sky];
+  return (
+    <AnimatePresence>
+      {show && (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center overflow-visible">
+          {Array.from({ length: n }).map((_, i) => {
+            const ang = (i / n) * Math.PI * 2;
+            const dist = (big ? 92 : 56) + (i % 5) * 8;
+            return (
+              <motion.span
+                key={i}
+                initial={{ x: 0, y: 0, opacity: 1, scale: 0.5 }}
+                animate={{ x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, opacity: 0, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: big ? 1 : 0.75, ease: 'easeOut' }}
+                className="absolute w-2.5 h-2.5 rounded-full"
+                style={{ background: colores[i % colores.length] }}
+              />
+            );
+          })}
+        </div>
+      )}
+    </AnimatePresence>
+  );
 }
 
 // id legible a partir de un texto libre (para categorías que el usuario

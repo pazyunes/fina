@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { COLORS, Face, formatThousands, fmtMoney, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { Celebracion, CountUp, COLORS, Face, formatThousands, fmtMoney, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
 
@@ -154,6 +154,7 @@ export function HomeV2() {
   const [reserva, setReserva] = useState(() => loadV2Reserva());
   const [reservaOpen, setReservaOpen] = useState(false);
   const [reservaVal, setReservaVal] = useState('');
+  const [celebrarReserva, setCelebrarReserva] = useState(false);
   function guardarReserva() {
     const n = parseMoneyInput(reservaVal);
     if (!n) return;
@@ -162,6 +163,8 @@ export function HomeV2() {
     saveV2Reserva(nuevo);
     setReservaVal('');
     setReservaOpen(false);
+    setCelebrarReserva(true);
+    setTimeout(() => setCelebrarReserva(false), 800);
   }
 
   // Un solo lugar por sección: cada tarjeta muestra su dato y lleva a su
@@ -217,11 +220,14 @@ export function HomeV2() {
       {/* Reservas + Completá tu perfil — lista PLANA (sin caja individual),
           filas apoyadas sobre el fondo y separadas por una línea fina. */}
       <div className="flex flex-col">
-        <div className="flex items-center gap-3 py-3">
+        <div className="relative flex items-center gap-3 py-3">
+          <Celebracion show={celebrarReserva} />
           <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
           <div className="flex-1 min-w-0">
             <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
-            <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{reserva > 0 ? `Tenés ${fmtMoney(reserva)} apartados` : 'Apartá plata para no gastarla — tipo alcancía.'}</p>
+            <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>
+              {reserva > 0 ? <>Tenés <CountUp value={reserva} format={fmtMoney} /> apartados</> : 'Apartá plata para no gastarla — tipo alcancía.'}
+            </p>
           </div>
           <button type="button" onClick={() => setReservaOpen((o) => !o)} className="text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
             {reserva > 0 ? 'Sumar' : 'Reservar'}
