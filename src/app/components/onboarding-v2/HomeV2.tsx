@@ -125,23 +125,6 @@ function datosBienestar() {
   return { gastosPct, gastosTexto, objetivosPct, objetivosTexto, inversionPct, inversionTexto };
 }
 
-function Arco({ radius, pct, color }: { radius: number; pct: number | null; color: string }) {
-  const c = 2 * Math.PI * radius;
-  const dash = pct === null ? 0 : (Math.max(0, Math.min(100, pct)) / 100) * c;
-  return (
-    <>
-      <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(31,27,46,0.08)" strokeWidth="9" />
-      {pct !== null && (
-        <circle
-          cx="60" cy="60" r={radius} fill="none" stroke={color} strokeWidth="9"
-          strokeDasharray={`${dash} ${c - dash}`} strokeLinecap="round"
-          transform="rotate(-90 60 60)"
-        />
-      )}
-    </>
-  );
-}
-
 // REDISEÑO v2 — Home, según el boceto: perfil arriba + 3 acciones grandes
 // para arrancar, y — si hay un grupo armado — una vista chica de la
 // actividad del grupo debajo del dashboard (no mezclada con los accesos
@@ -156,27 +139,6 @@ function Arco({ radius, pct, color }: { radius: number; pct: number | null; colo
 // onboarding (autopercepción de ahorro/inversión/control) y aparece desde
 // el primer segundo — le da algo de valor apenas entra, sin esperar a que
 // use la app.
-// Los 3 accesos principales, ahora como 3 cuadraditos en una sola línea
-// (ícono + nombre), en vez de 3 filas grandes.
-const ACCESOS = [
-  { icon: '💸', label: 'Gastos', to: '/onboarding-v2/gastos', color: COLORS.coral, soft: COLORS.coralSoft },
-  { icon: '🎯', label: 'Objetivos', to: '/onboarding-v2/objetivos', color: COLORS.gold, soft: COLORS.goldSoft },
-  { icon: '🌱', label: 'Inversiones', to: '/onboarding-v2/inversiones', color: COLORS.green, soft: COLORS.greenSoft },
-];
-
-// Una tarjeta chica de "Mis análisis" — arranca simple: un título, un dato
-// grande (si ya hay datos reales) y una barrita del color de la sección.
-function AnalisisCard({ titulo, valor, sub, color }: { titulo: string; valor: string; sub: string; color: string }) {
-  return (
-    <div className="max-lg:w-[168px] max-lg:shrink-0 lg:flex-1 lg:min-w-[150px] bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex flex-col gap-1.5">
-      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>{titulo}</p>
-      <p className="text-[24px] font-bold leading-none" style={{ color }}>{valor}</p>
-      <p className="text-[11.5px] leading-snug" style={{ color: COLORS.inkSoft }}>{sub}</p>
-      <div className="h-1.5 rounded-full mt-1" style={{ background: color, opacity: 0.25 }} />
-    </div>
-  );
-}
-
 export function HomeV2() {
   const navigate = useNavigate();
   const nombre = loadV2Nombre();
@@ -185,7 +147,6 @@ export function HomeV2() {
   const topGrupo = grupo ? [...grupo.miembros].sort((a, b) => b.actividad - a.actividad).slice(0, 3) : [];
   const tips = tipsPara();
   const b = datosBienestar();
-  const hayBienestar = b.gastosPct !== null || b.objetivosPct !== null || b.inversionPct !== null;
   const paso = proximoPaso();
   const racha = rachaDeGastos();
 
@@ -203,11 +164,12 @@ export function HomeV2() {
     setReservaOpen(false);
   }
 
-  // "Mis análisis" — tarjetas simples con lo que ya hay de datos reales.
-  const analisis = [
-    { titulo: 'Gastos', valor: b.gastosPct !== null ? `${b.gastosPct}%` : '—', sub: b.gastosTexto || 'Poné topes en Gastos para ver este análisis.', color: COLORS.coral },
-    { titulo: 'Objetivos', valor: b.objetivosPct !== null ? `${b.objetivosPct}%` : '—', sub: b.objetivosTexto || 'Cargá un objetivo con monto para ver el progreso.', color: COLORS.gold },
-    { titulo: 'Inversiones', valor: b.inversionPct !== null ? (b.inversionPct >= 100 ? '✓' : '~') : '—', sub: b.inversionTexto || 'Sumá un aporte en Inversiones para ver este análisis.', color: COLORS.green },
+  // Un solo lugar por sección: cada tarjeta muestra su dato y lleva a su
+  // pantalla (fusiona los viejos "accesos" + "bienestar" + "Mis análisis").
+  const secciones = [
+    { icon: '💸', label: 'Gastos', to: '/onboarding-v2/gastos', soft: COLORS.coralSoft, metric: b.gastosPct !== null ? b.gastosTexto : 'Registrá para ver tu resumen' },
+    { icon: '🎯', label: 'Objetivos', to: '/onboarding-v2/objetivos', soft: COLORS.goldSoft, metric: b.objetivosPct !== null ? `${b.objetivosPct}% de progreso` : 'Ponéle un monto a un objetivo' },
+    { icon: '🌱', label: 'Inversiones', to: '/onboarding-v2/inversiones', soft: COLORS.greenSoft, metric: b.inversionPct !== null ? b.inversionTexto : 'Sumá tu primer aporte' },
   ];
 
   return (
@@ -245,38 +207,8 @@ export function HomeV2() {
         <Cta label={paso.cta} onClick={() => navigate(paso.to)} />
       </div>
 
-      {/* Anillo de bienestar financiero — solo si hay algo real que mostrar */}
-      {hayBienestar && (
-        <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex gap-4 items-center lg:col-span-2 lg:h-full">
-          <svg viewBox="0 0 120 120" className="w-[92px] h-[92px] shrink-0">
-            <Arco radius={50} pct={b.gastosPct} color={COLORS.coral} />
-            <Arco radius={38} pct={b.objetivosPct} color={COLORS.gold} />
-            <Arco radius={26} pct={b.inversionPct} color={COLORS.green} />
-          </svg>
-          <div className="flex-1 min-w-0 flex flex-col gap-1">
-            <p className="text-[12px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSoft }}>Tu bienestar financiero</p>
-            {b.gastosPct !== null && (
-              <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.ink }}>
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS.coral }} />{b.gastosTexto}
-              </span>
-            )}
-            {b.objetivosPct !== null && (
-              <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.ink }}>
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS.gold }} />{b.objetivosTexto}
-              </span>
-            )}
-            {b.inversionPct !== null && (
-              <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.ink }}>
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS.green }} />{b.inversionTexto}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Reservas (alcancía) — movida acá desde Gastos, arriba de todo,
-          debajo del bienestar. Es plata que apartás para no gastarla. */}
-      <div className={`bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] lg:h-full ${hayBienestar ? 'lg:col-span-1' : 'lg:col-span-3'}`}>
+      {/* Reservas (alcancía) — plata que apartás para no gastarla. */}
+      <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] lg:col-span-3">
         <div className="flex items-center gap-3">
           <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
           <div className="flex-1 min-w-0">
@@ -312,32 +244,23 @@ export function HomeV2() {
         />
       </div>
 
-      {/* 3 accesos como cuadraditos en una línea */}
-      <div className="grid grid-cols-3 gap-3 lg:col-span-3">
-        {ACCESOS.map((a) => (
+      {/* 3 secciones — un solo lugar por sección: dato + acceso a su pantalla */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:col-span-3">
+        {secciones.map((s) => (
           <button
-            key={a.label}
+            key={s.label}
             type="button"
-            onClick={() => navigate(a.to)}
-            className="flex flex-col items-center gap-2 bg-white rounded-2xl py-4 px-2 shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 active:scale-[0.97]"
+            onClick={() => navigate(s.to)}
+            className="flex items-center gap-3 text-left bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] transition-all duration-100 active:scale-[0.98]"
           >
-            <span className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: a.soft }}>
-              <span className="text-xl">{a.icon}</span>
+            <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-lg" style={{ background: s.soft }}>{s.icon}</span>
+            <span className="flex-1 min-w-0">
+              <span className="block font-semibold text-[15px]" style={{ color: COLORS.ink }}>{s.label}</span>
+              <span className="block text-[12px] leading-snug" style={{ color: COLORS.inkSoft }}>{s.metric}</span>
             </span>
-            <span className="text-[12.5px] font-semibold" style={{ color: COLORS.ink }}>{a.label}</span>
+            <span className="shrink-0 font-bold" style={{ color: COLORS.brand }}>→</span>
           </button>
         ))}
-      </div>
-
-      {/* Mis análisis — carrusel horizontal en mobile; en desktop las tarjetas
-          se acomodan en la celda (sin salirse con margen negativo). */}
-      <div className="flex flex-col gap-2 lg:col-span-2">
-        <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Mis análisis</p>
-        <div className="flex gap-3 overflow-x-auto -mx-[22px] px-[22px] pb-1 lg:mx-0 lg:px-0 lg:overflow-visible lg:flex-wrap" style={{ scrollbarWidth: 'none' }}>
-          {analisis.map((a) => (
-            <AnalisisCard key={a.titulo} titulo={a.titulo} valor={a.valor} sub={a.sub} color={a.color} />
-          ))}
-        </div>
       </div>
 
       {/* Mis competencias — ranking del grupo. Empieza simple: el nombre del
