@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Celebracion, CountUp, COLORS, Face, formatThousands, fmtMoney, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { IconGastos, IconInversiones, IconObjetivos, IconReserva, IconSparkle } from './FinaIcons';
+import type { ComponentType } from 'react';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
 
@@ -169,10 +171,10 @@ export function HomeV2() {
 
   // Un solo lugar por sección: cada tarjeta muestra su dato y lleva a su
   // pantalla (fusiona los viejos "accesos" + "bienestar" + "Mis análisis").
-  const secciones = [
-    { icon: '💸', label: 'Gastos', to: '/onboarding-v2/gastos', soft: COLORS.coralSoft, accent: COLORS.coral, metric: b.gastosPct !== null ? b.gastosTexto : 'Registrá para ver tu resumen' },
-    { icon: '🎯', label: 'Objetivos', to: '/onboarding-v2/objetivos', soft: COLORS.goldSoft, accent: COLORS.gold, metric: b.objetivosPct !== null ? `${b.objetivosPct}% de progreso` : 'Ponéle un monto a un objetivo' },
-    { icon: '🌱', label: 'Inversiones', to: '/onboarding-v2/inversiones', soft: COLORS.greenSoft, accent: COLORS.green, metric: b.inversionPct !== null ? b.inversionTexto : 'Sumá tu primer aporte' },
+  const secciones: { Icon: ComponentType<{ size?: number }>; label: string; to: string; soft: string; accent: string; metric: string }[] = [
+    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', soft: COLORS.coralSoft, accent: COLORS.coral, metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá' },
+    { Icon: IconObjetivos, label: 'Objetivos', to: '/onboarding-v2/objetivos', soft: COLORS.goldSoft, accent: COLORS.gold, metric: b.objetivosPct !== null ? `${b.objetivosPct}%` : 'Sumá uno' },
+    { Icon: IconInversiones, label: 'Inversiones', to: '/onboarding-v2/inversiones', soft: COLORS.greenSoft, accent: COLORS.green, metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
   ];
 
   return (
@@ -200,7 +202,7 @@ export function HomeV2() {
       {/* Tu próximo paso — HERO de color: el foco de la pantalla, no una caja más */}
       <div className="rounded-[26px] p-5 flex flex-col gap-4" style={{ background: COLORS.brand }}>
         <div className="flex items-center gap-3.5">
-          <span className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-2xl" style={{ background: 'rgba(255,255,255,0.18)' }}>✨</span>
+          <span className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-white" style={{ background: 'rgba(255,255,255,0.18)' }}><IconSparkle size={24} /></span>
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu próximo paso</p>
             <p className="font-bold text-[17px] leading-tight text-white">{paso.titulo}</p>
@@ -222,7 +224,7 @@ export function HomeV2() {
       <div className="flex flex-col">
         <div className="relative flex items-center gap-3 py-3">
           <Celebracion show={celebrarReserva} />
-          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
+          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft, color: COLORS.gold }}><IconReserva size={18} /></span>
           <div className="flex-1 min-w-0">
             <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
             <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>
@@ -260,22 +262,23 @@ export function HomeV2() {
         </button>
       </div>
 
-      {/* 3 secciones — fichas con color (una por sección): dato + acceso */}
-      <div className="flex flex-col gap-3">
+      {/* 3 secciones — las tres en una línea (fichas tintadas): ícono + nombre + dato corto */}
+      <div className="grid grid-cols-3 gap-2.5">
         {secciones.map((s) => (
           <button
             key={s.label}
             type="button"
             onClick={() => navigate(s.to)}
-            className="flex items-center gap-3.5 text-left rounded-2xl p-4 transition-all duration-100 active:scale-[0.98]"
+            className="flex flex-col items-center gap-2 text-center rounded-2xl px-2 py-4 transition-all duration-100 active:scale-[0.97]"
             style={{ background: s.soft }}
           >
-            <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-lg bg-white/70">{s.icon}</span>
-            <span className="flex-1 min-w-0">
-              <span className="block font-bold text-[15px]" style={{ color: COLORS.ink }}>{s.label}</span>
-              <span className="block text-[12.5px] leading-snug" style={{ color: COLORS.inkSoft }}>{s.metric}</span>
+            <span className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white/70" style={{ color: s.accent }}>
+              <s.Icon size={22} />
             </span>
-            <span className="shrink-0 font-bold text-[18px]" style={{ color: s.accent }}>→</span>
+            <span className="flex flex-col gap-0.5">
+              <span className="text-[13px] font-bold leading-tight" style={{ color: COLORS.ink }}>{s.label}</span>
+              <span className="text-[10.5px] leading-tight" style={{ color: COLORS.inkSoft }}>{s.metric}</span>
+            </span>
           </button>
         ))}
       </div>
