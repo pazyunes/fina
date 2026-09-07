@@ -655,7 +655,7 @@ export function OnboardingV2() {
 
               {currentKey === 'estabilidadIngresos' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Y te llega siempre parecido, o varía?</h1>
+                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Con qué regularidad recibís tus ingresos?</h1>
                   <div className="flex flex-wrap gap-2.5">
                     {ESTABILIDAD.map((o) => (
                       <Chip key={o.id} on={estabilidadIngresos === o.id} onClick={() => setEstabilidadIngresos(o.id)}>{o.label}</Chip>
