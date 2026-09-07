@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Celebracion, CountUp, COLORS, Face, formatThousands, fmtMoney, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
-import { IconGastos, IconInversiones, IconObjetivos, IconReserva, IconSparkle } from './FinaIcons';
+import { IconGastos, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
 import type { ComponentType } from 'react';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
@@ -256,7 +256,7 @@ export function HomeV2() {
           className="flex items-center gap-3 py-3 text-left border-t"
           style={{ borderColor: COLORS.line }}
         >
-          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft }}>📝</span>
+          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}><IconPerfil size={18} /></span>
           <span className="flex-1 text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Completá tu perfil</span>
           <span className="shrink-0 font-bold" style={{ color: COLORS.brand }}>→</span>
         </button>

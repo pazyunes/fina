@@ -99,3 +99,53 @@ export function IconTrofeo(p: IconProps) {
     </Svg>
   );
 }
+
+// Sumar / agregar — más
+export function IconMas(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 5v14M5 12h14" />
+    </Svg>
+  );
+}
+
+// Borrar — tacho
+export function IconBasura(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 7h16M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" />
+      <path d="M6.5 7 7.3 19a1.7 1.7 0 0 0 1.7 1.6h6a1.7 1.7 0 0 0 1.7-1.6L17.5 7" />
+      <path d="M10 11v6M14 11v6" />
+    </Svg>
+  );
+}
+
+// Chat / WhatsApp — globo
+export function IconChat(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 12a7.5 7.5 0 1 1 3.5 6.3L4 19.5l1.2-3.4A7.4 7.4 0 0 1 4 12Z" />
+      <path d="M9 11h6M9 14h4" />
+    </Svg>
+  );
+}
+
+// Buscar — lupa
+export function IconLupa(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M20 20l-4.2-4.2" />
+    </Svg>
+  );
+}
+
+// Perfil — persona
+export function IconPerfil(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="8.5" r="3.5" />
+      <path d="M5.5 19.5a6.5 6.5 0 0 1 13 0" />
+    </Svg>
+  );
+}

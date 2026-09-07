@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArmarGrupoBtn, Coachmark, Cta, Donut, COLORS, Face, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
+import { IconChat, IconEditar, IconLupa } from './FinaIcons';
 import { WHATSAPP_URL } from '../WhatsAppFab';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
@@ -349,7 +350,7 @@ export function GastosV2() {
                   className="text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
                   style={{ borderColor: COLORS.line }}
                 >
-                  <span className="text-2xl shrink-0">📝</span>
+                  <span className="shrink-0" style={{ color: COLORS.brand }}><IconEditar size={22} /></span>
                   <span className="flex flex-col">
                     <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde FINA</span>
                     <span className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Lo cargás acá, a mano, en un toque.</span>
@@ -361,7 +362,7 @@ export function GastosV2() {
                   className="text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
                   style={{ borderColor: COLORS.line }}
                 >
-                  <span className="text-2xl shrink-0">💬</span>
+                  <span className="shrink-0" style={{ color: COLORS.brand }}><IconChat size={22} /></span>
                   <span className="flex flex-col">
                     <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde WhatsApp</span>
                     <span className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Se lo contás a FINA hablando, sin cargar nada.</span>
@@ -503,7 +504,7 @@ export function GastosV2() {
             className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
             style={busquedaAbierta ? { background: COLORS.brand, color: '#fff' } : { background: COLORS.tint, color: COLORS.brand }}
           >
-            🔍
+            <IconLupa size={16} />
           </button>
         </div>
         {busquedaAbierta && (

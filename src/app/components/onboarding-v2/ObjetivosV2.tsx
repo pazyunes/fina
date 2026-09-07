@@ -3,6 +3,8 @@ import { ArmarGrupoBtn, Celebracion, Cta, Coachmark, COLORS, Donut, Face, Segmen
 
 // Sugerencias para arrancar cuando todavía no hay objetivos — le dan
 // emoción/juego a la pantalla vacía; tocás una y abre el modal precargado.
+import { IconBasura, IconEditar, IconMas } from './FinaIcons';
+
 const SUGERENCIAS_OBJETIVO = [
   { emoji: '✈️', nombre: 'Un viaje' },
   { emoji: '🛟', nombre: 'Fondo de emergencia' },
@@ -832,28 +834,28 @@ export function ObjetivosV2() {
                 type="button"
                 onClick={() => empezarEdicion(o)}
                 aria-label="Editar objetivo"
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[13px] transition-all duration-100 active:scale-90"
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
                 style={{ background: COLORS.tint, color: COLORS.brand }}
               >
-                ✏️
+                <IconEditar size={15} />
               </button>
               <button
                 type="button"
                 onClick={() => setOpenId(o.id)}
                 aria-label="Sumar un registro"
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[15px] font-bold transition-all duration-100 active:scale-90"
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
                 style={{ background: COLORS.brandSoft, color: COLORS.brand }}
               >
-                +
+                <IconMas size={16} />
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmarBorrar(o.id)}
                 aria-label="Borrar objetivo"
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[13px] transition-all duration-100 active:scale-90"
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
                 style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}
               >
-                🗑️
+                <IconBasura size={15} />
               </button>
             </div>
           </div>
