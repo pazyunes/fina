@@ -173,8 +173,8 @@ export function HomeV2() {
   ];
 
   return (
-    <div className="px-[22px] pt-8 pb-4 flex flex-col gap-6 lg:max-w-2xl lg:mx-auto lg:pt-10">
-      <div className="flex items-center gap-3">
+    <div className="px-[22px] pt-8 pb-4 flex flex-col gap-6 lg:max-w-4xl lg:mx-auto lg:pt-10 lg:grid lg:grid-cols-2 lg:gap-5 lg:gap-y-6 lg:items-start">
+      <div className="flex items-center gap-3 lg:col-span-2">
         <button
           type="button"
           onClick={() => navigate('/onboarding-v2/perfil')}
@@ -194,20 +194,21 @@ export function HomeV2() {
         </div>
       </div>
 
-      {/* Tu próximo paso — HERO de color: el foco de la pantalla, no una caja más */}
-      <div className="rounded-[26px] p-5 flex flex-col gap-4" style={{ background: COLORS.brand }}>
-        <div className="flex items-center gap-3.5">
+      {/* Tu próximo paso — HERO de color: el foco. En desktop se abre en
+          banner horizontal (texto a la izquierda, acción a la derecha). */}
+      <div className="rounded-[26px] p-5 lg:p-6 flex flex-col gap-4 lg:col-span-2 lg:flex-row lg:items-center lg:gap-6" style={{ background: COLORS.brand }}>
+        <div className="flex items-center gap-3.5 lg:flex-1 lg:min-w-0">
           <span className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-2xl" style={{ background: 'rgba(255,255,255,0.18)' }}>✨</span>
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu próximo paso</p>
-            <p className="font-bold text-[17px] leading-tight text-white">{paso.titulo}</p>
+            <p className="font-bold text-[17px] lg:text-[20px] leading-tight text-white">{paso.titulo}</p>
             <p className="text-[13px] leading-snug" style={{ color: 'rgba(255,255,255,0.88)' }}>{paso.msg}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={() => navigate(paso.to)}
-          className="w-full rounded-2xl py-3.5 text-[15px] font-bold transition-transform duration-100 active:scale-[0.99]"
+          className="w-full lg:w-auto lg:shrink-0 lg:px-10 rounded-2xl py-3.5 text-[15px] font-bold transition-transform duration-100 active:scale-[0.99]"
           style={{ background: '#fff', color: COLORS.brand }}
         >
           {paso.cta}
@@ -216,7 +217,7 @@ export function HomeV2() {
 
       {/* Reservas + Completá tu perfil — lista PLANA (sin caja individual),
           filas apoyadas sobre el fondo y separadas por una línea fina. */}
-      <div className="flex flex-col">
+      <div className="flex flex-col lg:col-span-1">
         <div className="flex items-center gap-3 py-3">
           <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
           <div className="flex-1 min-w-0">
@@ -255,7 +256,7 @@ export function HomeV2() {
       </div>
 
       {/* 3 secciones — fichas con color (una por sección): dato + acceso */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:col-span-1">
         {secciones.map((s) => (
           <button
             key={s.label}
@@ -308,7 +309,7 @@ export function HomeV2() {
       </div>
 
       {/* Tips para vos — recomendaciones cortas según lo que ya sabemos de vos */}
-      <div className="flex flex-col gap-2 lg:col-span-3">
+      <div className="flex flex-col gap-2 lg:col-span-1">
         <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tips para vos</p>
         {tips.map((t) => (
           <button
