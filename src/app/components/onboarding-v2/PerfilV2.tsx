@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArmarGrupoBtn, Chip, COLORS, Face, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
+import { AnalisisCard, Arco, ArmarGrupoBtn, Chip, COLORS, Face, datosBienestar, fmtMoney, formatThousands, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero, saveV2Reserva } from './shared';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
@@ -31,6 +31,30 @@ export function PerfilV2() {
   const [guardado, setGuardado] = useState(false);
   const [nivel, setNivel] = useState<string | null>(() => loadV2NivelFinanciero());
   const [abriendoNivel, setAbriendoNivel] = useState(false);
+
+  // "Tu progreso" — se mudó acá desde Home (bienestar + análisis).
+  const b = datosBienestar();
+  const hayBienestar = b.gastosPct !== null || b.objetivosPct !== null || b.inversionPct !== null;
+  const analisis = [
+    { titulo: 'Gastos', valor: b.gastosPct !== null ? `${b.gastosPct}%` : '—', sub: b.gastosTexto || 'Poné topes en Gastos para ver este análisis.', color: COLORS.coral },
+    { titulo: 'Objetivos', valor: b.objetivosPct !== null ? `${b.objetivosPct}%` : '—', sub: b.objetivosTexto || 'Cargá un objetivo con monto para ver el progreso.', color: COLORS.gold },
+    { titulo: 'Inversiones', valor: b.inversionPct !== null ? (b.inversionPct >= 100 ? '✓' : '~') : '—', sub: b.inversionTexto || 'Sumá un aporte en Inversiones para ver este análisis.', color: COLORS.green },
+  ];
+
+  // Reservas ("alcancía") — se mudó acá desde Home.
+  const [reserva, setReserva] = useState(() => loadV2Reserva());
+  const [reservaOpen, setReservaOpen] = useState(false);
+  const [reservaVal, setReservaVal] = useState('');
+  function guardarReserva() {
+    const n = parseMoneyInput(reservaVal);
+    if (!n) return;
+    const nuevo = reserva + n;
+    setReserva(nuevo);
+    saveV2Reserva(nuevo);
+    setReservaVal('');
+    setReservaOpen(false);
+  }
+
   const items = itemsPerfil();
   const faltan = items.filter((i) => !i.hecho);
   const faltaNivel = !nivel;
@@ -165,6 +189,66 @@ export function PerfilV2() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Reservas (alcancía) — plata que apartás para no gastarla */}
+      <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)]">
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft }}>🔒</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
+            <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{reserva > 0 ? `Tenés ${fmtMoney(reserva)} apartados` : 'Apartá plata para no gastarla — tipo alcancía.'}</p>
+          </div>
+          <button type="button" onClick={() => setReservaOpen((o) => !o)} className="text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
+            {reserva > 0 ? 'Sumar' : 'Reservar'}
+          </button>
+        </div>
+        {reservaOpen && (
+          <div className="mt-3 pt-3 border-t border-dashed flex gap-2" style={{ borderColor: 'rgba(31,27,46,0.14)' }}>
+            <input
+              autoFocus
+              className="flex-1 min-w-0 border border-[rgba(31,27,46,0.16)] rounded-xl px-3 py-2 text-[13.5px] outline-none focus:border-[#7626B3] transition-colors"
+              placeholder="¿Cuánto querés reservar?"
+              inputMode="numeric"
+              value={reservaVal}
+              onChange={(e) => setReservaVal(formatThousands(e.target.value))}
+            />
+            <button type="button" onClick={guardarReserva} className="rounded-xl px-3.5 text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}>
+              Guardar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tu progreso — bienestar + análisis (se mudó desde Home) */}
+      {hayBienestar && (
+        <div className="flex flex-col gap-3">
+          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkSoft }}>Tu progreso</p>
+          <div className="bg-white rounded-2xl p-4 shadow-[0_2px_18px_rgba(31,27,46,0.07)] flex gap-4 items-center">
+            <svg viewBox="0 0 120 120" className="w-[92px] h-[92px] shrink-0">
+              <Arco radius={50} pct={b.gastosPct} color={COLORS.coral} />
+              <Arco radius={38} pct={b.objetivosPct} color={COLORS.gold} />
+              <Arco radius={26} pct={b.inversionPct} color={COLORS.green} />
+            </svg>
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              <p className="text-[12px] font-bold uppercase tracking-wide mb-0.5" style={{ color: COLORS.inkSoft }}>Tu bienestar financiero</p>
+              {b.gastosPct !== null && (
+                <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.ink }}><span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS.coral }} />{b.gastosTexto}</span>
+              )}
+              {b.objetivosPct !== null && (
+                <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.ink }}><span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS.gold }} />{b.objetivosTexto}</span>
+              )}
+              {b.inversionPct !== null && (
+                <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.ink }}><span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS.green }} />{b.inversionTexto}</span>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-3 overflow-x-auto -mx-[22px] px-[22px] pb-1 lg:mx-0 lg:px-0 lg:overflow-visible lg:flex-wrap" style={{ scrollbarWidth: 'none' }}>
+            {analisis.map((a) => (
+              <AnalisisCard key={a.titulo} titulo={a.titulo} valor={a.valor} sub={a.sub} color={a.color} />
+            ))}
+          </div>
         </div>
       )}
 
