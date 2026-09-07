@@ -62,8 +62,15 @@ export function PerfilV2() {
   }
 
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-6 lg:max-w-2xl lg:mx-auto">
-      <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Tu perfil</h1>
+    <div className="px-[22px] pt-8 flex flex-col gap-6 lg:max-w-4xl lg:mx-auto lg:pt-10">
+      {/* Banda editorial full-bleed (violeta) + mascota */}
+      <div className="-mx-[22px] -mt-8 px-[22px] pt-9 lg:pt-10 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.brandSoft }}>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Tu perfil</h1>
+          <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Tu foto, tu nombre y lo que falta para completar tu FINA.</p>
+        </div>
+        <div className="shrink-0"><Face color={COLORS.brand} size={64} mood="happy" /></div>
+      </div>
 
       <div className="flex flex-col items-center gap-3">
         <button

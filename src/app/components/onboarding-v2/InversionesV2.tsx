@@ -160,7 +160,7 @@ export function InversionesV2() {
   // ── intro ──
   if (paso === 'intro') {
     return (
-      <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
+      <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto">
         {/* Banda editorial full-bleed (color de Inversiones) + mascota */}
         <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.inversionesSoft }}>
           <div className="flex-1 min-w-0">
@@ -194,7 +194,7 @@ export function InversionesV2() {
 
     return (
       <div className="pb-6">
-        <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
+        <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto">
           {/* Banda editorial full-bleed (color de Inversiones) + mascota */}
           <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.inversionesSoft }}>
             <div className="flex-1 min-w-0">
@@ -364,7 +364,7 @@ export function InversionesV2() {
 
   // ── q1 / q2 / yaInvierte / enQue / bancos comparten el layout del stepper ──
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto">
+    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto">
       <div className="flex justify-center gap-2">
         {pasos.map((p, i) => (
           <span key={p} className="w-2.5 h-2.5 rounded-full" style={{ background: i <= stepIndex ? COLORS.brand : 'rgba(31,27,46,0.14)' }} />
