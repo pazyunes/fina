@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
+import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
 import { IconChevron, IconClose } from './FinaIcons';
 import { useDisplayCurrency, useMoney } from '../../lib/displayCurrency';
 import { fetchExchangeRate } from '../../lib/exchangeRate';
@@ -793,7 +793,7 @@ export function InversionesV2() {
               reales promete un rendimiento que no podemos conocer.
               El simulador sí es honesto: es explícitamente hipotético, compone
               por MES y muestra el resultado como rango. */}
-          {tab === 'evolucion' && <Simulador tasaMensual={perfil.tasaMensual} />}
+          {tab === 'evolucion' && <Simulador perfilId={perfilId} />}
         </div>
       </div>
     );
@@ -871,117 +871,328 @@ export function InversionesV2() {
   );
 }
 
-// Serie de puntos para una polilínea SVG. La usa el simulador.
-function serieAPath(arr: number[], w: number, h: number, pad: number, max: number) {
-  return arr
-    .map((v, i) => {
-      const x = pad + (arr.length > 1 ? (i / (arr.length - 1)) * (w - 2 * pad) : (w - 2 * pad) / 2);
-      const y = h - pad - (v / max) * (h - 2 * pad);
-      return `${x},${y}`;
-    })
-    .join(' ');
+// ── Supuestos del simulador ──────────────────────────────────────────────
+// La simulación usaba UNA tasa por perfil (0,8% / 1,5% / 2,5% mensual) que no
+// correspondía a ningún instrumento real: decía "tendrías tanto" sin decir
+// haciendo qué. Ahora cada instrumento trae su propio supuesto, con la fuente
+// y la fecha, porque no rinden igual ni funcionan igual.
+//
+// Números de septiembre de 2026. Envejecen: cuando dejen de tener sentido hay
+// que actualizarlos acá y mover FECHA_SUPUESTOS.
+const FECHA_SUPUESTOS = 'septiembre de 2026';
+
+// Inflación esperada para los próximos 12 meses (REM del BCRA). Se usa para
+// traducir el resultado a poder de compra de hoy — que en Argentina es LA
+// pregunta, porque una tasa nominal alta con inflación más alta es una pérdida.
+const INFLACION_ANUAL_ESPERADA = 0.242;
+
+type Supuesto = {
+  instrumentoId: string;
+  /* TNA nominal en pesos. null = no genera interés por sí mismo. */
+  tna: number | null;
+  /* Rinde en dólares (CEDEARs): la tasa no es comparable con una TNA en pesos. */
+  enDolares?: boolean;
+  /* Ajusta por inflación (UVA): el rendimiento real es el spread sobre el CER. */
+  ajustaPorInflacion?: boolean;
+  comoFunciona: string;
+  fuente: string;
+};
+
+const SUPUESTOS: Record<string, Supuesto> = {
+  cuenta_remunerada: {
+    instrumentoId: 'cuenta_remunerada',
+    tna: 0.21,
+    comoFunciona: 'Tu plata rinde todos los días y la podés sacar cuando quieras. La tasa cambia seguido: esto es una foto de hoy.',
+    fuente: 'TAMAR proyectada a diciembre de 2026, Relevamiento de Expectativas del Mercado (BCRA)',
+  },
+  plazo_fijo: {
+    instrumentoId: 'plazo_fijo',
+    tna: 0.242 + 0.01,
+    ajustaPorInflacion: true,
+    comoFunciona: 'Sigue a la inflación y suma alrededor de 1% anual encima. Protege tu poder de compra, pero la plata queda inmovilizada (mínimo 90 días en la mayoría de los bancos).',
+    fuente: 'Inflación esperada a 12 meses (REM del BCRA) + spread UVA típico de plaza',
+  },
+  fci: {
+    instrumentoId: 'fci',
+    tna: 0.20,
+    comoFunciona: 'Un equipo decide dónde poner la plata. Rinde parecido a un plazo fijo pero la podés rescatar en 24 o 48 horas.',
+    fuente: 'Rendimiento típico de fondos money market, en línea con la tasa de plazo fijo del BCRA',
+  },
+  dolar_mep: {
+    instrumentoId: 'dolar_mep',
+    tna: null,
+    comoFunciona: 'Comprar dólares no genera intereses: no hay un rendimiento que simular. Lo que hace es proteger lo que juntaste de una devaluación, y cuánto suba el dólar no lo sabe nadie.',
+    fuente: '—',
+  },
+  cedears: {
+    instrumentoId: 'cedears',
+    tna: 0.10,
+    enDolares: true,
+    comoFunciona: 'Son pedacitos de empresas del exterior. El 10% anual es el promedio histórico del S&P 500 en dólares a largo plazo — hubo años de +25% y años de −20%.',
+    fuente: 'Rendimiento medio anualizado del S&P 500, 1928-2024',
+  },
+};
+
+const mensualDesdeTna = (tna: number) => Math.pow(1 + tna, 1 / 12) - 1;
+const INFLACION_MENSUAL = mensualDesdeTna(INFLACION_ANUAL_ESPERADA);
+
+// Abrevia para el eje: $1,2M / $450k. En el eje importa la magnitud, no el peso
+// exacto — el número exacto va en las cifras de abajo.
+function ejeMoneda(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace('.', ',')}M`;
+  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
+  return `$${Math.round(n)}`;
 }
 
-// Simulador con plata ficticia — pensado para bajar el miedo de quien
-// nunca invirtió: "probalo antes de comprometerte". Usa la misma tasa
-// mensual ilustrativa del perfil ya calculado, pero con un monto y un
-// plazo que la persona inventa, no con aportes reales. Es la única
-// proyección que queda en la pantalla, y es honesta por construcción: la
-// persona sabe que los números son de mentira, compone por MES (no por
-// aporte, que era el error de la vista que se sacó) y el resultado se
-// muestra como rango, nunca como número exacto (§5.2).
-function Simulador({ tasaMensual }: { tasaMensual: number }) {
+// ── Gráfico del simulador ────────────────────────────────────────────────
+// Antes eran dos polilíneas flotando sin ejes: no se sabía cuánta plata ni
+// cuánto tiempo representaba cada punto, así que las líneas no significaban
+// nada. Acá van eje Y con montos, eje X con meses, grilla recesiva, la banda
+// del rango, y etiqueta directa en el punto final de cada serie — así la
+// identidad de las líneas no depende solo del color.
+function GraficoSimulacion({
+  aportado, proyectado, lo, hi, meses, mostrarBanda,
+}: {
+  aportado: number[];
+  proyectado: number[];
+  lo: number[];
+  hi: number[];
+  meses: number;
+  mostrarBanda: boolean;
+}) {
+  const w = 320, h = 190;
+  const padL = 46, padR = 14, padT = 12, padB = 26;
+  const techo = Math.max(...hi, ...aportado, 1);
+  // Redondeo hacia arriba a un número "lindo" para que las guías caigan en
+  // valores legibles y no en 137.482.
+  const paso = Math.pow(10, Math.floor(Math.log10(techo))) / 2;
+  const max = Math.ceil(techo / paso) * paso;
+
+  const x = (i: number, n: number) => padL + (n > 1 ? (i / (n - 1)) * (w - padL - padR) : (w - padL - padR) / 2);
+  const y = (v: number) => h - padB - (v / max) * (h - padT - padB);
+  const linea = (arr: number[]) => arr.map((v, i) => `${x(i, arr.length)},${y(v)}`).join(' ');
+
+  const guias = [0, 0.5, 1].map((f) => f * max);
+  const marcasX = meses <= 6 ? [0, Math.floor(meses / 2), meses - 1] : [0, Math.floor(meses / 2), meses - 1];
+
+  const ultimo = proyectado.length - 1;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 190 }} role="img"
+      aria-label={`Simulación a ${meses} meses: pondrías ${fmtMoney(aportado[ultimo] ?? 0)} y podrías tener entre ${fmtMoney(lo[ultimo] ?? 0)} y ${fmtMoney(hi[ultimo] ?? 0)}.`}>
+      {/* Grilla + eje Y. Recesivo: la grilla ubica, no compite. */}
+      {guias.map((v, i) => (
+        <g key={i}>
+          <line x1={padL} x2={w - padR} y1={y(v)} y2={y(v)} stroke={COLORS.line} strokeWidth="1" />
+          <text x={padL - 7} y={y(v) + 3.5} textAnchor="end" fontSize="9.5" fill={COLORS.inkFaint} fontFamily={FONTS.mono}>{ejeMoneda(v)}</text>
+        </g>
+      ))}
+      {/* Eje X: meses. */}
+      {marcasX.map((m) => (
+        <text key={m} x={x(m, meses)} y={h - 9} textAnchor="middle" fontSize="9.5" fill={COLORS.inkFaint} fontFamily={FONTS.mono}>
+          {m === 0 ? 'hoy' : `${m + 1}m`}
+        </text>
+      ))}
+
+      {/* Banda del rango: la proyección no es una línea, es un intervalo. */}
+      {mostrarBanda && (
+        <polygon
+          points={`${hi.map((v, i) => `${x(i, hi.length)},${y(v)}`).join(' ')} ${[...lo].reverse().map((v, i) => `${x(lo.length - 1 - i, lo.length)},${y(v)}`).join(' ')}`}
+          fill={COLORS.brand}
+          opacity="0.14"
+        />
+      )}
+
+      {/* Lo que pusiste: línea base, en tinta neutra y recesiva. */}
+      <polyline points={linea(aportado)} fill="none" stroke={COLORS.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Lo que tendrías: la serie protagonista. */}
+      {mostrarBanda && (
+        <polyline points={linea(proyectado)} fill="none" stroke={COLORS.brand} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+
+      {/* Puntos finales con anillo de superficie, para que se despeguen. */}
+      <circle cx={x(ultimo, aportado.length)} cy={y(aportado[ultimo])} r="4" fill={COLORS.ink} stroke={COLORS.surface} strokeWidth="2" />
+      {mostrarBanda && (
+        <circle cx={x(ultimo, proyectado.length)} cy={y(proyectado[ultimo])} r="4.5" fill={COLORS.brand} stroke={COLORS.surface} strokeWidth="2" />
+      )}
+    </svg>
+  );
+}
+
+// Simulador con plata ficticia — pensado para bajar el miedo de quien nunca
+// invirtió: "probalo antes de comprometerte". Ahora simula SOBRE UN
+// INSTRUMENTO CONCRETO, con su tasa y su fuente: decir "tendrías tanto" sin
+// decir haciendo qué no informa, solo entusiasma.
+function Simulador({ perfilId }: { perfilId: PerfilId }) {
   const [monto, setMonto] = useState('10.000');
   const [meses, setMeses] = useState(12);
+  // Arranca en el instrumento más conservador que le corresponde al perfil.
+  const sugeridos = INSTRUMENTOS.filter((i) => i.perfiles.includes(perfilId));
+  const [instrId, setInstrId] = useState<string>(sugeridos[0]?.id ?? INSTRUMENTOS[0].id);
   const montoNum = parseMoneyInput(monto);
 
-  const serieAportado: number[] = [];
-  const serieProyectado: number[] = [];
-  let acumAp = 0;
-  let acumProy = 0;
-  // Banda de estimación: la proyección nunca es un número exacto (§5.2), así
-  // que además del punto medio calculamos un piso y un techo (media tasa /
-  // tasa y media) para mostrar el resultado como RANGO, no como certeza.
-  let acumLo = 0;
-  let acumHi = 0;
+  const instrumento = INSTRUMENTOS.find((i) => i.id === instrId) ?? INSTRUMENTOS[0];
+  const sup = SUPUESTOS[instrId];
+  const rinde = sup?.tna != null;
+  const tasaMensual = rinde ? mensualDesdeTna(sup.tna as number) : 0;
+
+  const aportado: number[] = [];
+  const proyectado: number[] = [];
+  const lo: number[] = [];
+  const hi: number[] = [];
+  let acumAp = 0, acumProy = 0, acumLo = 0, acumHi = 0;
   for (let i = 0; i < meses; i++) {
     acumAp += montoNum;
+    // Banda: media tasa / tasa y media. La proyección nunca es un número
+    // exacto (§5.2) — y en un instrumento variable la banda es lo honesto.
     acumProy = (acumProy + montoNum) * (1 + tasaMensual);
     acumLo = (acumLo + montoNum) * (1 + tasaMensual * 0.5);
     acumHi = (acumHi + montoNum) * (1 + tasaMensual * 1.5);
-    serieAportado.push(acumAp);
-    serieProyectado.push(acumProy);
+    aportado.push(acumAp); proyectado.push(acumProy); lo.push(acumLo); hi.push(acumHi);
   }
-  const max = Math.max(...serieAportado, ...serieProyectado, 1);
-  const w = 280, h = 130, pad = 10;
-  const totalAportado = serieAportado[serieAportado.length - 1] ?? 0;
-  const proyeccionLo = acumLo;
-  const proyeccionHi = acumHi;
-  // Aportado = declarado (línea llena, neutral); proyección = estimado
-  // (línea punteada). El trazo dice la confianza, no el color (§5.1).
-  const realColor = COLORS.ink;
-  const proyColor = COLORS.brand;
+  const totalAportado = aportado[aportado.length - 1] ?? 0;
+  const proyFinal = proyectado[proyectado.length - 1] ?? 0;
+
+  // EL DATO HONESTO. Una tasa nominal alta con inflación más alta es una
+  // pérdida de poder de compra, y en pesos eso no se ve: $1.200.000 dentro de
+  // un año parecen más que $1.000.000 hoy aunque compren menos. Se traduce
+  // todo a plata de hoy. Para lo que rinde en dólares no aplica: ahí el
+  // rendimiento ya viene en una moneda que no se licúa igual.
+  //
+  // OJO con la comparación: lo que se pone NO se pone todo junto hoy. Cada
+  // cuota entra en un mes distinto y vale distinto en plata de hoy, así que
+  // comparar el resultado real contra la SUMA NOMINAL de las cuotas subestima
+  // siempre (esa suma mezcla pesos de hoy con pesos de dentro de dos años).
+  // Se descuenta cuota por cuota.
+  const proyReal = proyFinal / Math.pow(1 + INFLACION_MENSUAL, meses);
+  let aportadoReal = 0;
+  for (let i = 1; i <= meses; i++) aportadoReal += montoNum / Math.pow(1 + INFLACION_MENSUAL, i);
+  const ganaPoderDeCompra = proyReal > aportadoReal;
 
   return (
     <div className={BLOQUE}>
       <TituloSeccion>Probá antes de invertir plata real</TituloSeccion>
-      <div className="relative">
-        <span className="absolute top-1/2 -translate-y-1/2 left-3" style={{ color: COLORS.inkSoft }}>$</span>
-        <input
-          className="v2-focus w-full rounded-xl pl-7 pr-3 py-2.5 text-[15px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors"
-          style={{ background: COLORS.surface, color: COLORS.ink, borderColor: COLORS.lineStrong }}
-          placeholder="Cuánto pondrías por mes"
-          inputMode="decimal"
-          value={monto}
-          onChange={(e) => setMonto(formatThousands(e.target.value))}
+      <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+        Elegí un instrumento y un monto imaginario. No mueve plata: es para ver cómo funciona cada uno.
+      </p>
+
+      <div className="flex flex-col gap-2.5">
+        <TituloSeccion>¿En qué?</TituloSeccion>
+        <OpcionesGrid
+          opciones={INSTRUMENTOS.map((i) => ({ id: i.id, label: i.nombre }))}
+          valor={instrId}
+          onElegir={setInstrId}
         />
       </div>
-      <div className="flex gap-2">
-        {[6, 12, 24].map((m) => {
-          const sel = meses === m;
-          return (
+
+      <div className="flex flex-col gap-2.5">
+        <TituloSeccion>¿Cuánto por mes?</TituloSeccion>
+        <div className="relative">
+          <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
+          <input
+            aria-label="Cuánto pondrías por mes"
+            className="v2-focus w-full rounded-2xl pl-8 pr-4 py-3 text-[18px] font-mono tabular-nums outline-none transition-colors"
+            style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+            placeholder="Cuánto pondrías por mes"
+            inputMode="decimal"
+            value={monto}
+            onChange={(e) => setMonto(formatThousands(e.target.value))}
+          />
+        </div>
+        <div className="flex gap-2">
+          {[6, 12, 24].map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => setMeses(m)}
-              aria-pressed={sel}
-              className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-semibold transition-all duration-100 active:scale-95"
-              style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.tint, color: COLORS.inkSoft }}
+              aria-pressed={meses === m}
+              className="v2-focus flex-1 min-h-[44px] rounded-2xl text-[15px] font-bold transition-all duration-100 active:scale-[0.97]"
+              style={meses === m
+                ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
+                : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
             >
               {m} meses
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
       {montoNum > 0 && (
         <>
-          <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[130px]">
-            <polyline points={serieAPath(serieProyectado, w, h, pad, max)} fill="none" stroke={proyColor} strokeWidth="3" strokeDasharray="2 4" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points={serieAPath(serieAportado, w, h, pad, max)} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <div className="flex gap-4">
-            <span className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Pondrías</span>
-            <span className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}><span className="w-4 h-0.5 rounded-full" style={{ background: proyColor }} /> Tendrías (estimado)</span>
+          <GraficoSimulacion aportado={aportado} proyectado={proyectado} lo={lo} hi={hi} meses={meses} mostrarBanda={rinde} />
+
+          {/* Leyenda: con dos series siempre va, y además cada una lleva su
+              cifra al lado, así la identidad no depende del color. */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="w-4 h-[2px] rounded-full shrink-0" style={{ background: COLORS.ink }} />
+              <span className="flex-1 text-[15px]" style={{ color: COLORS.inkSoft }}>Lo que pondrías</span>
+              <span className="font-mono tabular-nums font-semibold text-[15px]" style={{ color: COLORS.ink }}>{fmtMoney(totalAportado)}</span>
+            </div>
+            {rinde && (
+              <div className="flex items-center gap-2.5">
+                <span className="w-4 h-[2.5px] rounded-full shrink-0" style={{ background: COLORS.brand }} />
+                <span className="flex-1 text-[15px]" style={{ color: COLORS.inkSoft }}>Lo que podrías tener</span>
+                <span className="font-mono tabular-nums font-semibold text-[15px]" style={{ color: COLORS.brand }}>{fmtMoney(proyFinal)}</span>
+              </div>
+            )}
           </div>
-          <div className="flex flex-col gap-2.5">
-            {/* Lo que pondrías es aritmética de lo que dijiste: declarado, exacto. */}
-            <div className="py-2.5 border-b" style={{ borderColor: COLORS.line }}>
-              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>En {meses} meses pondrías</p>
-              <Monto value={totalAportado} className="font-bold text-[18px]" />
+
+          {rinde ? (
+            <div className="flex flex-col gap-2.5 pt-1">
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>A los {meses} meses podrías tener</p>
+                <Rango min={lo[lo.length - 1]} max={hi[hi.length - 1]} />
+                <EstadoConfianza estado="estimado" />
+              </div>
+
+              {/* En Argentina el número nominal engaña: $1.200.000 el año que
+                  viene parecen más que $1.000.000 hoy aunque compren menos. */}
+              {!sup?.enDolares && (
+                <div className="flex flex-col gap-1.5 pt-1 pl-3.5 border-l-2" style={{ borderColor: ganaPoderDeCompra ? COLORS.lima : COLORS.star }}>
+                  <p className="text-[14px] font-semibold" style={{ color: COLORS.ink }}>En plata de hoy</p>
+                  <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                    Con una inflación de {Math.round(INFLACION_ANUAL_ESPERADA * 100)}% anual, esos{' '}
+                    <span className="font-mono tabular-nums">{fmtMoney(proyFinal)}</span> comprarían como{' '}
+                    <span className="font-mono tabular-nums font-bold" style={{ color: COLORS.ink }}>{fmtMoney(proyReal)}</span> de hoy
+                    {ganaPoderDeCompra
+                      ? `, contra ${fmtMoney(aportadoReal)} que habrías puesto medido igual: le ganás a la inflación.`
+                      : `, contra ${fmtMoney(aportadoReal)} que habrías puesto medido igual: con este instrumento no le ganás a la inflación, la seguís de cerca.`}
+                  </p>
+                </div>
+              )}
             </div>
-            {/* Lo que tendrías es una PROYECCIÓN: se muestra como rango, nunca
-                como número exacto (§5.2). Se angosta cuando hay más certeza. */}
-            <div className="py-2.5 flex flex-col gap-1.5">
-              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Podrías tener</p>
-              <Rango min={proyeccionLo} max={proyeccionHi} />
-              <EstadoConfianza estado="estimado" />
-            </div>
+          ) : (
+            <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+              {sup?.comoFunciona}
+            </p>
+          )}
+
+          {/* Con qué se hizo la cuenta. Sin esto, "tendrías tanto" es un número
+              sin respaldo — y no todos los instrumentos funcionan igual. */}
+          <div className="flex flex-col gap-1.5 pt-1">
+            <TituloSeccion>Cómo se hizo esta cuenta</TituloSeccion>
+            <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{sup?.comoFunciona}</p>
+            {rinde && (
+              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                Supuesto: <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>
+                  {Math.round((sup!.tna as number) * 100)}% anual{sup?.enDolares ? ' en dólares' : ''}
+                </span>
+                {sup?.ajustaPorInflacion ? ' (inflación esperada + spread).' : '.'}{' '}
+                La banda del gráfico va de la mitad a una vez y media esa tasa, porque ninguna es fija.
+              </p>
+            )}
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
+              Fuente: {sup?.fuente}. Datos de {FECHA_SUPUESTOS} — las tasas cambian.
+            </p>
           </div>
         </>
       )}
-      <p className="text-[12px]" style={{ color: COLORS.inkFaint }}>Es una simulación con números inventados — no es una promesa de rendimiento ni mueve plata real.</p>
+
+      <p className="text-[14px] leading-snug" style={{ color: COLORS.inkFaint }}>
+        Es una simulación con números inventados sobre {instrumento.nombre}: no es una promesa de rendimiento, no mueve plata real y no reemplaza asesoramiento financiero.
+      </p>
       <ArmarGrupoBtn />
     </div>
   );
 }
+
