@@ -104,12 +104,12 @@ export function GastosV2() {
   const [ngNuevaCat, setNgNuevaCat] = useState('');
   const [ngTipo, setNgTipo] = useState<TipoGasto>('necesario');
 
-  // Buscador — por nombre, sección, tipo, y orden por monto o por fecha.
-  // Colapsado en una lupita de costado por defecto para no ocupar tanto lugar.
+  // Buscador por nombre + orden. Los filtros por sección y por tipo se sacaron:
+  // las secciones ya están separadas arriba, así que filtrar la lista por
+  // sección duplicaba el mismo trabajo, y las dos filas de chips ocupaban más
+  // pantalla que la lista que filtraban.
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-  const [filtroSeccion, setFiltroSeccion] = useState<string>('todas');
-  const [filtroTipo, setFiltroTipo] = useState<TipoGasto | 'todos'>('todos');
   const [orden, setOrden] = useState<'recientes' | 'monto'>('recientes');
 
   const totalGastado = gastos.reduce((s, g) => s + g.monto, 0);
@@ -127,10 +127,8 @@ export function GastosV2() {
 
   const gastosFiltrados = gastos
     .filter((g) => !busqueda.trim() || g.descripcion.toLowerCase().includes(busqueda.trim().toLowerCase()))
-    .filter((g) => filtroSeccion === 'todas' || g.categoriaId === filtroSeccion)
-    .filter((g) => filtroTipo === 'todos' || g.tipo === filtroTipo)
     .sort((a, b) => (orden === 'monto' ? b.monto - a.monto : b.ts - a.ts));
-  const hayFiltrosActivos = !!busqueda.trim() || filtroSeccion !== 'todas' || filtroTipo !== 'todos';
+  const hayBusqueda = !!busqueda.trim();
 
   function agregarDinero() {
     const n = parseMoneyInput(addDispVal);
@@ -461,8 +459,11 @@ export function GastosV2() {
                       : <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Sin registros todavía</p>}
                   </div>
                 </div>
-                <span className="shrink-0" style={{ color: COLORS.inkFaint }}>
-                  <IconChevron size={16} style={{ transform: open ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 120ms' }} />
+                <span className="shrink-0 flex items-center gap-2">
+                  {!tope && <span className="text-[14px]" style={{ color: COLORS.inkFaint }}>Sin tope</span>}
+                  <span style={{ color: COLORS.inkFaint }}>
+                    <IconChevron size={16} style={{ transform: open ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 120ms' }} />
+                  </span>
                 </span>
               </button>
 
@@ -478,16 +479,7 @@ export function GastosV2() {
                     <button type="button" className="v2-focus font-semibold underline" style={{ color: COLORS.brand }} onClick={() => setOpenCatId(cat.id)}>Editar</button>
                   </div>
                 </div>
-              ) : (
-                // Tope sin definir = 'por-descubrir' (§5.1): invitación, no error.
-                // Sin naranja ni gold de alerta; tint neutral + ícono monolineal.
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="shrink-0" style={{ color: COLORS.inkSoft }}><IconLupa size={16} /></span>
-                  <p className="text-[14px] font-medium" style={{ color: COLORS.inkSoft }}>
-                    Por ahora estamos mirando cómo es tu {cat.nombre.toLowerCase()}. Cuando quieras, ponéle un tope.
-                  </p>
-                </div>
-              )}
+              ) : null}
 
               {open && (
                 <div className="mt-3 pt-3 border-t border-dashed flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
@@ -545,7 +537,7 @@ export function GastosV2() {
       {/* Buscador de gastos — colapsado en una lupita, no ocupa lugar hasta que se usa */}
       <div className="flex flex-col gap-2.5 lg:col-span-1">
         <div className="flex items-center justify-between">
-          <p className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>Tus gastos</p>
+          <TituloSeccion>Tus gastos</TituloSeccion>
           <button
             type="button"
             onClick={() => setBusquedaAbierta((v) => !v)}
@@ -568,50 +560,6 @@ export function GastosV2() {
             onChange={(e) => setBusqueda(e.target.value)}
           />
         )}
-        {categorias.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setFiltroSeccion('todas')}
-              className="v2-focus rounded-full px-3 py-1.5 text-[14px] font-semibold transition-all duration-100 active:scale-95"
-              style={filtroSeccion === 'todas' ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-            >
-              Todas las secciones
-            </button>
-            {categorias.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setFiltroSeccion(c.id)}
-                className="v2-focus rounded-full px-3 py-1.5 text-[14px] font-semibold transition-all duration-100 active:scale-95"
-                style={filtroSeccion === c.id ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-              >
-                {c.nombre}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setFiltroTipo('todos')}
-            className="v2-focus rounded-full px-3 py-1.5 text-[14px] font-semibold transition-all duration-100 active:scale-95"
-            style={filtroTipo === 'todos' ? { background: COLORS.ink, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-          >
-            Todos los tipos
-          </button>
-          {TIPOS.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setFiltroTipo(t)}
-              className="v2-focus rounded-full px-3 py-1.5 text-[14px] font-semibold transition-all duration-100 active:scale-95"
-              style={filtroTipo === t ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-            >
-              {TIPO_INFO[t].label}
-            </button>
-          ))}
-        </div>
         <SegmentedTab
           options={[{ id: 'recientes' as const, label: 'Más recientes' }, { id: 'monto' as const, label: 'Mayor monto' }]}
           value={orden}
@@ -621,9 +569,9 @@ export function GastosV2() {
 
         {gastos.length === 0 && <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
         {gastos.length > 0 && gastosFiltrados.length === 0 && (
-          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>No encontramos gastos con esos filtros.</p>
+          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>No encontramos gastos con ese nombre.</p>
         )}
-        {gastosFiltrados.slice(0, hayFiltrosActivos ? 50 : 6).map((g) => {
+        {gastosFiltrados.slice(0, hayBusqueda ? 50 : 6).map((g) => {
           const cat = categorias.find((c) => c.id === g.categoriaId);
           return (
             // Idem: un movimiento no es una tarjeta, es un renglón.
