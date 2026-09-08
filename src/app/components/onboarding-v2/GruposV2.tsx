@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { COLORS, Face, Grupo, Titulo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, saveV2Grupo } from './shared';
 import { IconChevron } from './FinaIcons';
 
@@ -23,6 +24,13 @@ function Check({ size = 12 }: { size?: number }) {
 }
 
 export function GruposV2() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  // Grupos no está en el menú de abajo: siempre se llega desde otra pantalla
+  // (Objetivos, Perfil, Home). Quien navega hasta acá deja escrito de dónde
+  // vino, así el volver devuelve al lugar real y no a un default arbitrario.
+  const origen = (location.state as { from?: string } | null)?.from ?? '/onboarding-v2/home';
+
   const [grupo, setGrupo] = useState<Grupo | null>(() => loadV2Grupo());
   const [nombreGrupo, setNombreGrupo] = useState('');
   const [codigoTxt, setCodigoTxt] = useState('');
@@ -59,17 +67,22 @@ export function GruposV2() {
     }
   }
 
-  // Botón "Volver" reutilizable — sin flecha de plantilla (§2): chevron
-  // del set propio, girado, y target táctil cómodo.
+  // Botón "Volver" — sin flecha de plantilla (§2): chevron del set propio,
+  // girado, con target táctil de 44px. Es JERÁRQUICO: desde "crear"/"unirse"
+  // retrocede al selector, y desde el selector sale a la pantalla de la que
+  // viniste. Antes el único volver era el de adentro de "crear" y solo llegaba
+  // al selector, así que ahí la pantalla se volvía un callejón sin salida.
   function Volver() {
+    const enSubpaso = modo !== 'elegir';
     return (
       <button
         type="button"
-        className="v2-focus inline-flex items-center gap-1.5 self-start text-[15px] font-semibold rounded-full py-2 pr-3 pl-1 -ml-1"
+        aria-label={enSubpaso ? 'Volver a elegir' : 'Volver a la pantalla anterior'}
+        className="v2-focus inline-flex items-center gap-1.5 self-start min-h-[44px] text-[15px] font-semibold rounded-full py-2 pr-3 pl-1 -ml-1"
         style={{ color: COLORS.inkSoft }}
-        onClick={() => setModo('elegir')}
+        onClick={() => (enSubpaso ? setModo('elegir') : navigate(origen))}
       >
-        <span className="rotate-180"><IconChevron size={16} /></span>
+        <span className="rotate-180"><IconChevron size={18} /></span>
         Volver
       </button>
     );
@@ -77,7 +90,8 @@ export function GruposV2() {
 
   if (!grupo) {
     return (
-      <div className="px-[22px] pt-8 flex flex-col gap-4">
+      <div className="px-6 pt-6 flex flex-col gap-4">
+        <Volver />
         <Titulo>Grupos</Titulo>
 
         {/* Vidriera vacía = promesa (§10): mostramos qué va a haber acá y una
@@ -138,7 +152,6 @@ export function GruposV2() {
 
         {modo === 'crear' && (
           <div className="flex flex-col gap-2.5">
-            <Volver />
             <label htmlFor="grupo-nombre" className="text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>Nombre del grupo</label>
             <input
               id="grupo-nombre"
@@ -153,7 +166,7 @@ export function GruposV2() {
               type="button"
               onClick={crear}
               disabled={!nombreGrupo.trim()}
-              className="v2-focus rounded-2xl py-3.5 font-bold disabled:opacity-40 transition-all duration-100 active:scale-[0.98]"
+              className="v2-focus rounded-2xl py-3.5 font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Crear grupo
@@ -163,7 +176,6 @@ export function GruposV2() {
 
         {modo === 'unirse' && (
           <div className="flex flex-col gap-2.5">
-            <Volver />
             <label htmlFor="grupo-codigo" className="text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>Código del grupo</label>
             <input
               id="grupo-codigo"
@@ -178,7 +190,7 @@ export function GruposV2() {
               type="button"
               onClick={unirse}
               disabled={!codigoTxt.trim()}
-              className="v2-focus rounded-2xl py-3.5 font-bold disabled:opacity-40 transition-all duration-100 active:scale-[0.98]"
+              className="v2-focus rounded-2xl py-3.5 font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Unirme
@@ -193,8 +205,9 @@ export function GruposV2() {
   const max = Math.max(...ordenados.map((m) => m.actividad), 1);
 
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
-      <div className="flex items-center justify-between">
+    <div className="px-6 pt-6 flex flex-col gap-4 pb-4">
+      <Volver />
+      <div className="flex items-center justify-between gap-3">
         <Titulo>{grupo.nombre}</Titulo>
         <button type="button" onClick={salir} className="v2-focus text-[14px] font-semibold underline rounded-full px-2 py-2" style={{ color: COLORS.inkSoft }}>Salir</button>
       </div>

@@ -1,15 +1,28 @@
 /* onboarding-v2 — estilos base scopeados al sandbox del rediseño.
    No toca la app real: solo aplica a los elementos con estas clases, que
-   viven únicamente dentro de onboarding-v2. Alineado a la guía de frontend
-   (§11 accesibilidad): foco SIEMPRE visible, nunca outline:none sin reemplazo. */
+   viven únicamente dentro de onboarding-v2. Los colores entran por CSS vars
+   derivadas de COLORS (ver COLOR_VARS en shared.tsx): acá no hay hex sueltos.
+   Alineado a la guía de frontend §11: foco SIEMPRE visible. */
 
-/* Foco visible (guía §4 --focus-ring). Se aplica a cualquier control
-   interactivo de v2 que lleve la clase .v2-focus. */
+/* Foco visible. Nunca outline:none sin reemplazo. */
 .v2-focus:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(126, 93, 168, 0.45);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v2-focus) 45%, transparent);
 }
 /* Cuando el control ya tiene su propia sombra, el anillo se suma sin pisarla. */
 .v2-focus {
   outline: none;
+}
+
+/* Estado deshabilitado de los botones de acción. `opacity-40` sobre el violeta
+   producía un lavanda con texto blanco encima: fallaba contraste y además no
+   se leía como "deshabilitado", solo como "violeta más claro". Acá el relleno
+   se cambia por el neutro, con borde y texto que sí contrastan. */
+.v2-disabled:disabled,
+.v2-disabled[aria-disabled='true'] {
+  background: var(--v2-disabled-bg) !important;
+  color: var(--v2-disabled-fg) !important;
+  border: 1.5px solid var(--v2-disabled-borde) !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
 }

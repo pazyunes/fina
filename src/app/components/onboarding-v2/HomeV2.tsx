@@ -310,7 +310,7 @@ export function HomeV2() {
         {grupo ? (
           <button
             type="button"
-            onClick={() => navigate('/onboarding-v2/grupos')}
+            onClick={() => navigate('/onboarding-v2/grupos', { state: { from: '/onboarding-v2/home' } })}
             className="v2-focus text-left flex flex-col gap-2.5 transition-transform duration-100 active:scale-[0.99]"
           >
             <span className="flex items-center gap-2 text-[16px] font-bold" style={{ color: COLORS.brand }}>

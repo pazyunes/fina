@@ -262,8 +262,16 @@ export function InversionesV2() {
                 const bancoMatch = bancos.find((b) => r.apps.includes(b));
                 const already = yaEnIds.has(r.id);
                 return (
-                  <div key={r.id} className="py-4 border-b last:border-b-0" style={{ borderColor: COLORS.line, opacity: already ? 0.7 : 1 }}>
-                    <div className="flex items-center justify-between gap-2">
+                  // La fila se arma como columna flex: antes los hijos eran
+                  // elementos en línea sueltos y el <p> del banco era
+                  // `inline-flex`, así que no ocupaba el ancho completo y el
+                  // botón de "¿por qué?" se le pegaba al lado en la misma
+                  // línea. El `mt-2` del botón no podía separarlos porque el
+                  // problema no era vertical. Con `flex-col` cada hijo es su
+                  // propia fila y el `gap` los separa siempre, sin margenes
+                  // manuales que dependan del orden.
+                  <div key={r.id} className="py-4 border-b last:border-b-0 flex flex-col items-start gap-1.5" style={{ borderColor: COLORS.line, opacity: already ? 0.7 : 1 }}>
+                    <div className="w-full flex items-center justify-between gap-2">
                       <p className="font-bold text-[16px]" style={{ color: COLORS.ink }}>{r.nombre}</p>
                       <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>
                         <span className="w-2 h-2 rounded-full" style={{ background: RIESGO_FILL[r.riesgo] }} aria-hidden />
@@ -271,24 +279,24 @@ export function InversionesV2() {
                       </span>
                     </div>
                     {bancoMatch ? (
-                      <p className="inline-flex items-center gap-1.5 text-[14px] font-semibold mt-1" style={{ color: COLORS.limaText }}>
+                      <p className="inline-flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: COLORS.limaText }}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ background: COLORS.limaText }} aria-hidden />
                         Lo tenés a mano desde tu {bancoMatch}
                       </p>
                     ) : (
-                      <p className="text-[14px] mt-1" style={{ color: COLORS.inkSoft }}>{r.desc}</p>
+                      <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{r.desc}</p>
                     )}
-                    {already && <p className="text-[14px] font-semibold mt-1" style={{ color: COLORS.inkSoft }}>Ya lo hacés</p>}
+                    {already && <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Ya lo hacés</p>}
                     <button
                       type="button"
                       onClick={() => setExpandido((s) => { const n = new Set(s); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
-                      className="v2-focus mt-2 text-[14px] font-bold underline rounded"
+                      className="v2-focus min-h-[44px] flex items-center text-[14px] font-bold underline rounded"
                       style={{ color: COLORS.brand }}
                     >
                       {expandido.has(r.id) ? 'Ocultar' : '¿Por qué te lo recomendamos?'}
                     </button>
                     {expandido.has(r.id) && (
-                      <p className="text-[14px] mt-1.5 leading-relaxed" style={{ color: COLORS.inkSoft }}>{r.porQue}</p>
+                      <p className="text-[14px] leading-relaxed" style={{ color: COLORS.inkSoft }}>{r.porQue}</p>
                     )}
                   </div>
                 );
@@ -332,7 +340,7 @@ export function InversionesV2() {
                     value={aporteMonto}
                     onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
                   />
-                  <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} aria-label="Registrar aporte" className="v2-focus rounded-xl w-12 flex items-center justify-center text-white disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}><IconMas size={20} /></button>
+                  <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} aria-label="Registrar aporte" className="v2-focus rounded-xl w-12 flex items-center justify-center text-white v2-disabled transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}><IconMas size={20} /></button>
                 </div>
               </div>
 

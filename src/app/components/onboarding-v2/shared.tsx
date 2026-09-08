@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { IconChevron, IconClose, IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
 import './onboarding-v2.css';
@@ -104,11 +104,22 @@ export const FONTS = {
   body: "'Figtree', system-ui, sans-serif",
   mono: "'IBM Plex Mono', ui-monospace, monospace",
 };
-// Se pega en el root de V2Layout y DeviceFrame (style={{ ...FONT_VARS }}).
+// Se pega en el root de V2Layout y DeviceFrame (style={{ ...FONT_VARS, ...COLOR_VARS }}).
 export const FONT_VARS = {
   '--font-serif': FONTS.display,
   '--font-sans': FONTS.body,
   '--font-mono': FONTS.mono,
+} as React.CSSProperties;
+
+// Los pocos tokens que necesita el CSS scopeado (onboarding-v2.css) para el
+// foco y el estado deshabilitado. Se derivan de COLORS en vez de repetir el
+// hex en la hoja de estilos: la regla 1 del repo es que no haya hex sueltos,
+// y acá COLORS sigue siendo la única fuente de verdad.
+export const COLOR_VARS = {
+  '--v2-focus': COLORS.brand,
+  '--v2-disabled-bg': COLORS.tint,
+  '--v2-disabled-fg': COLORS.inkSoft,
+  '--v2-disabled-borde': COLORS.lineStrong,
 } as React.CSSProperties;
 
 // ── plata: formateo + parseo de inputs ──
@@ -380,11 +391,14 @@ export function crearGrupoDemo(nombreGrupo: string): Grupo {
 // hay un grupo armado, lleva a verlo; si no, a la pantalla para crearlo.
 export function ArmarGrupoBtn() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const grupo = loadV2Grupo();
   return (
     <button
       type="button"
-      onClick={() => navigate('/onboarding-v2/grupos')}
+      // Se deja escrito de dónde se sale, para que el volver de Grupos
+      // devuelva acá y no a un default.
+      onClick={() => navigate('/onboarding-v2/grupos', { state: { from: pathname } })}
       className="v2-focus w-full flex items-center gap-3 text-left min-h-[56px] py-3 border-y transition-all duration-100 active:scale-[0.99]"
       style={{ borderColor: COLORS.line }}
     >
@@ -981,7 +995,7 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col overflow-hidden lg:flex-row"
-      style={{ background: COLORS.paper, ...FONT_VARS }}
+      style={{ background: COLORS.paper, ...FONT_VARS, ...COLOR_VARS }}
     >
       {/* Panel de marca — solo desktop */}
       <aside

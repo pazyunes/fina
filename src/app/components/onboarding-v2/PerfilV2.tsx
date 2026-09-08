@@ -126,7 +126,7 @@ export function PerfilV2() {
             onClick={guardarNombre}
             disabled={!nombre.trim()}
             aria-label={guardado ? 'Nombre guardado' : 'Guardar nombre'}
-            className="v2-focus rounded-2xl px-5 font-bold disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0 inline-flex items-center justify-center"
+            className="v2-focus rounded-2xl px-5 font-bold v2-disabled transition-all duration-100 active:scale-95 shrink-0 inline-flex items-center justify-center"
             style={{ background: guardado ? COLORS.lima : COLORS.brand, color: guardado ? COLORS.ink : COLORS.surface }}
           >
             {guardado ? <Check size={15} /> : 'Guardar'}

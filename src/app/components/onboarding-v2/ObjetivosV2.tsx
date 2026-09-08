@@ -579,7 +579,7 @@ export function ObjetivosV2() {
             <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} />
             <div className="flex gap-2 mt-1">
               <button type="button" onClick={() => setEditando(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[15px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
-              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
+              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
             </div>
           </div>
         ) : (
@@ -658,7 +658,7 @@ export function ObjetivosV2() {
               type="button"
               onClick={completarMontoTotal}
               disabled={montoModoEdit !== 'desconocido' && parseMoneyInput(montoTotalEdit) <= 0}
-              className="v2-focus rounded-xl px-4 py-2.5 font-bold disabled:opacity-40 transition-all duration-100 active:scale-95"
+              className="v2-focus rounded-xl px-4 py-2.5 font-bold v2-disabled transition-all duration-100 active:scale-95"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Guardar
@@ -717,7 +717,7 @@ export function ObjetivosV2() {
               onClick={agregarRegistro}
               disabled={parseMoneyInput(regMonto) <= 0}
               aria-label="Sumar registro"
-              className="v2-focus rounded-xl px-4 flex items-center justify-center font-bold disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0"
+              className="v2-focus rounded-xl px-4 flex items-center justify-center font-bold v2-disabled transition-all duration-100 active:scale-95 shrink-0"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               <IconMas size={18} />

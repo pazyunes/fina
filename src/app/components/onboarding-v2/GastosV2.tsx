@@ -342,7 +342,7 @@ export function GastosV2() {
               type="button"
               onClick={agregarGasto}
               disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim())}
-              className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold disabled:opacity-40 transition-all duration-100 active:scale-95"
+              className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Agregar gasto
