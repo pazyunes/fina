@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
+import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
 import { IconChevron, IconClose } from './FinaIcons';
 import { useDisplayCurrency, useMoney } from '../../lib/displayCurrency';
 import { fetchExchangeRate } from '../../lib/exchangeRate';
@@ -93,7 +93,31 @@ const RIESGO_FILL: Record<Instrumento['riesgo'], string> = {
 };
 
 type Moneda = 'ARS' | 'USD';
-type Aporte = { id: string; monto: number; instrumentoId: string; ts: number };
+// Un aporte guarda TRES cosas, no una:
+//   · `monto` + `moneda`: lo que la persona efectivamente cargó. Es el hecho,
+//     y se muestra siempre tal cual — nunca convertido.
+//   · `cotizacion`: el blue del día en que se cargó, cuando fue en USD.
+//   · `montoArs`: el equivalente en pesos CONGELADO a esa cotización, que es
+//     lo que se suma.
+// Guardar solo el número convertido a pesos de hoy seria un bug conocido de
+// esta app: está documentado en Main.tsx ("los montos en USD cargados con el
+// dólar viejo se ven desfasados"). Un aporte de US$100 de hace seis meses no
+// son los pesos que valen esos dólares hoy: son los que pusiste entonces.
+// `moneda`, `cotizacion` y `montoArs` son opcionales para que los registros
+// viejos —que solo tienen `monto` en pesos— sigan leyéndose.
+type Aporte = {
+  id: string;
+  monto: number;
+  moneda?: Moneda;
+  cotizacion?: number;
+  montoArs?: number;
+  instrumentoId: string;
+  ts: number;
+};
+
+// Lecturas tolerantes con lo ya guardado.
+const monedaDe = (a: Aporte): Moneda => a.moneda ?? 'ARS';
+const montoArsDe = (a: Aporte): number => a.montoArs ?? a.monto;
 type PersistidoInv = {
   completado: boolean; // llegó a la pantalla de resultado alguna vez
   porQue: string | null;
@@ -182,6 +206,7 @@ export function InversionesV2() {
     setConfirmarBorrar(false);
     setAporteMonto('');
     setAporteInstrId(INSTRUMENTOS[0].id);
+    setAporteMoneda('ARS');
     setAportePaso('que-es');
     setAporteAbierto(true);
   }
@@ -189,6 +214,7 @@ export function InversionesV2() {
     setEditandoId(a.id);
     setConfirmarBorrar(false);
     setAporteInstrId(a.instrumentoId);
+    setAporteMoneda(monedaDe(a));
     setAporteMonto(formatThousands(String(a.monto)));
     setAportePaso('datos');
     setAporteAbierto(true);
@@ -197,8 +223,14 @@ export function InversionesV2() {
     const monto = parseMoneyInput(aporteMonto);
     if (monto <= 0 || !editandoId) return;
     // Se conserva la fecha original: editar un monto mal tipeado no debería
-    // mover el aporte a hoy y romper la evolución.
-    setAportes((prev) => prev.map((a) => (a.id === editandoId ? { ...a, monto, instrumentoId: aporteInstrId } : a)));
+    // mover el aporte a hoy y romper la evolución. La cotización SÍ se
+    // reescribe con la de hoy si se pasa a dólares, porque es una carga nueva
+    // en esa moneda; si sigue en pesos, no hay cotización que guardar.
+    setAportes((prev) => prev.map((a) => (
+      a.id === editandoId
+        ? { ...a, ...nuevoAporte(monto), cotizacion: aporteMoneda === 'USD' && rate ? rate : undefined, instrumentoId: aporteInstrId }
+        : a
+    )));
   }
   function borrarAporte() {
     if (!editandoId) return;
@@ -221,6 +253,10 @@ export function InversionesV2() {
   const [aportes, setAportes] = useState<Aporte[]>(() => persistido?.aportes ?? []);
   const [aporteMonto, setAporteMonto] = useState('');
   const [aporteInstrId, setAporteInstrId] = useState<string>(INSTRUMENTOS[0].id);
+  // Moneda en la que se está cargando ESTE aporte. Es independiente de la
+  // moneda de visualización de la pantalla: podés estar mirando totales en
+  // dólares y cargar un aporte que hiciste en pesos.
+  const [aporteMoneda, setAporteMoneda] = useState<Moneda>('ARS');
 
   useEffect(() => {
     saveV2InversionesState({ completado: paso === 'resultado', porQue, reaccion, yaInvierte, enQue, bancos, aportes, monedaInv });
@@ -259,10 +295,19 @@ export function InversionesV2() {
     .sort((a, b) => Number(yaEnIds.has(a.id)) - Number(yaEnIds.has(b.id)))
     .slice(0, 3);
 
+  // El equivalente en pesos se congela con la cotización del momento: si el
+  // aporte fue en dólares, se guarda a cuánto estaba el blue ese día.
+  function nuevoAporte(monto: number): Pick<Aporte, 'monto' | 'moneda' | 'cotizacion' | 'montoArs'> {
+    if (aporteMoneda === 'USD' && rate) {
+      return { monto, moneda: 'USD', cotizacion: rate, montoArs: Math.round(monto * rate) };
+    }
+    return { monto, moneda: 'ARS', montoArs: monto };
+  }
+
   function agregarAporte() {
     const monto = parseMoneyInput(aporteMonto);
     if (monto <= 0) return;
-    setAportes((a) => [{ id: String(Date.now()), monto, instrumentoId: aporteInstrId, ts: Date.now() }, ...a]);
+    setAportes((a) => [{ id: String(Date.now()), ...nuevoAporte(monto), instrumentoId: aporteInstrId, ts: Date.now() }, ...a]);
     setAporteMonto('');
   }
 
@@ -298,7 +343,11 @@ export function InversionesV2() {
 
   // ── resultado: perfil + 3 pestañas, en diseño claro de FINA ──
   if (paso === 'resultado') {
-    const totalAportado = aportes.reduce((s, a) => s + a.monto, 0);
+    // Se suma el equivalente en pesos congelado al momento de cada carga, no
+    // el número tipeado: si no, un aporte en dólares se sumaría como si fueran
+    // pesos. El total responde "cuánta plata pusiste", con la cotización de
+    // cada día — no "cuánto valdría hoy si lo hubieras puesto todo hoy".
+    const totalAportado = aportes.reduce((s, a) => s + montoArsDe(a), 0);
     // Si un aporte quedó apuntando a un instrumento que ya no está en el
     // catálogo, se decía el id crudo ("plazo") en la lista. Un slug interno no
     // es un nombre: mejor decir que no lo reconocemos que mostrar basura.
@@ -447,12 +496,41 @@ export function InversionesV2() {
 
               <div className="flex flex-col gap-2.5">
                 <TituloSeccion>¿Cuánto?</TituloSeccion>
+                {/* En qué moneda lo pusiste. Es independiente de la moneda en
+                    que estás mirando los totales: podés ver en dólares y
+                    cargar algo que hiciste en pesos. Si no hay cotización, el
+                    dólar queda deshabilitado — sin ella no se puede guardar a
+                    cuánto estaba, y ese dato es justamente el que evita que el
+                    aporte se desfase después. */}
+                <div className="flex gap-2">
+                  {(['ARS', 'USD'] as Moneda[]).map((m) => {
+                    const sinCotizacion = m === 'USD' && !rate;
+                    const sel = aporteMoneda === m;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        role="radio"
+                        aria-checked={sel}
+                        aria-disabled={sinCotizacion || undefined}
+                        title={sinCotizacion ? 'Todavía no tenemos la cotización del dólar' : undefined}
+                        onClick={() => !sinCotizacion && setAporteMoneda(m)}
+                        className="v2-focus flex-1 min-h-[48px] rounded-2xl text-[15px] font-bold transition-all duration-100 active:scale-[0.98]"
+                        style={sel
+                          ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
+                          : { background: COLORS.surface, color: sinCotizacion ? COLORS.inkFaint : COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, cursor: sinCotizacion ? 'not-allowed' : 'pointer' }}
+                      >
+                        {m === 'ARS' ? 'En pesos' : 'En dólares'}
+                      </button>
+                    );
+                  })}
+                </div>
                 <div className="relative">
-                  <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
+                  <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{aporteMoneda === 'USD' ? 'US$' : '$'}</span>
                   <input
                     autoFocus
-                    aria-label="Monto del aporte en pesos"
-                    className="v2-focus w-full rounded-2xl pl-8 pr-4 py-3 text-[18px] font-mono tabular-nums outline-none transition-colors"
+                    aria-label={`Monto del aporte en ${aporteMoneda === 'USD' ? 'dólares' : 'pesos'}`}
+                    className={`v2-focus w-full rounded-2xl ${aporteMoneda === 'USD' ? 'pl-14' : 'pl-8'} pr-4 py-3 text-[18px] font-mono tabular-nums outline-none transition-colors`}
                     style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                     placeholder="Monto"
                     inputMode="decimal"
@@ -460,9 +538,14 @@ export function InversionesV2() {
                     onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
                   />
                 </div>
-                {/* El monto siempre se carga en pesos, aunque estés viendo en
-                    USD: si no, no se sabe con qué cotización se guardó. */}
-                <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Se carga en pesos.</p>
+                {/* Se dice el equivalente y con qué cotización queda guardado,
+                    para que no haya sorpresa después. */}
+                {aporteMoneda === 'USD' && rate && parseMoneyInput(aporteMonto) > 0 && (
+                  <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                    Son <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{fmtMoney(parseMoneyInput(aporteMonto) * rate)}</span> al blue de hoy
+                    (<span className="font-mono tabular-nums">{fmtMoney(rate)}</span>). Queda guardado a esa cotización.
+                  </p>
+                )}
               </div>
 
               <Cta
@@ -563,7 +646,7 @@ export function InversionesV2() {
               pusiste dólares, cuando pusiste pesos. */}
           {isUsd && (
             <p className="text-[13px] leading-snug pl-3.5 border-l-2 -mt-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-              Los montos están pasados a dólares con la cotización blue de hoy. Lo que registraste está en pesos.
+              El total está pasado a dólares con el blue de hoy. Cada registro se muestra en la moneda en que lo cargaste.
             </p>
           )}
 
@@ -631,7 +714,7 @@ export function InversionesV2() {
                 <Donut
                   segments={INSTRUMENTOS.map((i) => ({
                     color: RIESGO_FILL[i.riesgo],
-                    pct: totalAportado > 0 ? (aportes.filter((a) => a.instrumentoId === i.id).reduce((s, a) => s + a.monto, 0) / totalAportado) * 100 : 0,
+                    pct: totalAportado > 0 ? (aportes.filter((a) => a.instrumentoId === i.id).reduce((s, a) => s + montoArsDe(a), 0) / totalAportado) * 100 : 0,
                   }))}
                   centerLabel="Invertido"
                   centerValue={fmt(totalAportado)}
@@ -683,7 +766,13 @@ export function InversionesV2() {
                           <span className="text-[15px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
                           <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
                         </span>
-                        <span className="text-[15px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmt(a.monto)}</span>
+                        {/* Se muestra lo que cargaste, en la moneda en que lo
+                            cargaste: eso es el hecho y no se convierte nunca.
+                            Lo que sí respeta el toggle de arriba es el TOTAL,
+                            que es un derivado. */}
+                        <span className="text-[15px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>
+                          {monedaDe(a) === 'USD' ? `US$ ${a.monto.toLocaleString('es-AR')}` : fmtMoney(a.monto)}
+                        </span>
                         <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={16} /></span>
                       </button>
                     ))}
@@ -798,9 +887,9 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
     );
   }
   let acumReal = 0;
-  const real = ordenado.map((a) => (acumReal += a.monto));
+  const real = ordenado.map((a) => (acumReal += montoArsDe(a)));
   let acumProy = 0;
-  const proyectado = ordenado.map((a) => { acumProy = (acumProy + a.monto) * (1 + tasaMensual); return acumProy; });
+  const proyectado = ordenado.map((a) => { acumProy = (acumProy + montoArsDe(a)) * (1 + tasaMensual); return acumProy; });
   const max = Math.max(...real, ...proyectado, 1);
   const w = 280, h = 130, pad = 10;
   const xy = (arr: number[], i: number) => {
