@@ -584,7 +584,14 @@ export function Donut({
   return (
     <div
       className="relative rounded-full shrink-0"
-      style={{ width: size, height: size, background: stops || (dark ? COLORS.darkLine : COLORS.tint) }}
+      // BUG: `stops` es la lista de paradas ("#B0E150 0% 40%, #FFC457 40% 100%"),
+      // y se estaba asignando cruda a `background` sin envolverla en
+      // conic-gradient(). Con DOS o más segmentos eso es CSS inválido y el
+      // anillo se dibujaba vacío; con uno solo funcionaba de casualidad, porque
+      // el shorthand `background` alcanza a leer "#FFC457" como color y
+      // "0% 100%" como posición. O sea: el donut de Gastos y el de Inversiones
+      // venían mostrando el fondo de respaldo en vez de la distribución real.
+      style={{ width: size, height: size, background: stops ? `conic-gradient(${stops})` : (dark ? COLORS.darkLine : COLORS.tint) }}
     >
       <div
         className="absolute rounded-full flex flex-col items-center justify-center"

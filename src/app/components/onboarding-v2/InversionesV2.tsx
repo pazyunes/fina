@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
-import { IconChevron, IconClose, IconMas } from './FinaIcons';
+import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
+import { IconChevron, IconClose } from './FinaIcons';
+import { useDisplayCurrency, useMoney } from '../../lib/displayCurrency';
+import { fetchExchangeRate } from '../../lib/exchangeRate';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
 // explícito): un mini-quiz corto arma un perfil de riesgo real (no fijo),
@@ -130,16 +132,50 @@ export function InversionesV2() {
   const [bancos, setBancos] = useState<string[]>(() => persistido?.bancos ?? []);
   const [tab, setTab] = useState<Tab>('recos');
   const [modoEvolucion, setModoEvolucion] = useState<'real' | 'simulador'>('real');
-  // OJO: el toggle Pesos/USD que había acá no hacía nada — `monedaInv` se
-  // guardaba pero no se leía en ningún lado, así que no cambiaba un solo valor
-  // en pantalla. Un control que promete algo y no lo cumple es peor que uno
-  // ausente, así que se saca de la UI. El valor guardado se conserva tal cual
-  // para no pisar datos de quien ya lo tocó, hasta que se cablee de verdad.
+  // ── Moneda de visualización (ARS / USD) ────────────────────────────────
+  // Ahora sí está cableada. No hace falta nada nuevo: la app ya tiene el
+  // circuito entero — `/api/dolar` (Vercel Function que pega a dolarapi blue y
+  // cachea en Supabase), `fetchExchangeRate` y el contexto DisplayCurrency, que
+  // envuelve toda la app desde App.tsx. Lo único que faltaba era pedir la
+  // cotización desde acá: el efecto que la trae vive en Main.tsx, que es el
+  // shell autenticado, y el sandbox v2 cuelga de rutas públicas que no pasan
+  // por ahí.
+  //
+  // En `vite` local la función no corre (vite sirve api/dolar.ts como módulo),
+  // así que fetchExchangeRate devuelve null y el toggle queda deshabilitado
+  // solo-ARS. En el preview de Vercel funciona.
+  const { rate, setRate, currency, setCurrency } = useDisplayCurrency();
+  const { fmt, isUsd } = useMoney();
+  useEffect(() => {
+    if (rate) return; // ya la trajo otra pantalla: no la pisamos
+    let vivo = true;
+    fetchExchangeRate().then((r) => { if (vivo && r?.rate) setRate(r.rate); });
+    return () => { vivo = false; };
+  }, [rate, setRate]);
+
+  // Se conserva el valor viejo de `monedaInv` para no pisar datos guardados.
   const monedaInv = persistido?.monedaInv;
 
   // Instrumento abierto en el detalle. Reemplaza al viejo set `expandido`, que
   // desplegaba el "por qué" dentro de la propia fila y hacía crecer la lista.
   const [detalle, setDetalle] = useState<Instrumento | null>(null);
+
+  // Alta de aporte en dos pasos: primero se explica qué es registrar (la duda
+  // más común es si esto mueve plata de verdad), después se piden los datos.
+  const [aporteAbierto, setAporteAbierto] = useState(false);
+  const [aportePaso, setAportePaso] = useState<'que-es' | 'datos'>('que-es');
+  function cerrarAporte() {
+    setAporteAbierto(false);
+    setAportePaso('que-es');
+    setAporteMonto('');
+  }
+  useEffect(() => {
+    if (!aporteAbierto) return;
+    const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') cerrarAporte(); };
+    window.addEventListener('keydown', alTeclear);
+    return () => window.removeEventListener('keydown', alTeclear);
+  }, [aporteAbierto]);
+
   useEffect(() => {
     if (!detalle) return;
     const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') setDetalle(null); };
@@ -228,7 +264,10 @@ export function InversionesV2() {
   // ── resultado: perfil + 3 pestañas, en diseño claro de FINA ──
   if (paso === 'resultado') {
     const totalAportado = aportes.reduce((s, a) => s + a.monto, 0);
-    const nombreInstr = (id: string) => INSTRUMENTOS.find((i) => i.id === id)?.nombre ?? id;
+    // Si un aporte quedó apuntando a un instrumento que ya no está en el
+    // catálogo, se decía el id crudo ("plazo") en la lista. Un slug interno no
+    // es un nombre: mejor decir que no lo reconocemos que mostrar basura.
+    const nombreInstr = (id: string) => INSTRUMENTOS.find((i) => i.id === id)?.nombre ?? 'Otro instrumento';
     const pl = PERFIL_LIGHT[perfilId];
 
     // Detalle de un instrumento. Es el "después entrá y ves todo": qué es,
@@ -307,9 +346,117 @@ export function InversionesV2() {
       </div>
     );
 
+    // Alta de aporte. Paso 1: qué es esto. Paso 2: los datos. Se separan
+    // porque "registrar un aporte" no se entiende solo: la primera reacción
+    // es pensar que la app va a mover plata.
+    const modalAporte = aporteAbierto && (
+      <div
+        className="fixed inset-0 z-30 flex items-end sm:items-center justify-center sm:p-5"
+        style={{ background: `${COLORS.ink}73` }}
+        onClick={cerrarAporte}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Registrar un aporte"
+      >
+        <div
+          className="w-full sm:max-w-[420px] max-h-[88vh] overflow-y-auto rounded-t-[24px] sm:rounded-[24px] p-6 flex flex-col gap-5"
+          style={{ background: COLORS.surface }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <Titulo className="!text-[26px]">Registrar un aporte</Titulo>
+            <button
+              type="button"
+              onClick={cerrarAporte}
+              aria-label="Cerrar"
+              className="v2-focus w-11 h-11 -mr-2 -mt-1 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+              style={{ color: COLORS.inkSoft }}
+            >
+              <IconClose size={18} />
+            </button>
+          </div>
+
+          {aportePaso === 'que-es' ? (
+            <>
+              <p className="text-[17px] leading-snug" style={{ color: COLORS.ink }}>
+                Anotá acá la plata que vos ya pusiste en algún instrumento, por fuera de FINA.
+              </p>
+              <div className="flex flex-col gap-1.5">
+                <TituloSeccion>Esto no mueve tu plata</TituloSeccion>
+                <p className="text-[15px] leading-relaxed" style={{ color: COLORS.inkSoft }}>
+                  FINA no invierte ni toca tu dinero. Registrar es solo anotar, como en un cuaderno,
+                  para que puedas ver todo junto y seguir cómo evoluciona.
+                </p>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <TituloSeccion>Para qué sirve</TituloSeccion>
+                <p className="text-[15px] leading-relaxed" style={{ color: COLORS.inkSoft }}>
+                  Con lo que anotes armamos tu evolución y te avisamos si hace rato que no le sumás.
+                </p>
+              </div>
+              <Cta label="Registrar uno" onClick={() => setAportePaso('datos')} />
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col gap-2.5">
+                <TituloSeccion>¿En qué lo pusiste?</TituloSeccion>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {INSTRUMENTOS.map((i) => {
+                    const sel = aporteInstrId === i.id;
+                    return (
+                      <button
+                        key={i.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={sel}
+                        onClick={() => setAporteInstrId(i.id)}
+                        className="v2-focus min-h-[56px] rounded-2xl px-3 py-3 text-[14.5px] font-semibold leading-snug transition-all duration-100 active:scale-[0.97]"
+                        style={sel
+                          ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
+                          : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                      >
+                        {i.nombre}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <TituloSeccion>¿Cuánto?</TituloSeccion>
+                <div className="relative">
+                  <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
+                  <input
+                    autoFocus
+                    aria-label="Monto del aporte en pesos"
+                    className="v2-focus w-full rounded-2xl pl-8 pr-4 py-3 text-[18px] font-mono tabular-nums outline-none transition-colors"
+                    style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                    placeholder="Monto"
+                    inputMode="decimal"
+                    value={aporteMonto}
+                    onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
+                  />
+                </div>
+                {/* El monto siempre se carga en pesos, aunque estés viendo en
+                    USD: si no, no se sabe con qué cotización se guardó. */}
+                <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Se carga en pesos.</p>
+              </div>
+
+              <Cta
+                label="Guardar"
+                disabled={parseMoneyInput(aporteMonto) <= 0}
+                onClick={() => { agregarAporte(); cerrarAporte(); }}
+              />
+            </>
+          )}
+        </div>
+      </div>
+    );
+
     return (
       <div className="pb-6">
         {modalDetalle}
+        {modalAporte}
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
           {/* Banda editorial full-bleed. Sin Fini (guía §6): el personaje nunca
               va cerca de un dato, y menos en inversiones. */}
@@ -317,12 +464,45 @@ export function InversionesV2() {
             <Titulo>Inversiones</Titulo>
             <p className="text-[15px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
           </header>
-          {/* El perfil, en una línea. Antes eran tres elementos separados —
-              pastilla de color, toggle de moneda y una frase suelta debajo —
-              para decir una sola cosa. */}
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            Sos <span className="font-bold" style={{ color: pl.strong }}>perfil {perfil.label.toLowerCase()}</span>: {perfil.copy.charAt(0).toLowerCase() + perfil.copy.slice(1)}
-          </p>
+          {/* El perfil en una línea + el toggle de moneda, que ahora sí hace
+              algo. Cuando no hay cotización (local, o si la función falla) el
+              USD queda deshabilitado y se dice por qué, en vez de ofrecer un
+              botón que no responde. */}
+          <div className="flex items-start justify-between gap-3">
+            <p className="flex-1 text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              Sos <span className="font-bold" style={{ color: pl.strong }}>perfil {perfil.label.toLowerCase()}</span>: {perfil.copy.charAt(0).toLowerCase() + perfil.copy.slice(1)}
+            </p>
+            <div className="flex rounded-full p-0.5 shrink-0" style={{ background: COLORS.tint }}>
+              {(['ARS', 'USD'] as const).map((c) => {
+                const sinCotizacion = c === 'USD' && !rate;
+                const activo = currency === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => !sinCotizacion && setCurrency(c)}
+                    aria-pressed={activo}
+                    aria-disabled={sinCotizacion || undefined}
+                    title={sinCotizacion ? 'Todavía no tenemos la cotización del dólar' : `Ver en ${c === 'ARS' ? 'pesos' : 'dólares'}`}
+                    className="v2-focus rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors duration-150"
+                    style={activo
+                      ? { background: COLORS.brand, color: COLORS.surface }
+                      : { color: sinCotizacion ? COLORS.inkFaint : COLORS.inkSoft, cursor: sinCotizacion ? 'not-allowed' : 'pointer' }}
+                  >
+                    {c === 'ARS' ? 'Pesos' : 'USD'}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {/* Un monto convertido es un dato DERIVADO, no declarado: se dice a
+              qué se convirtió y con qué (§5). Sin esto, "US$ 120" parece que
+              pusiste dólares, cuando pusiste pesos. */}
+          {isUsd && (
+            <p className="text-[13px] leading-snug pl-3.5 border-l-2 -mt-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+              Los montos están pasados a dólares con la cotización blue de hoy. Lo que registraste está en pesos.
+            </p>
+          )}
 
           <Tabs
             options={[
@@ -391,7 +571,7 @@ export function InversionesV2() {
                     pct: totalAportado > 0 ? (aportes.filter((a) => a.instrumentoId === i.id).reduce((s, a) => s + a.monto, 0) / totalAportado) * 100 : 0,
                   }))}
                   centerLabel="Invertido"
-                  centerValue={fmtMoney(totalAportado)}
+                  centerValue={fmt(totalAportado)}
                   size={100}
                 />
                 <div className="flex-1 flex flex-col gap-1.5">
@@ -401,37 +581,39 @@ export function InversionesV2() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2.5 pt-2">
-                <TituloSeccion>Registrar un aporte</TituloSeccion>
-                <div className="flex flex-wrap gap-2">
-                  {INSTRUMENTOS.map((i) => (
-                    <Chip key={i.id} on={aporteInstrId === i.id} onClick={() => setAporteInstrId(i.id)}>{i.nombre}</Chip>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    className="v2-focus flex-1 min-w-0 rounded-xl px-3 py-2.5 text-[15px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors"
-                    style={{ background: COLORS.surface, color: COLORS.ink, borderColor: COLORS.lineStrong }}
-                    placeholder="Monto"
-                    inputMode="decimal"
-                    value={aporteMonto}
-                    onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
-                  />
-                  <button type="button" onClick={agregarAporte} disabled={parseMoneyInput(aporteMonto) <= 0} aria-label="Registrar aporte" className="v2-focus rounded-xl w-12 flex items-center justify-center text-white v2-disabled transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}><IconMas size={20} /></button>
-                </div>
-              </div>
+              {/* Registrar un aporte pasa de formulario siempre abierto a
+                  botón. El formulario ocupaba media pantalla y empujaba los
+                  registros —que es lo que uno viene a mirar— abajo del fondo.
+                  Ahora el botón abre un paso que primero explica qué es esto
+                  (registrar no mueve plata: FINA no toca tu dinero) y recién
+                  después pide instrumento y monto. */}
+              <button
+                type="button"
+                onClick={() => setAporteAbierto(true)}
+                className="v2-focus w-full rounded-2xl py-4 text-[17px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
+                style={{ background: COLORS.brand, color: COLORS.surface, boxShadow: '0 10px 24px -8px rgba(118,38,179,0.45)' }}
+              >
+                + Registrar un aporte
+              </button>
 
-              <div className="flex flex-col gap-2">
-                {aportes.length === 0 && <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>}
-                {aportes.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between gap-3 py-3 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
-                    <span className="flex-1 min-w-0 flex flex-col">
-                      <span className="text-[15px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
-                      <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
-                    </span>
-                    <Monto value={a.monto} className="text-[15px] font-semibold shrink-0" />
+              {/* Los registros se ven sin apretar nada. */}
+              <div className="flex flex-col gap-2 pt-2">
+                <TituloSeccion>Tus registros</TituloSeccion>
+                {aportes.length === 0 ? (
+                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes. Cuando sumes el primero, lo vas a ver acá.</p>
+                ) : (
+                  <div className="flex flex-col">
+                    {aportes.map((a) => (
+                      <div key={a.id} className="flex items-center justify-between gap-3 py-3 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+                        <span className="flex-1 min-w-0 flex flex-col">
+                          <span className="text-[15px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
+                          <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
+                        </span>
+                        <span className="text-[15px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmt(a.monto)}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
