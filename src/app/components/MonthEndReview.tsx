@@ -59,7 +59,7 @@ export function MonthEndReview({ analysis, resetDay, periodKey, periodStart, sav
   const [goalIdx, setGoalIdx] = useState(0);
   const [saveDest, setSaveDest] = useState('');
   const [saveDestOther, setSaveDestOther] = useState('');
-  const [under, setUnder] = useState<Record<string, { choice: string; other: string }>>({});
+  const [under, setUnder] = useState<Record<string, { choice: string; other: string } | undefined>>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {

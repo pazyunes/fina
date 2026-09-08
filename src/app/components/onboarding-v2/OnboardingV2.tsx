@@ -134,8 +134,6 @@ const BUBBLE_POR_TOP: Record<ObjetivoId, string> = {
   no_claro: 'Tranqui — lo vamos descubriendo juntas, a tu ritmo.',
 };
 
-const CONVIVENCIA_OPCIONES = ['Vivo sola/o', 'Con mi pareja', 'Con mi familia', 'Con roommates', 'Tengo hijos/as a cargo', 'Tengo otras personas a cargo'];
-
 const ZONAS: { id: string; label: string; muted?: boolean }[] = [
   { id: 'CABA', label: 'CABA' },
   { id: 'GBA', label: 'GBA' },
@@ -162,63 +160,7 @@ const ESTABILIDAD: { id: string; label: string }[] = [
   { id: 'De forma ocasional o esporádica', label: 'De forma ocasional o esporádica' },
 ];
 
-// Gastos fijos — combina lo que ya usa la app real (Alquiler/expensas,
-// Suscripciones, Supermercado, Prepaga, Belleza, Terapia, Gimnasio,
-// Estudios, Transporte — ver ExpensesFixed.tsx) con lo que todavía no
-// registra pero un asesor necesita saber (tarjeta, préstamo, ayuda familiar).
-const GASTOS_FIJOS_OPCIONES: { value: string; display: string; muted?: boolean }[] = [
-  { value: 'Alquiler o expensas', display: 'Alquiler o expensas' },
-  { value: 'Suscripciones', display: 'Suscripciones' },
-  { value: 'Supermercado', display: 'Supermercado' },
-  { value: 'Prepaga u obra social', display: 'Prepaga u obra social' },
-  { value: 'Belleza y cuidado personal', display: 'Belleza y cuidado personal' },
-  { value: 'Psicóloga o terapia', display: 'Psicóloga o terapia' },
-  { value: 'Gimnasio', display: 'Gimnasio' },
-  { value: 'Estudios', display: 'Estudios' },
-  { value: 'Transporte (seguro, nafta, boleto)', display: 'Transporte (seguro, nafta, boleto)' },
-  { value: 'Tarjeta de crédito', display: 'Tarjeta de crédito' },
-  { value: 'Cuota de préstamo', display: 'Cuota de préstamo' },
-  { value: 'Ayuda a familiares', display: 'Ayuda a familiares' },
-  { value: 'Ninguno por ahora', display: 'Ninguno por ahora', muted: true },
-];
-
-const CATEGORIAS_GASTO: { value: string; display: string }[] = [
-  { value: 'Delivery', display: 'Delivery' },
-  { value: 'Restaurantes', display: 'Restaurantes' },
-  { value: 'Cafeterías', display: 'Cafeterías' },
-  { value: 'Salidas y entretenimiento', display: 'Salidas y entretenimiento' },
-  { value: 'Supermercado', display: 'Supermercado' },
-  { value: 'Transporte', display: 'Transporte' },
-  { value: 'Belleza y cuidado personal', display: 'Belleza y cuidado personal' },
-  { value: 'Ropa', display: 'Ropa' },
-  { value: 'Suscripciones', display: 'Suscripciones' },
-  { value: 'Compras online', display: 'Compras online' },
-];
-
-const NIVELES: { id: Nivel; label: string }[] = [
-  { id: 'nada', label: 'Nada' },
-  { id: 'poco', label: 'Poco' },
-  { id: 'bastante', label: 'Bastante' },
-  { id: 'todo', label: 'Todo' },
-];
-
 type FilaAsignacion = { id: 'ahorro' | 'inversiones' | 'gastosFijos' | 'gastosVariables'; titulo: string; ejemplo: string };
-const FILAS_ASIGNACION: FilaAsignacion[] = [
-  { id: 'ahorro', titulo: 'Ahorro', ejemplo: 'Lo que dejás guardado, sin invertir.' },
-  { id: 'inversiones', titulo: 'Inversiones', ejemplo: 'Lo que ponés a que rinda (plazo fijo, fondos, etc.)' },
-  { id: 'gastosFijos', titulo: 'Gastos fijos', ejemplo: 'Ej: alquiler, cuotas, suscripciones — lo que se repite todos los meses.' },
-  { id: 'gastosVariables', titulo: 'Gastos variables', ejemplo: 'Ej: salidas, gustos, delivery — lo que cambia mes a mes.' },
-];
-
-const COMO_VIENES: { id: ComoVieneId; label: string; msg: string; muted?: boolean }[] = [
-  { id: 'justo', label: 'Me alcanza justo', msg: 'Genial — vamos a ayudarte a que te sobre cada vez más.' },
-  { id: 'sobra', label: 'Me sobra un poco', msg: 'Buenísimo, te ayudamos a que ese sobrante trabaje para vos.' },
-  { id: 'no_llega', label: 'No llego a fin de mes', msg: 'No te preocupes, vinimos justo para eso.' },
-  { id: 'hago_lo_que_quiero', label: 'Hago lo que quiero', msg: 'Como a vos te gusta — te ayudamos a que te dure más.' },
-  { id: 'no_lo_tengo_en_cuenta', label: 'No lo tengo muy en cuenta', msg: 'Te vamos a hacer mucho más fácil tenerlo en cuenta.' },
-  { id: 'prefiero_no_decir', label: 'Prefiero no decir', msg: 'Todo bien — lo vamos descubriendo juntas, a tu ritmo.', muted: true },
-];
-
 // Sí/No como opciones de verdad y no dos chips sueltos: así entran en la misma
 // grilla que el resto y tienen el mismo target táctil.
 const SI_NO: { id: 'si' | 'no'; label: string }[] = [
@@ -721,14 +663,6 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {currentKey === 'convivencia' && (
-                <>
-                  <Titulo>Contanos un poco de tu día a día: ¿con quién compartís tu casa?</Titulo>
-                  <Nota>Elegí todas las que apliquen.</Nota>
-                  <MultiOtroChips opciones={CONVIVENCIA_OPCIONES.map((v) => ({ value: v, display: v }))} seleccion={convivencia} toggle={toggleConvivencia} otro={convivenciaOtro} />
-                </>
-              )}
-
               {currentKey === 'zona' && (
                 <>
                   <Titulo>¿En dónde andás viviendo?</Titulo>
@@ -759,62 +693,6 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {currentKey === 'gastosFijos' && (
-                <>
-                  <Titulo>¿Tenés algún gasto grande que se te repite todos los meses?</Titulo>
-                  <Nota>No hace falta el monto, solo si existe.</Nota>
-                  <MultiOtroChips opciones={GASTOS_FIJOS_OPCIONES} seleccion={gastosFijos} toggle={toggleGastosFijos} otro={gastosFijosOtro} />
-                </>
-              )}
-
-              {currentKey === 'categoriasGasto' && (
-                <>
-                  <Titulo>¿En qué se te suele ir la plata día a día?</Titulo>
-                  <Nota>Elegí las que quieras — con esto ya te armamos las secciones en Gastos.</Nota>
-                  <MultiOtroChips opciones={CATEGORIAS_GASTO} seleccion={categoriasGasto} toggle={toggleCategoriaGasto} otro={categoriasOtro} />
-                </>
-              )}
-
-              {currentKey === 'categoriasRecortar' && (
-                <>
-                  <Titulo>¿Hay alguna de estas en la que te gustaría gastar menos?</Titulo>
-                  <Nota>Así te avisamos si te conviene ponerle un tope.</Nota>
-                  <div className="flex flex-wrap gap-2.5">
-                    {categoriasElegidas.map((c) => (
-                      <Chip key={c} on={categoriasRecortarSel.includes(c)} onClick={() => toggleCategoriaRecortar(c)}>{c}</Chip>
-                    ))}
-                    <Chip muted on={recortarNinguna} onClick={() => { setRecortarNinguna(true); setCategoriasRecortarSel([]); }}>Ninguna por ahora</Chip>
-                  </div>
-                </>
-              )}
-
-              {currentKey === 'asignacionPlata' && (
-                <>
-                  <Titulo>De esta plata, ¿cuánto va a...?</Titulo>
-                  <div className="flex flex-col gap-4">
-                    {FILAS_ASIGNACION.map((fila) => (
-                      <div key={fila.id} className="flex flex-col gap-1.5">
-                        <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>{fila.titulo}</p>
-                        <Nota>{fila.ejemplo}</Nota>
-                        <div className="flex gap-1.5">
-                          {NIVELES.map((n) => (
-                            <button
-                              key={n.id}
-                              type="button"
-                              onClick={() => setAsignacion((a) => ({ ...a, [fila.id]: n.id }))}
-                              className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-100 active:scale-95"
-                              style={asignacion[fila.id] === n.id ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
-                            >
-                              {n.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
               {currentKey === 'tedioso' && (
                 <>
                   <Titulo>¿Se te hace tedioso llevar el control de tu plata?</Titulo>
@@ -836,22 +714,6 @@ export function OnboardingV2() {
                         — y FINA lo registra sola, al toque. También te responde dudas y te avisa cómo venís.
                       </p>
                     </div>
-                  )}
-                </>
-              )}
-
-              {currentKey === 'comoViene' && (
-                <>
-                  <Titulo>¿Cómo venís con tu plata?</Titulo>
-                  <Nota>Elegí todas las que apliquen.</Nota>
-                  <div className="flex flex-wrap gap-2.5">
-                    {COMO_VIENES.map((o) => (
-                      <Chip key={o.id} on={comoViene.includes(o.id)} muted={o.muted} onClick={() => toggleComoViene(o.id)}>{o.label}</Chip>
-                    ))}
-                    <OtroChip abierto={comoViene.includes('otro')} onClick={() => toggleComoViene('otro')} />
-                  </div>
-                  {comoViene.includes('otro') && (
-                    <input autoFocus aria-label="Contanos más sobre cómo venís" className={inputClass} style={inputStyle()} placeholder="Contanos más" value={comoVieneOtroTxt} onChange={(e) => setComoVieneOtroTxt(e.target.value)} />
                   )}
                 </>
               )}

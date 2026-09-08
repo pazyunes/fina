@@ -314,7 +314,6 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                       }}
                       onBlur={() => { if (entertainmentComplete) advanceFrom('entertainment'); }}
                       placeholder="Ej: 8"
-                      min="0"
                       className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noEntertainment}
                       style={{ backgroundColor: noEntertainment ? '#f3f3f5' : undefined }}
@@ -398,7 +397,6 @@ export function ExpensesServices({ initial, onComplete, editMode }: ExpensesServ
                       }}
                       onBlur={() => { if (deliveryComplete) advanceFrom('delivery'); }}
                       placeholder="Ej: 4"
-                      min="0"
                       className={`w-full ${AMOUNT_FIELD_CLASS}`}
                       disabled={noDelivery}
                       style={{ backgroundColor: noDelivery ? '#f3f3f5' : undefined }}

@@ -564,25 +564,6 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                       <p className="text-sm text-gray-500 mb-3">{category.helper}</p>
                     )}
 
-                    {category.key === 'housing' && (
-                      <div className="mb-3 flex items-center gap-2">
-                        <CurrencyToggle
-                          value={housingCurrency}
-                          usdEnabled={!!usdRate}
-                          onChange={(c) => {
-                            setHousingCurrency(c);
-                            if (c === 'USD') {
-                              const usd = parseInt(housingUsd.replace(/\D/g, '')) || 0;
-                              setExpenses(prev => ({ ...prev, housing: usdRate ? arsFromUsd(usd, usdRate) : 0 }));
-                            }
-                          }}
-                        />
-                        {!usdRate && (
-                          <span className="text-xs text-gray-400">USD no disponible ahora</span>
-                        )}
-                      </div>
-                    )}
-
                     <div className="flex items-center gap-2 mb-3">
                       <Switch
                         checked={isNotPaying}
@@ -652,33 +633,6 @@ export function ExpensesFixed({ initial, monthlyIncome, onComplete, editMode }: 
                         {expenses.therapy > 0 && (
                           <p className="text-sm text-gray-500">
                             Total mensual: <span style={{ color: category.color }}>{formatCurrency(expenses.therapy)}</span>
-                          </p>
-                        )}
-                      </div>
-                    ) : category.key === 'housing' && housingCurrency === 'USD' ? (
-                      <div style={{ opacity: isNotPaying ? 0.4 : 1, pointerEvents: isNotPaying ? 'none' : 'auto' }}>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm z-10">USD</span>
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={housingUsd ? Number(housingUsd).toLocaleString('es-AR').replace(/,/g, '.') : ''}
-                            onChange={(e) => {
-                              const digits = e.target.value.replace(/\D/g, '');
-                              setHousingUsd(digits);
-                              const usd = parseInt(digits) || 0;
-                              setExpenses(prev => ({ ...prev, housing: usdRate ? arsFromUsd(usd, usdRate) : 0 }));
-                            }}
-                            onBlur={() => { if (expenses.housing > 0) advanceFrom('housing'); }}
-                            placeholder="0"
-                            className={`pl-12 rounded-xl ${AMOUNT_FIELD_CLASS}`}
-                            disabled={isNotPaying}
-                          />
-                        </div>
-                        {housingUsd && usdRate && (
-                          <p className="text-xs text-gray-500 mt-2">
-                            ≈ {formatArs(expenses.housing)} al cambio del día (USD blue {formatArs(usdRate)})
                           </p>
                         )}
                       </div>

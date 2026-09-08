@@ -229,7 +229,7 @@ export function GruposV2() {
           </span>
         )}
         <span className="text-[15px] font-bold shrink-0" style={{ color: COLORS.brandDark }}>
-          {typeof navigator !== 'undefined' && navigator.share ? 'Compartir' : 'Copiar'}
+          {typeof navigator !== 'undefined' && typeof navigator.share === 'function' ? 'Compartir' : 'Copiar'}
         </span>
       </button>
 

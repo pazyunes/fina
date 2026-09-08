@@ -30,7 +30,7 @@ function budgetsFrom(analysis: FinancialAnalysis): Cat[] {
   const u = analysis.userData;
   const e = u.expenses;
   const m = (f?: number, a?: number) => Math.round((f || 0) * (a || 0) * 4.33);
-  return [
+  const todas: Cat[] = [
     { key: 'entertainment', label: 'Entretenimiento', emoji: '🎉', budget: m(u.entertainmentFrequency, u.entertainmentAmount) },
     { key: 'delivery',      label: 'Delivery',        emoji: '🍔', budget: m(u.deliveryFrequency, u.deliveryAmount) },
     { key: 'cafeterias',    label: 'Cafetería',       emoji: '☕', budget: m(u.cafeteriasFrequency, u.cafeteriasAmount) },
@@ -39,7 +39,8 @@ function budgetsFrom(analysis: FinancialAnalysis): Cat[] {
     { key: 'beauty',        label: 'Belleza',         emoji: '💄', budget: e?.beauty || 0 },
     { key: 'therapy',       label: 'Terapia',         emoji: '🧠', budget: e?.therapy || 0 },
     { key: 'transport',     label: 'Transporte',      emoji: '🚌', budget: e?.transport || 0 },
-  ].filter((c) => VARIABLE_CATS.has(c.key) && c.budget > 0);
+  ];
+  return todas.filter((c) => VARIABLE_CATS.has(c.key) && c.budget > 0);
 }
 
 // Categorías "por visita": tienen ticket promedio y unidad para decir

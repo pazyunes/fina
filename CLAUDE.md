@@ -29,10 +29,17 @@ están decididas.
 ## Comandos
 
 ```bash
-npm run dev      # desarrollo
-npm run build    # build de producción — tiene que pasar antes de cualquier PR
-npm run lint
+npm run dev        # desarrollo
+npm run build      # build de producción — tiene que pasar antes de cualquier PR
+npm run typecheck  # tsc --noEmit — tiene que pasar antes de cualquier PR
 ```
+
+> ⚠️ **`npm run build` NO chequea tipos.** Vite compila con esbuild, que borra
+> las anotaciones sin validarlas: un import que falta o una comparación
+> imposible pasan el build en verde y explotan recién en el navegador. La regla
+> 7 ("sin `any`") tampoco la valida nadie sin `typecheck`. Corré los dos.
+>
+> No hay linter configurado. Si alguna vez se agrega, va acá.
 
 ## Antes de abrir un PR
 
