@@ -871,6 +871,65 @@ export function OpcionesLista<T extends string>({
   );
 }
 
+// Título de sección dentro de una pantalla. Baloo 2 chico: se distingue del
+// título de pantalla por tamaño, no por color ni por una caja alrededor.
+// Reemplaza los `text-[13px] font-bold` en gris que se usaban como encabezado,
+// que competían en peso con el cuerpo y no leían como jerarquía.
+export function TituloSeccion({ children }: { children: React.ReactNode }) {
+  return (
+    <h2
+      className="text-[17px] font-bold leading-tight tracking-[-0.01em]"
+      style={{ color: COLORS.ink, fontFamily: FONTS.display }}
+    >
+      {children}
+    </h2>
+  );
+}
+
+// Fila de una lista. Es el reemplazo de la tarjeta para todo lo que no sea EL
+// dato principal de la pantalla: se apoya directo sobre el papel y se separa de
+// la siguiente por una hairline, no por un contorno propio.
+export function Fila({
+  icon, label, detalle, valor, onClick, tono,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  detalle?: React.ReactNode;
+  valor?: React.ReactNode;
+  onClick?: () => void;
+  tono?: string;
+}) {
+  const contenido = (
+    <>
+      {icon && (
+        <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: tono ?? COLORS.brand }}>
+          {icon}
+        </span>
+      )}
+      <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <span className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>{label}</span>
+        {detalle && <span className="text-[12.5px] leading-snug" style={{ color: COLORS.inkSoft }}>{detalle}</span>}
+      </span>
+      {valor && <span className="shrink-0 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{valor}</span>}
+      {onClick && <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>}
+    </>
+  );
+  const clases = 'w-full flex items-center gap-3 text-left min-h-[56px] py-3 border-b last:border-b-0';
+  if (!onClick) {
+    return <div className={clases} style={{ borderColor: COLORS.line }}>{contenido}</div>;
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ borderColor: COLORS.line }}
+      className={`v2-focus ${clases} transition-all duration-100 ease-out active:scale-[0.99]`}
+    >
+      {contenido}
+    </button>
+  );
+}
+
 // Opción de escape: "prefiero no decirlo", "saltar por ahora". Antes era un
 // link subrayado suelto debajo del CTA; ahora es un control con borde propio,
 // para que se pueda tocar sin apuntar a un renglón de texto (target ≥ 44px).

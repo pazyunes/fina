@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Celebracion, COLORS, EstadoConfianza, Monto, formatThousands, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { Celebracion, COLORS, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, formatThousands, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
 import { IconChevron, IconFuego, IconGastos, IconGrupo, IconIdea, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
 import type { ComponentType } from 'react';
 
@@ -167,185 +167,197 @@ export function HomeV2() {
     setTimeout(() => setCelebrarReserva(false), 800);
   }
 
-  // Un solo lugar por sección: cada tarjeta muestra su dato y lleva a su
-  // pantalla (fusiona los viejos "accesos" + "bienestar" + "Mis análisis").
-  const secciones: { Icon: ComponentType<{ size?: number }>; label: string; to: string; soft: string; accent: string; metric: string }[] = [
-    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', soft: COLORS.gastosSoft, accent: COLORS.gastos, metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá' },
-    { Icon: IconObjetivos, label: 'Objetivos', to: '/onboarding-v2/objetivos', soft: COLORS.objetivosSoft, accent: COLORS.objetivos, metric: b.objetivosPct !== null ? `${b.objetivosPct}%` : 'Sumá uno' },
-    { Icon: IconInversiones, label: 'Inversiones', to: '/onboarding-v2/inversiones', soft: COLORS.inversionesSoft, accent: COLORS.inversiones, metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
+  // Un solo lugar por sección: cada fila muestra su dato y lleva a su pantalla.
+  // Ya no llevan color propio — el color por sección era otra forma de decir
+  // "esto es una caja distinta", y con tintes de 1.1 de contraste no decía nada.
+  const secciones: { Icon: ComponentType<{ size?: number }>; label: string; to: string; metric: string }[] = [
+    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá el primero' },
+    { Icon: IconObjetivos, label: 'Objetivos', to: '/onboarding-v2/objetivos', metric: b.objetivosPct !== null ? `${b.objetivosPct}% de avance` : 'Sumá uno' },
+    { Icon: IconInversiones, label: 'Inversiones', to: '/onboarding-v2/inversiones', metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
   ];
 
   return (
-    <div className="px-[22px] pt-8 pb-4 flex flex-col gap-6 lg:max-w-2xl lg:mx-auto lg:pt-10">
-      <div className="flex items-center gap-3">
+    // DIRECCIÓN C — Home des-encajonado. Antes casi todo elemento vivía dentro
+    // de su propio contenedor redondeado y tintado: banda lila, fila, divisor,
+    // fila, tres fichas de color, otra caja. Como los tintes estaban todos
+    // entre 1.07 y 1.24 de contraste, ninguna de esas cajas separaba nada —
+    // solo sumaban contornos. Ahora el contenido se apoya directo sobre el
+    // papel y se separa por aire y por hairline; la ÚNICA tarjeta elevada de
+    // toda la app es "tu próximo paso", que es lo que de verdad tiene prioridad.
+    <div className="px-6 pt-8 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-10">
+
+      {/* Saludo. El nombre pasa a ser el título de la pantalla, en Baloo 2:
+          antes decía "Tu FINA" en 19px y el nombre iba arriba en gris chico,
+          o sea que lo genérico pesaba más que lo personal. */}
+      <header className="flex items-center gap-3.5">
         <button
           type="button"
           onClick={() => navigate('/onboarding-v2/perfil')}
-          className="v2-focus w-12 h-12 rounded-full overflow-hidden shrink-0 flex items-center justify-center shadow-[0_2px_10px_rgba(31,27,46,0.08)] transition-transform duration-100 active:scale-95"
+          className="v2-focus w-12 h-12 rounded-full overflow-hidden shrink-0 flex items-center justify-center transition-transform duration-100 active:scale-95"
           style={foto ? undefined : { background: COLORS.brandSoft, color: COLORS.brand }}
           aria-label="Ver tu perfil"
         >
           {foto ? <img src={foto} alt="" className="w-full h-full object-cover" /> : <IconPerfil size={22} />}
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>{saludoDelDia()}{nombre ? `, ${nombre}` : ''}</p>
-          <p className="text-[19px] font-bold leading-tight" style={{ color: COLORS.ink }}>Tu FINA</p>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>{saludoDelDia()}</p>
+          <Titulo className="!text-[24px] lg:!text-[26px] truncate">{nombre || 'Tu FINA'}</Titulo>
         </div>
-        {/* Racha — hábito estilo Duolingo, con IconFuego. Con 0 días todavía no
-            es un dato: se muestra tenue como invitación (por-descubrir), no como
-            un cero que parece un error. */}
+        {/* Racha. Con 0 días todavía no es un dato: se muestra tenue como
+            invitación (por-descubrir), no como un cero que parece un error. */}
         {racha > 0 ? (
-          <div className="flex flex-col items-center shrink-0 rounded-2xl px-3 py-1.5" style={{ background: COLORS.brandSoft }}>
-            <span className="flex items-center gap-1 text-[15px] font-bold leading-none" style={{ color: COLORS.brandDark }}><IconFuego size={15} /> <span className="font-mono tabular-nums">{racha}</span></span>
-            <span className="text-[9.5px] font-semibold" style={{ color: COLORS.brand }}>{racha === 1 ? 'día' : 'días'}</span>
+          <div className="flex flex-col items-center shrink-0" style={{ color: COLORS.brand }}>
+            <span className="flex items-center gap-1 text-[17px] font-bold leading-none"><IconFuego size={16} /> <span className="font-mono tabular-nums">{racha}</span></span>
+            <span className="text-[9.5px] font-semibold" style={{ color: COLORS.inkSoft }}>{racha === 1 ? 'día' : 'días'}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 shrink-0 rounded-2xl px-3 py-2" style={{ background: COLORS.tint, color: COLORS.inkFaint }} aria-label="Todavía no arrancaste tu racha">
-            <IconFuego size={15} />
-            <span className="text-[11px] font-semibold leading-none">Racha</span>
+          <div className="flex flex-col items-center shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Todavía no arrancaste tu racha">
+            <IconFuego size={16} />
+            <span className="text-[9.5px] font-semibold leading-none mt-1">Racha</span>
           </div>
         )}
-      </div>
+      </header>
 
-      {/* Tu próximo paso — bloque tintado que lidera la pantalla (el púrpura es
-          estructural, §3.3: recuadro, no un hero de color saturado). Es la
-          única acción sugerida a la vez, estilo Duolingo. */}
-      <div className="rounded-[22px] p-5 flex flex-col gap-4" style={{ background: COLORS.brandSoft }}>
-        <div className="flex items-center gap-3.5">
-          <span className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: COLORS.surface, color: COLORS.brand }}><IconSparkle size={24} /></span>
+      {/* LA tarjeta elevada de la app. Es la única, y por eso funciona: cuando
+          todo era tarjeta, ser tarjeta no significaba nada. */}
+      <section
+        className="rounded-[22px] p-5 flex flex-col gap-4"
+        style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, boxShadow: '0 2px 14px rgba(43,33,24,0.06)' }}
+      >
+        <div className="flex items-start gap-3.5">
+          <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}><IconSparkle size={22} /></span>
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-semibold" style={{ color: COLORS.brand }}>Tu próximo paso</p>
-            <p className="font-bold text-[17px] leading-tight" style={{ color: COLORS.brandDark }}>{paso.titulo}</p>
-            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{paso.msg}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.brand, fontFamily: FONTS.mono }}>Tu próximo paso</p>
+            <p className="font-bold text-[18px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
+            <p className="text-[13px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>{paso.msg}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={() => navigate(paso.to)}
-          className="v2-focus w-full rounded-2xl py-3.5 text-[15px] font-bold text-white transition-transform duration-100 active:scale-[0.99]"
-          style={{ background: COLORS.brand }}
+          className="v2-focus w-full rounded-2xl py-3.5 text-[15px] font-bold transition-transform duration-100 active:scale-[0.99]"
+          style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           {paso.cta}
         </button>
-      </div>
+      </section>
 
-      {/* Reservas + Completá tu perfil — lista PLANA (sin caja individual),
-          filas apoyadas sobre el fondo y separadas por una línea fina. */}
-      <div className="flex flex-col">
-        <div className="relative flex items-center gap-3 py-3">
-          <Celebracion show={celebrarReserva} />
-          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.goldSoft, color: COLORS.starText }}><IconReserva size={18} /></span>
-          <div className="flex-1 min-w-0">
-            <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
-            <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>
-              {reserva > 0 ? <>Tenés <Monto value={reserva} className="text-[12px]" /> apartados</> : 'Apartá plata para no gastarla — tipo alcancía.'}
-            </p>
-            {/* La reserva la cargó la persona: dato declarado (§5.1). */}
-            {reserva > 0 && <EstadoConfianza estado="declarado" className="mt-1" />}
-          </div>
-          <button type="button" onClick={() => setReservaOpen((o) => !o)} className="v2-focus flex items-center justify-center min-h-[44px] px-2 text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
-            {reserva > 0 ? 'Sumar' : 'Reservar'}
-          </button>
-        </div>
-        {reservaOpen && (
-          <div className="pb-3 flex gap-2">
-            <input
-              autoFocus
-              className="v2-focus flex-1 min-w-0 rounded-xl px-3 py-2 min-h-[44px] text-[13.5px] outline-none"
-              style={{ border: `1px solid ${COLORS.line}`, color: COLORS.ink }}
-              placeholder="¿Cuánto querés reservar?"
-              inputMode="decimal"
-              value={reservaVal}
-              onChange={(e) => setReservaVal(formatThousands(e.target.value))}
+      {/* Tus secciones. Eran tres fichas tintadas en grilla; los tres tintes
+          estaban a 1.1 del fondo, así que las fichas se leían como un bloque
+          gris único. Como filas, el nombre y el dato de cada una se leen. */}
+      <section className="flex flex-col gap-2">
+        <TituloSeccion>Tus secciones</TituloSeccion>
+        <div className="flex flex-col">
+          {secciones.map((s) => (
+            <Fila
+              key={s.label}
+              icon={<s.Icon size={18} />}
+              label={s.label}
+              valor={s.metric}
+              onClick={() => navigate(s.to)}
             />
-            <button type="button" onClick={guardarReserva} className="v2-focus rounded-xl px-3.5 min-h-[44px] text-[12.5px] font-bold text-white transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand }}>
-              Guardar
+          ))}
+        </div>
+      </section>
+
+      {/* Reservas + perfil */}
+      <section className="flex flex-col gap-2">
+        <TituloSeccion>Tu plata guardada</TituloSeccion>
+        <div className="flex flex-col">
+          <div className="relative flex items-center gap-3 min-h-[56px] py-3 border-b" style={{ borderColor: COLORS.line }}>
+            <Celebracion show={celebrarReserva} />
+            <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.starSoft, color: COLORS.starText }}><IconReserva size={18} /></span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
+              <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>
+                {reserva > 0 ? <>Tenés <Monto value={reserva} className="text-[12.5px]" /> apartados</> : 'Apartá plata para no gastarla — tipo alcancía.'}
+              </p>
+              {/* La reserva la cargó la persona: dato declarado (§5.1). */}
+              {reserva > 0 && <EstadoConfianza estado="declarado" className="mt-1" />}
+            </div>
+            <button type="button" onClick={() => setReservaOpen((o) => !o)} className="v2-focus flex items-center justify-center min-h-[44px] px-3 rounded-full text-[13px] font-bold shrink-0" style={{ color: COLORS.brand, border: `1.5px solid ${COLORS.brandSoft}` }}>
+              {reserva > 0 ? 'Sumar' : 'Reservar'}
             </button>
           </div>
-        )}
-        <button
-          type="button"
-          onClick={() => navigate('/onboarding-v2/perfil')}
-          className="v2-focus flex items-center gap-3 py-3 text-left border-t"
-          style={{ borderColor: COLORS.line }}
-        >
-          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}><IconPerfil size={18} /></span>
-          <span className="flex-1 text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Completá tu perfil</span>
-          <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
-        </button>
-      </div>
+          {reservaOpen && (
+            <div className="py-3 flex gap-2 border-b" style={{ borderColor: COLORS.line }}>
+              <input
+                autoFocus
+                className="v2-focus flex-1 min-w-0 rounded-xl px-3 py-2 min-h-[44px] text-[14px] outline-none"
+                style={{ border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink, background: COLORS.surface }}
+                placeholder="¿Cuánto querés reservar?"
+                inputMode="decimal"
+                aria-label="Monto a reservar"
+                value={reservaVal}
+                onChange={(e) => setReservaVal(formatThousands(e.target.value))}
+              />
+              <button type="button" onClick={guardarReserva} className="v2-focus rounded-xl px-4 min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand, color: COLORS.surface }}>
+                Guardar
+              </button>
+            </div>
+          )}
+          <Fila
+            icon={<IconPerfil size={18} />}
+            label="Completá tu perfil"
+            onClick={() => navigate('/onboarding-v2/perfil')}
+          />
+        </div>
+      </section>
 
-      {/* 3 secciones — las tres en una línea (fichas tintadas): ícono + nombre + dato corto */}
-      <div className="grid grid-cols-3 gap-2.5">
-        {secciones.map((s) => (
-          <button
-            key={s.label}
-            type="button"
-            onClick={() => navigate(s.to)}
-            className="v2-focus flex flex-col items-center gap-2 text-center rounded-2xl px-2 py-4 transition-all duration-100 active:scale-[0.97]"
-            style={{ background: s.soft }}
-          >
-            <span className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: COLORS.surface, color: s.accent }}>
-              <s.Icon size={22} />
-            </span>
-            <span className="flex flex-col gap-0.5">
-              <span className="text-[13px] font-bold leading-tight" style={{ color: COLORS.ink }}>{s.label}</span>
-              <span className="text-[10.5px] leading-tight" style={{ color: COLORS.inkSoft }}>{s.metric}</span>
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Mis competencias — ranking del grupo. Empieza simple: el nombre del
-          grupo con una franja de color arriba y el ranking de actividad. */}
-      <div className="flex flex-col gap-2 lg:col-span-1">
-        <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Mis competencias</p>
+      {/* Mis competencias */}
+      <section className="flex flex-col gap-2">
+        <TituloSeccion>Mis competencias</TituloSeccion>
         {grupo ? (
           <button
             type="button"
             onClick={() => navigate('/onboarding-v2/grupos')}
-            className="v2-focus text-left rounded-2xl overflow-hidden border transition-transform duration-100 active:scale-[0.99]"
-            style={{ background: COLORS.surface, borderColor: COLORS.line }}
+            className="v2-focus text-left flex flex-col gap-2.5 transition-transform duration-100 active:scale-[0.99]"
           >
-            <div className="px-4 py-2 flex items-center justify-between" style={{ background: COLORS.brand }}>
-              <p className="font-bold text-[13.5px] text-white truncate flex items-center gap-1.5"><IconGrupo size={16} /> {grupo.nombre}</p>
-              <span className="text-[11.5px] font-semibold text-white/90 shrink-0 flex items-center gap-0.5">Ver todo <IconChevron size={13} /></span>
-            </div>
-            <div className="p-4 flex flex-col gap-1.5">
+            <span className="flex items-center gap-2 text-[14px] font-bold" style={{ color: COLORS.brand }}>
+              <IconGrupo size={16} /> {grupo.nombre}
+              <span className="ml-auto flex items-center gap-0.5 text-[12.5px] font-semibold">Ver todo <IconChevron size={13} /></span>
+            </span>
+            <span className="flex flex-col">
               {topGrupo.map((m, i) => (
-                <div key={m.nombre} className="flex items-center gap-2 text-[13px]">
-                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>{i + 1}</span>
+                <span key={m.nombre} className="flex items-center gap-2.5 text-[13.5px] py-2 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 font-mono tabular-nums" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>{i + 1}</span>
                   <span className="flex-1 truncate" style={{ color: m.sosVos ? COLORS.brand : COLORS.ink, fontWeight: m.sosVos ? 700 : 500 }}>
                     {m.nombre}{m.sosVos ? ' (vos)' : ''}
                   </span>
-                  <span style={{ color: COLORS.inkSoft }}>{m.actividad}</span>
-                </div>
+                  <span className="font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>{m.actividad}</span>
+                </span>
               ))}
-            </div>
+            </span>
           </button>
         ) : (
-          <div className="rounded-2xl px-4 py-3.5 text-[12.5px]" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>
-            Todavía no tenés un grupo. Armá uno desde <strong style={{ color: COLORS.brand }}>Objetivos</strong> para competir con tus amigas y amigos.
-          </div>
+          <p className="text-[13.5px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+            Todavía no tenés un grupo. Armá uno desde <strong style={{ color: COLORS.brandDark }}>Objetivos</strong> para competir con tus amigas y amigos.
+          </p>
         )}
-      </div>
+      </section>
 
-      {/* Tips para vos — recomendaciones cortas según lo que ya sabemos de vos */}
-      <div className="flex flex-col gap-2 lg:col-span-3">
-        <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Tips para vos</p>
-        {tips.map((t) => (
-          <button
-            key={t.texto}
-            type="button"
-            onClick={() => navigate(t.to)}
-            className="v2-focus w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
-            style={{ background: COLORS.goldSoft }}
-          >
-            <span className="shrink-0" style={{ color: COLORS.starText }}><IconIdea size={20} /></span>
-            <span className="flex-1 text-[13px] font-medium" style={{ color: COLORS.ink }}>{t.texto}</span>
-          </button>
-        ))}
-      </div>
+      {/* Tips. Eran cajas amarillas apiladas — tres contenedores más. Ahora son
+          filas con el ícono de idea al costado, separadas por hairline. */}
+      {tips.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <TituloSeccion>Tips para vos</TituloSeccion>
+          <div className="flex flex-col">
+            {tips.map((t) => (
+              <button
+                key={t.texto}
+                type="button"
+                onClick={() => navigate(t.to)}
+                className="v2-focus w-full flex items-center gap-3 text-left min-h-[56px] py-3 border-b last:border-b-0 transition-all duration-100 active:scale-[0.99]"
+                style={{ borderColor: COLORS.line }}
+              >
+                <span className="shrink-0" style={{ color: COLORS.starText }}><IconIdea size={20} /></span>
+                <span className="flex-1 text-[13.5px] leading-snug" style={{ color: COLORS.ink }}>{t.texto}</span>
+                <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={16} /></span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
