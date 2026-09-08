@@ -81,7 +81,7 @@ export function PerfilV2() {
       <header className="flex items-center gap-4">
         <div className="flex-1 min-w-0">
           <Titulo>Tu perfil</Titulo>
-          <p className="text-[14px] mt-2" style={{ color: COLORS.inkSoft }}>Tu foto, tu nombre y lo que falta para completar tu FINA.</p>
+          <p className="text-[16px] mt-2" style={{ color: COLORS.inkSoft }}>Tu foto, tu nombre y lo que falta para completar tu FINA.</p>
         </div>
       </header>
 
@@ -101,7 +101,7 @@ export function PerfilV2() {
           {/* Scrim de tinta sobre la foto para que la etiqueta se lea (media
               overlay, no decoración de color). */}
           <span
-            className="absolute bottom-0 left-0 right-0 text-center text-[10px] font-bold py-1"
+            className="absolute bottom-0 left-0 right-0 text-center text-[12px] font-bold py-1"
             style={{ background: 'rgba(43,33,24,0.6)', color: COLORS.surface }}
           >
             Cambiar
@@ -111,11 +111,11 @@ export function PerfilV2() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="perfil-nombre" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu nombre</label>
+        <label htmlFor="perfil-nombre" className="text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu nombre</label>
         <div className="flex gap-2">
           <input
             id="perfil-nombre"
-            className="v2-focus flex-1 min-w-0 rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
+            className="v2-focus flex-1 min-w-0 rounded-2xl px-4 py-3 text-[18px] outline-none transition-colors"
             style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
             placeholder="Tu nombre"
             value={nombre}
@@ -141,7 +141,7 @@ export function PerfilV2() {
             <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: COLORS.line }}>
               <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pctPerfil}%`, background: COLORS.brand }} />
             </div>
-            <span className="text-[12.5px] font-bold tabular-nums shrink-0" style={{ color: COLORS.brand, fontFamily: FONTS.mono }}>{pctPerfil}%</span>
+            <span className="text-[14px] font-bold tabular-nums shrink-0" style={{ color: COLORS.brand, fontFamily: FONTS.mono }}>{pctPerfil}%</span>
           </div>
 
           <div className="flex flex-col">
@@ -161,7 +161,7 @@ export function PerfilV2() {
                 >
                   {it.hecho ? <Check size={11} /> : null}
                 </span>
-                <span className="flex-1 text-[14.5px] font-medium" style={{ color: it.hecho ? COLORS.inkFaint : COLORS.ink, textDecoration: it.hecho ? 'line-through' : 'none' }}>
+                <span className="flex-1 text-[16px] font-medium" style={{ color: it.hecho ? COLORS.inkFaint : COLORS.ink, textDecoration: it.hecho ? 'line-through' : 'none' }}>
                   {it.label}
                 </span>
               </button>
@@ -181,7 +181,7 @@ export function PerfilV2() {
                 >
                   {nivel ? <Check size={11} /> : null}
                 </span>
-                <span className="flex-1 text-[14.5px] font-medium" style={{ color: nivel ? COLORS.inkFaint : COLORS.ink, textDecoration: nivel ? 'line-through' : 'none' }}>
+                <span className="flex-1 text-[16px] font-medium" style={{ color: nivel ? COLORS.inkFaint : COLORS.ink, textDecoration: nivel ? 'line-through' : 'none' }}>
                   Descubrí tu nivel de conocimiento financiero
                 </span>
               </button>
@@ -195,7 +195,7 @@ export function PerfilV2() {
           {abriendoNivel && (
             <div className="flex flex-col gap-3 pt-1">
               <TituloSeccion>¿Cómo describirías lo que sabés hoy?</TituloSeccion>
-              <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
                 Así las recomendaciones te van a hablar en tu idioma, sin sonar ni muy básico ni muy técnico.
               </p>
               <OpcionesLista
@@ -212,7 +212,7 @@ export function PerfilV2() {
 
       <div className="flex flex-col">
         {['Términos y condiciones', 'Política de privacidad', 'Enviar feedback'].map((txt) => (
-          <button key={txt} type="button" className="v2-focus text-left text-[13.5px] font-medium min-h-[48px] py-3 border-b last:border-b-0" style={{ color: COLORS.inkSoft, borderColor: COLORS.line }}>
+          <button key={txt} type="button" className="v2-focus text-left text-[15px] font-medium min-h-[48px] py-3 border-b last:border-b-0" style={{ color: COLORS.inkSoft, borderColor: COLORS.line }}>
             {txt}
           </button>
         ))}

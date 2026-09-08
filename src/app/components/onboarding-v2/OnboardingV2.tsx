@@ -261,7 +261,7 @@ const PREVIEW_INFO: Record<ObjetivoId, { titulo: string; desc: string; bg: strin
 // crudo, §3.3). El foco visible lo da .v2-focus (--focus-ring, §11), así no hace
 // falta el `focus:border-...` con hex. El borde de error usa naranja (atención
 // accionable real, §3.3), nunca un rojo de alerta.
-const inputClass = 'v2-focus rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors';
+const inputClass = 'v2-focus rounded-2xl px-4 py-3 text-[18px] outline-none transition-colors';
 function inputStyle(err = false): React.CSSProperties {
   return { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${err ? COLORS.naranja : COLORS.line}` };
 }
@@ -327,9 +327,9 @@ function formatearTelefonoAr(v: string): string {
 function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</label>
+      <label className="text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</label>
       {children}
-      {error && <p className="text-[12px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
+      {error && <p className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
     </div>
   );
 }
@@ -646,7 +646,7 @@ export function OnboardingV2() {
                       un borde más a la pantalla. */}
                   <ul className="flex flex-col gap-3.5 list-none p-0 m-0">
                     {['Conocé tus gastos', 'Lográ tus objetivos', 'Cuidá tu bienestar financiero'].map((txt) => (
-                      <li key={txt} className="flex items-center gap-3 text-[16.5px] font-semibold" style={{ color: COLORS.ink }}>
+                      <li key={txt} className="flex items-center gap-3 text-[20px] font-semibold" style={{ color: COLORS.ink }}>
                         <span className="w-[26px] h-[26px] rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brand }}>
                           <CheckIcon />
                         </span>
@@ -654,7 +654,7 @@ export function OnboardingV2() {
                       </li>
                     ))}
                   </ul>
-                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
+                  <p className="text-[18px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
                 </>
               )}
 
@@ -707,7 +707,7 @@ export function OnboardingV2() {
                   <OpcionesLista opciones={OBJETIVOS} valor={meta} onElegir={setMeta} />
                   <div className="flex justify-center py-1"><Face color={FACE_COLOR} size={90} mood="happy" /></div>
                   {meta && (
-                    <div className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[13.5px] font-semibold" style={{ color: COLORS.ink, background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
+                    <div className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[15px] font-semibold" style={{ color: COLORS.ink, background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
                       {objetivoBubble}
                     </div>
                   )}
@@ -794,7 +794,7 @@ export function OnboardingV2() {
                   <div className="flex flex-col gap-4">
                     {FILAS_ASIGNACION.map((fila) => (
                       <div key={fila.id} className="flex flex-col gap-1.5">
-                        <p className="text-[14.5px] font-bold" style={{ color: COLORS.ink }}>{fila.titulo}</p>
+                        <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>{fila.titulo}</p>
                         <Nota>{fila.ejemplo}</Nota>
                         <div className="flex gap-1.5">
                           {NIVELES.map((n) => (
@@ -802,7 +802,7 @@ export function OnboardingV2() {
                               key={n.id}
                               type="button"
                               onClick={() => setAsignacion((a) => ({ ...a, [fila.id]: n.id }))}
-                              className="v2-focus flex-1 rounded-xl py-2.5 text-[12.5px] font-bold transition-all duration-100 active:scale-95"
+                              className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-100 active:scale-95"
                               style={asignacion[fila.id] === n.id ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
                             >
                               {n.label}
@@ -824,13 +824,13 @@ export function OnboardingV2() {
                       <div className="flex items-center gap-3">
                         <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.darkLine, color: COLORS.onDark }}><IconChat size={24} /></span>
                         <div className="flex flex-col">
-                          <p className="text-[15px] font-bold" style={{ color: COLORS.onDark }}>
+                          <p className="text-[18px] font-bold" style={{ color: COLORS.onDark }}>
                             {tedioso === 'si' ? 'Tranqui — para eso está tu FINA en WhatsApp' : 'Igual te va a encantar tu FINA en WhatsApp'}
                           </p>
-                          <p className="text-[12.5px]" style={{ color: COLORS.onDarkSoft }}>Sin planillas, sin abrir la app.</p>
+                          <p className="text-[14px]" style={{ color: COLORS.onDarkSoft }}>Sin planillas, sin abrir la app.</p>
                         </div>
                       </div>
-                      <p className="text-[13.5px] leading-relaxed" style={{ color: COLORS.onDark }}>
+                      <p className="text-[15px] leading-relaxed" style={{ color: COLORS.onDark }}>
                         Le escribís tu gasto como se lo contarías a una amiga —{' '}
                         <span className="font-semibold" style={{ color: COLORS.onDark }}>“gasté 5.000 en el súper”</span>{' '}
                         — y FINA lo registra sola, al toque. También te responde dudas y te avisa cómo venís.
@@ -901,10 +901,10 @@ export function OnboardingV2() {
                   <Apoyo>Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.</Apoyo>
                   <input autoFocus aria-label="Nombre de tu objetivo" className={inputClass} style={inputStyle()} placeholder="Ej: Viaje a Bariloche" value={objNombre} onChange={(e) => setObjNombre(e.target.value)} />
                   <div className="flex items-center justify-between">
-                    <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+                    <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
                     <div className="flex rounded-full p-0.5" style={{ background: COLORS.tint }}>
                       {(['ARS', 'USD'] as const).map((m) => (
-                        <button key={m} type="button" aria-pressed={objMoneda === m} onClick={() => setObjMoneda(m)} className="v2-focus rounded-full px-3 py-1 text-[12px] font-bold transition-colors" style={objMoneda === m ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}>{m}</button>
+                        <button key={m} type="button" aria-pressed={objMoneda === m} onClick={() => setObjMoneda(m)} className="v2-focus rounded-full px-3 py-1 text-[14px] font-bold transition-colors" style={objMoneda === m ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}>{m}</button>
                       ))}
                     </div>
                   </div>
@@ -912,7 +912,7 @@ export function OnboardingV2() {
                     <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{objMoneda === 'USD' ? 'US$' : '$'}</span>
                     <input aria-label="Monto total del objetivo" className={`${inputClass} pl-11`} style={inputStyle()} placeholder="Monto total" inputMode="decimal" value={objMonto} onChange={(e) => setObjMonto(formatThousands(e.target.value))} />
                   </div>
-                  <p className="text-[14px] font-bold mt-1" style={{ color: COLORS.ink }}>¿Para cuándo? <span className="font-normal text-[13px]" style={{ color: COLORS.inkSoft }}>(opcional)</span></p>
+                  <p className="text-[16px] font-bold mt-1" style={{ color: COLORS.ink }}>¿Para cuándo? <span className="font-normal text-[15px]" style={{ color: COLORS.inkSoft }}>(opcional)</span></p>
                   <input type="date" aria-label="Fecha del objetivo (opcional)" className={inputClass} style={inputStyle()} value={objFecha} onChange={(e) => setObjFecha(e.target.value)} />
                 </>
               )}
@@ -925,16 +925,16 @@ export function OnboardingV2() {
                     {previewsOrdenados.map((p) => (
                       <div key={p.titulo} className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: p.bg }}>
                         <div>
-                          <p className="font-bold text-[14px]" style={{ color: COLORS.ink }}>{p.titulo}</p>
-                          <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>{p.desc}</p>
+                          <p className="font-bold text-[16px]" style={{ color: COLORS.ink }}>{p.titulo}</p>
+                          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{p.desc}</p>
                         </div>
                       </div>
                     ))}
                     <div className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: COLORS.ink }}>
                       <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.darkLine, color: COLORS.onDark }}><IconChat size={24} /></span>
                       <div>
-                        <p className="font-bold text-[14px]" style={{ color: COLORS.onDark }}>Tu bot de WhatsApp</p>
-                        <p className="text-[12.5px]" style={{ color: COLORS.onDarkSoft }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
+                        <p className="font-bold text-[16px]" style={{ color: COLORS.onDark }}>Tu bot de WhatsApp</p>
+                        <p className="text-[14px]" style={{ color: COLORS.onDarkSoft }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
                       </div>
                     </div>
                   </div>
@@ -971,7 +971,7 @@ export function OnboardingV2() {
                     >
                       {aceptoTerminos && <CheckIcon />}
                     </span>
-                    <span className="text-[13.5px] font-medium" style={{ color: COLORS.ink }}>
+                    <span className="text-[15px] font-medium" style={{ color: COLORS.ink }}>
                       Acepto los <span className="underline font-semibold">términos y condiciones</span> y la <span className="underline font-semibold">política de privacidad</span>.
                     </span>
                   </button>
@@ -990,7 +990,7 @@ export function OnboardingV2() {
                   </Campo>
                   <Campo label="Teléfono" error={intentoLogin && !telefonoOk ? 'Campo obligatorio' : undefined}>
                     <div className="flex gap-2">
-                      <span className={`flex items-center gap-1.5 px-3 rounded-2xl text-[15px] font-semibold shrink-0 ${inputClass}`} style={inputStyle(false)}>+54</span>
+                      <span className={`flex items-center gap-1.5 px-3 rounded-2xl text-[18px] font-semibold shrink-0 ${inputClass}`} style={inputStyle(false)}>+54</span>
                       <input
                         className={`flex-1 ${inputClass}`}
                         style={inputStyle(intentoLogin && !telefonoOk)}
@@ -1010,7 +1010,7 @@ export function OnboardingV2() {
                   <Titulo>Verificá tu teléfono</Titulo>
                   <Apoyo>Te mandamos un código a +54 {telefono || 'tu teléfono'}.</Apoyo>
                   <input aria-label="Código de verificación" className={inputClass} style={inputStyle()} placeholder="Código" inputMode="numeric" value={codigoVerif} onChange={(e) => setCodigoVerif(e.target.value)} />
-                  <p className="text-[12px]" style={{ color: COLORS.inkFaint }}>Modo de prueba: todavía no mandamos SMS de verdad — escribí cualquier código de 4 a 6 dígitos.</p>
+                  <p className="text-[14px]" style={{ color: COLORS.inkFaint }}>Modo de prueba: todavía no mandamos SMS de verdad — escribí cualquier código de 4 a 6 dígitos.</p>
                 </>
               )}
 
@@ -1018,7 +1018,7 @@ export function OnboardingV2() {
                 <>
                   <div className="flex justify-center py-2"><Face color={FACE_COLOR} mood="happy" /></div>
                   <Titulo>¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</Titulo>
-                  <p className="text-[14px] text-center" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
+                  <p className="text-[16px] text-center" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
                 </>
               )}
             </motion.div>

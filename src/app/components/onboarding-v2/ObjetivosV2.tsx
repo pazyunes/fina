@@ -115,7 +115,7 @@ function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Mone
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={`Moneda: ${actual.code}`}
-        className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors"
+        className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[15px] font-semibold transition-colors"
         style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
       >
         <span>{actual.code}</span>
@@ -130,7 +130,7 @@ function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Mone
                 key={m.code}
                 type="button"
                 onClick={() => { onChange(m.code); setOpen(false); }}
-                className="ov2-menu-item v2-focus w-full flex items-center gap-2 px-3 py-2.5 text-left text-[13.5px] transition-colors"
+                className="ov2-menu-item v2-focus w-full flex items-center gap-2 px-3 py-2.5 text-left text-[15px] transition-colors"
                 style={{ color: COLORS.ink }}
               >
                 <span className="font-semibold w-9 shrink-0">{m.code}</span>
@@ -164,7 +164,7 @@ const CARD_SHADOW = 'border';
 // Borde + foco por CSS (ov2-input, ver V2_STYLES) para que el color salga de
 // COLORS y no de un hex crudo en la clase de Tailwind. v2-focus agrega el
 // anillo de foco de la guía (§11).
-const inputClass = 'ov2-input v2-focus rounded-xl px-3 py-2.5 text-[14px] outline-none transition-colors';
+const inputClass = 'ov2-input v2-focus rounded-xl px-3 py-2.5 text-[16px] outline-none transition-colors';
 
 const HORIZONTE_OPCIONES = ['Lo antes posible', 'Todavía no lo pensé'];
 
@@ -181,7 +181,7 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
             key={o}
             type="button"
             onClick={() => { setValor(o); setFecha(''); }}
-            className="v2-focus rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+            className="v2-focus rounded-xl px-3 py-2 text-[15px] font-semibold transition-all duration-100 active:scale-95"
             style={valor === o && !fechaElegida ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
           >
             {o}
@@ -190,7 +190,7 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
         <button
           type="button"
           onClick={() => setValor(null)}
-          className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+          className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[15px] font-semibold transition-all duration-100 active:scale-95"
           style={fechaElegida || valor === null ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
         >
 <IconCalendario size={15} /> Fecha exacta
@@ -284,7 +284,7 @@ function MontoPicker({
               key={m}
               type="button"
               onClick={() => setModo(m)}
-              className="v2-focus flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+              className="v2-focus flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-[14px] font-semibold transition-all duration-100 active:scale-95"
               style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
             >
               {label}
@@ -332,7 +332,7 @@ function MontoPicker({
       )}
 
       {modo === 'desconocido' && (
-        <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Buenísimo — lo vas a poder poner más adelante, cuando lo tengas más claro.</p>
+        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Buenísimo — lo vas a poder poner más adelante, cuando lo tengas más claro.</p>
       )}
     </div>
   );
@@ -492,14 +492,14 @@ export function ObjetivosV2() {
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-6" style={{ background: `${COLORS.ink}80` }} onClick={() => setConfirmarBorrar(null)}>
       <div className="w-full max-w-[320px] rounded-2xl p-5 flex flex-col gap-4" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col gap-1">
-          <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>¿Borrar este objetivo?</p>
-          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Se va a eliminar “{objAConfirmar.nombre}” y todos sus registros. No se puede deshacer.</p>
+          <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>¿Borrar este objetivo?</p>
+          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Se va a eliminar “{objAConfirmar.nombre}” y todos sus registros. No se puede deshacer.</p>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setConfirmarBorrar(null)}
-            className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-100 active:scale-95"
+            className="v2-focus flex-1 rounded-xl py-2.5 text-[16px] font-bold transition-all duration-100 active:scale-95"
             style={{ background: COLORS.tint, color: COLORS.inkSoft }}
           >
             No
@@ -507,7 +507,7 @@ export function ObjetivosV2() {
           <button
             type="button"
             onClick={() => { borrarObjetivo(objAConfirmar.id); setConfirmarBorrar(null); }}
-            className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-100 active:scale-95"
+            className="v2-focus flex-1 rounded-xl py-2.5 text-[16px] font-bold transition-all duration-100 active:scale-95"
             style={{ background: COLORS.naranja, color: COLORS.ink }}
           >
             Sí, borrar
@@ -544,21 +544,21 @@ export function ObjetivosV2() {
         {V2_STYLES}
         {confirmarBorrarModal}
         <div className="flex items-center justify-between">
-          <button type="button" className="v2-focus inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>
+          <button type="button" className="v2-focus inline-flex items-center gap-1 text-[15px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>
             <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} /> Volver
           </button>
           <div className="flex items-center gap-3">
             {abierto.tipo === 'grupal' && grupo && (
-              <button type="button" className="v2-focus inline-flex items-center gap-1 text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }} onClick={invitarGente}>{invitado ? <><CheckMini /> Copiado</> : 'Invitar'}</button>
+              <button type="button" className="v2-focus inline-flex items-center gap-1 text-[14px] font-semibold underline" style={{ color: COLORS.brand }} onClick={invitarGente}>{invitado ? <><CheckMini /> Copiado</> : 'Invitar'}</button>
             )}
-            <button type="button" className="v2-focus text-[12.5px] font-semibold underline" style={{ color: COLORS.brand }} onClick={() => empezarEdicion()}>Editar</button>
-            <button type="button" className="v2-focus text-[12.5px] font-semibold underline" style={{ color: COLORS.coralDark }} onClick={() => setConfirmarBorrar(abierto.id)}>Borrar</button>
+            <button type="button" className="v2-focus text-[14px] font-semibold underline" style={{ color: COLORS.brand }} onClick={() => empezarEdicion()}>Editar</button>
+            <button type="button" className="v2-focus text-[14px] font-semibold underline" style={{ color: COLORS.coralDark }} onClick={() => setConfirmarBorrar(abierto.id)}>Borrar</button>
           </div>
         </div>
 
         {editando ? (
-          <div className={`rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
-            <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Editar objetivo</p>
+          <div className="flex flex-col gap-2.5 pt-1">
+            <TituloSeccion>Editar objetivo</TituloSeccion>
             <input className={inputClass} placeholder="Nombre" value={editNombre} onChange={(e) => setEditNombre(e.target.value)} />
             <input className={inputClass} placeholder="Descripción (opcional)" value={editDescripcion} onChange={(e) => setEditDescripcion(e.target.value)} />
             <SegmentedTab
@@ -566,24 +566,24 @@ export function ObjetivosV2() {
               value={editTipo} onChange={setEditTipo} trackColor={COLORS.gold}
             />
             <div className="flex items-center justify-between">
-              <p className="text-[13px] font-semibold" style={{ color: COLORS.ink }}>Moneda</p>
+              <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>Moneda</p>
               <MonedaDropdown value={editMoneda} onChange={setEditMoneda} />
             </div>
-            <p className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Cuánto necesitás?</p>
+            <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Cuánto necesitás?</p>
             <MontoPicker
               modo={editMontoModo} setModo={setEditMontoModo}
               montoTxt={editMontoTotal} setMontoTxt={setEditMontoTotal}
               minTxt={editMontoMin} setMinTxt={setEditMontoMin}
             />
-            <p className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Para cuándo?</p>
+            <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Para cuándo?</p>
             <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} />
             <div className="flex gap-2 mt-1">
-              <button type="button" onClick={() => setEditando(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
-              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="v2-focus flex-[2] rounded-xl py-2.5 text-[13.5px] font-bold disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
+              <button type="button" onClick={() => setEditando(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[15px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
+              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold disabled:opacity-40 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
             </div>
           </div>
         ) : (
-        <div className={`relative rounded-2xl p-4 flex gap-4 items-center ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
+        <div className="relative py-2 flex gap-4 items-center">
           <Celebracion show={celebrar} big={celebrarBig} />
           {estado === 'definido' && (
             <Donut
@@ -595,14 +595,14 @@ export function ObjetivosV2() {
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-[18px] font-bold truncate" style={{ color: COLORS.ink }}>{abierto.nombre}</p>
+              <p className="text-[20px] font-bold truncate" style={{ color: COLORS.ink }}>{abierto.nombre}</p>
               {abierto.tipo === 'grupal' && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
+                <span className="inline-flex items-center gap-1 text-[12px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
                   <IconGrupo size={11} /> Grupal
                 </span>
               )}
               {abierto.moneda !== 'ARS' && (
-                <span className="text-[10px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.skySoft, color: COLORS.ink }}>
+                <span className="text-[12px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.skySoft, color: COLORS.ink }}>
                   {abierto.moneda}
                 </span>
               )}
@@ -611,44 +611,44 @@ export function ObjetivosV2() {
                   EstadoConfianza, no con un badge de alerta. */}
               {estado !== 'definido' && <EstadoConfianza estado="por-descubrir" />}
             </div>
-            {abierto.descripcion && <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>{abierto.descripcion}</p>}
+            {abierto.descripcion && <p className="text-[14px] mt-0.5" style={{ color: COLORS.inkSoft }}>{abierto.descripcion}</p>}
             {abierto.horizonte && (
-              <p className="text-[11.5px] mt-0.5 flex items-center gap-1" style={{ color: COLORS.inkFaint }}><IconCalendario size={13} /> {abierto.horizonte}</p>
+              <p className="text-[14px] mt-0.5 flex items-center gap-1" style={{ color: COLORS.inkFaint }}><IconCalendario size={13} /> {abierto.horizonte}</p>
             )}
             {estado === 'definido' && (
               <>
-                <p className="text-[13px] mt-1.5" style={{ color: COLORS.ink }}>
+                <p className="text-[15px] mt-1.5" style={{ color: COLORS.ink }}>
                   Llevás <MontoObj monto={Math.round(animAcum)} moneda={abierto.moneda} className="font-semibold" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(abierto)}</span>
                 </p>
                 {/* El total es lo que la persona nos declaró (§5.1). */}
                 <EstadoConfianza estado="declarado" className="mt-0.5" />
-                {!done && <p className="text-[12px] mt-1" style={{ color: COLORS.inkSoft }}>Te falta <MontoObj monto={restante} moneda={abierto.moneda} /></p>}
+                {!done && <p className="text-[14px] mt-1" style={{ color: COLORS.inkSoft }}>Te falta <MontoObj monto={restante} moneda={abierto.moneda} /></p>}
                 {/* Delta de la semana en LIMA: el avance chico igual se lee
                     como avance (§5.3), y el lima es el color del avance. */}
                 {aporteSemana > 0 && (
-                  <p className="text-[12.5px] mt-1 font-semibold inline-flex items-center" style={{ color: COLORS.limaText }}>
+                  <p className="text-[14px] mt-1 font-semibold inline-flex items-center" style={{ color: COLORS.limaText }}>
                     +<MontoObj monto={aporteSemana} moneda={abierto.moneda} style={{ color: COLORS.limaText }} />&nbsp;esta semana
                   </p>
                 )}
                 {/* Cuándo llegás: estimado → rango de semanas + marca. */}
                 {semanasEstimadas && (
                   <span className="mt-1 flex flex-col gap-0.5">
-                    <span className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>A este ritmo, entre {semanasEstimadas.lo} y {semanasEstimadas.hi} semanas para lograrlo.</span>
+                    <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>A este ritmo, entre {semanasEstimadas.lo} y {semanasEstimadas.hi} semanas para lograrlo.</span>
                     <EstadoConfianza estado="estimado" />
                   </span>
                 )}
               </>
             )}
             {estado !== 'definido' && (
-              <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>Todavía no le pusimos un monto. Cuando lo tengas te muestro el progreso — y si querés lo afinamos juntas.</p>
+              <p className="text-[14px] mt-1" style={{ color: COLORS.inkSoft }}>Todavía no le pusimos un monto. Cuando lo tengas te muestro el progreso — y si querés lo afinamos juntas.</p>
             )}
           </div>
         </div>
         )}
 
         {estado !== 'definido' && (
-          <div className={`rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
-            <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+          <div className="flex flex-col gap-2.5 pt-1">
+            <TituloSeccion>¿Cuánto necesitás?</TituloSeccion>
             <MontoPicker
               modo={montoModoEdit} setModo={setMontoModoEdit}
               montoTxt={montoTotalEdit} setMontoTxt={setMontoTotalEdit}
@@ -667,20 +667,20 @@ export function ObjetivosV2() {
         )}
 
         {done && (
-          <div className="rounded-2xl px-4 py-3 text-[13.5px] font-semibold text-center" style={{ background: COLORS.greenSoft, color: COLORS.ink }}>
+          <p className="rounded-2xl px-4 py-3.5 text-[16px] font-bold text-center" style={{ background: COLORS.lima, color: COLORS.ink }}>
             ¡Ya juntaste todo lo que necesitás para este objetivo!
-          </div>
+          </p>
         )}
 
         {!done && consejoPara(abierto, estado) && (
-          <p className="text-[13px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.star }}>
+          <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.star }}>
             {consejoPara(abierto, estado)}
           </p>
         )}
 
         {/* Registrar un pago o un ahorro */}
-        <div className={`rounded-2xl p-4 flex flex-col gap-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
-          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Sumar un registro</p>
+        <div className="flex flex-col gap-2.5 pt-1">
+          <TituloSeccion>Sumar un registro</TituloSeccion>
           <div className="grid grid-cols-2 gap-2">
             {(['paid', 'saved'] as const).map((k) => {
               const sel = kind === k;
@@ -689,7 +689,7 @@ export function ObjetivosV2() {
                   key={k}
                   type="button"
                   onClick={() => setKind(k)}
-                  className="v2-focus py-2 rounded-xl text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                  className="v2-focus py-2 rounded-xl text-[15px] font-semibold transition-all duration-100 active:scale-95"
                   style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                 >
                   {k === 'paid' ? 'Ya lo pagué' : 'Lo separé'}
@@ -728,21 +728,21 @@ export function ObjetivosV2() {
         {/* Historial de registros */}
         <div className="flex flex-col gap-2">
           <TituloSeccion>Registros</TituloSeccion>
-          {abierto.contribuciones.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste nada.</p>}
+          {abierto.contribuciones.length === 0 && <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste nada.</p>}
           {abierto.contribuciones.map((c) => (
             <div key={c.id} className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
               <span
-                className="text-[10.5px] font-bold rounded-full px-2 py-0.5 shrink-0"
+                className="text-[12px] font-bold rounded-full px-2 py-0.5 shrink-0"
                 style={{ background: c.kind === 'paid' ? COLORS.greenSoft : COLORS.goldSoft, color: COLORS.ink }}
               >
                 {c.kind === 'paid' ? 'Pagado' : 'Separado'}
               </span>
               <span className="flex-1 min-w-0 truncate">
-                <span className="text-[13.5px]" style={{ color: COLORS.ink }}>{c.label}</span>
+                <span className="text-[15px]" style={{ color: COLORS.ink }}>{c.label}</span>
               </span>
-              <span className="text-[12px] shrink-0" style={{ color: COLORS.inkSoft }}>{fechaDisplay(c.ts)}</span>
-              <MontoObj monto={c.monto} moneda={c.moneda} className="font-semibold text-[13.5px] shrink-0" />
-              <button type="button" onClick={() => borrarRegistro(c.id)} className="v2-focus shrink-0 w-8 h-8 flex items-center justify-center rounded-full" style={{ color: COLORS.inkFaint }} aria-label="Borrar registro"><IconBasura size={15} /></button>
+              <span className="text-[14px] shrink-0" style={{ color: COLORS.inkSoft }}>{fechaDisplay(c.ts)}</span>
+              <MontoObj monto={c.monto} moneda={c.moneda} className="font-semibold text-[15px] shrink-0" />
+              <button type="button" onClick={() => borrarRegistro(c.id)} className="v2-focus shrink-0 w-8 h-8 flex items-center justify-center rounded-full" style={{ color: COLORS.inkFaint }} aria-label="Borrar registro"><IconBasura size={18} /></button>
             </div>
           ))}
         </div>
@@ -759,11 +759,11 @@ export function ObjetivosV2() {
           <Titulo>Nuevo objetivo</Titulo>
           <button type="button" onClick={() => setCreating(false)} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
-        <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+        <input className={`${inputClass} rounded-2xl py-3 text-[18px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        <input className={`${inputClass} rounded-2xl py-3 text-[18px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
         <div className="flex flex-col gap-1.5">
-          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Individual o en conjunto?</p>
+          <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿Individual o en conjunto?</p>
           <SegmentedTab
             options={[
               { id: 'individual', label: 'Individual' },
@@ -776,18 +776,18 @@ export function ObjetivosV2() {
           {tipo === 'grupal' && !grupo && (
             <div className="flex flex-col gap-1.5 mt-1">
               <input className={inputClass} placeholder="Nombre del grupo" value={invitarNombre} onChange={(e) => setInvitarNombre(e.target.value)} />
-              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Armamos el grupo con este nombre y vas a poder invitar gente apenas lo crees.</p>
+              <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Armamos el grupo con este nombre y vas a poder invitar gente apenas lo crees.</p>
             </div>
           )}
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Para cuándo?</p>
+          <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿Para cuándo?</p>
           <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} />
         </div>
 
         <div className="flex items-center justify-between -mb-1">
-          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+          <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
           <MonedaDropdown value={moneda} onChange={setMoneda} />
         </div>
         <MontoPicker
@@ -797,7 +797,7 @@ export function ObjetivosV2() {
         />
         <Cta label="Agregar objetivo" disabled={!nombre.trim() || (tipo === 'grupal' && !grupo && !invitarNombre.trim())} onClick={crearObjetivo} />
         {tipo === 'grupal' && !grupo && !invitarNombre.trim() && (
-          <p className="text-[12px] text-center" style={{ color: COLORS.coralDark }}>Ponele nombre al grupo para poder invitar gente.</p>
+          <p className="text-[14px] text-center" style={{ color: COLORS.coralDark }}>Ponele nombre al grupo para poder invitar gente.</p>
         )}
       </div>
     </div>
@@ -816,7 +816,7 @@ export function ObjetivosV2() {
       <header className="pb-1 flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <Titulo>Tus objetivos</Titulo>
-          <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>
             {objetivos.length > 0
               ? `Vas por ${objetivos.length} objetivo${objetivos.length > 1 ? 's' : ''}, a tu ritmo.`
               : 'Ponéle nombre a eso que querés lograr. Lo hacemos juntas, a tu ritmo.'}
@@ -843,7 +843,7 @@ export function ObjetivosV2() {
                 key={s.nombre}
                 type="button"
                 onClick={() => { setNombre(s.nombre); setCreating(true); }}
-                className="v2-focus min-h-[52px] rounded-2xl px-3 py-3 text-[14px] font-semibold leading-snug transition-all duration-100 active:scale-[0.97]"
+                className="v2-focus min-h-[52px] rounded-2xl px-3 py-3 text-[16px] font-semibold leading-snug transition-all duration-100 active:scale-[0.97]"
                 style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
               >
                 {s.nombre}
@@ -856,11 +856,11 @@ export function ObjetivosV2() {
       {objetivos.map((o) => {
         const estado = estadoMonto(o);
         return (
-          <div key={o.id} className={`relative w-full rounded-2xl p-4 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
+          <div key={o.id} className="relative w-full py-4 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
             <button
               type="button"
               onClick={() => setOpenId(o.id)}
-              className="v2-focus w-full flex items-center gap-3.5 text-left pr-[92px]"
+              className="v2-focus w-full flex items-center gap-3.5 text-left"
             >
               {estado === 'definido' ? (
                 <Donut
@@ -873,13 +873,13 @@ export function ObjetivosV2() {
                 // Sin monto = "por descubrir": contorno tenue, sin relleno,
                 // sin color de alerta (guía §5.1). Mismo trato para "todavía
                 // no sé" y para el que llegó sin completar del onboarding.
-                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[10px] text-center font-semibold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.lineStrong, color: COLORS.inkSoft }}>
+                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[12px] text-center font-semibold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.lineStrong, color: COLORS.inkSoft }}>
                   a<br />definir
                 </span>
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-[15px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
+                  <p className="font-semibold text-[18px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
                   {o.tipo === 'grupal' && (
                     <span className="inline-flex items-center rounded-full px-1.5 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
                       <IconGrupo size={12} />
@@ -888,7 +888,7 @@ export function ObjetivosV2() {
                 </div>
                 {estado === 'definido' ? (
                   <>
-                    <p className="text-[12.5px]" style={{ color: COLORS.inkSoft }}>Llevás <MontoObj monto={saved(o)} moneda={o.moneda} className="text-[12.5px]" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(o)}</span></p>
+                    <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Llevás <MontoObj monto={saved(o)} moneda={o.moneda} className="text-[14px]" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(o)}</span></p>
                     <EstadoConfianza estado="declarado" className="mt-0.5" />
                   </>
                 ) : (
@@ -897,32 +897,33 @@ export function ObjetivosV2() {
                 )}
               </div>
             </button>
-            {/* Acciones rápidas del objetivo (editar / sumar registro / borrar) */}
-            <div className="absolute top-2.5 right-2.5 flex items-center gap-1">
+            {/* Acciones rápidas del objetivo (editar / sumar registro / borrar).
+                En su propia fila: sobre el texto se pisaban los targets. */}
+            <div className="mt-1 flex items-center justify-end gap-1">
               <button
                 type="button"
                 onClick={() => empezarEdicion(o)}
                 aria-label="Editar objetivo"
-                className="v2-focus w-8 h-8 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-                style={{ background: COLORS.tint, color: COLORS.brand }}
+                className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+                style={{ color: COLORS.brand }}
               >
-                <IconEditar size={15} />
+                <IconEditar size={18} />
               </button>
               <button
                 type="button"
                 onClick={() => setOpenId(o.id)}
                 aria-label="Sumar un registro"
-                className="v2-focus w-8 h-8 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-                style={{ background: COLORS.brandSoft, color: COLORS.brand }}
+                className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+                style={{ color: COLORS.brand }}
               >
-                <IconMas size={16} />
+                <IconMas size={20} />
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmarBorrar(o.id)}
                 aria-label="Borrar objetivo"
-                className="v2-focus w-8 h-8 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-                style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}
+                className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+                style={{ color: COLORS.naranjaText }}
               >
                 <IconBasura size={15} />
               </button>
@@ -933,7 +934,7 @@ export function ObjetivosV2() {
       <button
         type="button"
         onClick={() => setCreating(true)}
-        className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-4 text-[15px] font-bold transition-all duration-100 active:scale-[0.99]"
+        className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-4 text-[18px] font-bold transition-all duration-100 active:scale-[0.99]"
         style={{ borderColor: COLORS.lineStrong, color: COLORS.ink }}
       >
         <IconMas size={17} /> Agregar objetivo
@@ -951,7 +952,7 @@ export function ObjetivosV2() {
                   key={s.nombre}
                   type="button"
                   onClick={() => { setNombre(s.nombre); setCreating(true); }}
-                  className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+                  className="v2-focus rounded-full px-3 py-1.5 text-[14px] font-semibold transition-all duration-100 active:scale-95"
                   style={{ background: COLORS.tint, color: COLORS.ink }}
                 >
                   {s.nombre}

@@ -38,7 +38,7 @@ export function SidebarV2() {
               type="button"
               onClick={() => navigate(tab.to)}
               aria-current={active ? 'page' : undefined}
-              className="v2-focus flex items-center gap-3 rounded-xl px-3 py-2.5 min-h-[44px] text-[15px] font-semibold transition-colors"
+              className="v2-focus flex items-center gap-3 rounded-xl px-3 py-2.5 min-h-[44px] text-[18px] font-semibold transition-colors"
               style={{
                 background: active ? COLORS.brandSoft : 'transparent',
                 color: active ? COLORS.brand : COLORS.inkSoft,
@@ -56,7 +56,7 @@ export function SidebarV2() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Hablar con FINA por WhatsApp"
-        className="v2-focus mt-auto flex items-center gap-3 rounded-xl px-3 py-3 min-h-[44px] text-[15px] font-bold transition-transform active:scale-95"
+        className="v2-focus mt-auto flex items-center gap-3 rounded-xl px-3 py-3 min-h-[44px] text-[18px] font-bold transition-transform active:scale-95"
         style={{ background: COLORS.ink, color: COLORS.onDark }}
       >
         <IconChat size={20} />

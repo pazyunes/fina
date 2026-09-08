@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, Rango, Titulo, fechaDisplay, fmtMoney, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
+import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
 import { IconChevron, IconMas } from './FinaIcons';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
@@ -95,8 +95,11 @@ type PersistidoInv = {
 
 // Tarjeta clara estándar de FINA v2. El borde va por token (hairline), no por
 // el color por defecto de Tailwind, para no dejar un color fuera de la paleta.
+// Única tarjeta de la pantalla: la entrada a armar el perfil.
 const CARD = 'bg-white rounded-2xl border';
-const cardStyle = { borderColor: COLORS.line } as const;
+const cardStyle = { borderColor: COLORS.lineStrong } as const;
+// Bloque de sección: sin contorno, separado por aire y por su propio título.
+const BLOQUE = 'flex flex-col gap-3';
 
 export function InversionesV2() {
   // Si ya había estado antes en esta pantalla y llegó al resultado, retoma
@@ -169,8 +172,6 @@ export function InversionesV2() {
   }
 
   // Toggle segmentado claro reutilizable (moneda / tabs / modo evolución).
-  const segWrap = 'flex gap-1.5 rounded-2xl p-1';
-  const segWrapStyle = { background: COLORS.tint } as const;
 
   // ── intro ──
   if (paso === 'intro') {
@@ -180,7 +181,7 @@ export function InversionesV2() {
             personaje NO aparece en inversiones (plata seria). */}
         <header className="pb-1">
           <Titulo>Inversiones</Titulo>
-          <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
+          <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
         </header>
         <button
           type="button"
@@ -188,8 +189,8 @@ export function InversionesV2() {
           style={cardStyle}
           className={`v2-focus text-left ${CARD} p-5 flex flex-col gap-2 transition-transform duration-100 active:scale-[0.99]`}
         >
-          <span className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Averiguá tu perfil de inversor</span>
-          <span className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>
+          <span className="text-[20px] font-bold" style={{ color: COLORS.ink }}>Averiguá tu perfil de inversor</span>
+          <span className="text-[15px]" style={{ color: COLORS.inkSoft }}>
             {prefilledPerfil
               ? 'Ya nos contaste algo de esto en el onboarding — te faltan un par de preguntas más.'
               : '2 minutos, para que las recomendaciones tengan que ver con vos — sin comprometerte a nada.'}
@@ -213,11 +214,11 @@ export function InversionesV2() {
               va cerca de un dato, y menos en inversiones. */}
           <header className="pb-1">
             <Titulo>Inversiones</Titulo>
-            <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
+            <p className="text-[15px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
           </header>
           <div className="flex items-center justify-between gap-2">
             <span
-              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[14px] font-bold"
               style={{ background: pl.soft, color: pl.strong }}
             >
               Perfil {perfil.label.toLowerCase()}
@@ -230,7 +231,7 @@ export function InversionesV2() {
                   onClick={() => setMonedaInv(m)}
                   aria-label={m === 'ARS' ? 'Ver en pesos' : 'Ver en dólares'}
                   aria-pressed={monedaInv === m}
-                  className="v2-focus rounded-full px-3 py-1.5 text-[11px] font-bold transition-colors duration-150"
+                  className="v2-focus rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors duration-150"
                   style={monedaInv === m ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}
                 >
                   {m === 'ARS' ? 'Pesos' : 'USD'}
@@ -238,34 +239,22 @@ export function InversionesV2() {
               ))}
             </div>
           </div>
-          <p className="text-[13.5px] -mt-2" style={{ color: COLORS.inkSoft }}>{perfil.copy}</p>
+          <p className="text-[15px] -mt-2" style={{ color: COLORS.inkSoft }}>{perfil.copy}</p>
 
-          <div className={segWrap} style={segWrapStyle}>
-            {([
-              ['recos', 'Recomendaciones'],
-              ['mias', 'Mis inversiones'],
-              ['evolucion', 'Mi evolución'],
-            ] as [Tab, string][]).map(([id, label]) => {
-              const sel = tab === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
-                  aria-pressed={sel}
-                  className="v2-focus flex-1 rounded-xl py-2.5 text-[12px] font-bold transition-colors duration-150"
-                  style={sel ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+          <Tabs
+            options={[
+              { id: 'recos' as Tab, label: 'Recomendaciones' },
+              { id: 'mias' as Tab, label: 'Mis inversiones' },
+              { id: 'evolucion' as Tab, label: 'Mi evolución' },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
 
           {tab === 'recos' && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
               {enQue.length > 0 && (
-                <p className="text-[12.5px] leading-snug font-semibold pl-3.5 border-l-2" style={{ color: COLORS.limaText, borderColor: COLORS.lima }}>
+                <p className="text-[14px] leading-snug font-semibold pl-3.5 border-l-2" style={{ color: COLORS.limaText, borderColor: COLORS.lima }}>
                   Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
                 </p>
               )}
@@ -273,44 +262,44 @@ export function InversionesV2() {
                 const bancoMatch = bancos.find((b) => r.apps.includes(b));
                 const already = yaEnIds.has(r.id);
                 return (
-                  <div key={r.id} className={`${CARD} p-4`} style={{ ...cardStyle, opacity: already ? 0.7 : 1 }}>
+                  <div key={r.id} className="py-4 border-b last:border-b-0" style={{ borderColor: COLORS.line, opacity: already ? 0.7 : 1 }}>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-bold text-[14.5px]" style={{ color: COLORS.ink }}>{r.nombre}</p>
-                      <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>
+                      <p className="font-bold text-[16px]" style={{ color: COLORS.ink }}>{r.nombre}</p>
+                      <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>
                         <span className="w-2 h-2 rounded-full" style={{ background: RIESGO_FILL[r.riesgo] }} aria-hidden />
                         Riesgo {r.riesgo.toLowerCase()}
                       </span>
                     </div>
                     {bancoMatch ? (
-                      <p className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold mt-1" style={{ color: COLORS.limaText }}>
+                      <p className="inline-flex items-center gap-1.5 text-[14px] font-semibold mt-1" style={{ color: COLORS.limaText }}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ background: COLORS.limaText }} aria-hidden />
                         Lo tenés a mano desde tu {bancoMatch}
                       </p>
                     ) : (
-                      <p className="text-[12.5px] mt-1" style={{ color: COLORS.inkSoft }}>{r.desc}</p>
+                      <p className="text-[14px] mt-1" style={{ color: COLORS.inkSoft }}>{r.desc}</p>
                     )}
-                    {already && <p className="text-[11.5px] font-semibold mt-1" style={{ color: COLORS.inkSoft }}>Ya lo hacés</p>}
+                    {already && <p className="text-[14px] font-semibold mt-1" style={{ color: COLORS.inkSoft }}>Ya lo hacés</p>}
                     <button
                       type="button"
                       onClick={() => setExpandido((s) => { const n = new Set(s); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
-                      className="v2-focus mt-2 text-[11.5px] font-bold underline rounded"
+                      className="v2-focus mt-2 text-[14px] font-bold underline rounded"
                       style={{ color: COLORS.brand }}
                     >
                       {expandido.has(r.id) ? 'Ocultar' : '¿Por qué te lo recomendamos?'}
                     </button>
                     {expandido.has(r.id) && (
-                      <p className="text-[12px] mt-1.5 leading-relaxed" style={{ color: COLORS.inkSoft }}>{r.porQue}</p>
+                      <p className="text-[14px] mt-1.5 leading-relaxed" style={{ color: COLORS.inkSoft }}>{r.porQue}</p>
                     )}
                   </div>
                 );
               })}
-              <p className="text-[11px] px-1" style={{ color: COLORS.inkFaint }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
+              <p className="text-[12px] px-1" style={{ color: COLORS.inkFaint }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
             </div>
           )}
 
           {tab === 'mias' && (
             <div className="flex flex-col gap-3">
-              <div className={`${CARD} p-4 flex gap-4 items-center`} style={cardStyle}>
+              <div className="py-2 flex gap-4 items-center">
                 <Donut
                   segments={INSTRUMENTOS.map((i) => ({
                     color: RIESGO_FILL[i.riesgo],
@@ -321,14 +310,14 @@ export function InversionesV2() {
                   size={100}
                 />
                 <div className="flex-1 flex flex-col gap-1.5">
-                  <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Vas registrando lo que ponés en cada instrumento acá abajo.</p>
+                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Vas registrando lo que ponés en cada instrumento acá abajo.</p>
                   {/* Lo invertido es lo que la persona cargó: dato declarado (§5). */}
                   <EstadoConfianza estado="declarado" />
                 </div>
               </div>
 
-              <div className={`${CARD} p-4 flex flex-col gap-2.5`} style={cardStyle}>
-                <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Registrar un aporte</p>
+              <div className="flex flex-col gap-2.5 pt-2">
+                <TituloSeccion>Registrar un aporte</TituloSeccion>
                 <div className="flex flex-wrap gap-2">
                   {INSTRUMENTOS.map((i) => (
                     <Chip key={i.id} on={aporteInstrId === i.id} onClick={() => setAporteInstrId(i.id)}>{i.nombre}</Chip>
@@ -336,7 +325,7 @@ export function InversionesV2() {
                 </div>
                 <div className="flex gap-2">
                   <input
-                    className="v2-focus flex-1 min-w-0 rounded-xl px-3 py-2.5 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors"
+                    className="v2-focus flex-1 min-w-0 rounded-xl px-3 py-2.5 text-[15px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors"
                     style={{ background: COLORS.surface, color: COLORS.ink, borderColor: COLORS.lineStrong }}
                     placeholder="Monto"
                     inputMode="decimal"
@@ -348,14 +337,14 @@ export function InversionesV2() {
               </div>
 
               <div className="flex flex-col gap-2">
-                {aportes.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>}
+                {aportes.length === 0 && <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>}
                 {aportes.map((a) => (
-                  <div key={a.id} className={`${CARD} flex items-center justify-between gap-3 px-3.5 py-2.5`} style={cardStyle}>
+                  <div key={a.id} className="flex items-center justify-between gap-3 py-3 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
                     <span className="flex-1 min-w-0 flex flex-col">
-                      <span className="text-[13.5px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
-                      <span className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
+                      <span className="text-[15px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
+                      <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
                     </span>
-                    <Monto value={a.monto} className="text-[13.5px] font-semibold shrink-0" />
+                    <Monto value={a.monto} className="text-[15px] font-semibold shrink-0" />
                   </div>
                 ))}
               </div>
@@ -364,23 +353,14 @@ export function InversionesV2() {
 
           {tab === 'evolucion' && (
             <div className="flex flex-col gap-3">
-              <div className={segWrap} style={segWrapStyle}>
-                {(['real', 'simulador'] as const).map((m) => {
-                  const sel = modoEvolucion === m;
-                  return (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setModoEvolucion(m)}
-                      aria-pressed={sel}
-                      className="v2-focus flex-1 rounded-xl py-2.5 text-[12px] font-bold transition-colors duration-150"
-                      style={sel ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}
-                    >
-                      {m === 'real' ? 'Mis aportes' : 'Simular'}
-                    </button>
-                  );
-                })}
-              </div>
+              <Tabs
+                options={[
+                  { id: 'real' as const, label: 'Mis aportes' },
+                  { id: 'simulador' as const, label: 'Simular' },
+                ]}
+                value={modoEvolucion}
+                onChange={setModoEvolucion}
+              />
               {modoEvolucion === 'real'
                 ? <Evolucion aportes={aportes} tasaMensual={perfil.tasaMensual} />
                 : <Simulador tasaMensual={perfil.tasaMensual} />}
@@ -449,7 +429,7 @@ export function InversionesV2() {
       {paso === 'bancos' && (
         <>
           <Titulo>¿Qué bancos o billeteras usás?</Titulo>
-          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Así te decimos exactamente desde dónde hacerlo.</p>
+          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Así te decimos exactamente desde dónde hacerlo.</p>
           <div className="flex flex-wrap gap-2.5">
             {BANCOS.map((b) => (
               <Chip key={b} on={bancos.includes(b)} onClick={() => toggleBanco(b)}>{b}</Chip>
@@ -471,7 +451,7 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
   if (ordenado.length === 0) {
     return (
       <div className="rounded-2xl p-5 text-center border border-dashed" style={{ borderColor: COLORS.lineStrong }}>
-        <p className="text-[13.5px]" style={{ color: COLORS.inkSoft }}>Registrá algún aporte en "Mis inversiones" para ver tu evolución acá.</p>
+        <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Registrá algún aporte en "Mis inversiones" para ver tu evolución acá.</p>
       </div>
     );
   }
@@ -494,8 +474,8 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
   const proyColor = COLORS.brand;
 
   return (
-    <div className={`${CARD} p-4 flex flex-col gap-3`} style={cardStyle}>
-      <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Tu evolución</p>
+    <div className={BLOQUE}>
+      <TituloSeccion>Tu evolución</TituloSeccion>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[130px]">
         <polyline points={pathProy} fill="none" stroke={proyColor} strokeWidth="3" strokeDasharray="2 4" strokeLinecap="round" strokeLinejoin="round" />
         <polyline points={pathReal} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -504,10 +484,10 @@ function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: n
         {real.map((_, i) => { const [x, y] = xy(real, i); return <circle key={`r${i}`} cx={x} cy={y} r="3.5" fill={realColor} stroke={COLORS.surface} strokeWidth="1.5" />; })}
       </svg>
       <div className="flex gap-4">
-        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Aportado real</span>
-        <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-4 h-0.5 rounded-full" style={{ background: proyColor }} /> Proyección estimada</span>
+        <span className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Aportado real</span>
+        <span className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}><span className="w-4 h-0.5 rounded-full" style={{ background: proyColor }} /> Proyección estimada</span>
       </div>
-      <p className="text-[11px]" style={{ color: COLORS.inkFaint }}>Proyección ilustrativa a tu perfil — no es una promesa de rendimiento.</p>
+      <p className="text-[12px]" style={{ color: COLORS.inkFaint }}>Proyección ilustrativa a tu perfil — no es una promesa de rendimiento.</p>
     </div>
   );
 }
@@ -560,12 +540,12 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
   const proyColor = COLORS.brand;
 
   return (
-    <div className={`${CARD} p-4 flex flex-col gap-3`} style={cardStyle}>
-      <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Probá antes de invertir plata real</p>
+    <div className={BLOQUE}>
+      <TituloSeccion>Probá antes de invertir plata real</TituloSeccion>
       <div className="relative">
         <span className="absolute top-1/2 -translate-y-1/2 left-3" style={{ color: COLORS.inkSoft }}>$</span>
         <input
-          className="v2-focus w-full rounded-xl pl-7 pr-3 py-2.5 text-[13.5px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors"
+          className="v2-focus w-full rounded-xl pl-7 pr-3 py-2.5 text-[15px] font-['IBM_Plex_Mono'] tabular-nums outline-none border transition-colors"
           style={{ background: COLORS.surface, color: COLORS.ink, borderColor: COLORS.lineStrong }}
           placeholder="Cuánto pondrías por mes"
           inputMode="decimal"
@@ -582,7 +562,7 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
               type="button"
               onClick={() => setMeses(m)}
               aria-pressed={sel}
-              className="v2-focus flex-1 rounded-xl py-2.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
+              className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-semibold transition-all duration-100 active:scale-95"
               style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.tint, color: COLORS.inkSoft }}
             >
               {m} meses
@@ -598,26 +578,26 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
             <polyline points={serieAPath(serieAportado, w, h, pad, max)} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div className="flex gap-4">
-            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Pondrías</span>
-            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: COLORS.inkSoft }}><span className="w-4 h-0.5 rounded-full" style={{ background: proyColor }} /> Tendrías (estimado)</span>
+            <span className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Pondrías</span>
+            <span className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}><span className="w-4 h-0.5 rounded-full" style={{ background: proyColor }} /> Tendrías (estimado)</span>
           </div>
           <div className="flex flex-col gap-2.5">
             {/* Lo que pondrías es aritmética de lo que dijiste: declarado, exacto. */}
             <div className="py-2.5 border-b" style={{ borderColor: COLORS.line }}>
-              <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>En {meses} meses pondrías</p>
-              <Monto value={totalAportado} className="font-bold text-[15px]" />
+              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>En {meses} meses pondrías</p>
+              <Monto value={totalAportado} className="font-bold text-[18px]" />
             </div>
             {/* Lo que tendrías es una PROYECCIÓN: se muestra como rango, nunca
                 como número exacto (§5.2). Se angosta cuando hay más certeza. */}
             <div className="py-2.5 flex flex-col gap-1.5">
-              <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>Podrías tener</p>
+              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Podrías tener</p>
               <Rango min={proyeccionLo} max={proyeccionHi} />
               <EstadoConfianza estado="estimado" />
             </div>
           </div>
         </>
       )}
-      <p className="text-[11px]" style={{ color: COLORS.inkFaint }}>Es una simulación con números inventados — no es una promesa de rendimiento ni mueve plata real.</p>
+      <p className="text-[12px]" style={{ color: COLORS.inkFaint }}>Es una simulación con números inventados — no es una promesa de rendimiento ni mueve plata real.</p>
       <ArmarGrupoBtn />
     </div>
   );

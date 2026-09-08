@@ -34,7 +34,10 @@ export function V2Layout() {
           layout adentro (Home usa varias columnas; las demás se centran en una
           columna legible con lg:max-w-2xl lg:mx-auto en su propio contenedor). */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto w-full lg:max-w-[1120px] pb-10 lg:pb-12">
+        {/* El botón de chat sobresale 20px por encima de la barra (-mt-5), así
+            que el contenido necesita ese despeje extra o la última fila queda
+            tapada por el círculo. */}
+        <div className="mx-auto w-full lg:max-w-[1120px] pb-16 lg:pb-12">
           <Outlet />
         </div>
       </div>

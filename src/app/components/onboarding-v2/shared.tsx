@@ -155,7 +155,7 @@ export function EstadoConfianza({ estado, className = '' }: { estado: Confianza;
   if (estado === 'confirmado') return null; // verificado: sin marca
   const m = CONFIANZA_META[estado];
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[11.5px] font-medium ${className}`} style={{ color: COLORS.inkSoft }}>
+    <span className={`inline-flex items-center gap-1.5 text-[14px] font-medium ${className}`} style={{ color: COLORS.inkSoft }}>
       <svg width="18" height="6" viewBox="0 0 18 6" fill="none" aria-hidden style={{ opacity: m.op }}>
         <line x1="1" y1="3" x2="17" y2="3" stroke="currentColor" strokeWidth={m.w} strokeDasharray={m.dash} strokeLinecap="round" />
       </svg>
@@ -170,7 +170,7 @@ export function EstadoConfianza({ estado, className = '' }: { estado: Confianza;
 export function Rango({ min, max, nota, className = '' }: { min: number; max: number; nota?: string; className?: string }) {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-      <p className="font-mono tabular-nums text-[15px] font-semibold" style={{ color: COLORS.ink }}>
+      <p className="font-mono tabular-nums text-[18px] font-semibold" style={{ color: COLORS.ink }}>
         entre {fmtMoney(min)} y {fmtMoney(max)}
       </p>
       <div className="relative h-1.5 rounded-full" style={{ background: COLORS.tint }}>
@@ -178,7 +178,7 @@ export function Rango({ min, max, nota, className = '' }: { min: number; max: nu
         <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ background: COLORS.lineStrong }} />
         <span className="absolute left-1 right-1 top-1/2 -translate-y-1/2 h-[3px] rounded-full" style={{ background: COLORS.lineStrong, opacity: 0.5 }} />
       </div>
-      {nota && <p className="text-[11.5px]" style={{ color: COLORS.inkSoft }}>{nota}</p>}
+      {nota && <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{nota}</p>}
     </div>
   );
 }
@@ -390,8 +390,8 @@ export function ArmarGrupoBtn() {
     >
       <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}><IconGrupo size={18} /></span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[15px] font-semibold" style={{ color: COLORS.ink }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
-        <span className="block text-[12.5px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
+        <span className="block text-[18px] font-semibold" style={{ color: COLORS.ink }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
+        <span className="block text-[14px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
       </span>
       <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
     </button>
@@ -580,8 +580,8 @@ export function Donut({
           boxShadow: dark ? 'none' : '0 2px 10px rgba(31,27,46,0.07)',
         }}
       >
-        <span className="text-[10.5px] leading-tight text-center" style={{ color: dark ? COLORS.onDarkSoft : COLORS.inkSoft }}>{centerLabel}</span>
-        <span className="font-bold text-[15px] leading-tight" style={{ color: dark ? COLORS.onDark : COLORS.ink }}>{centerValue}</span>
+        <span className="text-[12px] leading-tight text-center" style={{ color: dark ? COLORS.onDarkSoft : COLORS.inkSoft }}>{centerLabel}</span>
+        <span className="font-bold text-[18px] leading-tight" style={{ color: dark ? COLORS.onDark : COLORS.ink }}>{centerValue}</span>
       </div>
     </div>
   );
@@ -645,7 +645,7 @@ export function Chip({ on, warm: _warm, muted, onClick, children }: { on: boolea
       type="button"
       onClick={onClick}
       style={style}
-      className="v2-focus inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14.5px] font-semibold select-none
+      className="v2-focus inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[16px] font-semibold select-none
         transition-all duration-100 ease-out active:scale-[0.96]"
     >
       {children}
@@ -661,7 +661,7 @@ export function OtroChip({ abierto, onClick }: { abierto: boolean; onClick: () =
     <button
       type="button"
       onClick={onClick}
-      className="v2-focus inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[14.5px] font-semibold select-none
+      className="v2-focus inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[16px] font-semibold select-none
         border border-dashed transition-all duration-100 ease-out active:scale-[0.96]"
       style={{ borderColor: COLORS.lilaBorde, color: COLORS.brandDark, background: abierto ? COLORS.brandSoft : COLORS.surface }}
     >
@@ -677,7 +677,7 @@ export function OtroChip({ abierto, onClick }: { abierto: boolean; onClick: () =
 export function Nota({ children }: { children: React.ReactNode }) {
   return (
     <p
-      className="text-[13.5px] leading-snug pl-3.5 border-l-2"
+      className="text-[15px] leading-snug pl-3.5 border-l-2"
       style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}
     >
       {children}
@@ -711,7 +711,7 @@ export function OpcionesMulti({
               ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
               : { background: COLORS.surface, color: o.muted ? COLORS.inkSoft : COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
             className="v2-focus w-full flex items-center gap-3 text-left min-h-[52px] px-4 py-3
-              rounded-2xl text-[14.5px] font-semibold leading-snug
+              rounded-2xl text-[16px] font-semibold leading-snug
               transition-all duration-100 ease-out active:scale-[0.99]"
           >
             <span
@@ -749,7 +749,7 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
       style={disabled
         ? { background: COLORS.tint, color: COLORS.inkSoft, border: `1.5px solid ${COLORS.lineStrong}` }
         : { background: COLORS.brand, color: COLORS.surface, boxShadow: '0 10px 24px -8px rgba(118,38,179,0.45)' }}
-      className={`v2-focus w-full rounded-2xl py-4 text-[16px] font-bold select-none
+      className={`v2-focus w-full rounded-2xl py-4 text-[18px] font-bold select-none
         transition-all duration-100 ease-out
         ${disabled ? 'cursor-not-allowed' : 'active:scale-[0.98]'}`}
     >
@@ -760,7 +760,7 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
 
 // ── Primitivos de la dirección C ────────────────────────────────────────
 // Todo lo de acá abajo existe para que la jerarquía viva en UN lugar. Antes
-// cada pantalla repetía `text-[23px] font-bold` a mano, y por eso la pantalla
+// cada pantalla repetía `text-[26px] font-bold` a mano, y por eso la pantalla
 // de género terminaba con dos preguntas del mismo tamaño y sin jerarquía.
 
 // El ÚNICO <h1> de la pantalla. Baloo 2 es lo único de la estética anterior
@@ -768,7 +768,7 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
 export function Titulo({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <h1
-      className={`font-extrabold leading-[1.12] tracking-[-0.01em] text-[30px] lg:text-[34px] text-balance ${className}`}
+      className={`font-extrabold leading-[1.1] tracking-[-0.01em] text-[32px] lg:text-[38px] text-balance ${className}`}
       style={{ color: COLORS.ink, fontFamily: FONTS.display }}
     >
       {children}
@@ -778,7 +778,7 @@ export function Titulo({ children, className = '' }: { children: React.ReactNode
 
 // Línea de apoyo debajo del título. Nunca compite con él.
 export function Apoyo({ children }: { children: React.ReactNode }) {
-  return <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{children}</p>;
+  return <p className="text-[16px] leading-snug" style={{ color: COLORS.inkSoft }}>{children}</p>;
 }
 
 // "Pregunta 3 de 8". Reemplaza la barra segmentada por sección, que mostraba
@@ -786,7 +786,7 @@ export function Apoyo({ children }: { children: React.ReactNode }) {
 export function Contador({ actual, total }: { actual: number; total: number }) {
   return (
     <p
-      className="text-[10.5px] font-semibold uppercase tracking-[0.12em]"
+      className="text-[12px] font-semibold uppercase tracking-[0.12em]"
       style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}
     >
       Pregunta {actual} de {total}
@@ -823,7 +823,7 @@ export function OpcionesGrid<T extends string>({
             style={on
               ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
               : { background: COLORS.surface, color: o.muted ? COLORS.inkSoft : COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-            className={`v2-focus min-h-[56px] rounded-2xl px-3 py-3.5 text-[14.5px] font-semibold leading-snug
+            className={`v2-focus min-h-[56px] rounded-2xl px-3 py-3.5 text-[16px] font-semibold leading-snug
               transition-all duration-100 ease-out active:scale-[0.97]
               ${ultima ? (columnas === 3 ? 'col-span-3' : 'col-span-2') : ''}`}
           >
@@ -859,7 +859,7 @@ export function OpcionesLista<T extends string>({
               ? { background: COLORS.brand, color: COLORS.surface, borderColor: COLORS.brand }
               : { color: o.muted ? COLORS.inkSoft : COLORS.ink, borderColor: COLORS.line }}
             className="v2-focus flex items-center justify-between gap-3 text-left min-h-[56px] px-4 py-3.5
-              rounded-2xl border-b last:border-b-0 text-[15px] font-semibold leading-snug
+              rounded-2xl border-b last:border-b-0 text-[18px] font-semibold leading-snug
               transition-all duration-100 ease-out active:scale-[0.99]"
           >
             {o.label}
@@ -873,12 +873,12 @@ export function OpcionesLista<T extends string>({
 
 // Título de sección dentro de una pantalla. Baloo 2 chico: se distingue del
 // título de pantalla por tamaño, no por color ni por una caja alrededor.
-// Reemplaza los `text-[13px] font-bold` en gris que se usaban como encabezado,
+// Reemplaza los `text-[15px] font-bold` en gris que se usaban como encabezado,
 // que competían en peso con el cuerpo y no leían como jerarquía.
 export function TituloSeccion({ children }: { children: React.ReactNode }) {
   return (
     <h2
-      className="text-[17px] font-bold leading-tight tracking-[-0.01em]"
+      className="text-[21px] font-bold leading-tight tracking-[-0.01em]"
       style={{ color: COLORS.ink, fontFamily: FONTS.display }}
     >
       {children}
@@ -907,10 +907,10 @@ export function Fila({
         </span>
       )}
       <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-        <span className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>{label}</span>
-        {detalle && <span className="text-[12.5px] leading-snug" style={{ color: COLORS.inkSoft }}>{detalle}</span>}
+        <span className="text-[18px] font-semibold" style={{ color: COLORS.ink }}>{label}</span>
+        {detalle && <span className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{detalle}</span>}
       </span>
-      {valor && <span className="shrink-0 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{valor}</span>}
+      {valor && <span className="shrink-0 text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>{valor}</span>}
       {onClick && <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>}
     </>
   );
@@ -939,7 +939,7 @@ export function BotonFantasma({ label, onClick }: { label: string; onClick: () =
       type="button"
       onClick={onClick}
       style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}
-      className="v2-focus w-full rounded-2xl py-3.5 text-[14.5px] font-semibold
+      className="v2-focus w-full rounded-2xl py-3.5 text-[16px] font-semibold
         transition-all duration-100 ease-out active:scale-[0.98]"
     >
       {label}
@@ -960,7 +960,7 @@ export function ActionRow({ icon, label, onClick }: { icon: React.ReactNode; lab
       <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}>
         {icon}
       </span>
-      <span className="flex-1 font-semibold text-[15px]" style={{ color: COLORS.ink }}>{label}</span>
+      <span className="flex-1 font-semibold text-[18px]" style={{ color: COLORS.ink }}>{label}</span>
       <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
     </button>
   );
@@ -988,19 +988,19 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
         className="hidden lg:flex lg:flex-col lg:justify-between lg:w-[40%] lg:max-w-[520px] shrink-0 px-12 py-14"
         style={{ background: COLORS.brand, color: '#fff' }}
       >
-        <div className="text-[26px] font-bold tracking-tight">FINA</div>
+        <div className="text-[30px] font-bold tracking-tight">FINA</div>
         <div className="flex flex-col gap-7">
-          <p className="text-[30px] font-bold leading-[1.15]">Ordená tu plata,<br />a tu ritmo.</p>
+          <p className="text-[34px] font-bold leading-[1.15]">Ordená tu plata,<br />a tu ritmo.</p>
           <ul className="flex flex-col gap-4">
             {PILARES.map((p) => (
-              <li key={p.t} className="flex items-center gap-3 text-[16px] font-semibold">
+              <li key={p.t} className="flex items-center gap-3 text-[18px] font-semibold">
                 <span className="w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: 'rgba(255,255,255,0.18)' }}><p.Icon size={18} /></span>
                 {p.t}
               </li>
             ))}
           </ul>
         </div>
-        <p className="text-[12.5px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu información es privada — no la compartimos con nadie.</p>
+        <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu información es privada — no la compartimos con nadie.</p>
       </aside>
 
       {/* Flujo de preguntas */}
@@ -1029,7 +1029,7 @@ export function Coachmark({ id, children }: { id: string; children: React.ReactN
   if (visto) return null;
   return (
     <div className="flex items-start gap-2.5 rounded-2xl p-3.5" style={{ background: COLORS.brandSoft }}>
-      <p className="flex-1 text-[13px] font-medium leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
+      <p className="flex-1 text-[15px] font-medium leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
       <button
         type="button"
         aria-label="Cerrar"
@@ -1050,6 +1050,43 @@ export function Coachmark({ id, children }: { id: string; children: React.ReactN
 // pestaña blanca elevada para la opción activa, en vez de dos botones
 // iguales. Se usa donde haga falta elegir entre 2-3 opciones excluyentes
 // con más carácter que un selector de chips.
+// Pestañas de CONTENIDO. Distinto de SegmentedTab a propósito: un control
+// segmentado (pastilla dentro de una pista rellena) es para elegir entre dos
+// alternativas excluyentes de un mismo dato — Pesos/USD, semana/mes. Cuando lo
+// que cambia es la sección que estás mirando, la convención es la pestaña
+// subrayada: no necesita pista de fondo, así que no agrega una caja más, y el
+// subrayado marca la posición actual sin encerrar nada.
+export function Tabs<T extends string>({
+  options, value, onChange,
+}: {
+  options: { id: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div role="tablist" className="flex gap-1 border-b" style={{ borderColor: COLORS.line }}>
+      {options.map((o) => {
+        const sel = value === o.id;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            role="tab"
+            aria-selected={sel}
+            onClick={() => onChange(o.id)}
+            className="v2-focus flex-1 min-h-[48px] px-1 pb-2.5 pt-2 text-[15px] font-bold leading-tight transition-colors duration-150 border-b-[3px] -mb-px"
+            style={sel
+              ? { color: COLORS.brand, borderColor: COLORS.brand }
+              : { color: COLORS.inkSoft, borderColor: 'transparent' }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function SegmentedTab<T extends string>({
   options, value, onChange, trackColor = COLORS.gold,
 }: {
@@ -1067,7 +1104,7 @@ export function SegmentedTab<T extends string>({
             key={o.id}
             type="button"
             onClick={() => onChange(o.id)}
-            className="flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-150"
+            className="flex-1 rounded-xl py-2.5 text-[16px] font-bold transition-all duration-150"
             style={sel
               ? { background: COLORS.surface, color: COLORS.ink, boxShadow: '0 2px 8px rgba(43,33,24,0.12)' }
               : { background: 'transparent', color: COLORS.ink, opacity: 0.75 }}

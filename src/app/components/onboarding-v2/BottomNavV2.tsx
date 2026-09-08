@@ -52,7 +52,7 @@ export function BottomNavV2() {
             style={{ color: active ? COLORS.brand : COLORS.inkFaint }}
           >
             <Icon size={22} />
-            <span className="text-[10.5px] font-semibold">{tab.label}</span>
+            <span className="text-[12px] font-semibold">{tab.label}</span>
           </button>
         );
       })}
@@ -87,7 +87,7 @@ export function BottomNavV2() {
             style={{ color: active ? COLORS.brand : COLORS.inkFaint }}
           >
             <Icon size={22} />
-            <span className="text-[10.5px] font-semibold">{tab.label}</span>
+            <span className="text-[12px] font-semibold">{tab.label}</span>
           </button>
         );
       })}
