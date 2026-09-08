@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
-import { IconChevron, IconMas } from './FinaIcons';
+import { IconChevron, IconClose, IconMas } from './FinaIcons';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
 // explícito): un mini-quiz corto arma un perfil de riesgo real (no fijo),
@@ -74,6 +74,16 @@ const PERFIL_LIGHT: Record<PerfilId, { soft: string; strong: string }> = {
 // Color de relleno por nivel de riesgo (segmentos del donut, puntos de leyenda).
 // Es una distinción categórica, no un juicio: usa rellenos de la paleta en
 // rampa cálida lima / star / naranja, nunca verde ni coral neón fuera de tokens.
+// El nivel de riesgo, dicho en criollo. Una etiqueta que dice "Riesgo medio"
+// no significa nada para alguien que nunca invirtió: nombra una categoría sin
+// explicar qué le puede pasar a su plata. Estas frases dicen lo mismo en
+// términos de lo que se ve, sin dramatizar y sin prometer.
+const RIESGO_EXPLICADO: Record<Instrumento['riesgo'], string> = {
+  Bajo: 'Lo que ponés no debería bajar. Rinde menos, pero es lo más previsible.',
+  Medio: 'Puede subir y bajar en el camino. Suele acomodarse con el tiempo.',
+  Alto: 'Sube y baja bastante. Es para plata que puedas dejar quieta un buen rato.',
+};
+
 const RIESGO_FILL: Record<Instrumento['riesgo'], string> = {
   Bajo: COLORS.lima,
   Medio: COLORS.star,
@@ -120,8 +130,22 @@ export function InversionesV2() {
   const [bancos, setBancos] = useState<string[]>(() => persistido?.bancos ?? []);
   const [tab, setTab] = useState<Tab>('recos');
   const [modoEvolucion, setModoEvolucion] = useState<'real' | 'simulador'>('real');
-  const [monedaInv, setMonedaInv] = useState<Moneda>(() => persistido?.monedaInv ?? 'ARS');
-  const [expandido, setExpandido] = useState<Set<string>>(new Set());
+  // OJO: el toggle Pesos/USD que había acá no hacía nada — `monedaInv` se
+  // guardaba pero no se leía en ningún lado, así que no cambiaba un solo valor
+  // en pantalla. Un control que promete algo y no lo cumple es peor que uno
+  // ausente, así que se saca de la UI. El valor guardado se conserva tal cual
+  // para no pisar datos de quien ya lo tocó, hasta que se cablee de verdad.
+  const monedaInv = persistido?.monedaInv;
+
+  // Instrumento abierto en el detalle. Reemplaza al viejo set `expandido`, que
+  // desplegaba el "por qué" dentro de la propia fila y hacía crecer la lista.
+  const [detalle, setDetalle] = useState<Instrumento | null>(null);
+  useEffect(() => {
+    if (!detalle) return;
+    const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') setDetalle(null); };
+    window.addEventListener('keydown', alTeclear);
+    return () => window.removeEventListener('keydown', alTeclear);
+  }, [detalle]);
 
   const [aportes, setAportes] = useState<Aporte[]>(() => persistido?.aportes ?? []);
   const [aporteMonto, setAporteMonto] = useState('');
@@ -207,8 +231,85 @@ export function InversionesV2() {
     const nombreInstr = (id: string) => INSTRUMENTOS.find((i) => i.id === id)?.nombre ?? id;
     const pl = PERFIL_LIGHT[perfilId];
 
+    // Detalle de un instrumento. Es el "después entrá y ves todo": qué es,
+    // qué le puede pasar a tu plata, por qué te lo recomendamos a VOS y desde
+    // dónde lo podés hacer. Mismo patrón de modal que usa Objetivos, para no
+    // inventar una tercera forma de mostrar algo encima de la pantalla.
+    const modalDetalle = detalle && (
+      <div
+        className="fixed inset-0 z-30 flex items-end sm:items-center justify-center sm:p-5"
+        style={{ background: `${COLORS.ink}73` }}
+        onClick={() => setDetalle(null)}
+        role="dialog"
+        aria-modal="true"
+        aria-label={detalle.nombre}
+      >
+        <div
+          className="w-full sm:max-w-[420px] max-h-[88vh] overflow-y-auto rounded-t-[24px] sm:rounded-[24px] p-6 flex flex-col gap-5"
+          style={{ background: COLORS.surface }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <Titulo className="!text-[26px]">{detalle.nombre}</Titulo>
+            <button
+              type="button"
+              onClick={() => setDetalle(null)}
+              aria-label="Cerrar"
+              className="v2-focus w-11 h-11 -mr-2 -mt-1 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+              style={{ color: COLORS.inkSoft }}
+            >
+              <IconClose size={18} />
+            </button>
+          </div>
+
+          <p className="text-[17px] leading-snug" style={{ color: COLORS.ink }}>{detalle.desc}</p>
+
+          <div className="flex flex-col gap-1.5">
+            <TituloSeccion>Qué le puede pasar a tu plata</TituloSeccion>
+            <p className="inline-flex items-center gap-2 text-[15px] font-bold" style={{ color: COLORS.ink }}>
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: RIESGO_FILL[detalle.riesgo] }} aria-hidden />
+              Riesgo {detalle.riesgo.toLowerCase()}
+            </p>
+            <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{RIESGO_EXPLICADO[detalle.riesgo]}</p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <TituloSeccion>Por qué te lo recomendamos</TituloSeccion>
+            <p className="text-[15px] leading-relaxed" style={{ color: COLORS.inkSoft }}>{detalle.porQue}</p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <TituloSeccion>Dónde lo podés hacer</TituloSeccion>
+            {(() => {
+              const tuyas = detalle.apps.filter((a) => bancos.includes(a));
+              const otras = detalle.apps.filter((a) => !bancos.includes(a));
+              return (
+                <>
+                  {tuyas.length > 0 && (
+                    <p className="text-[15px] leading-snug font-semibold" style={{ color: COLORS.limaText }}>
+                      Ya lo tenés a mano desde {tuyas.join(' o ')}.
+                    </p>
+                  )}
+                  {otras.length > 0 && (
+                    <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                      {tuyas.length > 0 ? 'También está en ' : 'Está disponible en '}{otras.join(', ')}.
+                    </p>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+
+          <p className="text-[13px] leading-snug pt-1" style={{ color: COLORS.inkFaint }}>
+            Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.
+          </p>
+        </div>
+      </div>
+    );
+
     return (
       <div className="pb-6">
+        {modalDetalle}
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
           {/* Banda editorial full-bleed. Sin Fini (guía §6): el personaje nunca
               va cerca de un dato, y menos en inversiones. */}
@@ -216,30 +317,12 @@ export function InversionesV2() {
             <Titulo>Inversiones</Titulo>
             <p className="text-[15px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
           </header>
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[14px] font-bold"
-              style={{ background: pl.soft, color: pl.strong }}
-            >
-              Perfil {perfil.label.toLowerCase()}
-            </span>
-            <div className="flex rounded-full p-0.5 shrink-0" style={{ background: COLORS.tint }}>
-              {(['ARS', 'USD'] as Moneda[]).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMonedaInv(m)}
-                  aria-label={m === 'ARS' ? 'Ver en pesos' : 'Ver en dólares'}
-                  aria-pressed={monedaInv === m}
-                  className="v2-focus rounded-full px-3 py-1.5 text-[12px] font-bold transition-colors duration-150"
-                  style={monedaInv === m ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}
-                >
-                  {m === 'ARS' ? 'Pesos' : 'USD'}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="text-[15px] -mt-2" style={{ color: COLORS.inkSoft }}>{perfil.copy}</p>
+          {/* El perfil, en una línea. Antes eran tres elementos separados —
+              pastilla de color, toggle de moneda y una frase suelta debajo —
+              para decir una sola cosa. */}
+          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            Sos <span className="font-bold" style={{ color: pl.strong }}>perfil {perfil.label.toLowerCase()}</span>: {perfil.copy.charAt(0).toLowerCase() + perfil.copy.slice(1)}
+          </p>
 
           <Tabs
             options={[
@@ -258,47 +341,41 @@ export function InversionesV2() {
                   Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
                 </p>
               )}
+              {/* DIVULGACIÓN PROGRESIVA. Antes cada fila mostraba a la vez el
+                  nombre, una pastilla de riesgo, dónde tenerlo, "ya lo hacés"
+                  y un desplegable con el porqué: cinco datos por ítem, quince
+                  en pantalla, para alguien que capaz nunca invirtió. Ahora la
+                  fila dice UNA cosa —qué es, en criollo— y todo lo demás vive
+                  en el detalle, a un toque.
+
+                  Un cambio de fondo: la fila mostraba "lo tenés a mano desde tu
+                  X" EN LUGAR de la descripción. Para quien no sabe qué es un
+                  FCI, saber desde qué app se hace no le sirve de nada si antes
+                  no sabe qué es. La descripción manda; el banco pasa al
+                  detalle, que es donde importa cuando ya decidiste. */}
               {recomendados.map((r) => {
-                const bancoMatch = bancos.find((b) => r.apps.includes(b));
                 const already = yaEnIds.has(r.id);
                 return (
-                  // La fila se arma como columna flex: antes los hijos eran
-                  // elementos en línea sueltos y el <p> del banco era
-                  // `inline-flex`, así que no ocupaba el ancho completo y el
-                  // botón de "¿por qué?" se le pegaba al lado en la misma
-                  // línea. El `mt-2` del botón no podía separarlos porque el
-                  // problema no era vertical. Con `flex-col` cada hijo es su
-                  // propia fila y el `gap` los separa siempre, sin margenes
-                  // manuales que dependan del orden.
-                  <div key={r.id} className="py-4 border-b last:border-b-0 flex flex-col items-start gap-1.5" style={{ borderColor: COLORS.line, opacity: already ? 0.7 : 1 }}>
-                    <div className="w-full flex items-center justify-between gap-2">
-                      <p className="font-bold text-[16px]" style={{ color: COLORS.ink }}>{r.nombre}</p>
-                      <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>
-                        <span className="w-2 h-2 rounded-full" style={{ background: RIESGO_FILL[r.riesgo] }} aria-hidden />
-                        Riesgo {r.riesgo.toLowerCase()}
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setDetalle(r)}
+                    className="v2-focus w-full text-left flex items-center gap-3 py-4 border-b last:border-b-0 transition-all duration-100 active:scale-[0.99]"
+                    style={{ borderColor: COLORS.line }}
+                  >
+                    <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                      <span className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-[17px]" style={{ color: COLORS.ink }}>{r.nombre}</span>
+                        {already && (
+                          <span className="text-[12px] font-semibold rounded-full px-2 py-0.5" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
+                            Ya lo hacés
+                          </span>
+                        )}
                       </span>
-                    </div>
-                    {bancoMatch ? (
-                      <p className="inline-flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: COLORS.limaText }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: COLORS.limaText }} aria-hidden />
-                        Lo tenés a mano desde tu {bancoMatch}
-                      </p>
-                    ) : (
-                      <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{r.desc}</p>
-                    )}
-                    {already && <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Ya lo hacés</p>}
-                    <button
-                      type="button"
-                      onClick={() => setExpandido((s) => { const n = new Set(s); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
-                      className="v2-focus min-h-[44px] flex items-center text-[14px] font-bold underline rounded"
-                      style={{ color: COLORS.brand }}
-                    >
-                      {expandido.has(r.id) ? 'Ocultar' : '¿Por qué te lo recomendamos?'}
-                    </button>
-                    {expandido.has(r.id) && (
-                      <p className="text-[14px] leading-relaxed" style={{ color: COLORS.inkSoft }}>{r.porQue}</p>
-                    )}
-                  </div>
+                      <span className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.desc}</span>
+                    </span>
+                    <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
+                  </button>
                 );
               })}
               <p className="text-[12px] px-1" style={{ color: COLORS.inkFaint }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
