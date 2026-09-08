@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import {
   COLORS, DeviceFrame, Face, CheckIcon, Chip, OtroChip, Nota, Cta,
+  Titulo, Apoyo, Contador, OpcionesGrid, OpcionesLista, OpcionesMulti, BotonFantasma,
   formatThousands, parseMoneyInput,
   saveV2Categorias, saveV2Nombre,
   saveV2PerfilOnboarding, saveV2TerminosAceptados,
@@ -25,31 +26,42 @@ import { IconChat, IconChevron, IconBasura } from './FinaIcons';
 // moneda, el perfil de inversión) NO se preguntan acá — se completan dentro
 // de Objetivos/Inversiones la primera vez que se entra a esa sección.
 
-type Genero = 'femenino' | 'masculino' | 'otro' | 'prefiero_no_decir' | null;
-type Edad = '18-24' | '25-34' | '35-44' | '45-54' | '55-64' | '65+' | null;
-type Situacion = 'trabaja' | 'estudia' | 'ambas' | 'ninguna' | null;
+// Los ids se separan del "puede estar sin contestar" para que los componentes
+// de opción (OpcionesGrid/OpcionesLista) reciban una unión de strings limpia.
+type GeneroId = 'femenino' | 'masculino' | 'otro' | 'prefiero_no_decir';
+type EdadId = '18-24' | '25-34' | '35-44' | '45-54' | '55-64' | '65+';
+type SituacionId = 'trabaja' | 'estudia' | 'ambas' | 'ninguna';
+type Genero = GeneroId | null;
+type Edad = EdadId | null;
+type Situacion = SituacionId | null;
 type ObjetivoId = 'invertir' | 'ahorrar' | 'objetivo' | 'no_claro';
 type ComoVieneId = 'justo' | 'sobra' | 'no_llega' | 'hago_lo_que_quiero' | 'no_lo_tengo_en_cuenta' | 'prefiero_no_decir' | 'otro';
 type Nivel = 'nada' | 'poco' | 'bastante' | 'todo';
 type PasoLogin = 'datos' | 'verificar';
 
+// DIRECCIÓN C — una pregunta por pantalla. `generoEdad` se partió en `genero` +
+// `edad` y `perfilInversor` en `invReaccion` + `invYaInvierte`: eran las dos
+// pantallas que metían dos preguntas con dos <h1> del mismo tamaño, o sea sin
+// jerarquía posible entre ellas.
 type StepKey =
-  | 'intro' | 'nombre' | 'generoEdad' | 'objetivo' | 'situacion' | 'zona'
+  | 'intro' | 'nombre' | 'genero' | 'edad' | 'objetivo' | 'situacion' | 'zona'
   | 'ingresos' | 'estabilidadIngresos' | 'tedioso'
-  | 'perfilInversor' | 'objetivoInversion' | 'definirObjetivo'
+  | 'invReaccion' | 'invYaInvierte' | 'objetivoInversion' | 'definirObjetivo'
   | 'intermedia' | 'comoConocio' | 'terminos' | 'login';
 
 const CTA_LABELS: Record<StepKey, string> = {
   intro: 'Empezar',
   nombre: 'Continuar',
-  generoEdad: 'Continuar',
+  genero: 'Continuar',
+  edad: 'Continuar',
   objetivo: 'Continuar',
   situacion: 'Continuar',
   zona: 'Continuar',
   ingresos: 'Continuar',
   estabilidadIngresos: 'Continuar',
   tedioso: 'Continuar',
-  perfilInversor: 'Continuar',
+  invReaccion: 'Continuar',
+  invYaInvierte: 'Continuar',
   objetivoInversion: 'Continuar',
   definirObjetivo: 'Guardar objetivo',
   intermedia: 'Genial, sigamos',
@@ -57,35 +69,40 @@ const CTA_LABELS: Record<StepKey, string> = {
   terminos: 'Aceptar y continuar',
   login: 'Continuar',
 };
+
+// Pasos que se pueden saltear sin contestar. La salida deja de ser un link
+// subrayado suelto debajo del CTA y pasa a ser un BotonFantasma con borde.
 const SKIPPABLE: StepKey[] = [
   'zona', 'ingresos', 'estabilidadIngresos', 'comoConocio',
 ];
 
-type SeccionId = 'bienvenida' | 'vos' | 'diaadia' | 'cierre';
-const SECCION_INFO: Record<SeccionId, { label: string; bg: string }> = {
-  bienvenida: { label: '', bg: COLORS.paper },
-  vos: { label: 'Vos', bg: COLORS.tint },
-  diaadia: { label: 'Tu día a día', bg: COLORS.goldSoft },
-  cierre: { label: 'Ya casi', bg: COLORS.brandSoft },
-};
-const SECCION_DE: Record<StepKey, SeccionId> = {
-  intro: 'bienvenida', nombre: 'bienvenida',
-  generoEdad: 'vos', objetivo: 'vos', situacion: 'vos', zona: 'vos',
-  ingresos: 'diaadia', estabilidadIngresos: 'diaadia', tedioso: 'diaadia',
-  perfilInversor: 'diaadia', objetivoInversion: 'diaadia', definirObjetivo: 'diaadia',
-  intermedia: 'cierre', comoConocio: 'cierre', terminos: 'cierre', login: 'cierre',
-};
+// Pasos de OPCIÓN ÚNICA que avanzan solos al tocar la respuesta. Es lo que
+// elimina el "Continuar" huérfano flotando abajo — que era la mitad de lo que
+// se veía mal en el flujo viejo.
+//
+// Quedan afuera a propósito los pasos donde la respuesta dispara una devolución
+// que hay que poder leer: `objetivo` (la burbuja "modo ahorro activado") y
+// `tedioso` (la explicación del bot de WhatsApp). Ahí el CTA se queda, porque
+// avanzar solo se comería el mensaje.
+const AUTO_AVANCE: StepKey[] = [
+  'genero', 'edad', 'situacion', 'zona', 'estabilidadIngresos',
+  'invReaccion', 'invYaInvierte', 'objetivoInversion', 'comoConocio',
+];
+
+// Pasos que cuentan para el contador "Pregunta N de M" — los de trámite
+// (intro, intermedia, términos, login) no son preguntas y no suman.
+const NO_ES_PREGUNTA: StepKey[] = ['intro', 'intermedia', 'terminos', 'login'];
 
 const FACE_COLOR = COLORS.brand;
 
-const GENEROS: { id: Genero; label: string; muted?: boolean }[] = [
+const GENEROS: { id: GeneroId; label: string; muted?: boolean }[] = [
   { id: 'femenino', label: 'Femenino' },
   { id: 'masculino', label: 'Masculino' },
   { id: 'otro', label: 'Otro' },
   { id: 'prefiero_no_decir', label: 'Prefiero no decir', muted: true },
 ];
 
-const EDADES: { id: Edad; label: string }[] = [
+const EDADES: { id: EdadId; label: string }[] = [
   { id: '18-24', label: '18 a 24' },
   { id: '25-34', label: '25 a 34' },
   { id: '35-44', label: '35 a 44' },
@@ -96,7 +113,7 @@ const EDADES: { id: Edad; label: string }[] = [
 
 // Texto puro, sin emoji como marcador de opción (§2, §5.4). El chip ya es
 // texto — la opción se distingue por la palabra, no por un pictograma.
-const SITUACIONES: { id: Situacion; label: string }[] = [
+const SITUACIONES: { id: SituacionId; label: string }[] = [
   { id: 'trabaja', label: 'Laburando' },
   { id: 'estudia', label: 'Estudiando' },
   { id: 'ambas', label: 'Ambas' },
@@ -202,6 +219,29 @@ const COMO_VIENES: { id: ComoVieneId; label: string; msg: string; muted?: boolea
   { id: 'prefiero_no_decir', label: 'Prefiero no decir', msg: 'Todo bien — lo vamos descubriendo juntas, a tu ritmo.', muted: true },
 ];
 
+// Sí/No como opciones de verdad y no dos chips sueltos: así entran en la misma
+// grilla que el resto y tienen el mismo target táctil.
+const SI_NO: { id: 'si' | 'no'; label: string }[] = [
+  { id: 'si', label: 'Sí' },
+  { id: 'no', label: 'No' },
+];
+
+const REACCIONES_INVERSION: { id: string; label: string }[] = [
+  { id: 'Lo saco todo', label: 'Lo saco todo' },
+  { id: 'Lo dejo y espero', label: 'Lo dejo y espero' },
+  { id: 'Pongo más', label: 'Pongo más' },
+];
+
+const YA_INVIERTE: { id: 'si' | 'no'; label: string }[] = [
+  { id: 'si', label: 'Sí, ya invierto' },
+  { id: 'no', label: 'Todavía no' },
+];
+
+const PLAZOS_INVERSION: { id: string; label: string }[] = [
+  { id: 'Sacarla pronto (corto plazo)', label: 'Sacarla pronto (corto plazo)' },
+  { id: 'Dejarla que rinda (largo plazo)', label: 'Dejarla que rinda (largo plazo)' },
+];
+
 const COMO_CONOCIO: { id: string; label: string }[] = [
   { id: 'Instagram', label: 'Instagram' },
   { id: 'TikTok', label: 'TikTok' },
@@ -241,13 +281,14 @@ function useOtroMulti() {
 type OtroMulti = ReturnType<typeof useOtroMulti>;
 type OpcionMulti = { value: string; display: string; muted?: boolean };
 
+// Las opciones fijas van en lista de ancho completo; lo que la persona escribió
+// a mano sigue como chip, porque ahí sí importa que se vea como algo agregado
+// por ella y que se pueda quitar de a uno.
 function MultiOtroChips({ opciones, seleccion, toggle, otro }: { opciones: OpcionMulti[]; seleccion: string[]; toggle: (v: string) => void; otro: OtroMulti }) {
   return (
     <div className="flex flex-col gap-2.5">
+      <OpcionesMulti opciones={opciones} seleccion={seleccion} onToggle={toggle} />
       <div className="flex flex-wrap gap-2.5">
-        {opciones.map((o) => (
-          <Chip key={o.value} on={seleccion.includes(o.value)} muted={o.muted} onClick={() => toggle(o.value)}>{o.display}</Chip>
-        ))}
         {otro.custom.map((txt) => (
           <Chip key={txt} on onClick={() => otro.quitar(txt)}>
             {txt}
@@ -356,18 +397,24 @@ export function OnboardingV2() {
 
   const flow = useMemo<StepKey[]>(() => {
     const f: StepKey[] = [
-      'intro', 'nombre', 'generoEdad', 'objetivo', 'situacion', 'zona',
+      'intro', 'nombre', 'genero', 'edad', 'objetivo', 'situacion', 'zona',
       'ingresos', 'estabilidadIngresos', 'tedioso',
     ];
     // Ramas según lo que quiere lograr:
-    if (meta === 'invertir') f.push('perfilInversor', 'objetivoInversion');
+    if (meta === 'invertir') f.push('invReaccion', 'invYaInvierte', 'objetivoInversion');
     else if (meta === 'objetivo') f.push('definirObjetivo');
     // 'ahorrar' y 'no_claro' siguen el flujo normal, sin pasos extra.
     f.push('intermedia', 'comoConocio', 'terminos', 'login');
     return f;
   }, [meta]);
   const currentKey = flow[Math.min(currentIdx, flow.length - 1)];
-  const seccionActual = SECCION_INFO[SECCION_DE[currentKey]];
+
+  // Contador "Pregunta N de M": se cuenta sobre las preguntas reales del flujo
+  // actual, no sobre todos los pasos. Como el flujo se ramifica según `meta`,
+  // el total se recalcula solo cuando la rama cambia.
+  const preguntas = useMemo(() => flow.filter((k) => !NO_ES_PREGUNTA.includes(k)), [flow]);
+  const preguntaActual = preguntas.indexOf(currentKey) + 1;
+  const esPregunta = preguntaActual > 0;
 
   const toggleMulti = (setter: (fn: (v: string[]) => string[]) => void) => (id: string) =>
     setter((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
@@ -392,10 +439,12 @@ export function OnboardingV2() {
 
   function stepValid(key: StepKey): boolean {
     if (key === 'nombre') return nombre.trim().length > 0;
-    if (key === 'generoEdad') return !!genero && !!edad;
+    if (key === 'genero') return !!genero && (genero !== 'otro' || generoOtroTxt.trim().length > 0);
+    if (key === 'edad') return !!edad;
     if (key === 'objetivo') return !!meta;
     if (key === 'situacion') return !!situacion;
-    if (key === 'perfilInversor') return !!invReaccion && !!invYaInvierte;
+    if (key === 'invReaccion') return !!invReaccion;
+    if (key === 'invYaInvierte') return !!invYaInvierte;
     if (key === 'objetivoInversion') return !!invPorQue;
     if (key === 'definirObjetivo') return objNombre.trim().length > 0 && parseMoneyInput(objMonto) > 0;
     if (key === 'terminos') return aceptoTerminos;
@@ -455,6 +504,37 @@ export function OnboardingV2() {
     }
   }
 
+  // ── Auto-avance ───────────────────────────────────────────────────────
+  // Al tocar una respuesta de opción única, la pantalla avanza sola. El delay
+  // existe para que se llegue a VER el estado elegido: sin él la opción se
+  // pinta y desaparece en el mismo frame, y no queda claro qué se eligió.
+  // Con `prefers-reduced-motion` no hace falta esa espera visual, así que
+  // avanza al toque.
+  const reduce = useReducedMotion();
+  const autoTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (autoTimer.current !== null) window.clearTimeout(autoTimer.current); }, []);
+
+  function avanzar() {
+    setCurrentIdx((i) => Math.min(i + 1, flow.length - 1));
+  }
+
+  // `avanzaSolo` es false cuando la respuesta abre un campo de texto ("Otro"):
+  // ahí hay que quedarse para poder escribir.
+  function elegir<T>(set: (v: T) => void, valor: T, avanzaSolo = true) {
+    set(valor);
+    if (!avanzaSolo || !AUTO_AVANCE.includes(currentKey)) return;
+    if (autoTimer.current !== null) window.clearTimeout(autoTimer.current);
+    autoTimer.current = window.setTimeout(avanzar, reduce ? 0 : 190);
+  }
+
+  // El CTA sobrevive solo donde hace falta: pasos que no avanzan solos, o pasos
+  // que sí lo harían pero quedaron esperando un "Otro" escrito a mano.
+  const esperandoOtro =
+    (currentKey === 'genero' && genero === 'otro') ||
+    (currentKey === 'estabilidadIngresos' && estabilidadIngresos === 'otro') ||
+    (currentKey === 'comoConocio' && comoConocio === 'otro');
+  const pideCta = !AUTO_AVANCE.includes(currentKey) || esperandoOtro;
+
   function onNext() {
     if (currentKey === 'login') {
       if (finished) { navigate('/onboarding-v2/home'); return; }
@@ -477,21 +557,10 @@ export function OnboardingV2() {
 
   const showTop = currentIdx > 0 && currentKey !== 'login';
 
-  const segmentos = useMemo(() => {
-    const vistos = new Set<SeccionId>();
-    const lista: SeccionId[] = [];
-    flow.forEach((k) => {
-      const s = SECCION_DE[k];
-      if (!vistos.has(s)) { vistos.add(s); lista.push(s); }
-    });
-    return lista;
-  }, [flow]);
-  function fillDeSeccion(s: SeccionId): number {
-    const idxs = flow.map((k, i) => ({ k, i })).filter((x) => SECCION_DE[x.k] === s).map((x) => x.i);
-    if (idxs.length === 0) return 0;
-    const alcanzados = idxs.filter((i) => i <= currentIdx).length;
-    return Math.round((alcanzados / idxs.length) * 100);
-  }
+  // Una sola barra continua, no cuatro segmentos por sección. Los segmentos
+  // decían en qué bloque estabas pero nunca cuánto faltaba en total; el
+  // contador de arriba ya dice el bloque, así que la barra puede decir el resto.
+  const progresoPct = Math.round(((currentIdx + 1) / flow.length) * 100);
 
   const ctaLabel = finished
     ? 'Ir a mi FINA'
@@ -521,60 +590,78 @@ export function OnboardingV2() {
 
   return (
     <DeviceFrame>
-      <div className="flex-1 min-h-0 flex flex-col transition-colors duration-300" style={{ background: seccionActual.bg }}>
+      {/* Un solo fondo para todo el flujo. Antes cada sección tenía el suyo
+          (tinte, star suave, lila), pero como los tres estaban entre 1.11 y
+          1.20 de contraste, el cambio no se percibía: solo ensuciaba. Dónde
+          estás lo dice ahora el contador, que además dice cuánto falta. */}
+      <div className="flex-1 min-h-0 flex flex-col" style={{ background: COLORS.paper }}>
         {showTop && (
-          <div className="px-[22px] pt-5 pb-1 flex items-center gap-3 w-full lg:max-w-xl lg:mx-auto lg:pt-10">
-            {currentIdx > 0 && (
-              <button type="button" onClick={onBack} aria-label="Volver a la pregunta anterior" className="v2-focus shrink-0 w-11 h-11 -ml-1.5 flex items-center justify-center rounded-full transition-all duration-100 active:scale-90" style={{ color: COLORS.ink }}>
-                <IconChevron size={22} style={{ transform: 'rotate(180deg)' }} />
-              </button>
-            )}
-            <div className="flex-1 flex flex-col gap-1">
-              {seccionActual.label && (
-                <p className="text-[11.5px] font-semibold" style={{ color: COLORS.inkSoft }}>{seccionActual.label}</p>
-              )}
-              <div className="flex gap-1">
-                {segmentos.map((s) => (
-                  <div key={s} className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: COLORS.lineStrong }}>
-                    <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${fillDeSeccion(s)}%`, background: COLORS.brand }} />
-                  </div>
-                ))}
+          <header className="px-6 pt-5 pb-1 flex items-center gap-3 w-full lg:max-w-xl lg:mx-auto lg:pt-10">
+            <button type="button" onClick={onBack} aria-label="Volver a la pregunta anterior" className="v2-focus shrink-0 w-11 h-11 -ml-2.5 flex items-center justify-center rounded-full transition-all duration-100 active:scale-90" style={{ color: COLORS.ink }}>
+              <IconChevron size={22} style={{ transform: 'rotate(180deg)' }} />
+            </button>
+            <div className="flex-1 flex flex-col gap-1.5">
+              {esPregunta && <Contador actual={preguntaActual} total={preguntas.length} />}
+              <div
+                className="h-[4px] rounded-full overflow-hidden"
+                style={{ background: COLORS.line }}
+                role="progressbar"
+                aria-valuenow={progresoPct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Progreso del onboarding"
+              >
+                <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${progresoPct}%`, background: COLORS.brand }} />
               </div>
             </div>
-          </div>
+          </header>
         )}
 
-        <div className="flex-1 min-h-0 flex flex-col px-[22px] py-4 overflow-y-auto gap-4 w-full lg:max-w-xl lg:mx-auto">
+        {/* DISTRIBUCIÓN — el arreglo del vacío del 60%.
+            El contenido estaba pegado arriba y el CTA al fondo, así que en una
+            pantalla con cuatro opciones quedaba medio celular vacío en el medio.
+            `my-auto` en el hijo lo centra ópticamente cuando sobra lugar y no
+            hace nada cuando el contenido es más alto que el viewport (ahí
+            scrollea normal, sin recortar por arriba como haría `justify-center`).
+            El `pb` extra empuja el bloque un poco sobre el centro geométrico:
+            el centro óptico está más arriba que el matemático. */}
+        <div className="flex-1 min-h-0 flex flex-col px-6 pt-7 pb-4 overflow-y-auto w-full lg:max-w-xl lg:mx-auto">
           <motion.div
               key={finished ? 'finished' : currentKey}
-              initial={{ opacity: 0, y: 12 }}
+              initial={reduce ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.18 }}
-              className="flex flex-col gap-4"
+              transition={{ duration: reduce ? 0 : 0.18 }}
+              aria-live="polite"
+              className="flex flex-col gap-5 my-auto w-full pb-[12vh]"
             >
               {currentKey === 'intro' && (
                 <>
-                  <h1 className="text-[28px] font-bold leading-tight pt-2" style={{ color: COLORS.ink }}>
+                  <Titulo>
                     Llegó tu momento de cambiar la historia de tus finanzas
-                  </h1>
-                  <div className="flex flex-col gap-4 rounded-[18px] p-5" style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
+                  </Titulo>
+                  {/* Sin caja. Tres promesas no necesitan un contenedor para
+                      leerse como grupo: el aire y la repetición del check ya
+                      las agrupan. La caja anterior tenía 1.07 de contraste
+                      contra el papel, o sea que no agrupaba nada — solo sumaba
+                      un borde más a la pantalla. */}
+                  <ul className="flex flex-col gap-3.5 list-none p-0 m-0">
                     {['Conocé tus gastos', 'Lográ tus objetivos', 'Cuidá tu bienestar financiero'].map((txt) => (
-                      <div key={txt} className="flex items-center gap-3 text-[16px] font-semibold" style={{ color: COLORS.ink }}>
-                        <span className="w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brand }}>
+                      <li key={txt} className="flex items-center gap-3 text-[16.5px] font-semibold" style={{ color: COLORS.ink }}>
+                        <span className="w-[26px] h-[26px] rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brand }}>
                           <CheckIcon />
                         </span>
                         {txt}
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                   <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
                 </>
               )}
 
               {currentKey === 'nombre' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Cómo te llamamos?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Así te vamos a hablar de acá en adelante.</p>
+                  <Titulo>¿Cómo te llamamos?</Titulo>
+                  <Apoyo>Así te vamos a hablar de acá en adelante.</Apoyo>
                   <input
                     autoFocus
                     aria-label="Tu nombre"
@@ -588,38 +675,36 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {currentKey === 'generoEdad' && (
+              {/* Antes esta pantalla y la de edad eran una sola, con dos <h1>
+                  del mismo tamaño: no había forma de jerarquizarlas. Ahora son
+                  dos, y cada una entra completa sin scroll. Las cuatro opciones
+                  llenan exactamente una grilla de 2×2 — sin wrap ragged. */}
+              {currentKey === 'genero' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Con qué género te identificás?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {GENEROS.map((o) => (
-                      <Chip key={o.id} on={genero === o.id} muted={o.muted} onClick={() => setGenero(o.id)}>{o.label}</Chip>
-                    ))}
-                    <OtroChip abierto={genero === 'otro'} onClick={() => setGenero('otro')} />
-                  </div>
+                  <Titulo>¿Con qué género te identificás?</Titulo>
+                  <OpcionesGrid
+                    opciones={GENEROS}
+                    valor={genero}
+                    onElegir={(id) => elegir(setGenero, id, id !== 'otro')}
+                  />
                   {genero === 'otro' && (
                     <input autoFocus aria-label="Contanos cómo te identificás" className={inputClass} style={inputStyle()} placeholder="Contanos cómo te identificás" value={generoOtroTxt} onChange={(e) => setGeneroOtroTxt(e.target.value)} />
                   )}
-                  <h1 className="text-[23px] font-bold mt-2.5" style={{ color: COLORS.ink }}>¿Qué edad tenés?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {EDADES.map((o) => (
-                      <Chip key={o.id} on={edad === o.id} onClick={() => setEdad(o.id)}>{o.label}</Chip>
-                    ))}
-                  </div>
+                </>
+              )}
+
+              {currentKey === 'edad' && (
+                <>
+                  <Titulo>¿Qué edad tenés?</Titulo>
+                  <OpcionesGrid opciones={EDADES} valor={edad} onElegir={(id) => elegir(setEdad, id)} />
                 </>
               )}
 
               {currentKey === 'objetivo' && (
                 <>
-                  <h1 className="text-[23px] font-bold leading-snug" style={{ color: COLORS.ink }}>¿Qué es lo que más querés lograr con tu plata?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Elegí la que mejor te represente hoy — después vas a poder hacer todo lo demás igual.</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {OBJETIVOS.map((o) => (
-                      <Chip key={o.id} on={meta === o.id} onClick={() => setMeta(o.id)}>
-                        {o.label}
-                      </Chip>
-                    ))}
-                  </div>
+                  <Titulo>¿Qué es lo que más querés lograr con tu plata?</Titulo>
+                  <Apoyo>Elegí la que mejor te represente hoy — después vas a poder hacer todo lo demás igual.</Apoyo>
+                  <OpcionesLista opciones={OBJETIVOS} valor={meta} onElegir={setMeta} />
                   <div className="flex justify-center py-1"><Face color={FACE_COLOR} size={90} mood="happy" /></div>
                   {meta && (
                     <div className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[13.5px] font-semibold" style={{ color: COLORS.ink, background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
@@ -631,18 +716,14 @@ export function OnboardingV2() {
 
               {currentKey === 'situacion' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Contanos, ¿en qué andás?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {SITUACIONES.map((o) => (
-                      <Chip key={o.id} on={situacion === o.id} onClick={() => setSituacion(o.id)}>{o.label}</Chip>
-                    ))}
-                  </div>
+                  <Titulo>Contanos, ¿en qué andás?</Titulo>
+                  <OpcionesGrid opciones={SITUACIONES} valor={situacion} onElegir={(id) => elegir(setSituacion, id)} />
                 </>
               )}
 
               {currentKey === 'convivencia' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Contanos un poco de tu día a día: ¿con quién compartís tu casa?</h1>
+                  <Titulo>Contanos un poco de tu día a día: ¿con quién compartís tu casa?</Titulo>
                   <Nota>Elegí todas las que apliquen.</Nota>
                   <MultiOtroChips opciones={CONVIVENCIA_OPCIONES.map((v) => ({ value: v, display: v }))} seleccion={convivencia} toggle={toggleConvivencia} otro={convivenciaOtro} />
                 </>
@@ -650,18 +731,14 @@ export function OnboardingV2() {
 
               {currentKey === 'zona' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿En dónde andás viviendo?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {ZONAS.map((o) => (
-                      <Chip key={o.id} on={zona === o.id} muted={o.muted} onClick={() => setZona(o.id)}>{o.label}</Chip>
-                    ))}
-                  </div>
+                  <Titulo>¿En dónde andás viviendo?</Titulo>
+                  <OpcionesGrid opciones={ZONAS} valor={zona} onElegir={(id) => elegir(setZona, id)} />
                 </>
               )}
 
               {currentKey === 'ingresos' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿De dónde vienen tus ingresos hoy?</h1>
+                  <Titulo>¿De dónde vienen tus ingresos hoy?</Titulo>
                   <Nota>Esto es solo tuyo — nadie más lo ve. Elegí todas las que apliquen.</Nota>
                   <MultiOtroChips opciones={INGRESOS_OPCIONES.map((v) => ({ value: v, display: v }))} seleccion={ingresos} toggle={toggleIngresos} otro={ingresosOtro} />
                 </>
@@ -669,13 +746,13 @@ export function OnboardingV2() {
 
               {currentKey === 'estabilidadIngresos' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Con qué regularidad recibís tus ingresos?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {ESTABILIDAD.map((o) => (
-                      <Chip key={o.id} on={estabilidadIngresos === o.id} onClick={() => setEstabilidadIngresos(o.id)}>{o.label}</Chip>
-                    ))}
-                    <OtroChip abierto={estabilidadIngresos === 'otro'} onClick={() => setEstabilidadIngresos('otro')} />
-                  </div>
+                  <Titulo>¿Con qué regularidad recibís tus ingresos?</Titulo>
+                  <OpcionesLista
+                    opciones={ESTABILIDAD}
+                    valor={estabilidadIngresos}
+                    onElegir={(id) => elegir(setEstabilidadIngresos, id)}
+                  />
+                  <OtroChip abierto={estabilidadIngresos === 'otro'} onClick={() => setEstabilidadIngresos('otro')} />
                   {estabilidadIngresos === 'otro' && (
                     <input autoFocus aria-label="Contanos más sobre tus ingresos" className={inputClass} style={inputStyle()} placeholder="Contanos más" value={estabilidadOtroTxt} onChange={(e) => setEstabilidadOtroTxt(e.target.value)} />
                   )}
@@ -684,7 +761,7 @@ export function OnboardingV2() {
 
               {currentKey === 'gastosFijos' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Tenés algún gasto grande que se te repite todos los meses?</h1>
+                  <Titulo>¿Tenés algún gasto grande que se te repite todos los meses?</Titulo>
                   <Nota>No hace falta el monto, solo si existe.</Nota>
                   <MultiOtroChips opciones={GASTOS_FIJOS_OPCIONES} seleccion={gastosFijos} toggle={toggleGastosFijos} otro={gastosFijosOtro} />
                 </>
@@ -692,7 +769,7 @@ export function OnboardingV2() {
 
               {currentKey === 'categoriasGasto' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿En qué se te suele ir la plata día a día?</h1>
+                  <Titulo>¿En qué se te suele ir la plata día a día?</Titulo>
                   <Nota>Elegí las que quieras — con esto ya te armamos las secciones en Gastos.</Nota>
                   <MultiOtroChips opciones={CATEGORIAS_GASTO} seleccion={categoriasGasto} toggle={toggleCategoriaGasto} otro={categoriasOtro} />
                 </>
@@ -700,7 +777,7 @@ export function OnboardingV2() {
 
               {currentKey === 'categoriasRecortar' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Hay alguna de estas en la que te gustaría gastar menos?</h1>
+                  <Titulo>¿Hay alguna de estas en la que te gustaría gastar menos?</Titulo>
                   <Nota>Así te avisamos si te conviene ponerle un tope.</Nota>
                   <div className="flex flex-wrap gap-2.5">
                     {categoriasElegidas.map((c) => (
@@ -713,7 +790,7 @@ export function OnboardingV2() {
 
               {currentKey === 'asignacionPlata' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>De esta plata, ¿cuánto va a...?</h1>
+                  <Titulo>De esta plata, ¿cuánto va a...?</Titulo>
                   <div className="flex flex-col gap-4">
                     {FILAS_ASIGNACION.map((fila) => (
                       <div key={fila.id} className="flex flex-col gap-1.5">
@@ -740,11 +817,8 @@ export function OnboardingV2() {
 
               {currentKey === 'tedioso' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Se te hace tedioso llevar el control de tu plata?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    <Chip on={tedioso === 'si'} onClick={() => setTedioso('si')}>Sí</Chip>
-                    <Chip on={tedioso === 'no'} onClick={() => setTedioso('no')}>No</Chip>
-                  </div>
+                  <Titulo>¿Se te hace tedioso llevar el control de tu plata?</Titulo>
+                  <OpcionesGrid opciones={SI_NO} valor={tedioso} onElegir={setTedioso} />
                   {tedioso && (
                     <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.ink }}>
                       <div className="flex items-center gap-3">
@@ -768,7 +842,7 @@ export function OnboardingV2() {
 
               {currentKey === 'comoViene' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Cómo venís con tu plata?</h1>
+                  <Titulo>¿Cómo venís con tu plata?</Titulo>
                   <Nota>Elegí todas las que apliquen.</Nota>
                   <div className="flex flex-wrap gap-2.5">
                     {COMO_VIENES.map((o) => (
@@ -782,41 +856,49 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {currentKey === 'perfilInversor' && (
+              {/* El perfil de inversor también era una sola pantalla con dos
+                  preguntas — y encima la primera es un escenario que hay que
+                  leer entero antes de contestar. Partida en dos, el escenario
+                  puede ocupar el título sin competir con nada. */}
+              {currentKey === 'invReaccion' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Armemos tu perfil de inversor</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Dos preguntas rápidas para recomendarte según vos — nunca movemos tu plata, solo te orientamos.</p>
-                  <p className="text-[14.5px] font-bold mt-1 leading-snug" style={{ color: COLORS.ink }}>Estás en una inversión que sube y baja en el camino, pero promete crecer a 5 años a una tasa razonable. ¿Qué hacés?</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {['Lo saco todo', 'Lo dejo y espero', 'Pongo más'].map((o) => (
-                      <Chip key={o} on={invReaccion === o} onClick={() => setInvReaccion(o)}>{o}</Chip>
-                    ))}
-                  </div>
-                  <p className="text-[14.5px] font-bold mt-2" style={{ color: COLORS.ink }}>¿Ya invertís hoy en algo?</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {(['si', 'no'] as const).map((o) => (
-                      <Chip key={o} on={invYaInvierte === o} onClick={() => setInvYaInvierte(o)}>{o === 'si' ? 'Sí' : 'No'}</Chip>
-                    ))}
-                  </div>
+                  <Titulo>Estás en una inversión que sube y baja, pero promete crecer a 5 años. ¿Qué hacés?</Titulo>
+                  <Apoyo>Nunca movemos tu plata — esto es solo para recomendarte según vos.</Apoyo>
+                  <OpcionesLista
+                    opciones={REACCIONES_INVERSION}
+                    valor={invReaccion}
+                    onElegir={(id) => elegir(setInvReaccion, id)}
+                  />
+                </>
+              )}
+
+              {currentKey === 'invYaInvierte' && (
+                <>
+                  <Titulo>¿Ya invertís hoy en algo?</Titulo>
+                  <OpcionesGrid
+                    opciones={YA_INVIERTE}
+                    valor={invYaInvierte}
+                    onElegir={(id) => elegir(setInvYaInvierte, id)}
+                  />
                 </>
               )}
 
               {currentKey === 'objetivoInversion' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Con qué objetivo querés invertir esa plata?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Con esto afinamos qué opciones tienen más sentido para vos.</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {['Sacarla pronto (corto plazo)', 'Dejarla que rinda (largo plazo)'].map((o) => (
-                      <Chip key={o} on={invPorQue === o} onClick={() => setInvPorQue(o)}>{o}</Chip>
-                    ))}
-                  </div>
+                  <Titulo>¿Con qué objetivo querés invertir esa plata?</Titulo>
+                  <Apoyo>Con esto afinamos qué opciones tienen más sentido para vos.</Apoyo>
+                  <OpcionesLista
+                    opciones={PLAZOS_INVERSION}
+                    valor={invPorQue}
+                    onElegir={(id) => elegir(setInvPorQue, id)}
+                  />
                 </>
               )}
 
               {currentKey === 'definirObjetivo' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>¿Cuál es ese objetivo?</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.</p>
+                  <Titulo>¿Cuál es ese objetivo?</Titulo>
+                  <Apoyo>Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.</Apoyo>
                   <input autoFocus aria-label="Nombre de tu objetivo" className={inputClass} style={inputStyle()} placeholder="Ej: Viaje a Bariloche" value={objNombre} onChange={(e) => setObjNombre(e.target.value)} />
                   <div className="flex items-center justify-between">
                     <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
@@ -837,8 +919,8 @@ export function OnboardingV2() {
 
               {currentKey === 'intermedia' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>{meta === 'invertir' ? 'Tu plata, lista para crecer' : meta === 'ahorrar' ? 'Tu ahorro, siempre a la vista' : meta === 'objetivo' ? '¡Tu objetivo ya está en marcha!' : 'Así se va a ir viendo tu FINA'}</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{meta === 'invertir' ? 'Con tu perfil listo, esto es lo que te espera adentro.' : meta === 'ahorrar' ? 'Esto es lo que vas a poder hacer para que te sobre cada vez más.' : meta === 'objetivo' ? 'Lo vas a ver con su progreso, y todo esto además.' : 'Todo lo que FINA va a hacer por vos.'}</p>
+                  <Titulo>{meta === 'invertir' ? 'Tu plata, lista para crecer' : meta === 'ahorrar' ? 'Tu ahorro, siempre a la vista' : meta === 'objetivo' ? '¡Tu objetivo ya está en marcha!' : 'Así se va a ir viendo tu FINA'}</Titulo>
+                  <Apoyo>{meta === 'invertir' ? 'Con tu perfil listo, esto es lo que te espera adentro.' : meta === 'ahorrar' ? 'Esto es lo que vas a poder hacer para que te sobre cada vez más.' : meta === 'objetivo' ? 'Lo vas a ver con su progreso, y todo esto además.' : 'Todo lo que FINA va a hacer por vos.'}</Apoyo>
                   <div className="flex flex-col gap-3">
                     {previewsOrdenados.map((p) => (
                       <div key={p.titulo} className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: p.bg }}>
@@ -861,20 +943,20 @@ export function OnboardingV2() {
 
               {currentKey === 'comoConocio' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Una última curiosidad: ¿cómo conociste FINA?</h1>
-                  <div className="flex flex-wrap gap-2.5">
-                    {COMO_CONOCIO.map((o) => (
-                      <Chip key={o.id} on={comoConocio === o.id} onClick={() => setComoConocio(o.id)}>{o.label}</Chip>
-                    ))}
-                    <OtroChip abierto={comoConocio === 'otro'} onClick={() => setComoConocio('otro')} />
-                  </div>
+                  <Titulo>Una última curiosidad: ¿cómo conociste FINA?</Titulo>
+                  <OpcionesGrid
+                    opciones={COMO_CONOCIO}
+                    valor={comoConocio}
+                    onElegir={(id) => elegir(setComoConocio, id)}
+                  />
+                  <OtroChip abierto={comoConocio === 'otro'} onClick={() => setComoConocio('otro')} />
                 </>
               )}
 
               {currentKey === 'terminos' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Antes de seguir</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Tus datos son privados — solo se usan para darte recomendaciones a vos. Nunca los compartimos ni los vendemos.</p>
+                  <Titulo>Antes de seguir</Titulo>
+                  <Apoyo>Tus datos son privados — solo se usan para darte recomendaciones a vos. Nunca los compartimos ni los vendemos.</Apoyo>
                   <button
                     type="button"
                     role="checkbox"
@@ -898,8 +980,8 @@ export function OnboardingV2() {
 
               {currentKey === 'login' && !finished && pasoLogin === 'datos' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Guardá tu progreso</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todos los meses vas a poder ver cómo venís.</p>
+                  <Titulo>Guardá tu progreso</Titulo>
+                  <Apoyo>Todos los meses vas a poder ver cómo venís.</Apoyo>
                   <Campo label="Mail" error={intentoLogin && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Campo obligatorio') : undefined}>
                     <input className={inputClass} style={inputStyle(intentoLogin && !emailOk)} placeholder="vos@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
                   </Campo>
@@ -925,8 +1007,8 @@ export function OnboardingV2() {
 
               {currentKey === 'login' && !finished && pasoLogin === 'verificar' && (
                 <>
-                  <h1 className="text-[23px] font-bold" style={{ color: COLORS.ink }}>Verificá tu teléfono</h1>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Te mandamos un código a +54 {telefono || 'tu teléfono'}.</p>
+                  <Titulo>Verificá tu teléfono</Titulo>
+                  <Apoyo>Te mandamos un código a +54 {telefono || 'tu teléfono'}.</Apoyo>
                   <input aria-label="Código de verificación" className={inputClass} style={inputStyle()} placeholder="Código" inputMode="numeric" value={codigoVerif} onChange={(e) => setCodigoVerif(e.target.value)} />
                   <p className="text-[12px]" style={{ color: COLORS.inkFaint }}>Modo de prueba: todavía no mandamos SMS de verdad — escribí cualquier código de 4 a 6 dígitos.</p>
                 </>
@@ -935,21 +1017,26 @@ export function OnboardingV2() {
               {currentKey === 'login' && finished && (
                 <>
                   <div className="flex justify-center py-2"><Face color={FACE_COLOR} mood="happy" /></div>
-                  <h1 className="text-[23px] font-bold text-center" style={{ color: COLORS.ink }}>¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</h1>
+                  <Titulo>¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</Titulo>
                   <p className="text-[14px] text-center" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
                 </>
               )}
             </motion.div>
         </div>
 
-        <div className="px-[22px] pt-2.5 pb-6 flex flex-col gap-1.5 w-full lg:max-w-xl lg:mx-auto lg:pb-10">
-          <Cta label={ctaLabel} disabled={!finished && currentKey !== 'login' && !stepValid(currentKey)} onClick={onNext} />
-          {!finished && SKIPPABLE.includes(currentKey) && (
-            <button type="button" onClick={onSkip} className="v2-focus text-[13.5px] font-semibold underline py-2 text-center" style={{ color: COLORS.inkSoft }}>
-              Saltar por ahora
-            </button>
-          )}
-        </div>
+        {/* Pie. Solo existe si la pantalla lo necesita: en los pasos de opción
+            única que avanzan solos no hay nada acá abajo, y ese vacío al pie
+            desaparece con él. */}
+        {(pideCta || (!finished && SKIPPABLE.includes(currentKey))) && (
+          <div className="px-6 pt-3 pb-6 flex flex-col gap-2.5 w-full lg:max-w-xl lg:mx-auto lg:pb-10">
+            {pideCta && (
+              <Cta label={ctaLabel} disabled={!finished && currentKey !== 'login' && !stepValid(currentKey)} onClick={onNext} />
+            )}
+            {!finished && SKIPPABLE.includes(currentKey) && (
+              <BotonFantasma label="Saltar por ahora" onClick={onSkip} />
+            )}
+          </div>
+        )}
       </div>
     </DeviceFrame>
   );

@@ -4,17 +4,28 @@ import { AnimatePresence, motion } from 'motion/react';
 import { IconChevron, IconClose, IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
 import './onboarding-v2.css';
 
-// REDISEÑO v2 (rama feat/rediseno-onboarding-v2) — piezas compartidas entre
-// el onboarding y las pantallas post-onboarding.
+// REDISEÑO v2 — piezas compartidas entre el onboarding y las pantallas
+// post-onboarding.
 //
-// V2 del rediseño: se deja atrás la estética "rubber hose / mascota" —
-// bordes negros gruesos, sombras duras tipo sticker, tipografía Baloo 2 —
-// y se acerca a las referencias que sí sumaron (Headspace/Cleo/Nubank):
-// tarjetas limpias con sombra suave, tipografía Poppins (la misma que ya
-// usa el resto de la app real) y el púrpura de marca de FINA (#7626B3,
-// el mismo que Login/ObjetivosPage/InversionesPage) en vez de un acento
-// inventado. La energía sigue cambiando por sección (Gastos colorido,
-// Inversiones serio en modo oscuro), pero ya no via sombra de cómic.
+// DIRECCIÓN C, "una cosa por pantalla". Spec completo en
+// docs/superpowers/specs/2026-09-07-rediseno-v2-direccion-c-design.md
+//
+// El diagnóstico que la motivó: ninguna superficie del sandbox llegaba a 1.25
+// de contraste contra el papel — ni las tarjetas, ni los chips, ni las bandas,
+// ni los separadores. Cada vez que hacía falta jerarquía se metía un contenedor
+// tintado; como el tinte no separaba, se agregaba otro encima. El encajonamiento
+// y el aspecto apagado eran el mismo problema.
+//
+// Las tres formas de separar cosas, en orden de preferencia:
+//   1. AIRE — el separador por defecto.
+//   2. HAIRLINE de 1px — solo en listas de ítems homogéneos.
+//   3. RELLENO PLENO de color — solo para el estado elegido y el momento de
+//      valor (un objetivo que avanza, en lima).
+// Fuera de esa lista no se agregan contenedores. Una sola tarjeta elevada en
+// toda la app: "tu próximo paso" en Home.
+//
+// La jerarquía sale de la escala tipográfica y del peso, nunca de una caja:
+// un solo <h1> por pantalla, en Baloo 2 (ver Titulo).
 
 // Tokens de onboarding-v2 — fuente de verdad de color del sandbox (no tocamos
 // styles/tokens.css, que es de la app real). Alineado a la guía de frontend
@@ -36,14 +47,19 @@ export const COLORS = {
   inkFaint: '#7A6A58',   // tinta-suave — auxiliar (mínimo AA)
   paper: '#FAF7F1',      // fondo general — casi blanco, apenas cálido
   surface: '#FFFFFF',    // superficie elevada — tarjetas
-  tint: '#F1EBDF',       // hueco — bloque tintado / hundido
-  line: '#E7DFD1',       // hairline — separadores
-  lineStrong: '#D6CBB8', // separador más marcado
+  tint: '#EEE4D2',       // hueco — bloque tintado / hundido
+  // Separadores. Se subieron de contraste a propósito: los valores viejos
+  // (#E7DFD1 = 1.24 sobre papel) no separaban nada, y esa era la causa real
+  // del "todo encajonado" — cuando una línea no separa, se agrega una caja.
+  line: '#D6CBB8',       // hairline decorativa — 1.50 sobre papel
+  lineStrong: '#998769', // borde de CONTROL — 3.26, cumple WCAG 1.4.11 (3:1)
 
-  // Acento estructural (púrpura, NO es la marca)
-  brand: '#7E5DA8',      // púrpura — botones, progreso, foco, bordes (5.2:1 con blanco)
-  brandSoft: '#EEE7F6',  // lila muy suave — bandas / recuadros
-  brandDark: '#3D2A55',  // noche — fondos oscuros, texto fuerte
+  // Acento. El púrpura #7E5DA8 de la guía se reemplazó por el violeta de marca:
+  // no es solo más vivo (79% de saturación vs 45%), es además más accesible —
+  // 7.28:1 sobre papel contra 4.89:1, y 7.78:1 con texto blanco contra 5.23:1.
+  brand: '#7626B3',      // violeta — botones, progreso, foco, estado elegido
+  brandSoft: '#E4D5F5',  // lila — bandas / recuadros (violeta encima: 7.6:1)
+  brandDark: '#5C1B8E',  // violeta oscuro — texto sobre lila, fondos plenos
 
   // Fondo del "marco" que envuelve la pantalla en desktop — ver DeviceFrame.
   frameBg: '#EFEAE0',
@@ -77,12 +93,14 @@ export const COLORS = {
   onDarkSoft: 'rgba(250,247,241,0.6)',
 };
 
-// Tipografía de onboarding-v2 (guía §3.4): Outfit títulos, Figtree cuerpo,
-// IBM Plex Mono montos. Se aplican SCOPEADAS al subárbol de v2 sobrescribiendo
-// las CSS vars que ya usan los <h1..h4> y el body — así la app real sigue en
-// Baloo 2 sin tocarla. Ver FONT_VARS.
+// Tipografía de onboarding-v2: Baloo 2 en títulos, Figtree cuerpo, IBM Plex
+// Mono montos. El display era Outfit; se cambió a Baloo 2 por pedido explícito
+// de diseño — es lo único de la estética anterior que se conserva. Baloo 2 ya
+// vivía en tokens.css como --fina-display: lo tapaba justamente este override.
+// Se aplican SCOPEADAS al subárbol de v2 (ver FONT_VARS) sobrescribiendo las
+// CSS vars que ya usan los <h1..h4> y el body.
 export const FONTS = {
-  display: "'Outfit', system-ui, sans-serif",
+  display: "'Baloo 2', ui-rounded, 'Figtree', system-ui, sans-serif",
   body: "'Figtree', system-ui, sans-serif",
   mono: "'IBM Plex Mono', ui-monospace, monospace",
 };
@@ -652,28 +670,218 @@ export function OtroChip({ abierto, onClick }: { abierto: boolean; onClick: () =
   );
 }
 
-// Caja de ayuda/ejemplo — para los textos grises que acompañan una
-// pregunta: más grandes y en una cajita, no una línea chiquita que se pierde.
+// Texto de ayuda/ejemplo que acompaña una pregunta. Era una cajita tintada;
+// ahora es texto con una regla vertical al costado. La caja tenía 1.11 de
+// contraste — no destacaba el texto, solo agregaba un contorno más. La regla
+// hace el mismo trabajo (decir "esto es aparte") con un elemento en vez de cuatro.
 export function Nota({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl px-3.5 py-2.5" style={{ background: COLORS.tint }}>
-      <p className="text-[13.5px] font-semibold leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
+    <p
+      className="text-[13.5px] leading-snug pl-3.5 border-l-2"
+      style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}
+    >
+      {children}
+    </p>
+  );
+}
+
+// Multi-selección: mismas filas de ancho completo que OpcionesLista, pero con
+// casilla. Antes eran chips que se dimensionaban según su texto, así que ocho
+// opciones de largos distintos quedaban en escalera. Acá todas arrancan y
+// terminan en el mismo lugar, que es lo que hace que se lean como una lista.
+export function OpcionesMulti({
+  opciones, seleccion, onToggle,
+}: {
+  opciones: { value: string; display: string; muted?: boolean }[];
+  seleccion: string[];
+  onToggle: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {opciones.map((o) => {
+        const on = seleccion.includes(o.value);
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="checkbox"
+            aria-checked={on}
+            onClick={() => onToggle(o.value)}
+            style={on
+              ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
+              : { background: COLORS.surface, color: o.muted ? COLORS.inkSoft : COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+            className="v2-focus w-full flex items-center gap-3 text-left min-h-[52px] px-4 py-3
+              rounded-2xl text-[14.5px] font-semibold leading-snug
+              transition-all duration-100 ease-out active:scale-[0.99]"
+          >
+            <span
+              className="w-[22px] h-[22px] rounded-md shrink-0 flex items-center justify-center"
+              style={on
+                ? { background: COLORS.surface }
+                : { border: `2px solid ${COLORS.lineStrong}` }}
+            >
+              {on && (
+                <svg width="13" height="10" viewBox="0 0 14 11" fill="none" aria-hidden="true">
+                  <path d="M1 5.5L5 9.5L13 1.5" stroke={COLORS.brand} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </span>
+            <span className="flex-1">{o.display}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
+// CTA principal. El deshabilitado llevaba relleno #F1EBDF (1.11 sobre papel) y
+// texto tinta-suave: no se leía como control, se leía como texto suelto flotando
+// abajo. Ahora lleva relleno propio MÁS borde de 3:1 y texto 5.5:1 — sigue
+// diciendo "todavía no", pero se reconoce como botón. Se usa `aria-disabled` en
+// vez de `disabled` para que el lector de pantalla lo siga anunciando y el foco
+// no lo saltee (WCAG 3.3.1: el usuario tiene que poder llegar y entender por qué).
 export function Cta({ label, disabled, onClick }: { label: string; disabled?: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      disabled={disabled}
+      onClick={disabled ? undefined : onClick}
+      aria-disabled={disabled || undefined}
       style={disabled
-        ? { background: COLORS.tint, color: COLORS.inkFaint }
-        : { background: COLORS.brand, color: '#fff', boxShadow: '0 10px 24px -8px rgba(61,42,85,0.45)' }}
+        ? { background: COLORS.tint, color: COLORS.inkSoft, border: `1.5px solid ${COLORS.lineStrong}` }
+        : { background: COLORS.brand, color: COLORS.surface, boxShadow: '0 10px 24px -8px rgba(118,38,179,0.45)' }}
       className={`v2-focus w-full rounded-2xl py-4 text-[16px] font-bold select-none
-        transition-all duration-100 ease-out active:scale-[0.98]
-        ${disabled ? 'cursor-not-allowed' : ''}`}
+        transition-all duration-100 ease-out
+        ${disabled ? 'cursor-not-allowed' : 'active:scale-[0.98]'}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ── Primitivos de la dirección C ────────────────────────────────────────
+// Todo lo de acá abajo existe para que la jerarquía viva en UN lugar. Antes
+// cada pantalla repetía `text-[23px] font-bold` a mano, y por eso la pantalla
+// de género terminaba con dos preguntas del mismo tamaño y sin jerarquía.
+
+// El ÚNICO <h1> de la pantalla. Baloo 2 es lo único de la estética anterior
+// que se conserva, por pedido explícito.
+export function Titulo({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <h1
+      className={`font-extrabold leading-[1.12] tracking-[-0.01em] text-[30px] lg:text-[34px] text-balance ${className}`}
+      style={{ color: COLORS.ink, fontFamily: FONTS.display }}
+    >
+      {children}
+    </h1>
+  );
+}
+
+// Línea de apoyo debajo del título. Nunca compite con él.
+export function Apoyo({ children }: { children: React.ReactNode }) {
+  return <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{children}</p>;
+}
+
+// "Pregunta 3 de 8". Reemplaza la barra segmentada por sección, que mostraba
+// cuatro barritas sin decir nunca cuánto faltaba en total.
+export function Contador({ actual, total }: { actual: number; total: number }) {
+  return (
+    <p
+      className="text-[10.5px] font-semibold uppercase tracking-[0.12em]"
+      style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}
+    >
+      Pregunta {actual} de {total}
+    </p>
+  );
+}
+
+export type Opcion<T extends string> = { id: T; label: string; muted?: boolean };
+
+// Grilla de opciones. Dos columnas que SE LLENAN: si la cantidad es impar, la
+// última ocupa el ancho completo en vez de dejar media celda huérfana. Ese
+// hueco era el "3 + 2 ragged" que se veía como error de maquetación.
+export function OpcionesGrid<T extends string>({
+  opciones, valor, onElegir, columnas = 2,
+}: {
+  opciones: Opcion<T>[];
+  valor: T | null;
+  onElegir: (id: T) => void;
+  columnas?: 2 | 3;
+}) {
+  const impar = opciones.length % columnas !== 0;
+  return (
+    <div className={`grid gap-2.5 ${columnas === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      {opciones.map((o, i) => {
+        const on = valor === o.id;
+        const ultima = impar && i === opciones.length - 1;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onElegir(o.id)}
+            style={on
+              ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
+              : { background: COLORS.surface, color: o.muted ? COLORS.inkSoft : COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+            className={`v2-focus min-h-[56px] rounded-2xl px-3 py-3.5 text-[14.5px] font-semibold leading-snug
+              transition-all duration-100 ease-out active:scale-[0.97]
+              ${ultima ? (columnas === 3 ? 'col-span-3' : 'col-span-2') : ''}`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Lista de filas de ancho completo — para opciones largas, donde una grilla de
+// dos columnas obligaría a partir el texto. Separadas por hairline, sin caja.
+export function OpcionesLista<T extends string>({
+  opciones, valor, onElegir,
+}: {
+  opciones: Opcion<T>[];
+  valor: T | null;
+  onElegir: (id: T) => void;
+}) {
+  return (
+    <div role="radiogroup" className="flex flex-col">
+      {opciones.map((o) => {
+        const on = valor === o.id;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onElegir(o.id)}
+            style={on
+              ? { background: COLORS.brand, color: COLORS.surface, borderColor: COLORS.brand }
+              : { color: o.muted ? COLORS.inkSoft : COLORS.ink, borderColor: COLORS.line }}
+            className="v2-focus flex items-center justify-between gap-3 text-left min-h-[56px] px-4 py-3.5
+              rounded-2xl border-b last:border-b-0 text-[15px] font-semibold leading-snug
+              transition-all duration-100 ease-out active:scale-[0.99]"
+          >
+            {o.label}
+            {on && <span className="shrink-0"><CheckIcon /></span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Opción de escape: "prefiero no decirlo", "saltar por ahora". Antes era un
+// link subrayado suelto debajo del CTA; ahora es un control con borde propio,
+// para que se pueda tocar sin apuntar a un renglón de texto (target ≥ 44px).
+export function BotonFantasma({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}
+      className="v2-focus w-full rounded-2xl py-3.5 text-[14.5px] font-semibold
+        transition-all duration-100 ease-out active:scale-[0.98]"
     >
       {label}
     </button>
