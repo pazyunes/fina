@@ -155,7 +155,6 @@ export function InversionesV2() {
   const [enQue, setEnQue] = useState<string[]>(() => persistido?.enQue ?? []);
   const [bancos, setBancos] = useState<string[]>(() => persistido?.bancos ?? []);
   const [tab, setTab] = useState<Tab>('recos');
-  const [modoEvolucion, setModoEvolucion] = useState<'real' | 'simulador'>('real');
   // ── Moneda de visualización (ARS / USD) ────────────────────────────────
   // Ahora sí está cableada. No hace falta nada nuevo: la app ya tiene el
   // circuito entero — `/api/dolar` (Vercel Function que pega a dolarapi blue y
@@ -654,7 +653,7 @@ export function InversionesV2() {
             options={[
               { id: 'recos' as Tab, label: 'Recomendaciones' },
               { id: 'mias' as Tab, label: 'Mis inversiones' },
-              { id: 'evolucion' as Tab, label: 'Mi evolución' },
+              { id: 'evolucion' as Tab, label: 'Simular' },
             ]}
             value={tab}
             onChange={setTab}
@@ -782,21 +781,19 @@ export function InversionesV2() {
             </div>
           )}
 
-          {tab === 'evolucion' && (
-            <div className="flex flex-col gap-3">
-              <Tabs
-                options={[
-                  { id: 'real' as const, label: 'Mis aportes' },
-                  { id: 'simulador' as const, label: 'Simular' },
-                ]}
-                value={modoEvolucion}
-                onChange={setModoEvolucion}
-              />
-              {modoEvolucion === 'real'
-                ? <Evolucion aportes={aportes} tasaMensual={perfil.tasaMensual} />
-                : <Simulador tasaMensual={perfil.tasaMensual} />}
-            </div>
-          )}
+          {/* Antes acá había dos vistas: "Mis aportes" y "Simular". La primera
+              se sacó. No era un problema de dibujo: el eje X era el ÍNDICE del
+              aporte, no el tiempo, así que dos aportes con un año de diferencia
+              se veían igual que dos del mismo día; y la proyección componía una
+              vez por aporte, o sea que cargar cinco aportes hoy mostraba un año
+              de crecimiento. Y por debajo de eso hay algo que no se arregla
+              moviendo código: FINA no sabe cómo rindieron de verdad las
+              inversiones de nadie —solo sabe lo que la persona declaró que
+              puso—, así que dibujar una curva de crecimiento sobre aportes
+              reales promete un rendimiento que no podemos conocer.
+              El simulador sí es honesto: es explícitamente hipotético, compone
+              por MES y muestra el resultado como rango. */}
+          {tab === 'evolucion' && <Simulador tasaMensual={perfil.tasaMensual} />}
         </div>
       </div>
     );
@@ -874,55 +871,7 @@ export function InversionesV2() {
   );
 }
 
-// Línea de tiempo simple: lo aportado de verdad vs una proyección ilustrativa
-// a la tasa mensual del perfil (mismo criterio "orientativo" que el resto
-// de la app real — nunca una promesa de rendimiento). Diseño claro de FINA.
-function Evolucion({ aportes, tasaMensual }: { aportes: Aporte[]; tasaMensual: number }) {
-  const ordenado = [...aportes].reverse();
-  if (ordenado.length === 0) {
-    return (
-      <div className="rounded-2xl p-5 text-center border border-dashed" style={{ borderColor: COLORS.lineStrong }}>
-        <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Registrá algún aporte en "Mis inversiones" para ver tu evolución acá.</p>
-      </div>
-    );
-  }
-  let acumReal = 0;
-  const real = ordenado.map((a) => (acumReal += montoArsDe(a)));
-  let acumProy = 0;
-  const proyectado = ordenado.map((a) => { acumProy = (acumProy + montoArsDe(a)) * (1 + tasaMensual); return acumProy; });
-  const max = Math.max(...real, ...proyectado, 1);
-  const w = 280, h = 130, pad = 10;
-  const xy = (arr: number[], i: number) => {
-    const x = pad + (arr.length > 1 ? (i / (arr.length - 1)) * (w - 2 * pad) : (w - 2 * pad) / 2);
-    const y = h - pad - (arr[i] / max) * (h - 2 * pad);
-    return [x, y] as const;
-  };
-  const pathReal = real.map((_, i) => xy(real, i).join(',')).join(' ');
-  const pathProy = proyectado.map((_, i) => xy(proyectado, i).join(',')).join(' ');
-  // Aportado = dato declarado (línea llena, neutral). Proyección = estimado
-  // (línea PUNTEADA, guía §5.1): el trazo, no el color, dice la confianza.
-  const realColor = COLORS.ink;
-  const proyColor = COLORS.brand;
-
-  return (
-    <div className={BLOQUE}>
-      <TituloSeccion>Tu evolución</TituloSeccion>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[130px]">
-        <polyline points={pathProy} fill="none" stroke={proyColor} strokeWidth="3" strokeDasharray="2 4" strokeLinecap="round" strokeLinejoin="round" />
-        <polyline points={pathReal} fill="none" stroke={realColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Puntos: sin esto, un solo aporte no dibuja nada (una polyline de 1 punto no se ve). */}
-        {proyectado.map((_, i) => { const [x, y] = xy(proyectado, i); return <circle key={`p${i}`} cx={x} cy={y} r="3.5" fill={proyColor} stroke={COLORS.surface} strokeWidth="1.5" />; })}
-        {real.map((_, i) => { const [x, y] = xy(real, i); return <circle key={`r${i}`} cx={x} cy={y} r="3.5" fill={realColor} stroke={COLORS.surface} strokeWidth="1.5" />; })}
-      </svg>
-      <div className="flex gap-4">
-        <span className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}><span className="w-2.5 h-2.5 rounded-full" style={{ background: realColor }} /> Aportado real</span>
-        <span className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}><span className="w-4 h-0.5 rounded-full" style={{ background: proyColor }} /> Proyección estimada</span>
-      </div>
-      <p className="text-[12px]" style={{ color: COLORS.inkFaint }}>Proyección ilustrativa a tu perfil — no es una promesa de rendimiento.</p>
-    </div>
-  );
-}
-
+// Serie de puntos para una polilínea SVG. La usa el simulador.
 function serieAPath(arr: number[], w: number, h: number, pad: number, max: number) {
   return arr
     .map((v, i) => {
@@ -936,8 +885,11 @@ function serieAPath(arr: number[], w: number, h: number, pad: number, max: numbe
 // Simulador con plata ficticia — pensado para bajar el miedo de quien
 // nunca invirtió: "probalo antes de comprometerte". Usa la misma tasa
 // mensual ilustrativa del perfil ya calculado, pero con un monto y un
-// plazo que la persona inventa, no con aportes reales — por eso el
-// disclaimer es todavía más explícito que en "Mis aportes".
+// plazo que la persona inventa, no con aportes reales. Es la única
+// proyección que queda en la pantalla, y es honesta por construcción: la
+// persona sabe que los números son de mentira, compone por MES (no por
+// aporte, que era el error de la vista que se sacó) y el resultado se
+// muestra como rango, nunca como número exacto (§5.2).
 function Simulador({ tasaMensual }: { tasaMensual: number }) {
   const [monto, setMonto] = useState('10.000');
   const [meses, setMeses] = useState(12);
