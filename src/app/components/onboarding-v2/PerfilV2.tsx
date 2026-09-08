@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArmarGrupoBtn, Chip, COLORS, Face, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
+import { ArmarGrupoBtn, COLORS, Face, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
@@ -72,21 +72,25 @@ export function PerfilV2() {
   }
 
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-6 lg:max-w-3xl lg:mx-auto lg:pt-10">
-      {/* Banda editorial full-bleed (violeta) + mascota */}
-      <div className="-mx-[22px] -mt-8 lg:-mt-10 px-[22px] pt-9 lg:pt-10 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.brandSoft }}>
+    // DIRECCIÓN C — sin banda editorial y sin tarjeta por ítem. La banda
+    // full-bleed violeta era el recurso de la dirección B; acá el título ya
+    // ordena la pantalla solo. Los ítems del checklist eran tarjetas con
+    // contorno propio: como lista con hairline se leen como lo que son, una
+    // secuencia de cosas pendientes.
+    <div className="px-6 pt-8 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-10">
+      <header className="flex items-center gap-4">
         <div className="flex-1 min-w-0">
-          <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Tu perfil</h1>
-          <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Tu foto, tu nombre y lo que falta para completar tu FINA.</p>
+          <Titulo>Tu perfil</Titulo>
+          <p className="text-[14px] mt-2" style={{ color: COLORS.inkSoft }}>Tu foto, tu nombre y lo que falta para completar tu FINA.</p>
         </div>
-        <div className="shrink-0"><Face color={COLORS.brand} size={64} mood="happy" /></div>
-      </div>
+      </header>
 
       <div className="flex flex-col items-center gap-3">
         <button
           type="button"
           onClick={elegirFoto}
-          className="v2-focus relative w-24 h-24 rounded-full overflow-hidden shrink-0 shadow-[0_2px_14px_rgba(31,27,46,0.12)] transition-transform duration-100 active:scale-95"
+          className="v2-focus relative w-24 h-24 rounded-full overflow-hidden shrink-0 transition-transform duration-100 active:scale-95"
+          style={{ border: `1.5px solid ${COLORS.line}` }}
           aria-label="Cambiar foto de perfil"
         >
           {foto ? (
@@ -98,7 +102,7 @@ export function PerfilV2() {
               overlay, no decoración de color). */}
           <span
             className="absolute bottom-0 left-0 right-0 text-center text-[10px] font-bold py-1"
-            style={{ background: 'rgba(31,27,46,0.55)', color: COLORS.surface }}
+            style={{ background: 'rgba(43,33,24,0.6)', color: COLORS.surface }}
           >
             Cambiar
           </span>
@@ -106,13 +110,13 @@ export function PerfilV2() {
         <input ref={fileRef} type="file" accept="image/*" className="hidden" aria-label="Elegir foto de perfil" onChange={onFotoElegida} />
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <label htmlFor="perfil-nombre" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu nombre</label>
         <div className="flex gap-2">
           <input
             id="perfil-nombre"
-            className="v2-focus flex-1 rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
-            style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, color: COLORS.ink }}
+            className="v2-focus flex-1 min-w-0 rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
+            style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
             placeholder="Tu nombre"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
@@ -122,7 +126,7 @@ export function PerfilV2() {
             onClick={guardarNombre}
             disabled={!nombre.trim()}
             aria-label={guardado ? 'Nombre guardado' : 'Guardar nombre'}
-            className="v2-focus rounded-2xl px-4 font-bold disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0 inline-flex items-center justify-center"
+            className="v2-focus rounded-2xl px-5 font-bold disabled:opacity-40 transition-all duration-100 active:scale-95 shrink-0 inline-flex items-center justify-center"
             style={{ background: guardado ? COLORS.lima : COLORS.brand, color: guardado ? COLORS.ink : COLORS.surface }}
           >
             {guardado ? <Check size={15} /> : 'Guardar'}
@@ -131,74 +135,84 @@ export function PerfilV2() {
       </div>
 
       {(faltan.length > 0 || faltaNivel) && (
-        <div className="flex flex-col gap-2">
-          <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Completá tu perfil</p>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.tint }}>
+        <section className="flex flex-col gap-3">
+          <TituloSeccion>Completá tu perfil</TituloSeccion>
+          <div className="flex items-center gap-2.5">
+            <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: COLORS.line }}>
               <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pctPerfil}%`, background: COLORS.brand }} />
             </div>
-            <span className="text-[12.5px] font-bold tabular-nums shrink-0" style={{ color: COLORS.brand }}>{pctPerfil}%</span>
+            <span className="text-[12.5px] font-bold tabular-nums shrink-0" style={{ color: COLORS.brand, fontFamily: FONTS.mono }}>{pctPerfil}%</span>
           </div>
-          {items.map((it) => (
-            <button
-              key={it.label}
-              type="button"
-              onClick={() => navigate(it.to)}
-              disabled={it.hecho}
-              className="v2-focus w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3 transition-all duration-100 active:scale-[0.99] disabled:active:scale-100"
-              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
-            >
-              <span
-                aria-label={it.hecho ? 'Hecho' : 'Pendiente'}
-                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                style={it.hecho ? { background: COLORS.lima, color: COLORS.ink } : { border: `2px solid ${COLORS.lineStrong}` }}
-              >
-                {it.hecho ? <Check size={11} /> : null}
-              </span>
-              <span className="flex-1 text-[13.5px] font-medium" style={{ color: it.hecho ? COLORS.inkFaint : COLORS.ink, textDecoration: it.hecho ? 'line-through' : 'none' }}>
-                {it.label}
-              </span>
-            </button>
-          ))}
 
-          {/* Nivel de conocimiento financiero — mismo checklist, sin cartel aparte */}
-          {!abriendoNivel ? (
-            <button
-              type="button"
-              onClick={() => setAbriendoNivel(true)}
-              className="v2-focus w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3 transition-all duration-100 active:scale-[0.99]"
-              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
-            >
-              <span
-                aria-label={nivel ? 'Hecho' : 'Pendiente'}
-                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                style={nivel ? { background: COLORS.lima, color: COLORS.ink } : { border: `2px solid ${COLORS.lineStrong}` }}
+          <div className="flex flex-col">
+            {items.map((it) => (
+              <button
+                key={it.label}
+                type="button"
+                onClick={() => navigate(it.to)}
+                disabled={it.hecho}
+                className="v2-focus w-full flex items-center gap-3 text-left min-h-[52px] py-3 border-b transition-all duration-100 active:scale-[0.99] disabled:active:scale-100"
+                style={{ borderColor: COLORS.line }}
               >
-                {nivel ? <Check size={11} /> : null}
-              </span>
-              <span className="flex-1 text-[13.5px] font-medium" style={{ color: nivel ? COLORS.inkFaint : COLORS.ink, textDecoration: nivel ? 'line-through' : 'none' }}>
-                Descubrí tu nivel de conocimiento financiero
-              </span>
-            </button>
-          ) : (
-            <div className="rounded-2xl p-4 flex flex-col gap-2.5" style={{ background: COLORS.skySoft }}>
-              <p className="font-bold text-[14px]" style={{ color: COLORS.ink }}>¿Cómo describirías lo que sabés hoy?</p>
-              <p className="text-[12px]" style={{ color: COLORS.inkSoft }}>Así las recomendaciones te van a hablar en tu idioma, sin sonar ni muy básico ni muy técnico.</p>
-              <div className="flex flex-wrap gap-2">
-                {NIVELES_FINANCIEROS.map((n) => (
-                  <Chip key={n} on={nivel === n} onClick={() => { setNivel(n); saveV2NivelFinanciero(n); setAbriendoNivel(false); }}>{n}</Chip>
-                ))}
-              </div>
+                <span
+                  aria-label={it.hecho ? 'Hecho' : 'Pendiente'}
+                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                  style={it.hecho ? { background: COLORS.lima, color: COLORS.ink } : { border: `2px solid ${COLORS.lineStrong}` }}
+                >
+                  {it.hecho ? <Check size={11} /> : null}
+                </span>
+                <span className="flex-1 text-[14.5px] font-medium" style={{ color: it.hecho ? COLORS.inkFaint : COLORS.ink, textDecoration: it.hecho ? 'line-through' : 'none' }}>
+                  {it.label}
+                </span>
+              </button>
+            ))}
+
+            {/* Nivel de conocimiento financiero — mismo checklist, sin cartel aparte */}
+            {!abriendoNivel && (
+              <button
+                type="button"
+                onClick={() => setAbriendoNivel(true)}
+                className="v2-focus w-full flex items-center gap-3 text-left min-h-[52px] py-3 transition-all duration-100 active:scale-[0.99]"
+              >
+                <span
+                  aria-label={nivel ? 'Hecho' : 'Pendiente'}
+                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                  style={nivel ? { background: COLORS.lima, color: COLORS.ink } : { border: `2px solid ${COLORS.lineStrong}` }}
+                >
+                  {nivel ? <Check size={11} /> : null}
+                </span>
+                <span className="flex-1 text-[14.5px] font-medium" style={{ color: nivel ? COLORS.inkFaint : COLORS.ink, textDecoration: nivel ? 'line-through' : 'none' }}>
+                  Descubrí tu nivel de conocimiento financiero
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* Al abrirse, la pregunta se comporta como una pantalla del
+              onboarding: mismo título, misma lista de opciones. Antes era una
+              cajita celeste con chips adentro — otro sistema visual distinto
+              para la misma interacción. */}
+          {abriendoNivel && (
+            <div className="flex flex-col gap-3 pt-1">
+              <TituloSeccion>¿Cómo describirías lo que sabés hoy?</TituloSeccion>
+              <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                Así las recomendaciones te van a hablar en tu idioma, sin sonar ni muy básico ni muy técnico.
+              </p>
+              <OpcionesLista
+                opciones={NIVELES_FINANCIEROS.map((n) => ({ id: n, label: n }))}
+                valor={nivel}
+                onElegir={(n) => { setNivel(n); saveV2NivelFinanciero(n); setAbriendoNivel(false); }}
+              />
             </div>
           )}
-        </div>
+        </section>
       )}
 
       <ArmarGrupoBtn />
 
-      <div className="flex flex-col gap-1 pt-1">
+      <div className="flex flex-col">
         {['Términos y condiciones', 'Política de privacidad', 'Enviar feedback'].map((txt) => (
-          <button key={txt} type="button" className="v2-focus text-left text-[13px] font-medium py-3 rounded-lg" style={{ color: COLORS.inkSoft }}>
+          <button key={txt} type="button" className="v2-focus text-left text-[13.5px] font-medium min-h-[48px] py-3 border-b last:border-b-0" style={{ color: COLORS.inkSoft, borderColor: COLORS.line }}>
             {txt}
           </button>
         ))}

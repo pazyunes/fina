@@ -385,15 +385,15 @@ export function ArmarGrupoBtn() {
     <button
       type="button"
       onClick={() => navigate('/onboarding-v2/grupos')}
-      className="v2-focus w-full flex items-center gap-3 text-left rounded-2xl px-4 py-3.5 transition-all duration-100 active:scale-[0.99]"
-      style={{ background: COLORS.brandSoft }}
+      className="v2-focus w-full flex items-center gap-3 text-left min-h-[56px] py-3 border-y transition-all duration-100 active:scale-[0.99]"
+      style={{ borderColor: COLORS.line }}
     >
-      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.surface, color: COLORS.brand }}><IconGrupo size={18} /></span>
+      <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}><IconGrupo size={18} /></span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[14px] font-bold" style={{ color: COLORS.brandDark }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
-        <span className="block text-[11.5px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
+        <span className="block text-[15px] font-semibold" style={{ color: COLORS.ink }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
+        <span className="block text-[12.5px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
       </span>
-      <span className="shrink-0" style={{ color: COLORS.brand }}><IconChevron size={18} /></span>
+      <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
     </button>
   );
 }

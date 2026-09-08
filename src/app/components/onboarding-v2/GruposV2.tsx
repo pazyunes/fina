@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { COLORS, Face, Grupo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, saveV2Grupo } from './shared';
+import { COLORS, Face, Grupo, Titulo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, saveV2Grupo } from './shared';
 import { IconChevron } from './FinaIcons';
 
 // REDISEÑO v2 — Grupos: competir con amigas por actividad (cuánto
@@ -78,13 +78,13 @@ export function GruposV2() {
   if (!grupo) {
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4">
-        <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>Grupos</h1>
+        <Titulo>Grupos</Titulo>
 
         {/* Vidriera vacía = promesa (§10): mostramos qué va a haber acá y una
             acción clara para empezar. Fini (la estrella) sí puede acompañar un
             estado vacío — no hay ningún dato al lado. */}
         {modo === 'elegir' && (
-          <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ background: COLORS.brandSoft }}>
+          <div className="flex flex-col gap-4 py-2">
             <div className="flex items-center gap-3">
               <div className="shrink-0"><Face color={COLORS.star} size={56} mood="happy" /></div>
               <div className="min-w-0">
@@ -114,23 +114,23 @@ export function GruposV2() {
         )}
 
         {modo === 'elegir' && (
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col">
             <button
               type="button"
               onClick={() => setModo('crear')}
-              className="v2-focus w-full text-left rounded-2xl p-4 transition-all duration-100 active:scale-[0.99]"
-              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
+              className="v2-focus w-full text-left min-h-[60px] py-3.5 border-b transition-all duration-100 active:scale-[0.99]"
+              style={{ borderColor: COLORS.line }}
             >
-              <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>Crear un grupo</p>
+              <p className="font-semibold text-[15.5px]" style={{ color: COLORS.ink }}>Crear un grupo</p>
               <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>Le ponés nombre e invitás con un código.</p>
             </button>
             <button
               type="button"
               onClick={() => setModo('unirse')}
-              className="v2-focus w-full text-left rounded-2xl p-4 transition-all duration-100 active:scale-[0.99]"
-              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
+              className="v2-focus w-full text-left min-h-[60px] py-3.5 border-b transition-all duration-100 active:scale-[0.99]"
+              style={{ borderColor: COLORS.line }}
             >
-              <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>Unirme con un código</p>
+              <p className="font-semibold text-[15.5px]" style={{ color: COLORS.ink }}>Unirme con un código</p>
               <p className="text-[12.5px] mt-0.5" style={{ color: COLORS.inkSoft }}>Si una amiga ya te invitó.</p>
             </button>
           </div>
@@ -144,7 +144,7 @@ export function GruposV2() {
               id="grupo-nombre"
               autoFocus
               className="v2-focus rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
-              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, color: COLORS.ink }}
+              style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
               placeholder="Ej: Ahorrando juntas"
               value={nombreGrupo}
               onChange={(e) => setNombreGrupo(e.target.value)}
@@ -169,7 +169,7 @@ export function GruposV2() {
               id="grupo-codigo"
               autoFocus
               className="v2-focus rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors uppercase"
-              style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, color: COLORS.ink }}
+              style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
               placeholder="Ej: FINA-AB12C"
               value={codigoTxt}
               onChange={(e) => setCodigoTxt(e.target.value)}
@@ -195,7 +195,7 @@ export function GruposV2() {
   return (
     <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-[22px] font-bold" style={{ color: COLORS.ink }}>{grupo.nombre}</h1>
+        <Titulo>{grupo.nombre}</Titulo>
         <button type="button" onClick={salir} className="v2-focus text-[12.5px] font-semibold underline rounded-full px-2 py-2" style={{ color: COLORS.inkSoft }}>Salir</button>
       </div>
 
@@ -226,7 +226,7 @@ export function GruposV2() {
           <div
             key={m.nombre}
             className="flex items-center gap-3 rounded-2xl p-3.5"
-            style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, ...(m.sosVos ? { outline: `2px solid ${COLORS.brand}` } : null) }}
+            style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, ...(m.sosVos ? { outline: `2px solid ${COLORS.brand}` } : null) }}
           >
             {/* Ranking = secuencia real, la numeración sí es válida (§2). El 1º
                 resalta con star + tinta; el resto, hueco + tinta-media. */}
@@ -243,9 +243,9 @@ export function GruposV2() {
         ))}
       </div>
 
-      <div className="rounded-2xl px-4 py-3 text-[12.5px]" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>
+      <p className="text-[12.5px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
         Esto es una vista de ejemplo para probar la idea — cuando conectemos cuentas reales, acá vas a ver la actividad real de cada una.
-      </div>
+      </p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Cta, Donut, COLORS, EstadoConfianza, Face, Monto, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, slug, loadV2Categorias, loadV2GastosState, saveV2GastosState } from './shared';
+import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, Face, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, loadV2Categorias, loadV2GastosState, parseMoneyInput, saveV2GastosState, slug } from './shared';
 import { IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { WHATSAPP_URL } from '../WhatsAppFab';
 
@@ -58,8 +58,8 @@ const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.
 // sombra suave basada en tinta; hairline para listas; tint para bloques
 // agrupados; elevada SOLO para el dato central.
 const CARD_ELEVADA: React.CSSProperties = { background: COLORS.surface, boxShadow: '0 2px 8px rgba(43,33,24,0.08)' };
-const CARD_HAIRLINE: React.CSSProperties = { background: COLORS.surface, border: `1px solid ${COLORS.line}` };
-const INPUT_STYLE: React.CSSProperties = { background: COLORS.surface, border: `1px solid ${COLORS.line}` };
+const CARD_HAIRLINE: React.CSSProperties = { background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}` };
+const INPUT_STYLE: React.CSSProperties = { background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}` };
 
 // Cuenta nueva: acá solo entra lo que la persona puso en el onboarding — sin
 // categorías ni gastos de ejemplo inventados. Si ya había estado antes en
@@ -170,10 +170,10 @@ export function GastosV2() {
     <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-4xl lg:mx-auto lg:pt-10">
       {/* Banda editorial full-bleed. Sin Fini: esta pantalla está llena de
           números y el personaje no va cerca de datos (§6). */}
-      <div className="-mx-[22px] -mt-8 lg:-mt-10 px-[22px] pt-9 lg:pt-10 pb-6 rounded-b-[28px]" style={{ background: COLORS.gastosSoft }}>
-        <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Mis gastos</h1>
+      <header className="pb-1">
+        <Titulo>Mis gastos</Titulo>
         <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Todo lo que registrás, en un solo lugar. Ponéle un tope a cada sección.</p>
-      </div>
+      </header>
 
       {/* En desktop, todo lo de abajo se acomoda en grilla; en mobile sigue
           siendo una sola columna apilada (idéntico a antes). */}
@@ -214,8 +214,8 @@ export function GastosV2() {
 
       {/* Distribución por tipo — bloque tintado (§3.5): cuánto es impulso vs necesidad */}
       {porTipo.length > 0 && (
-        <div className="rounded-2xl p-3.5 flex flex-col gap-2 lg:col-span-1 lg:h-full" style={{ background: COLORS.tint }}>
-          <p className="text-[11.5px] font-bold" style={{ color: COLORS.inkSoft }}>¿En qué tipo de gasto se te va?</p>
+        <div className="flex flex-col gap-2 lg:col-span-1 lg:h-full">
+          <TituloSeccion>¿En qué tipo de gasto se te va?</TituloSeccion>
           <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: COLORS.surface }}>
             {porTipo.map((t) => (
               <div key={t.tipo} style={{ width: `${(t.monto / totalGastado) * 100}%`, background: TIPO_INFO[t.tipo].color }} />
@@ -253,7 +253,7 @@ export function GastosV2() {
                 onChange={(e) => setNgMonto(formatThousands(e.target.value))}
               />
             </div>
-            <div className="flex rounded-xl overflow-hidden shrink-0" style={{ border: `1px solid ${COLORS.line}` }}>
+            <div className="flex rounded-xl overflow-hidden shrink-0" style={{ border: `1.5px solid ${COLORS.lineStrong}` }}>
               {(['ARS', 'USD'] as Moneda[]).map((m) => (
                 <button
                   key={m}
@@ -287,7 +287,7 @@ export function GastosV2() {
                     type="button"
                     onClick={() => { setNgCatId(c.id); setNgNuevaCat(''); }}
                     className="v2-focus rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                    style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+                    style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                   >
                     {c.nombre}
                   </button>
@@ -326,7 +326,7 @@ export function GastosV2() {
                     type="button"
                     onClick={() => setNgTipo(t)}
                     className="v2-focus rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                    style={sel ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+                    style={sel ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                   >
                     {TIPO_INFO[t].label}
                   </button>
@@ -336,7 +336,7 @@ export function GastosV2() {
           </div>
 
           <div className="flex gap-2 mt-1">
-            <button type="button" onClick={() => setAddingGasto(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold" style={{ color: COLORS.ink, border: `1px solid ${COLORS.line}` }}>
+            <button type="button" onClick={() => setAddingGasto(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[13.5px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
               Cancelar
             </button>
             <button
@@ -393,7 +393,7 @@ export function GastosV2() {
             ) : (
               <>
                 <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>Registrá tu gasto por WhatsApp</p>
-                <div className="rounded-2xl p-4 flex flex-col gap-2.5" style={{ background: COLORS.tint }}>
+                <div className="flex flex-col gap-2.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.brandSoft }}>
                   {[
                     'Abrí el chat de FINA en WhatsApp.',
                     'Escribile tu gasto como se lo contarías a una amiga. Ej: "gasté 5.000 en el súper".',
@@ -430,7 +430,7 @@ export function GastosV2() {
           // Vidriera vacía (§10): promesa, no falla. Se muestra qué va a haber
           // (en 'por-descubrir') + la acción (el CTA "+ Agregar gasto" de arriba).
           // Único lugar de esta pantalla donde Fini puede aparecer (§6).
-          <div className="rounded-2xl p-5 flex flex-col items-center text-center gap-3" style={{ background: COLORS.tint }}>
+          <div className="py-6 flex flex-col items-center text-center gap-3">
             <Face color={COLORS.brand} size={56} mood="happy" />
             <div className="flex flex-col gap-1">
               <p className="text-[14.5px] font-semibold" style={{ color: COLORS.ink }}>Acá van a vivir tus secciones</p>
@@ -478,7 +478,7 @@ export function GastosV2() {
               ) : (
                 // Tope sin definir = 'por-descubrir' (§5.1): invitación, no error.
                 // Sin naranja ni gold de alerta; tint neutral + ícono monolineal.
-                <div className="mt-3 rounded-xl px-3 py-2.5 flex items-center gap-2" style={{ background: COLORS.tint }}>
+                <div className="mt-3 flex items-center gap-2">
                   <span className="shrink-0" style={{ color: COLORS.inkSoft }}><IconLupa size={16} /></span>
                   <p className="text-[12px] font-medium" style={{ color: COLORS.inkSoft }}>
                     Por ahora estamos mirando cómo es tu {cat.nombre.toLowerCase()}. Cuando quieras, ponéle un tope.
@@ -571,7 +571,7 @@ export function GastosV2() {
               type="button"
               onClick={() => setFiltroSeccion('todas')}
               className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-              style={filtroSeccion === 'todas' ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+              style={filtroSeccion === 'todas' ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
             >
               Todas las secciones
             </button>
@@ -581,7 +581,7 @@ export function GastosV2() {
                 type="button"
                 onClick={() => setFiltroSeccion(c.id)}
                 className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-                style={filtroSeccion === c.id ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+                style={filtroSeccion === c.id ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
               >
                 {c.nombre}
               </button>
@@ -593,7 +593,7 @@ export function GastosV2() {
             type="button"
             onClick={() => setFiltroTipo('todos')}
             className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-            style={filtroTipo === 'todos' ? { background: COLORS.ink, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+            style={filtroTipo === 'todos' ? { background: COLORS.ink, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
           >
             Todos los tipos
           </button>
@@ -603,7 +603,7 @@ export function GastosV2() {
               type="button"
               onClick={() => setFiltroTipo(t)}
               className="v2-focus rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-              style={filtroTipo === t ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+              style={filtroTipo === t ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
             >
               {TIPO_INFO[t].label}
             </button>

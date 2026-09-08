@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Chip, Cta, Donut, COLORS, EstadoConfianza, fechaDisplay, fmtMoney, formatThousands, Monto, parseMoneyInput, Rango, loadV2InversionesPerfil, loadV2InversionesState, saveV2InversionesState } from './shared';
+import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, Rango, Titulo, fechaDisplay, fmtMoney, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
 import { IconChevron, IconMas } from './FinaIcons';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
@@ -178,10 +178,10 @@ export function InversionesV2() {
       <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
         {/* Banda editorial full-bleed. Sin Fini: la guía §6 dice que el
             personaje NO aparece en inversiones (plata seria). */}
-        <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px]" style={{ background: COLORS.inversionesSoft }}>
-          <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
+        <header className="pb-1">
+          <Titulo>Inversiones</Titulo>
           <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
-        </div>
+        </header>
         <button
           type="button"
           onClick={() => setPaso(pasos[0])}
@@ -211,10 +211,10 @@ export function InversionesV2() {
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
           {/* Banda editorial full-bleed. Sin Fini (guía §6): el personaje nunca
               va cerca de un dato, y menos en inversiones. */}
-          <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px]" style={{ background: COLORS.inversionesSoft }}>
-            <h1 className="text-[26px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Inversiones</h1>
+          <header className="pb-1">
+            <Titulo>Inversiones</Titulo>
             <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
-          </div>
+          </header>
           <div className="flex items-center justify-between gap-2">
             <span
               className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-bold"
@@ -265,9 +265,9 @@ export function InversionesV2() {
           {tab === 'recos' && (
             <div className="flex flex-col gap-3">
               {enQue.length > 0 && (
-                <div className="rounded-xl px-3.5 py-2.5 text-[12.5px] font-semibold" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
+                <p className="text-[12.5px] leading-snug font-semibold pl-3.5 border-l-2" style={{ color: COLORS.limaText, borderColor: COLORS.lima }}>
                   Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
-                </div>
+                </p>
               )}
               {recomendados.map((r) => {
                 const bancoMatch = bancos.find((b) => r.apps.includes(b));
@@ -402,7 +402,7 @@ export function InversionesV2() {
 
       {paso === 'q1' && (
         <>
-          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿Con qué objetivo querés invertir esa plata?</h1>
+          <Titulo>¿Con qué objetivo querés invertir esa plata?</Titulo>
           <div className="flex flex-wrap gap-2.5">
             {['Sacarla pronto (corto plazo)', 'Dejarla que rinda (largo plazo)'].map((o) => (
               <Chip key={o} on={porQue === o} onClick={() => setPorQue(o)}>{o}</Chip>
@@ -413,9 +413,9 @@ export function InversionesV2() {
 
       {paso === 'q2' && (
         <>
-          <h1 className="text-[20px] font-bold leading-snug" style={{ color: COLORS.ink }}>
+          <Titulo>
             Estás en una inversión que sube y baja en el camino, pero promete crecer a 5 años a una tasa razonable. ¿Qué hacés?
-          </h1>
+          </Titulo>
           <div className="flex flex-wrap gap-2.5">
             {['Lo saco todo', 'Lo dejo y espero', 'Pongo más'].map((o) => (
               <Chip key={o} on={reaccion === o} onClick={() => setReaccion(o)}>{o}</Chip>
@@ -426,7 +426,7 @@ export function InversionesV2() {
 
       {paso === 'yaInvierte' && (
         <>
-          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿Ya invertís hoy en algo?</h1>
+          <Titulo>¿Ya invertís hoy en algo?</Titulo>
           <div className="flex flex-wrap gap-2.5">
             {(['si', 'no'] as const).map((o) => (
               <Chip key={o} on={yaInvierte === o} onClick={() => setYaInvierte(o)}>{o === 'si' ? 'Sí' : 'No'}</Chip>
@@ -437,7 +437,7 @@ export function InversionesV2() {
 
       {paso === 'enQue' && (
         <>
-          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿En qué invertís?</h1>
+          <Titulo>¿En qué invertís?</Titulo>
           <div className="flex flex-wrap gap-2.5">
             {EN_QUE_OPCIONES.map((o) => (
               <Chip key={o} on={enQue.includes(o)} onClick={() => toggleEnQue(o)}>{o}</Chip>
@@ -448,7 +448,7 @@ export function InversionesV2() {
 
       {paso === 'bancos' && (
         <>
-          <h1 className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿Qué bancos o billeteras usás?</h1>
+          <Titulo>¿Qué bancos o billeteras usás?</Titulo>
           <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Así te decimos exactamente desde dónde hacerlo.</p>
           <div className="flex flex-wrap gap-2.5">
             {BANCOS.map((b) => (
@@ -603,13 +603,13 @@ function Simulador({ tasaMensual }: { tasaMensual: number }) {
           </div>
           <div className="flex flex-col gap-2.5">
             {/* Lo que pondrías es aritmética de lo que dijiste: declarado, exacto. */}
-            <div className="rounded-xl px-3 py-2.5" style={{ background: COLORS.tint }}>
+            <div className="py-2.5 border-b" style={{ borderColor: COLORS.line }}>
               <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>En {meses} meses pondrías</p>
               <Monto value={totalAportado} className="font-bold text-[15px]" />
             </div>
             {/* Lo que tendrías es una PROYECCIÓN: se muestra como rango, nunca
                 como número exacto (§5.2). Se angosta cuando hay más certeza. */}
-            <div className="rounded-xl px-3 py-2.5 flex flex-col gap-1.5" style={{ background: COLORS.tint }}>
+            <div className="py-2.5 flex flex-col gap-1.5">
               <p className="text-[11px]" style={{ color: COLORS.inkSoft }}>Podrías tener</p>
               <Rango min={proyeccionLo} max={proyeccionHi} />
               <EstadoConfianza estado="estimado" />

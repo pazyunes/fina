@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, Celebracion, Cta, Coachmark, COLORS, Donut, EstadoConfianza, Face, SegmentedTab, fechaDisplay, fmtMoney, formatThousands, parseMoneyInput, useCountUp, loadV2ObjetivosIniciales, loadV2ObjetivosState, saveV2ObjetivosState, loadV2Grupo, saveV2Grupo, crearGrupoDemo, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding } from './shared';
+import { ArmarGrupoBtn, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, Face, SegmentedTab, Titulo, TituloSeccion, crearGrupoDemo, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Grupo, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, parseMoneyInput, saveV2Grupo, saveV2ObjetivosState, useCountUp } from './shared';
 
 // Sugerencias para arrancar cuando todavía no hay objetivos — le dan
 // emoción/juego a la pantalla vacía; tocás una y abre el modal precargado.
@@ -116,7 +116,7 @@ function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Mone
         onClick={() => setOpen((o) => !o)}
         aria-label={`Moneda: ${actual.code}`}
         className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors"
-        style={{ background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+        style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
       >
         <span>{actual.code}</span>
         <IconChevron size={14} style={{ transform: 'rotate(90deg)', color: COLORS.inkFaint }} />
@@ -182,7 +182,7 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
             type="button"
             onClick={() => { setValor(o); setFecha(''); }}
             className="v2-focus rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-            style={valor === o && !fechaElegida ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+            style={valor === o && !fechaElegida ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
           >
             {o}
           </button>
@@ -191,7 +191,7 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
           type="button"
           onClick={() => setValor(null)}
           className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-          style={fechaElegida || valor === null ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+          style={fechaElegida || valor === null ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
         >
 <IconCalendario size={15} /> Fecha exacta
         </button>
@@ -285,7 +285,7 @@ function MontoPicker({
               type="button"
               onClick={() => setModo(m)}
               className="v2-focus flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-[12.5px] font-semibold transition-all duration-100 active:scale-95"
-              style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+              style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
             >
               {label}
             </button>
@@ -673,9 +673,9 @@ export function ObjetivosV2() {
         )}
 
         {!done && consejoPara(abierto, estado) && (
-          <div className="rounded-2xl px-4 py-3 text-[13px] font-medium" style={{ background: COLORS.goldSoft, color: COLORS.ink }}>
+          <p className="text-[13px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.star }}>
             {consejoPara(abierto, estado)}
-          </div>
+          </p>
         )}
 
         {/* Registrar un pago o un ahorro */}
@@ -690,7 +690,7 @@ export function ObjetivosV2() {
                   type="button"
                   onClick={() => setKind(k)}
                   className="v2-focus py-2 rounded-xl text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                  style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${COLORS.line}` }}
+                  style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                 >
                   {k === 'paid' ? 'Ya lo pagué' : 'Lo separé'}
                 </button>
@@ -727,7 +727,7 @@ export function ObjetivosV2() {
 
         {/* Historial de registros */}
         <div className="flex flex-col gap-2">
-          <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Registros</p>
+          <TituloSeccion>Registros</TituloSeccion>
           {abierto.contribuciones.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste nada.</p>}
           {abierto.contribuciones.map((c) => (
             <div key={c.id} className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
@@ -756,7 +756,7 @@ export function ObjetivosV2() {
     <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: `${COLORS.ink}73` }} onClick={() => setCreating(false)}>
       <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto rounded-[24px] p-5 flex flex-col gap-3.5" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h1 className="text-[19px] font-bold" style={{ color: COLORS.ink }}>Nuevo objetivo</h1>
+          <Titulo>Nuevo objetivo</Titulo>
           <button type="button" onClick={() => setCreating(false)} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
@@ -813,9 +813,9 @@ export function ObjetivosV2() {
       {/* Banda editorial full-bleed (desencajonado). Fini acompaña en el
           encabezado (§6: onboarding/estados vacíos) — sin montos ni progreso
           al lado, así que no compite con ningún dato. */}
-      <div className="-mx-[22px] -mt-8 px-[22px] pt-9 pb-6 rounded-b-[28px] flex items-center gap-3" style={{ background: COLORS.objetivosSoft }}>
+      <header className="pb-1 flex items-center gap-3">
         <div className="flex-1 min-w-0">
-          <h1 className="text-[27px] font-bold leading-[1.05]" style={{ color: COLORS.ink }}>Tus objetivos</h1>
+          <Titulo>Tus objetivos</Titulo>
           <p className="text-[13.5px] mt-1.5" style={{ color: COLORS.inkSoft }}>
             {objetivos.length > 0
               ? `Vas por ${objetivos.length} objetivo${objetivos.length > 1 ? 's' : ''}, a tu ritmo.`
@@ -823,7 +823,7 @@ export function ObjetivosV2() {
           </p>
         </div>
         <div className="shrink-0"><Face color={COLORS.brand} size={68} mood="happy" /></div>
-      </div>
+      </header>
 
       {/* Desktop: 2 columnas (lista principal + barra lateral). Mobile: apilado. */}
       <div className="flex flex-col gap-4 lg:flex-row lg:gap-6 lg:items-start">
@@ -833,15 +833,18 @@ export function ObjetivosV2() {
       {/* Estado vacío con onda: sugerencias para arrancar (abren el modal) */}
       {objetivos.length === 0 && (
         <div className="flex flex-col gap-2.5 pt-1">
-          <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Con qué arrancás?</p>
-          <div className="flex flex-wrap gap-2">
+          <TituloSeccion>¿Con qué arrancás?</TituloSeccion>
+          {/* Grilla en vez de chips que envuelven: seis sugerencias de largos
+              distintos quedaban en escalera (2 + 3 + 1). En dos columnas se
+              llenan tres filas exactas. */}
+          <div className="grid grid-cols-2 gap-2.5">
             {SUGERENCIAS_OBJETIVO.map((s) => (
               <button
                 key={s.nombre}
                 type="button"
                 onClick={() => { setNombre(s.nombre); setCreating(true); }}
-                className="v2-focus rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                style={{ background: COLORS.tint, color: COLORS.ink }}
+                className="v2-focus min-h-[52px] rounded-2xl px-3 py-3 text-[14px] font-semibold leading-snug transition-all duration-100 active:scale-[0.97]"
+                style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
               >
                 {s.nombre}
               </button>
@@ -941,7 +944,7 @@ export function ObjetivosV2() {
       <div className="flex flex-col gap-4 lg:w-[300px] lg:shrink-0">
         {objetivos.length > 0 && (
           <div className="hidden lg:flex flex-col gap-2.5 rounded-2xl p-4 border" style={{ background: COLORS.surface, borderColor: COLORS.line }}>
-            <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Sumás otro?</p>
+            <TituloSeccion>¿Sumás otro?</TituloSeccion>
             <div className="flex flex-wrap gap-2">
               {SUGERENCIAS_OBJETIVO.slice(0, 4).map((s) => (
                 <button
