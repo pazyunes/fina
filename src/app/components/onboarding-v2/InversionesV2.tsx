@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
+import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
 import { IconChevron, IconClose } from './FinaIcons';
 import { useDisplayCurrency, useMoney } from '../../lib/displayCurrency';
 import { fetchExchangeRate } from '../../lib/exchangeRate';
@@ -160,14 +160,49 @@ export function InversionesV2() {
   // desplegaba el "por qué" dentro de la propia fila y hacía crecer la lista.
   const [detalle, setDetalle] = useState<Instrumento | null>(null);
 
-  // Alta de aporte en dos pasos: primero se explica qué es registrar (la duda
-  // más común es si esto mueve plata de verdad), después se piden los datos.
+  // Alta y edición de aporte comparten el mismo modal: es el mismo formulario,
+  // y tener dos pantallas distintas para cargar y para corregir lo mismo obliga
+  // a mantener dos veces la misma validación. `editandoId` distingue: null =
+  // alta (arranca explicando qué es registrar, que es la duda más común la
+  // primera vez), con id = edición (va directo a los datos, ya sabés qué es).
   const [aporteAbierto, setAporteAbierto] = useState(false);
   const [aportePaso, setAportePaso] = useState<'que-es' | 'datos'>('que-es');
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [confirmarBorrar, setConfirmarBorrar] = useState(false);
+
   function cerrarAporte() {
     setAporteAbierto(false);
     setAportePaso('que-es');
+    setEditandoId(null);
+    setConfirmarBorrar(false);
     setAporteMonto('');
+  }
+  function abrirAlta() {
+    setEditandoId(null);
+    setConfirmarBorrar(false);
+    setAporteMonto('');
+    setAporteInstrId(INSTRUMENTOS[0].id);
+    setAportePaso('que-es');
+    setAporteAbierto(true);
+  }
+  function abrirEdicion(a: Aporte) {
+    setEditandoId(a.id);
+    setConfirmarBorrar(false);
+    setAporteInstrId(a.instrumentoId);
+    setAporteMonto(formatThousands(String(a.monto)));
+    setAportePaso('datos');
+    setAporteAbierto(true);
+  }
+  function guardarEdicion() {
+    const monto = parseMoneyInput(aporteMonto);
+    if (monto <= 0 || !editandoId) return;
+    // Se conserva la fecha original: editar un monto mal tipeado no debería
+    // mover el aporte a hoy y romper la evolución.
+    setAportes((prev) => prev.map((a) => (a.id === editandoId ? { ...a, monto, instrumentoId: aporteInstrId } : a)));
+  }
+  function borrarAporte() {
+    if (!editandoId) return;
+    setAportes((prev) => prev.filter((a) => a.id !== editandoId));
   }
   useEffect(() => {
     if (!aporteAbierto) return;
@@ -364,7 +399,7 @@ export function InversionesV2() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-3">
-            <Titulo className="!text-[26px]">Registrar un aporte</Titulo>
+            <Titulo className="!text-[26px]">{editandoId ? 'Editar registro' : 'Registrar un aporte'}</Titulo>
             <button
               type="button"
               onClick={cerrarAporte}
@@ -400,26 +435,14 @@ export function InversionesV2() {
             <>
               <div className="flex flex-col gap-2.5">
                 <TituloSeccion>¿En qué lo pusiste?</TituloSeccion>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {INSTRUMENTOS.map((i) => {
-                    const sel = aporteInstrId === i.id;
-                    return (
-                      <button
-                        key={i.id}
-                        type="button"
-                        role="radio"
-                        aria-checked={sel}
-                        onClick={() => setAporteInstrId(i.id)}
-                        className="v2-focus min-h-[56px] rounded-2xl px-3 py-3 text-[14.5px] font-semibold leading-snug transition-all duration-100 active:scale-[0.97]"
-                        style={sel
-                          ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
-                          : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-                      >
-                        {i.nombre}
-                      </button>
-                    );
-                  })}
-                </div>
+                {/* El mismo componente que el onboarding: con cinco
+                    instrumentos, la última ocupa el ancho completo en vez de
+                    dejar media celda huérfana. */}
+                <OpcionesGrid
+                  opciones={INSTRUMENTOS.map((i) => ({ id: i.id, label: i.nombre }))}
+                  valor={aporteInstrId}
+                  onElegir={setAporteInstrId}
+                />
               </div>
 
               <div className="flex flex-col gap-2.5">
@@ -443,10 +466,50 @@ export function InversionesV2() {
               </div>
 
               <Cta
-                label="Guardar"
+                label={editandoId ? 'Guardar cambios' : 'Guardar'}
                 disabled={parseMoneyInput(aporteMonto) <= 0}
-                onClick={() => { agregarAporte(); cerrarAporte(); }}
+                onClick={() => { if (editandoId) guardarEdicion(); else agregarAporte(); cerrarAporte(); }}
               />
+
+              {/* Borrar. La confirmación se pide en el mismo lugar en vez de un
+                  window.confirm: el diálogo del navegador saca a la persona de
+                  la app y no dice qué se está por borrar. */}
+              {editandoId && (
+                confirmarBorrar ? (
+                  <div className="flex flex-col gap-2.5 pt-1">
+                    <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+                      ¿Borramos este registro de {nombreInstr(aporteInstrId)}? Se saca de tu total y de tu evolución.
+                    </p>
+                    <div className="flex gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmarBorrar(false)}
+                        className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold transition-all duration-100 active:scale-[0.98]"
+                        style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { borrarAporte(); cerrarAporte(); }}
+                        className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold transition-all duration-100 active:scale-[0.98]"
+                        style={{ background: COLORS.naranja, color: COLORS.ink }}
+                      >
+                        Sí, borrar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmarBorrar(true)}
+                    className="v2-focus min-h-[44px] text-[15px] font-semibold rounded-2xl transition-all duration-100 active:scale-[0.98]"
+                    style={{ color: COLORS.naranjaText }}
+                  >
+                    Borrar este registro
+                  </button>
+                )
+              )}
             </>
           )}
         </div>
@@ -589,7 +652,7 @@ export function InversionesV2() {
                   después pide instrumento y monto. */}
               <button
                 type="button"
-                onClick={() => setAporteAbierto(true)}
+                onClick={abrirAlta}
                 className="v2-focus w-full rounded-2xl py-4 text-[17px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
                 style={{ background: COLORS.brand, color: COLORS.surface, boxShadow: '0 10px 24px -8px rgba(118,38,179,0.45)' }}
               >
@@ -603,14 +666,26 @@ export function InversionesV2() {
                   <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes. Cuando sumes el primero, lo vas a ver acá.</p>
                 ) : (
                   <div className="flex flex-col">
+                    {/* Cada registro se toca para editarlo o borrarlo. Se
+                        prefiere abrir el mismo formulario antes que meter dos
+                        iconos por fila: con cinco registros serían diez
+                        controles chiquitos compitiendo con el dato. */}
                     {aportes.map((a) => (
-                      <div key={a.id} className="flex items-center justify-between gap-3 py-3 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => abrirEdicion(a)}
+                        aria-label={`Editar el aporte de ${nombreInstr(a.instrumentoId)}`}
+                        className="v2-focus w-full text-left flex items-center justify-between gap-3 min-h-[56px] py-3 border-b last:border-b-0 transition-all duration-100 active:scale-[0.99]"
+                        style={{ borderColor: COLORS.line }}
+                      >
                         <span className="flex-1 min-w-0 flex flex-col">
                           <span className="text-[15px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
                           <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
                         </span>
                         <span className="text-[15px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmt(a.monto)}</span>
-                      </div>
+                        <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={16} /></span>
+                      </button>
                     ))}
                   </div>
                 )}
