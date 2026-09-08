@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, Face, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, loadV2Categorias, loadV2GastosState, parseMoneyInput, saveV2GastosState, slug } from './shared';
+import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, Face, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, loadV2Categorias, loadV2GastosState, parseMoneyInput, saveV2GastosState, slug } from './shared';
 import { IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { WHATSAPP_URL } from '../WhatsAppFab';
 
@@ -177,7 +177,7 @@ export function GastosV2() {
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:gap-5 lg:gap-y-5 lg:grid-flow-row-dense lg:items-start">
       {/* Resumen: donut + disponible/gastado — el DATO CENTRAL, única tarjeta elevada */}
       <div className={`rounded-2xl p-4 flex gap-4 items-center lg:h-full ${porTipo.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`} style={CARD_ELEVADA}>
-        <Donut segments={donutCategorias} centerLabel="Gastado" centerValue={fmtMoney(totalGastado)} />
+        <Donut segments={donutCategorias} centerLabel="Gastado" centerValue={fmtMontoCompacto(totalGastado)} />
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <div>
             <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Dinero disponible</p>

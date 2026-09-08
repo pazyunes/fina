@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Celebracion, COLORS, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, formatThousands, loadV2Categorias, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
-import { IconChevron, IconFuego, IconGastos, IconGrupo, IconIdea, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
+import { Celebracion, COLORS, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, formatThousands, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { IconChevron, IconFuego, IconGastos, IconGrupo, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
 import type { ComponentType } from 'react';
 
-type Tip = { texto: string; to: string };
 
 // "Tu próximo paso" — el hilo estilo Duolingo: una sola acción, la más útil
 // según en qué punto está la persona. Da coherencia al dashboard sin
@@ -44,28 +43,6 @@ function rachaDeGastos(): number {
   const d = new Date();
   while (dias.has(d.toDateString())) { s++; d.setDate(d.getDate() - 1); }
   return s;
-}
-
-// Tips reales, no inventados — el mismo espíritu que las "ideas para
-// llegar más rápido" que ya tiene ObjetivosPage.tsx en la app real, pero
-// acá en Home y armados con lo único que persiste entre pantallas en este
-// sandbox (las respuestas del onboarding), no con gastos/objetivos que se
-// cargan durante la sesión — esos todavía viven solo en cada pantalla.
-function tipsPara(): Tip[] {
-  const tips: Tip[] = [];
-  if (loadV2Categorias().length === 0) {
-    tips.push({ texto: 'Registrá tu primer gasto y armamos tus secciones solas, a partir de eso.', to: '/onboarding-v2/gastos' });
-  }
-  if (loadV2ObjetivosIniciales().length > 0) {
-    tips.push({ texto: 'Tenés objetivos anotados del onboarding — ponéles un monto para ver el progreso.', to: '/onboarding-v2/objetivos' });
-  }
-  if (loadV2InversionesPerfil()) {
-    tips.push({ texto: 'Ya nos contaste algo de tu perfil inversor — terminalo en Inversiones para ver recomendaciones.', to: '/onboarding-v2/inversiones' });
-  }
-  if (tips.length === 0) {
-    tips.push({ texto: 'Explorá Gastos, Objetivos e Inversiones — cuanto más uses FINA, más te vamos a poder ayudar.', to: '/onboarding-v2/gastos' });
-  }
-  return tips.slice(0, 1);
 }
 
 // ── Anillo de bienestar financiero (estilo Headspace/Apple Watch) ──────
@@ -145,7 +122,6 @@ export function HomeV2() {
   const foto = loadV2Foto();
   const grupo = loadV2Grupo();
   const topGrupo = grupo ? [...grupo.miembros].sort((a, b) => b.actividad - a.actividad).slice(0, 3) : [];
-  const tips = tipsPara();
   const b = datosBienestar();
   const paso = proximoPaso();
   const racha = rachaDeGastos();
@@ -336,28 +312,6 @@ export function HomeV2() {
         )}
       </section>
 
-      {/* Tips. Eran cajas amarillas apiladas — tres contenedores más. Ahora son
-          filas con el ícono de idea al costado, separadas por hairline. */}
-      {tips.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <TituloSeccion>Tips para vos</TituloSeccion>
-          <div className="flex flex-col">
-            {tips.map((t) => (
-              <button
-                key={t.texto}
-                type="button"
-                onClick={() => navigate(t.to)}
-                className="v2-focus w-full flex items-center gap-3 text-left min-h-[56px] py-3 border-b last:border-b-0 transition-all duration-100 active:scale-[0.99]"
-                style={{ borderColor: COLORS.line }}
-              >
-                <span className="shrink-0" style={{ color: COLORS.starText }}><IconIdea size={20} /></span>
-                <span className="flex-1 text-[15px] leading-snug" style={{ color: COLORS.ink }}>{t.texto}</span>
-                <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={16} /></span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }

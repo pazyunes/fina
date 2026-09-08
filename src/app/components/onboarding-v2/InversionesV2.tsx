@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
+import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
 import { IconChevron, IconClose } from './FinaIcons';
 import { useDisplayCurrency, useMoney } from '../../lib/displayCurrency';
 import { fetchExchangeRate } from '../../lib/exchangeRate';
@@ -168,7 +168,7 @@ export function InversionesV2() {
   // así que fetchExchangeRate devuelve null y el toggle queda deshabilitado
   // solo-ARS. En el preview de Vercel funciona.
   const { rate, setRate, currency, setCurrency } = useDisplayCurrency();
-  const { fmt, isUsd } = useMoney();
+  const { fmt, fmtKpi, isUsd } = useMoney();
   useEffect(() => {
     if (rate) return; // ya la trajo otra pantalla: no la pisamos
     let vivo = true;
@@ -716,7 +716,7 @@ export function InversionesV2() {
                     pct: totalAportado > 0 ? (aportes.filter((a) => a.instrumentoId === i.id).reduce((s, a) => s + montoArsDe(a), 0) / totalAportado) * 100 : 0,
                   }))}
                   centerLabel="Invertido"
-                  centerValue={fmt(totalAportado)}
+                  centerValue={fmtKpi(totalAportado)}
                   size={100}
                 />
                 <div className="flex-1 flex flex-col gap-1.5">
@@ -936,14 +936,6 @@ const SUPUESTOS: Record<string, Supuesto> = {
 const mensualDesdeTna = (tna: number) => Math.pow(1 + tna, 1 / 12) - 1;
 const INFLACION_MENSUAL = mensualDesdeTna(INFLACION_ANUAL_ESPERADA);
 
-// Abrevia para el eje: $1,2M / $450k. En el eje importa la magnitud, no el peso
-// exacto — el número exacto va en las cifras de abajo.
-function ejeMoneda(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace('.', ',')}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
-  return `$${Math.round(n)}`;
-}
-
 // ── Gráfico del simulador ────────────────────────────────────────────────
 // Antes eran dos polilíneas flotando sin ejes: no se sabía cuánta plata ni
 // cuánto tiempo representaba cada punto, así que las líneas no significaban
@@ -983,7 +975,7 @@ function GraficoSimulacion({
       {guias.map((v, i) => (
         <g key={i}>
           <line x1={padL} x2={w - padR} y1={y(v)} y2={y(v)} stroke={COLORS.line} strokeWidth="1" />
-          <text x={padL - 7} y={y(v) + 3.5} textAnchor="end" fontSize="9.5" fill={COLORS.inkFaint} fontFamily={FONTS.mono}>{ejeMoneda(v)}</text>
+          <text x={padL - 7} y={y(v) + 3.5} textAnchor="end" fontSize="9.5" fill={COLORS.inkFaint} fontFamily={FONTS.mono}>{fmtMontoCompacto(v)}</text>
         </g>
       ))}
       {/* Eje X: meses. */}

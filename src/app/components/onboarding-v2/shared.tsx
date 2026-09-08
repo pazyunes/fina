@@ -126,6 +126,20 @@ export const COLOR_VARS = {
 export function fmtMoney(n: number): string {
   return `$${Math.round(n).toLocaleString('es-AR')}`;
 }
+// Monto abreviado, para lugares donde el ancho manda y la magnitud alcanza:
+// el centro de un donut, la etiqueta de un eje. El numero exacto siempre vive
+// en otro lado de la pantalla. Sin esto, "$987.654.321" no entra en el anillo
+// ni achicandolo hasta el limite de legibilidad.
+export function fmtMontoCompacto(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) {
+    const m = n / 1_000_000;
+    return `$${(abs >= 10_000_000 ? Math.round(m) : Number(m.toFixed(1))).toLocaleString('es-AR')}M`;
+  }
+  if (abs >= 100_000) return `$${Math.round(n / 1000).toLocaleString('es-AR')}k`;
+  return fmtMoney(n);
+}
+
 export function parseMoneyInput(v: string): number {
   return parseInt(v.replace(/\D/g, '')) || 0;
 }
@@ -581,6 +595,15 @@ export function Donut({
     })
     .join(', ');
   const inset = Math.round(size * 0.13);
+  // El valor del centro se dimensiona segun cuanto mide: con 18px fijos,
+  // "$4.635.000" se desbordaba del anillo. El circulo interior mide
+  // `size - 2*inset`; se le deja un 88% util y se estima el ancho del texto en
+  // 0.6em por caracter, que es el avance de IBM Plex Mono. Piso de 11px para
+  // que nunca quede ilegible, techo de 18px para que un numero corto no se
+  // infle. Va en mono con cifras tabulares, como todo monto (regla 5).
+  const anchoInterior = (size - inset * 2) * 0.88;
+  const valorFontSize = Math.max(11, Math.min(18, anchoInterior / (Math.max(centerValue.length, 1) * 0.6)));
+  const labelFontSize = Math.max(9, Math.min(12, valorFontSize * 0.66));
   return (
     <div
       className="relative rounded-full shrink-0"
@@ -601,8 +624,13 @@ export function Donut({
           boxShadow: dark ? 'none' : '0 2px 10px rgba(31,27,46,0.07)',
         }}
       >
-        <span className="text-[12px] leading-tight text-center" style={{ color: dark ? COLORS.onDarkSoft : COLORS.inkSoft }}>{centerLabel}</span>
-        <span className="font-bold text-[18px] leading-tight" style={{ color: dark ? COLORS.onDark : COLORS.ink }}>{centerValue}</span>
+        <span className="leading-tight text-center px-1" style={{ fontSize: labelFontSize, color: dark ? COLORS.onDarkSoft : COLORS.inkSoft }}>{centerLabel}</span>
+        <span
+          className="font-bold leading-tight font-mono tabular-nums whitespace-nowrap"
+          style={{ fontSize: valorFontSize, color: dark ? COLORS.onDark : COLORS.ink }}
+        >
+          {centerValue}
+        </span>
       </div>
     </div>
   );
