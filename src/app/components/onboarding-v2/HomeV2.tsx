@@ -131,7 +131,14 @@ function datosBienestar() {
     inversionTexto = esteMes ? 'Aportaste a tus inversiones este mes' : 'Hace tiempo que no le sumás a tus inversiones';
   }
 
-  return { gastosPct, gastosTexto, objetivosPct, objetivosTexto, inversionPct, inversionTexto };
+  // `gastosPct` es null por DOS motivos distintos, y la etiqueta de Home los
+  // confundía: decía "Registrá el primero" a quien ya tenía cuatro gastos
+  // cargados pero ninguna sección con tope. Lo que le falta es el tope, no el
+  // gasto.
+  const gastosFalta: 'gasto' | 'tope' | null =
+    gastosPct !== null ? null : (g.gastos.length === 0 ? 'gasto' : 'tope');
+
+  return { gastosPct, gastosTexto, gastosFalta, objetivosPct, objetivosTexto, inversionPct, inversionTexto };
 }
 
 // REDISEÑO v2 — Home, según el boceto: perfil arriba + 3 acciones grandes
@@ -208,7 +215,7 @@ export function HomeV2() {
   // Ya no llevan color propio — el color por sección era otra forma de decir
   // "esto es una caja distinta", y con tintes de 1.1 de contraste no decía nada.
   const secciones: { Icon: ComponentType<{ size?: number }>; label: string; to: string; metric: string }[] = [
-    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá el primero' },
+    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : (b.gastosFalta === 'gasto' ? 'Registrá el primero' : 'Ponéle un tope') },
     { Icon: IconObjetivos, label: 'Objetivos', to: '/onboarding-v2/objetivos', metric: b.objetivosPct !== null ? `${b.objetivosPct}% de avance` : 'Sumá uno' },
     { Icon: IconInversiones, label: 'Inversiones', to: '/onboarding-v2/inversiones', metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
   ];
