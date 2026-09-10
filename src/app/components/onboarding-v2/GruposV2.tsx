@@ -106,8 +106,14 @@ export function GruposV2() {
   if (!grupo) {
     return (
       <div className="px-6 pt-6 flex flex-col gap-4">
-        <Volver />
-        <Titulo>Grupos</Titulo>
+        {/* <header> y no un div suelto: la franja de color de V2Layout mide
+            dónde termina el encabezado para saber hasta dónde llegar, y ésta
+            era la única pantalla que no tenía uno — así que se quedaba con la
+            medida de la pantalla anterior. */}
+        <header>
+          <Volver />
+          <Titulo>Grupos</Titulo>
+        </header>
 
         {/* Vidriera vacía = promesa (§10): mostramos qué va a haber acá y una
             acción clara para empezar. Fini (la estrella) sí puede acompañar un
@@ -223,11 +229,13 @@ export function GruposV2() {
 
   return (
     <div className="px-6 pt-6 flex flex-col gap-4 pb-4">
-      <Volver />
-      <div className="flex items-center justify-between gap-3">
-        <Titulo>{grupo.nombre}</Titulo>
-        <button type="button" onClick={() => void salir()} className="v2-focus text-[14px] font-semibold underline rounded-full px-2 py-2" style={{ color: COLORS.inkSoft }}>Salir</button>
-      </div>
+      <header>
+        <Volver />
+        <div className="flex items-center justify-between gap-3">
+          <Titulo>{grupo.nombre}</Titulo>
+          <button type="button" onClick={() => void salir()} className="v2-focus text-[14px] font-semibold underline rounded-full px-2 py-2" style={{ color: COLORS.inkSoft }}>Salir</button>
+        </div>
+      </header>
 
       <button
         type="button"

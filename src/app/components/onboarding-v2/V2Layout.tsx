@@ -146,7 +146,10 @@ export function V2Layout() {
 
     const medir = () => {
       const cabecera = contenido.querySelector('header');
-      if (!cabecera) return; // Grupos no tiene <header>: se queda con el inicial
+      // Sin <header> se vuelve al alto inicial y NO se deja el de la pantalla
+      // anterior: heredar una medida ajena es peor que una por defecto, porque
+      // el error depende de por dónde viniste.
+      if (!cabecera) { setAltoFranja(ALTO_FRANJA_INICIAL); return; }
       const alto = cabecera.getBoundingClientRect().bottom - contenido.getBoundingClientRect().top;
       if (alto > 0) setAltoFranja(Math.round(alto + AIRE_FRANJA));
     };
