@@ -17,6 +17,7 @@ import { IconChat, IconChevron, IconBasura } from './FinaIcons';
 import { useAuth } from '../../lib/auth';
 import { formatearTelefonoAr, telefonoE164, telefonoValidoAr } from '../../lib/telefono';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
+import { traducirErrorAuth } from '../../lib/erroresAuth';
 import { crearObjetivo, crearSeccion, guardarPerfil, guardarPerfilInversor } from '../../api/v2';
 import { esperarCola } from '../../api/v2/almacen';
 
@@ -300,29 +301,6 @@ function MultiOtroChips({ opciones, seleccion, toggle, otro }: { opciones: Opcio
       )}
     </div>
   );
-}
-
-// Los mensajes de Supabase vienen en inglés y en jerga ("User already
-// registered"). Los que se pueden anticipar se traducen a algo accionable; el
-// resto se muestra tal cual, porque un mensaje raro es más útil que un
-// "algo salió mal" que no dice nada.
-function traducirErrorAuth(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes('already registered') || m.includes('already been registered')) {
-    return 'Ya hay una cuenta con ese mail. Podés iniciar sesión.';
-  }
-  if (m.includes('duplicate') && m.includes('phone')) {
-    return 'Ese teléfono ya está usado por otra cuenta.';
-  }
-  if (m.includes('invalid email')) return 'Ese mail no parece válido.';
-  if (m.includes('password')) return 'La contraseña no cumple los requisitos.';
-  if (m.includes('rate limit') || m.includes('too many')) {
-    return 'Demasiados intentos seguidos. Esperá un minuto y probá de nuevo.';
-  }
-  if (m.includes('failed to fetch') || m.includes('network')) {
-    return 'No pudimos conectarnos. Fijate la conexión y probá otra vez.';
-  }
-  return msg;
 }
 
 function emailValido(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
@@ -658,7 +636,7 @@ export function OnboardingV2() {
   function onNext() {
     if (currentKey === 'login') {
       if (finished) { marcarFiniAterriza(); navigate('/onboarding-v2/home'); return; }
-      if (pasoLogin === 'confirmar') { navigate('/login'); return; }
+      if (pasoLogin === 'confirmar') { navigate('/onboarding-v2/entrar'); return; }
       setIntentoLogin(true);
       if (!stepValid('login')) return;
       void crearCuenta();
@@ -798,7 +776,7 @@ export function OnboardingV2() {
                       al final Supabase le iba a decir que el mail ya existe. */}
                   <button
                     type="button"
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate('/onboarding-v2/entrar')}
                     className="v2-focus self-start text-[16px] font-semibold underline rounded-full py-2"
                     style={{ color: COLORS.brand }}
                   >

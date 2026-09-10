@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { BottomNavV2 } from './BottomNavV2';
 import { SidebarV2 } from './SidebarV2';
@@ -112,13 +112,53 @@ const FRANJA: { ruta: string; color: string }[] = [
   { ruta: '/onboarding-v2/grupos', color: COLORS.starSoft },    // star — tu gente
 ];
 
-const ALTO_FRANJA = 132;
+// Cuánto aire queda entre donde termina el título y donde termina la franja.
+// Sin esto, el borde de la franja pasa justo por la línea de base del subtítulo
+// y parece que lo corta.
+const AIRE_FRANJA = 22;
+
+// Alto de arranque, antes de medir. Es el de un título de dos líneas con
+// subtítulo: si la medición todavía no corrió, la franja ya está cerca.
+const ALTO_FRANJA_INICIAL = 132;
 
 export function V2Layout() {
   const { pathname } = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const franja = FRANJA.find((f) => pathname.startsWith(f.ruta))?.color ?? COLORS.paper;
+
+  // La franja se MIDE, no se fija en un número.
+  //
+  // Con un alto fijo siempre choca en alguna pantalla: el encabezado de Home
+  // (saludo de dos líneas + racha) no mide lo mismo que el de Objetivos
+  // (título + subtítulo), ni que el de Inversiones, y encima cambia con el
+  // largo del nombre de la persona y con el ancho del teléfono. Cualquier
+  // constante que funcione en una corta el texto en otra.
+  //
+  // Así que se mide dónde termina el <header> de la pantalla y la franja llega
+  // hasta ahí más un poco de aire.
+  const contenidoRef = useRef<HTMLDivElement>(null);
+  const [altoFranja, setAltoFranja] = useState(ALTO_FRANJA_INICIAL);
+
+  useEffect(() => {
+    const contenido = contenidoRef.current;
+    if (!contenido) return;
+
+    const medir = () => {
+      const cabecera = contenido.querySelector('header');
+      if (!cabecera) return; // Grupos no tiene <header>: se queda con el inicial
+      const alto = cabecera.getBoundingClientRect().bottom - contenido.getBoundingClientRect().top;
+      if (alto > 0) setAltoFranja(Math.round(alto + AIRE_FRANJA));
+    };
+
+    medir();
+    // Se remide cuando el encabezado cambia de tamaño (rotar el teléfono, un
+    // nombre largo que pasa a dos líneas) y cuando la pantalla monta su
+    // contenido, que puede llegar después de este effect.
+    const observador = new ResizeObserver(medir);
+    observador.observe(contenido);
+    return () => observador.disconnect();
+  }, [pathname]);
 
   // Al cambiar de pantalla, volver SIEMPRE al principio. El scroll vive en
   // este contenedor (no en window), así que hay que resetearlo a mano — si no,
@@ -152,8 +192,9 @@ export function V2Layout() {
             (limitada a 1120px y centrada): si midiera eso, en desktop leería
             como una tarjeta en vez de como el encabezado de la pantalla. */}
         <div
+          ref={contenidoRef}
           className="w-full"
-          style={{ background: `linear-gradient(to bottom, ${franja} 0, ${franja} ${ALTO_FRANJA}px, ${COLORS.paper} ${ALTO_FRANJA}px)` }}
+          style={{ background: `linear-gradient(to bottom, ${franja} 0, ${franja} ${altoFranja}px, ${COLORS.paper} ${altoFranja}px)` }}
         >
           {/* El botón de chat sobresale 20px por encima de la barra (-mt-5), así
               que el contenido necesita ese despeje extra o la última fila queda

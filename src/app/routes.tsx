@@ -8,6 +8,7 @@ import { RootRedirect } from "./components/RootRedirect";
 import { OnboardingGate } from "./components/OnboardingGate";
 import { FeedbackController } from "./components/FeedbackModal";
 import { OnboardingV2 } from "./components/onboarding-v2/OnboardingV2";
+import { EntrarV2 } from "./components/onboarding-v2/EntrarV2";
 import { V2Layout } from "./components/onboarding-v2/V2Layout";
 import { HomeV2 } from "./components/onboarding-v2/HomeV2";
 import { GastosV2 } from "./components/onboarding-v2/GastosV2";
@@ -45,6 +46,13 @@ export const router = createBrowserRouter([
     // paso. Todo lo que se contesta acá se guarda en Supabase.
     path: "/onboarding-v2",
     element: <OnboardingV2 />,
+  },
+  {
+    // Entrar con una cuenta que ya existe, en el diseño del flujo nuevo. El
+    // `/login` de abajo sigue siendo el del flujo viejo: esta ruta no lo
+    // reemplaza, es la puerta del v2.
+    path: "/onboarding-v2/entrar",
+    element: <EntrarV2 />,
   },
   {
     // Post-onboarding: Home / Gastos / Objetivos / Inversiones / Perfil /
