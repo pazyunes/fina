@@ -685,6 +685,16 @@ export function ObjetivosV2() {
         {/* Registrar un pago o un ahorro */}
         <div className="flex flex-col gap-2.5 pt-1">
           <TituloSeccion>Sumar un registro</TituloSeccion>
+          {/* PRUEBA — un aporte guardado es un logro chico: Fini salta una vez
+              y se va. Se engancha al `celebrar` que ya existía, así no hay otro
+              temporizador. `key` fuerza el remontaje para que se vuelva a
+              disparar cada vez, que es lo que pide el paquete para los estados
+              de una sola pasada. */}
+          {celebrar && !celebrarBig && (
+            <div className="flex justify-center">
+              <Fini key={`prog-${abierto.contribuciones.length}`} state="progreso" size={96} once />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             {(['paid', 'saved'] as const).map((k) => {
               const sel = kind === k;

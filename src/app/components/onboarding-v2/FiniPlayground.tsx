@@ -121,17 +121,19 @@ export function FiniPlayground() {
       <div className="flex flex-col gap-2">
         <TituloSeccion>Dónde está puesta en esta prueba</TituloSeccion>
         <ul className="flex flex-col gap-1.5 list-none p-0 m-0 text-[15px]" style={{ color: COLORS.inkSoft }}>
+          <li>· Avatar de Home y de Perfil — <span style={{ color: COLORS.ink }}>idle</span> (en todas las pantallas)</li>
           <li>· Onboarding, primera pantalla — <span style={{ color: COLORS.ink }}>saludo</span></li>
-          <li>· Onboarding, pantalla final — <span style={{ color: COLORS.ink }}>logro</span></li>
+          <li>· Onboarding, «¿qué querés lograr?» — <span style={{ color: COLORS.ink }}>idle</span></li>
           <li>· Onboarding, «esto vas a poder hacer» — <span style={{ color: COLORS.ink }}>insight</span></li>
-          <li>· Objetivos, vidriera vacía — <span style={{ color: COLORS.ink }}>vacio</span></li>
+          <li>· Onboarding, pantalla final — <span style={{ color: COLORS.ink }}>logro</span>, y de ahí vuela al avatar</li>
           <li>· Objetivos, objetivo cumplido — <span style={{ color: COLORS.ink }}>logro</span></li>
-          <li>· Gastos, vidriera vacía — <span style={{ color: COLORS.ink }}>vacio</span></li>
-          <li>· Grupos, vidriera vacía — <span style={{ color: COLORS.ink }}>vacio</span></li>
+          <li>· Objetivos, aporte guardado — <span style={{ color: COLORS.ink }}>progreso</span></li>
+          <li>· Objetivos / Gastos / Grupos, vidriera vacía — <span style={{ color: COLORS.ink }}>vacio</span></li>
+          <li>· Perfil, checklist completo — <span style={{ color: COLORS.ink }}>logro</span></li>
         </ul>
         <p className="text-[14px] leading-snug mt-1" style={{ color: COLORS.inkFaint }}>
-          Sacada de la cabecera de Objetivos, donde estaba pegada a «Vas por 3 objetivos» — el §6 dice que nunca va cerca de un dato.
-          Y sacada del placeholder de foto en Perfil: ahí era tu avatar, no tu acompañante.
+          Inversiones sigue sin Fini: el §6 lo prohíbe por nombre, y es la pantalla donde la app más necesita que le crean.
+          Sí pasó a ser el avatar, que era justo lo contrario de lo que yo había sugerido — pero es la decisión de producto, y es el patrón de Netflix.
         </p>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { IconPerfil } from './FinaIcons';
+import { Fini } from './Fini';
 import { ArmarGrupoBtn, COLORS, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
@@ -97,8 +97,8 @@ export function PerfilV2() {
           {foto ? (
             <img src={foto} alt="Tu foto de perfil" className="w-full h-full object-cover" />
           ) : (
-            <span className="w-full h-full flex items-center justify-center" style={{ background: COLORS.brandSoft, color: COLORS.brand }}>
-              <IconPerfil size={44} />
+            <span className="w-full h-full flex items-center justify-center" style={{ background: COLORS.starSoft }}>
+              <Fini state="idle" size={80} />
             </span>
           )}
           {/* Scrim de tinta sobre la foto para que la etiqueta se lea (media
@@ -136,6 +136,14 @@ export function PerfilV2() {
           </button>
         </div>
       </div>
+
+      {faltan.length === 0 && !faltaNivel && (
+        <section className="flex flex-col items-center gap-2 py-2">
+          <Fini state="logro" size={124} />
+          <p className="text-[16px] font-bold text-center" style={{ color: COLORS.ink }}>Tu perfil está completo</p>
+          <p className="text-[14px] text-center" style={{ color: COLORS.inkSoft }}>Con esto las recomendaciones te van a hablar en tu idioma.</p>
+        </section>
+      )}
 
       {(faltan.length > 0 || faltaNivel) && (
         <section className="flex flex-col gap-3">

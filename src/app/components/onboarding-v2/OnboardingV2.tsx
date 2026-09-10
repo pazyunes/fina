@@ -8,7 +8,7 @@ import {
   formatThousands, parseMoneyInput,
   saveV2Categorias, saveV2Nombre,
   saveV2PerfilOnboarding, saveV2TerminosAceptados,
-  saveV2InversionesPerfil, saveV2ObjetivosState,
+  saveV2InversionesPerfil, saveV2ObjetivosState, marcarFiniAterriza,
 } from './shared';
 import { IconChat, IconChevron, IconBasura } from './FinaIcons';
 
@@ -478,7 +478,7 @@ export function OnboardingV2() {
 
   function onNext() {
     if (currentKey === 'login') {
-      if (finished) { navigate('/onboarding-v2/home'); return; }
+      if (finished) { marcarFiniAterriza(); navigate('/onboarding-v2/home'); return; }
       setIntentoLogin(true);
       if (!stepValid('login')) return;
       if (pasoLogin === 'datos') { setPasoLogin('verificar'); setIntentoLogin(false); return; }

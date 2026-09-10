@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Fini } from './Fini';
 import { useNavigate } from 'react-router';
-import { Celebracion, COLORS, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, formatThousands, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, formatThousands, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
 import { IconChevron, IconFuego, IconGastos, IconGrupo, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
 import type { ComponentType } from 'react';
 
@@ -127,6 +128,34 @@ export function HomeV2() {
   const racha = rachaDeGastos();
 
   // Reserva ("alcancía") — se movió acá desde Gastos.
+  // PRUEBA — "Fini aterriza en el avatar", estilo Netflix. La animación la
+  // hace Home y no el onboarding, porque el destino es ESTE avatar y solo acá
+  // se puede medir dónde cae de verdad: en desktop el sidebar mide 240px y el
+  // contenido va centrado, así que cualquier coordenada calculada desde la
+  // pantalla anterior erraba.
+  const avatarRef = useRef<HTMLButtonElement>(null);
+  const [aterrizando, setAterrizando] = useState(false);
+  const [vuelo, setVuelo] = useState<{ left: number; top: number; lado: number; dx: number; dy: number; escala: number } | null>(null);
+
+  useEffect(() => {
+    if (!consumirFiniAterriza()) return;
+    const el = avatarRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const desde = 190; // tamaño de salida, parecido al de la pantalla final
+    setVuelo({
+      left: r.left,
+      top: r.top,
+      lado: r.width,
+      // Se arranca en el centro de la pantalla y se termina exactamente sobre
+      // el avatar, así el aterrizaje calza al pixel en cualquier viewport.
+      dx: window.innerWidth / 2 - (r.left + r.width / 2),
+      dy: window.innerHeight / 2 - (r.top + r.height / 2),
+      escala: desde / r.width,
+    });
+    setAterrizando(true);
+  }, []);
+
   const [reserva, setReserva] = useState(() => loadV2Reserva());
   const [reservaOpen, setReservaOpen] = useState(false);
   const [reservaVal, setReservaVal] = useState('');
@@ -161,6 +190,26 @@ export function HomeV2() {
     // papel y se separa por aire y por hairline; la ÚNICA tarjeta elevada de
     // toda la app es "tu próximo paso", que es lo que de verdad tiene prioridad.
     <div className="px-6 pt-8 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-10">
+      {/* Fini aterrizando en el avatar. Sale del centro en grande y termina
+          justo sobre el avatar, en su tamaño. */}
+      {aterrizando && vuelo && (
+        <div
+          className="fixed z-40 pointer-events-none v2-fini-aterriza"
+          style={{
+            left: vuelo.left,
+            top: vuelo.top,
+            width: vuelo.lado,
+            height: vuelo.lado,
+            ['--fini-dx' as string]: `${vuelo.dx}px`,
+            ['--fini-dy' as string]: `${vuelo.dy}px`,
+            ['--fini-k' as string]: String(vuelo.escala),
+          }}
+          onAnimationEnd={() => setAterrizando(false)}
+          aria-hidden
+        >
+          <Fini state="idle" size="100%" />
+        </div>
+      )}
 
       {/* Saludo. El nombre pasa a ser el título de la pantalla, en Baloo 2:
           antes decía "Tu FINA" en 19px y el nombre iba arriba en gris chico,
@@ -168,12 +217,17 @@ export function HomeV2() {
       <header className="flex items-center gap-3.5">
         <button
           type="button"
+          ref={avatarRef}
           onClick={() => navigate('/onboarding-v2/perfil')}
           className="v2-focus w-12 h-12 rounded-full overflow-hidden shrink-0 flex items-center justify-center transition-transform duration-100 active:scale-95"
-          style={foto ? undefined : { background: COLORS.brandSoft, color: COLORS.brand }}
+          style={foto ? undefined : { background: COLORS.starSoft }}
           aria-label="Ver tu perfil"
         >
-          {foto ? <img src={foto} alt="" className="w-full h-full object-cover" /> : <IconPerfil size={22} />}
+          {foto
+            ? <img src={foto} alt="" className="w-full h-full object-cover" />
+            // Mientras Fini está volando el avatar va vacío, así no se ve dos
+            // veces al mismo personaje.
+            : <span style={{ opacity: aterrizando ? 0 : 1 }}><Fini state="idle" size={40} /></span>}
         </button>
         <div className="flex-1 min-w-0">
           <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>{saludoDelDia()}</p>

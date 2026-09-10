@@ -302,6 +302,28 @@ export function loadV2Nombre(): string {
   }
 }
 
+// PRUEBA — bandera de "Fini tiene que aterrizar en el avatar". La deja el
+// onboarding al terminar y la consume Home una sola vez. Va por localStorage
+// porque hay un cambio de ruta en el medio.
+//
+// La animación la hace HOME, no el onboarding: el destino es el avatar de
+// Home, y solo Home puede medir dónde cae de verdad. En desktop el sidebar
+// mide 240px y el contenido va centrado, así que cualquier coordenada
+// calculada a mano desde el onboarding erraba.
+const LS_FINI_ATERRIZA = 'fina_v2_fini_aterriza';
+export function marcarFiniAterriza() {
+  try { localStorage.setItem(LS_FINI_ATERRIZA, '1'); } catch { /* no crítico */ }
+}
+export function consumirFiniAterriza(): boolean {
+  try {
+    const v = localStorage.getItem(LS_FINI_ATERRIZA) === '1';
+    if (v) localStorage.removeItem(LS_FINI_ATERRIZA);
+    return v;
+  } catch {
+    return false;
+  }
+}
+
 // Saludo según la hora — el mismo detalle que usan Headspace/Cleo para que
 // la pantalla de entrada se sienta una persona hablándote, no un dashboard.
 export function saludoDelDia(): string {
