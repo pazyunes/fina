@@ -112,10 +112,17 @@ const FRANJA: { ruta: string; color: string }[] = [
   { ruta: '/onboarding-v2/grupos', color: COLORS.starSoft },    // star — tu gente
 ];
 
-// Cuánto aire queda entre donde termina el título y donde termina la franja.
-// Sin esto, el borde de la franja pasa justo por la línea de base del subtítulo
-// y parece que lo corta.
-const AIRE_FRANJA = 22;
+// Cuánto aire, como máximo, queda entre donde termina el título y donde termina
+// la franja. Es un TECHO, no un valor fijo: si el elemento que sigue arranca
+// antes, la franja termina antes que él (ver `medir`).
+const AIRE_FRANJA = 24;
+
+// Cuánto se despega la franja del elemento que sigue. Sin esto la franja
+// termina justo donde empieza la primera tarjeta y las dos se leen pegadas.
+const DESPEGUE = 12;
+
+// Piso: aunque el hueco sea mínimo, la franja nunca termina pegada al título.
+const AIRE_MINIMO = 10;
 
 // Alto de arranque, antes de medir. Es el de un título de dos líneas con
 // subtítulo: si la medición todavía no corrió, la franja ya está cerca.
@@ -150,8 +157,29 @@ export function V2Layout() {
       // anterior: heredar una medida ajena es peor que una por defecto, porque
       // el error depende de por dónde viniste.
       if (!cabecera) { setAltoFranja(ALTO_FRANJA_INICIAL); return; }
-      const alto = cabecera.getBoundingClientRect().bottom - contenido.getBoundingClientRect().top;
-      if (alto > 0) setAltoFranja(Math.round(alto + AIRE_FRANJA));
+
+      const arriba = contenido.getBoundingClientRect().top;
+      const finTitulo = cabecera.getBoundingClientRect().bottom - arriba;
+      if (finTitulo <= 0) return;
+
+      // La franja tiene que terminar DENTRO del hueco que hay entre el título y
+      // lo que sigue, no a una distancia fija del título.
+      //
+      // Con una distancia fija el borde caía adentro del primer elemento: el
+      // hueco de Gastos son 16px (el `gap` de su contenedor) y la franja
+      // llegaba a 22, así que cortaba el selector "Este mes / Esta semana" por
+      // la mitad. Lo mismo en Objetivos y en Inversiones, cada una con su
+      // propio hueco.
+      const siguiente = cabecera.nextElementSibling;
+      const empiezaElCuerpo = siguiente
+        ? siguiente.getBoundingClientRect().top - arriba
+        : Infinity;
+
+      const alto = empiezaElCuerpo > finTitulo
+        ? Math.max(finTitulo + AIRE_MINIMO, Math.min(finTitulo + AIRE_FRANJA, empiezaElCuerpo - DESPEGUE))
+        : finTitulo + AIRE_FRANJA;
+
+      setAltoFranja(Math.round(alto));
     };
 
     medir();

@@ -86,7 +86,7 @@ export function PerfilV2() {
     // contorno propio: como lista con hairline se leen como lo que son, una
     // secuencia de cosas pendientes.
     <div className="px-6 pt-8 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-10">
-      <header className="flex items-center gap-4">
+      <header className="mb-2 flex items-center gap-4">
         <div className="flex-1 min-w-0">
           <Titulo>Tu perfil</Titulo>
           <p className="text-[16px] mt-2" style={{ color: COLORS.inkSoft }}>Tu foto, tu nombre y lo que falta para completar tu FINA.</p>

@@ -253,7 +253,7 @@ export function HomeV2() {
       {/* Saludo. El nombre pasa a ser el título de la pantalla, en Baloo 2:
           antes decía "Tu FINA" en 19px y el nombre iba arriba en gris chico,
           o sea que lo genérico pesaba más que lo personal. */}
-      <header className="flex items-center gap-3.5">
+      <header className="mb-2 flex items-center gap-3.5">
         <button
           type="button"
           ref={avatarRef}

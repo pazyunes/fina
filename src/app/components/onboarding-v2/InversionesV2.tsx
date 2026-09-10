@@ -357,7 +357,7 @@ export function InversionesV2() {
       <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
         {/* Banda editorial full-bleed. Sin Fini: la guía §6 dice que el
             personaje NO aparece en inversiones (plata seria). */}
-        <header className="pb-1">
+        <header className="pb-1 mb-2">
           <Titulo>Inversiones</Titulo>
           <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
         </header>
@@ -653,7 +653,7 @@ export function InversionesV2() {
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
           {/* Banda editorial full-bleed. Sin Fini (guía §6): el personaje nunca
               va cerca de un dato, y menos en inversiones. */}
-          <header className="pb-1">
+          <header className="pb-1 mb-2">
             <Titulo>Inversiones</Titulo>
             <p className="text-[15px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
           </header>

@@ -259,7 +259,7 @@ export function GastosV2() {
     <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-4xl lg:mx-auto lg:pt-10">
       {/* Banda editorial full-bleed. Sin Fini: esta pantalla está llena de
           números y el personaje no va cerca de datos (§6). */}
-      <header className="pb-1">
+      <header className="pb-1 mb-2">
         <Titulo>Mis gastos</Titulo>
         <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>Todo lo que registrás, en un solo lugar. Ponéle un tope a cada sección.</p>
       </header>

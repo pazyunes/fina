@@ -880,7 +880,7 @@ export function ObjetivosV2() {
       {/* Banda editorial full-bleed (desencajonado). Fini acompaña en el
           encabezado (§6: onboarding/estados vacíos) — sin montos ni progreso
           al lado, así que no compite con ningún dato. */}
-      <header className="pb-1 flex items-center gap-3">
+      <header className="pb-1 mb-2 flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <Titulo>Tus objetivos</Titulo>
           <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>

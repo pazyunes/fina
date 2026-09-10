@@ -110,7 +110,7 @@ export function GruposV2() {
             dónde termina el encabezado para saber hasta dónde llegar, y ésta
             era la única pantalla que no tenía uno — así que se quedaba con la
             medida de la pantalla anterior. */}
-        <header>
+        <header className="mb-2">
           <Volver />
           <Titulo>Grupos</Titulo>
         </header>
@@ -229,7 +229,7 @@ export function GruposV2() {
 
   return (
     <div className="px-6 pt-6 flex flex-col gap-4 pb-4">
-      <header>
+      <header className="mb-2">
         <Volver />
         <div className="flex items-center justify-between gap-3">
           <Titulo>{grupo.nombre}</Titulo>
