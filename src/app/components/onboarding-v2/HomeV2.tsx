@@ -326,16 +326,18 @@ export function HomeV2() {
           reserva para el momento de valor (§3.3) — y como el lima tiene 1.43
           de contraste sobre el papel, el texto encima va en TINTA, nunca en
           blanco: sobre relleno de color el texto es tinta (§3.3). */}
-      {/* Fini más grande (92 → 132) y alineado con el globo, no con el botón.
-          A 92 quedaba del tamaño de un ícono al lado de un cartel de 19px:
-          se leía como una decoración pegada al borde y no como el personaje
-          que te está hablando. Que sea el segundo elemento en peso de la
-          pantalla, después del saludo, es el punto. */}
-      <section className="flex items-start gap-1.5 pt-1">
-        <div className="shrink-0 -ml-2 -mt-3">
-          <Fini state="idle" size={132} />
+      {/* Fini grande (92 → 132 → 164) y alineado con el globo, no con el botón.
+          A 92 quedaba del tamaño de un ícono al lado de un cartel de 19px: se
+          leía como una decoración pegada al borde y no como el personaje que te
+          está hablando. Es el segundo elemento en peso de la pantalla, después
+          del saludo. Como a este tamaño se lleva casi la mitad del ancho en un
+          celular, el globo se aprieta un poco menos: gap más chico y el
+          personaje sale del margen izquierdo. */}
+      <section className="flex items-start gap-1 pt-1">
+        <div className="shrink-0 -ml-4 -mt-4">
+          <Fini state="idle" size={164} />
         </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-3 pt-2">
+        <div className="flex-1 min-w-0 flex flex-col gap-3 pt-3">
           <div
             className="relative rounded-[20px] rounded-tl-md px-4 py-3.5"
             style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}

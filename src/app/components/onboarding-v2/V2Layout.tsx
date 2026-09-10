@@ -139,22 +139,28 @@ export function V2Layout() {
       {/* Contenido — lienzo ancho en desktop. Cada pantalla decide su propio
           layout adentro (Home usa varias columnas; las demás se centran en una
           columna legible con lg:max-w-2xl lg:mx-auto en su propio contenedor). */}
-      {/* La franja va como fondo del contenedor que scrollea y no como un
-          bloque aparte: así ninguna pantalla tiene que saber que existe, y
-          entra sin tocar el markup de las seis. Se va con el scroll, que es lo
-          que corresponde — una barra de color pegada arriba se come 130px de
-          alto en un celular y no dice nada nuevo. */}
-      <div
-        ref={scrollRef}
-        className="flex-1 min-h-0 overflow-y-auto"
-        style={{ background: `linear-gradient(to bottom, ${franja} 0, ${franja} ${ALTO_FRANJA}px, ${COLORS.paper} ${ALTO_FRANJA}px)` }}
-      >
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
         <AvisoGuardado />
-        {/* El botón de chat sobresale 20px por encima de la barra (-mt-5), así
-            que el contenido necesita ese despeje extra o la última fila queda
-            tapada por el círculo. */}
-        <div className="mx-auto w-full lg:max-w-[1120px] pb-16 lg:pb-12">
-          <Puerta><Outlet /></Puerta>
+        {/* La franja de color va acá, en un elemento DENTRO del flujo que
+            scrollea, y no como fondo del contenedor que scrollea.
+            La diferencia se veía: el fondo de un contenedor con scroll no se
+            mueve con su contenido, así que la franja quedaba clavada arriba de
+            la pantalla y el contenido pasaba por abajo. Acá acompaña al título
+            y se va con él, que es lo que corresponde — la franja está para
+            decir en qué sección estás al entrar, no para tapar el scroll.
+            Va a lo ancho completo y no dentro de la columna de contenido
+            (limitada a 1120px y centrada): si midiera eso, en desktop leería
+            como una tarjeta en vez de como el encabezado de la pantalla. */}
+        <div
+          className="w-full"
+          style={{ background: `linear-gradient(to bottom, ${franja} 0, ${franja} ${ALTO_FRANJA}px, ${COLORS.paper} ${ALTO_FRANJA}px)` }}
+        >
+          {/* El botón de chat sobresale 20px por encima de la barra (-mt-5), así
+              que el contenido necesita ese despeje extra o la última fila queda
+              tapada por el círculo. */}
+          <div className="mx-auto w-full lg:max-w-[1120px] pb-16 lg:pb-12">
+            <Puerta><Outlet /></Puerta>
+          </div>
         </div>
       </div>
 

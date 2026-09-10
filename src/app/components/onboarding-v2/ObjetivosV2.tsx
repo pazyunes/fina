@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Fini } from './Fini';
 import { ArmarGrupoBtn, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
-import { FiniDice } from './FiniDice';
+import { FiniPresenta } from './FiniDice';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
 import type { Moneda as MonedaV2 } from '../../api/v2/tipos';
@@ -898,11 +898,17 @@ export function ObjetivosV2() {
 
       {/* Estado vacío con onda: sugerencias para arrancar (abren el modal).
           Fini acompaña acá y no en la lista con objetivos: §6 lo deja en
-          onboarding y estados vacíos, lejos de los montos y los progresos. */}
+          onboarding y estados vacíos, lejos de los montos y los progresos.
+          UN solo personaje, con el globo saliendo de él: antes había el de la
+          franja y además el centrado que ya estaba, o sea Fini dos veces en la
+          misma pantalla mirándose. */}
       {objetivos.length === 0 && (
         <div className="flex flex-col gap-3 pt-1">
-          <FiniDice dice="¿Qué es eso que querés lograr? Empezá por ponerle nombre — el monto lo vemos después." state="vacio" />
-          <div className="flex justify-center py-1"><Fini state="vacio" size={116} /></div>
+          <FiniPresenta
+            dice="¿Qué es eso que querés lograr? Empezá por ponerle nombre — el monto lo vemos después."
+            state="vacio"
+            size={124}
+          />
           <TituloSeccion>¿Con qué arrancás?</TituloSeccion>
           {/* Grilla en vez de chips que envuelven: seis sugerencias de largos
               distintos quedaban en escalera (2 + 3 + 1). En dos columnas se
