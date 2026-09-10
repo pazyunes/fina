@@ -103,7 +103,9 @@ export function MisVisualizaciones() {
       const porCat = g.categorias
         .map((c, i) => ({
           label: c.nombre,
-          valor: gastos.filter((x) => x.categoriaId === c.id).reduce((a, x) => a + x.monto, 0),
+          // En pesos, no en la moneda de cada gasto: sumar US$20 como "20"
+          // haría que la barra de esa sección se vea 1.500 veces más chica.
+          valor: gastos.filter((x) => x.categoriaId === c.id).reduce((a, x) => a + x.montoArs, 0),
           color: PALETA[i % PALETA.length],
         }))
         .filter((f) => f.valor > 0)
@@ -121,7 +123,7 @@ export function MisVisualizaciones() {
         const clave = d.toDateString();
         return {
           etiqueta: ['do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sá'][d.getDay()],
-          valor: gastos.filter((x) => x.ts && new Date(x.ts).toDateString() === clave).reduce((a, x) => a + x.monto, 0),
+          valor: gastos.filter((x) => x.ts && new Date(x.ts).toDateString() === clave).reduce((a, x) => a + x.montoArs, 0),
         };
       });
       return <Columnas dias={dias} />;
@@ -133,7 +135,7 @@ export function MisVisualizaciones() {
       const filas = Object.keys(etiquetas)
         .map((t, i) => ({
           label: etiquetas[t],
-          valor: gastos.filter((x) => x.tipo === t).reduce((a, x) => a + x.monto, 0),
+          valor: gastos.filter((x) => x.tipo === t).reduce((a, x) => a + x.montoArs, 0),
           color: PALETA[i % PALETA.length],
         }))
         .filter((f) => f.valor > 0)

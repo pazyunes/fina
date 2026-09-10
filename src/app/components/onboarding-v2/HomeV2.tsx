@@ -95,9 +95,11 @@ function datosBienestar() {
       const dentro = conTope.filter((c) => {
         const tope = g.topes[c.id];
         const desde = inicioDe(tope.periodo);
+        // En pesos: el tope está en pesos, así que un gasto en dólares tiene
+        // que compararse por su equivalente y no por el número que se tipeó.
         const gastado = g.gastos
           .filter((x) => x.categoriaId === c.id && (x.ts ?? 0) >= desde)
-          .reduce((s, x) => s + x.monto, 0);
+          .reduce((s, x) => s + x.montoArs, 0);
         return gastado <= tope.monto;
       });
       gastosPct = Math.round((dentro.length / conTope.length) * 100);

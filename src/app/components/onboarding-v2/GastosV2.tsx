@@ -33,10 +33,15 @@ type Periodo = 'semana' | 'mes';
 type Moneda = 'ARS' | 'USD';
 type Tope = { monto: number; periodo: Periodo };
 type Categoria = { id: string; nombre: string };
-type Gasto = { id: string; monto: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number; metodoPago?: string };
-// Nota: el total gastado / disponible siguen calculándose en pesos — un
-// gasto en USD se registra y se muestra con su propio signo (US$), pero
-// todavía no convertimos a un tipo de cambio real para sumarlo al total.
+type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number; metodoPago?: string };
+// Cada gasto guarda DOS montos: `monto` es lo que la persona tipeó, en su
+// moneda, y `montoArs` su equivalente en pesos congelado a la cotización de
+// ese día.
+//
+// La fila del gasto muestra `monto` con su signo (US$20, porque eso es lo que
+// pasó). Todo lo que SUMA usa `montoArs`: antes un gasto de US$20 entraba al
+// total como "$20" y hacía que el mes pareciera $30.780 más barato de lo que
+// fue. Ahora entra como $30.800.
 function fmtGasto(g: { monto: number; moneda: Moneda }): string {
   return g.moneda === 'USD' ? `US$${g.monto.toLocaleString('es-AR')}` : fmtMoney(g.monto);
 }
@@ -91,6 +96,7 @@ export function GastosV2() {
     gastos: db.gastos.map((g) => ({
       id: g.id,
       monto: g.monto,
+      montoArs: g.montoArs,
       moneda: g.moneda,
       descripcion: g.descripcion,
       categoriaId: g.seccionId ?? '',
@@ -166,8 +172,8 @@ export function GastosV2() {
   })();
   const gastosVentana = gastos.filter((g) => g.ts >= desdeVentana);
 
-  const totalGastado = gastosVentana.reduce((s, g) => s + g.monto, 0);
-  const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.monto, 0);
+  const totalGastado = gastosVentana.reduce((s, g) => s + g.montoArs, 0);
+  const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
 
   const donutCategorias = categorias
@@ -176,7 +182,7 @@ export function GastosV2() {
 
   const porTipo = TIPOS.map((t) => ({
     tipo: t,
-    monto: gastosVentana.filter((g) => g.tipo === t).reduce((s, g) => s + g.monto, 0),
+    monto: gastosVentana.filter((g) => g.tipo === t).reduce((s, g) => s + g.montoArs, 0),
   })).filter((t) => t.monto > 0);
 
   // Sugeridas que todavía no son secciones propias.
@@ -191,7 +197,9 @@ export function GastosV2() {
 
   const gastosFiltrados = gastos
     .filter((g) => !busqueda.trim() || g.descripcion.toLowerCase().includes(busqueda.trim().toLowerCase()))
-    .sort((a, b) => (orden === 'monto' ? b.monto - a.monto : b.ts - a.ts));
+    // "Mayor monto" compara en pesos: ordenar por `monto` pondría US$20 abajo
+    // de un gasto de $5.000, que es al revés.
+    .sort((a, b) => (orden === 'monto' ? b.montoArs - a.montoArs : b.ts - a.ts));
   const hayBusqueda = !!busqueda.trim();
 
   function agregarDinero() {
