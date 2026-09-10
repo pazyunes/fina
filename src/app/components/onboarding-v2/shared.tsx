@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { IconChevron, IconClose, IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
 import './onboarding-v2.css';
 import { estaHidratado, leerEstado } from '../../api/v2/almacen';
@@ -215,11 +215,31 @@ export function Rango({ min, max, nota, className = '' }: { min: number; max: nu
 // Números que "cuentan" (estilo Mercado Pago cuando rinden tus intereses):
 // animan de un valor al siguiente (y de 0 al entrar). Devuelve el número
 // que se está mostrando en cada frame.
+/**
+ * Cuenta desde el valor anterior hasta `value`.
+ *
+ * Dos resguardos, porque acá lo que se anima es UN MONTO y una animación
+ * trabada no deja un número feo: deja un número EQUIVOCADO.
+ *
+ * 1. Con `prefers-reduced-motion` no anima: devuelve el valor y listo.
+ * 2. Un temporizador de seguridad salta al valor final si el
+ *    `requestAnimationFrame` no llegó a terminar. Pasa cuando la pestaña está
+ *    en segundo plano: el navegador congela los frames y el contador se
+ *    quedaba clavado en el PRIMERO, o sea mostrando $0 cuando ya había
+ *    $300.000. Con esto, lo peor que puede pasar es que no se vea la
+ *    animación.
+ */
 export function useCountUp(value: number, duration = 650): number {
+  const reduce = useReducedMotion();
+  // Arranca en 0 a propósito: el conteo de entrada es parte del diseño. Lo que
+  // cambia es que ya no se puede quedar ahí (ver el resguardo 2).
   const [display, setDisplay] = useState(0);
   const fromRef = useRef(0);
   const rafRef = useRef<number | null>(null);
+
   useEffect(() => {
+    if (reduce) { fromRef.current = value; setDisplay(value); return; }
+
     const from = fromRef.current;
     const to = value;
     const start = performance.now();
@@ -231,8 +251,19 @@ export function useCountUp(value: number, duration = 650): number {
       else fromRef.current = to;
     };
     rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); fromRef.current = to; };
-  }, [value, duration]);
+
+    // En segundo plano los timers se ralentizan pero SÍ disparan, a diferencia
+    // de requestAnimationFrame, que se pausa del todo. Por eso el resguardo es
+    // un setTimeout y no otro frame.
+    const red = window.setTimeout(() => { setDisplay(to); fromRef.current = to; }, duration + 250);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      window.clearTimeout(red);
+      fromRef.current = to;
+    };
+  }, [value, duration, reduce]);
+
   return display;
 }
 
