@@ -312,13 +312,13 @@ export async function registrarGasto(g: {
   );
   if (r.error !== null || !r.data?.[0]) return falla<Gasto>(r.error ?? 'sin fila', 'registrarGasto');
 
-  // El medio usado sube al principio de la lista para la próxima vez.
+  // El gasto descuenta del medio con el que se pagó, y de paso ese medio queda
+  // como el más reciente (lo hace `mover_saldo`), así la próxima vez se ofrece
+  // primero. Si el medio no existía, lo crea con saldo negativo — que es la
+  // verdad: gastaste con algo que nunca cargaste.
   if (g.metodoPago) {
-    await correr<null>('registrarGasto/medio', () =>
-      supabase.from('payment_methods')
-        .upsert({ user_id: uid, name: g.metodoPago, last_used_at: new Date().toISOString() }, { onConflict: 'user_id,name', ignoreDuplicates: false })
-        .then(({ error }) => ({ data: null, error })),
-    );
+    const saldo = await moverSaldo(g.metodoPago, -g.montoArs);
+    if (saldo.error !== null) return falla<Gasto>(saldo.error, 'registrarGasto/saldo');
   }
   return ok(aGasto(r.data[0]));
 }
