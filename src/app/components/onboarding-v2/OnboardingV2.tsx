@@ -751,22 +751,25 @@ export function OnboardingV2() {
           </div>
         )}
 
-        {/* DISTRIBUCIÓN — el arreglo del vacío del 60%.
-            El contenido estaba pegado arriba y el CTA al fondo, así que en una
-            pantalla con cuatro opciones quedaba medio celular vacío en el medio.
-            `my-auto` en el hijo lo centra ópticamente cuando sobra lugar y no
-            hace nada cuando el contenido es más alto que el viewport (ahí
-            scrollea normal, sin recortar por arriba como haría `justify-center`).
-            El `pb` extra empuja el bloque un poco sobre el centro geométrico:
-            el centro óptico está más arriba que el matemático. */}
-        <div className="flex-1 min-h-0 flex flex-col px-6 pt-7 pb-4 overflow-y-auto w-full lg:max-w-xl lg:mx-auto">
+        {/* DISTRIBUCIÓN.
+            Antes el bloque se centraba vertical (`my-auto`) porque arriba no
+            había nada: el contenido pegado al techo con el CTA al fondo dejaba
+            medio celular vacío en el medio. Con Fini ocupando la franja de
+            arriba, centrar el resto genera un hueco NUEVO —entre el globo y la
+            pregunta— que es peor, porque parte en dos lo que tiene que leerse
+            como una conversación.
+            Así que el contenido arranca arriba y el aire sobrante queda abajo,
+            justo sobre el CTA. Cuando el contenido es más alto que la pantalla,
+            scrollea normal. En las pantallas SIN Fini (bienvenida, intermedia,
+            llegada) se conserva el centrado: ahí el techo sigue vacío. */}
+        <div className="flex-1 min-h-0 flex flex-col px-6 pt-4 pb-4 overflow-y-auto w-full lg:max-w-xl lg:mx-auto">
           <motion.div
               key={finished ? 'finished' : currentKey}
               initial={reduce ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: reduce ? 0 : 0.18 }}
               aria-live="polite"
-              className="flex flex-col gap-5 my-auto w-full pb-[12vh]"
+              className={`flex flex-col gap-5 w-full ${finiDice && !finished ? 'pb-8' : 'my-auto pb-[12vh]'}`}
             >
               {currentKey === 'intro' && (
                 <>
