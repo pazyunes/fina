@@ -103,7 +103,73 @@ comment on column user_profiles.onboarding_v2 is
   'Respuestas del onboarding v2 que se leen en bloque. Lo que se consulta o filtra tiene columna propia.';
 
 
--- ── 5) El quiz de inversiones se terminó o no ────────────────────────────
+-- ── 5) Crear un grupo, atómico ───────────────────────────────────────────
+-- La 0022 dejó crear grupos con un insert directo, y eso no funciona desde el
+-- cliente. El problema:
+--
+--   La policy de lectura de `groups` es `es_miembro_de(id)`. En el instante del
+--   insert la persona todavía NO es miembro (la membresía se inserta después),
+--   así que el `RETURNING` del insert devuelve CERO filas: RLS también filtra
+--   lo que vuelve de un insert. El grupo quedaba creado y la app veía un error.
+--
+-- Y aunque se leyera después, el insert del grupo y el de la membresía serían
+-- dos operaciones separadas: si la segunda falla, queda un grupo huérfano que
+-- nadie puede ver ni borrar, ocupando su código para siempre.
+--
+-- Esta función hace las dos cosas en una transacción y devuelve el grupo.
+-- El código lo genera acá y no el cliente, reintentando si sale repetido: es
+-- la base la que sabe cuáles están libres.
+create or replace function crear_grupo(nombre text)
+returns table (id uuid, name text, code text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid   uuid := auth.uid();
+  abc   text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- sin I, O, 0, 1: se confunden al dictarlo
+  nuevo text;
+  gid   uuid;
+  i     int;
+begin
+  if uid is null then
+    raise exception 'sin sesión';
+  end if;
+  if length(trim(nombre)) = 0 then
+    raise exception 'el grupo necesita un nombre';
+  end if;
+
+  for i in 1..10 loop
+    nuevo := 'FINA-' || (
+      select string_agg(substr(abc, 1 + floor(random() * length(abc))::int, 1), '')
+      from generate_series(1, 5)
+    );
+    begin
+      insert into groups (name, code, created_by)
+      values (trim(nombre), nuevo, uid)
+      returning groups.id into gid;
+      exit;
+    exception when unique_violation then
+      gid := null; -- código repetido: se prueba otro
+    end;
+  end loop;
+
+  if gid is null then
+    raise exception 'no se pudo generar un código libre';
+  end if;
+
+  insert into group_members (group_id, user_id, role)
+  values (gid, uid, 'owner');
+
+  return query select g.id, g.name, g.code from groups g where g.id = gid;
+end;
+$$;
+
+revoke all on function crear_grupo(text) from public;
+grant execute on function crear_grupo(text) to authenticated;
+
+
+-- ── 6) El quiz de inversiones se terminó o no ────────────────────────────
 -- Sin esto no hay forma de distinguir "contestó las dos preguntas del
 -- onboarding" de "hizo el quiz completo": el perfil inversor existe en los dos
 -- casos. Y la diferencia decide qué pantalla se abre — quien ya lo terminó no
@@ -112,7 +178,7 @@ alter table investment_profiles
   add column if not exists completed_at timestamptz;
 
 
--- ── 6) Nombres de las demás miembras de tu grupo ─────────────────────────
+-- ── 7) Nombres de las demás miembras de tu grupo ─────────────────────────
 -- Un ranking sin nombres no es un ranking. Pero user_profiles es owner-only,
 -- así que desde el cliente no se puede leer el nombre de otra persona.
 --
@@ -136,7 +202,7 @@ grant select on group_member_names to authenticated;
 comment on view group_member_names is
   'Sólo el nombre de las miembras de los grupos a los que pertenece auth.uid(). El filtro vive en la vista a propósito.';
 
--- ── 7) Bucket de fotos de perfil ─────────────────────────────────────────
+-- ── 8) Bucket de fotos de perfil ─────────────────────────────────────────
 -- Hoy la foto se guarda en base64 en localStorage: no sobrevive a cambiar de
 -- teléfono y hace pesado cada arranque. Va a Storage, con la ruta en
 -- user_profiles.avatar_path (que agregó la 0023).

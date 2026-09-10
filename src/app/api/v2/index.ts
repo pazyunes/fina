@@ -672,35 +672,39 @@ export async function leerMiGrupo(): Promise<Resultado<Grupo | null>> {
   return ok({ id: g.data.id, nombre: g.data.name, codigo: g.data.code, miembros });
 }
 
-function codigoAlAzar(): string {
-  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin I, O, 0, 1: se confunden al dictarlo
-  let s = '';
-  for (let i = 0; i < 5; i++) s += abc[Math.floor(Math.random() * abc.length)];
-  return `FINA-${s}`;
-}
-
+/**
+ * Crea el grupo y te deja como owner, en una sola operación.
+ *
+ * Va por RPC y no por un insert desde acá por dos razones, las dos de la
+ * migración 0024:
+ *
+ * 1. La policy de lectura de `groups` es "sos miembro". En el instante del
+ *    insert todavía no lo sos, así que el `RETURNING` volvía VACÍO —RLS
+ *    también filtra lo que devuelve un insert— y la app veía un error sobre un
+ *    grupo que sí se había creado.
+ * 2. El grupo y la membresía tienen que ir juntos. En dos operaciones
+ *    separadas, si la segunda falla queda un grupo huérfano que nadie puede
+ *    ver ni borrar, con su código ocupado para siempre.
+ *
+ * El código lo genera la base, que es la que sabe cuáles están libres.
+ */
 export async function crearGrupo(nombre: string): Promise<Resultado<Grupo>> {
+  const r = await correr<{ id: string; name: string; code: string }[]>('crearGrupo', () =>
+    supabase.rpc('crear_grupo', { nombre }).then(({ data, error }) => ({
+      data: data as { id: string; name: string; code: string }[] | null,
+      error,
+    })),
+  );
+  if (r.error !== null || !r.data?.[0]) return falla<Grupo>(r.error ?? 'sin fila', 'crearGrupo');
+  const g = r.data[0];
   const uid = await idUsuaria();
-  if (!uid) return falla<Grupo>('sin sesión', 'crearGrupo');
-
-  // Reintenta si el código sale repetido: hay un unique en la columna.
-  for (let intento = 0; intento < 5; intento++) {
-    const code = codigoAlAzar();
-    const r = await correr<{ id: string; name: string; code: string }[]>('crearGrupo', () =>
-      supabase.from('groups').insert({ name: nombre.trim(), code, created_by: uid }).select('id, name, code'),
-    );
-    if (r.data?.[0]) {
-      const g = r.data[0];
-      const m = await correr<null>('crearGrupo/miembro', () =>
-        supabase.from('group_members').insert({ group_id: g.id, user_id: uid, role: 'owner' })
-          .then(({ error }) => ({ data: null, error })),
-      );
-      if (m.error !== null) return falla<Grupo>(m.error, 'crearGrupo/miembro');
-      return ok({ id: g.id, nombre: g.name, codigo: g.code, miembros: [] });
-    }
-    if (r.error !== null && !r.error.includes('duplicate')) return falla<Grupo>(r.error, 'crearGrupo');
-  }
-  return falla<Grupo>('no se pudo generar un código libre', 'crearGrupo');
+  return ok({
+    id: g.id,
+    nombre: g.name,
+    codigo: g.code,
+    // Recién creado: la única miembra sos vos, y arrancás en cero.
+    miembros: [{ userId: uid ?? '', nombre: '', actividad: 0, rol: 'owner', sosVos: true }],
+  });
 }
 
 /** Entra a un grupo por código. Devuelve null si el código no existe. */

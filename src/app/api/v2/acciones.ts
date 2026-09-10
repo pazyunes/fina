@@ -306,10 +306,14 @@ export async function borrarFoto(): Promise<string | null> {
 // fallar porque el código no existe: pintar el grupo antes de saberlo sería
 // mostrarle a la persona que entró a un grupo que no existe.
 export async function crearGrupo(nombre: string): Promise<{ grupo: Grupo | null; error: string | null }> {
-  const r = await encolar(() => api.crearGrupo(nombre));
-  if (!r) return { grupo: null, error: 'No pudimos crear el grupo.' };
-  parchearEstado({ grupo: r });
-  return { grupo: r, error: null };
+  const r = await api.crearGrupo(nombre);
+  if (r.error !== null) return { grupo: null, error: r.error };
+  // Se relee en vez de usar lo que devolvió el insert: los nombres de las
+  // miembras salen de la vista `group_member_names`, no de la fila del grupo.
+  const conMiembros = await api.leerMiGrupo();
+  const grupo = conMiembros.data ?? r.data;
+  parchearEstado({ grupo });
+  return { grupo, error: null };
 }
 
 export async function unirseAGrupo(codigo: string): Promise<{ grupo: Grupo | null; error: string | null }> {
