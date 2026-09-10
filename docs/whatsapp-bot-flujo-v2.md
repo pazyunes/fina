@@ -111,34 +111,119 @@ Quince pantallas, una pregunta por pantalla. Las de opción única avanzan solas
 
 ---
 
-## 2. Lo que el flujo v2 tiene y el esquema actual no
+## 2. ¿Cambian las tablas? Sí, y bastante
 
-Esto es la lista de migraciones que **habría que escribir** cuando el v2 pase a
-ser la app real. Hoy no existe ninguna.
+Cuidado con una confusión que es fácil de tener: **"no hay migraciones nuevas"**
+describe el estado del repo hoy, **no** que el esquema alcance. `main` y `dev`
+tienen las mismas 19 migraciones porque el flujo v2 no persiste nada todavía. En
+el momento en que persista, hay que migrar bastante.
 
-| Concepto del v2 | ¿Está en el esquema? | Qué falta |
+### 2.1 Lo que YA sirve (más de lo que parecía)
+
+`transactions` es una base mejor de lo que se ve a primera vista:
+
+```sql
+transactions (
+  id, user_id, occurred_at, type ('expense'|'income'),
+  amount_ars, currency ('ARS'|'USD'), original_amount, exchange_rate_id,
+  category, merchant, description,
+  source ('whatsapp'|'web'|'manual'),
+  metadata jsonb, created_at
+)
+```
+
+Tres cosas que ya están resueltas ahí:
+
+- **`source` ya distingue de dónde entró el gasto**: `whatsapp` vs `web`. Es
+  exactamente lo que hace falta para que la app y el bot escriban en el mismo
+  lugar sin pisarse.
+- **`original_amount` + `exchange_rate_id` ya son el patrón de cotización
+  congelada.** Es la misma solución que el v2 usa para los aportes en dólares,
+  y ya está en el esquema: guarda el monto original, la moneda y a qué
+  cotización se convirtió. **No hay que inventarlo, hay que reusarlo.**
+- **`occurred_at` separado de `created_at`**: cuándo pasó el gasto vs cuándo se
+  cargó. El bot lo necesita para "ayer gasté…".
+
+### 2.2 Lo que hay que agregar
+
+| Concepto del v2 | Estado | Qué hacer |
 | --- | --- | --- |
-| Gasto individual con fecha | **No.** Hoy hay `transactions`, pero el onboarding viejo guarda *estimaciones* en `variable_expense_estimates`, no gastos sueltos | revisar si `transactions` alcanza; le falta `metodo_pago` y el `tipo` del v2 |
-| Secciones de gasto propias | **No.** Las categorías del esquema son fijas | tabla `expense_sections` por usuario |
-| Tope por sección | **No** | `monto` + `periodo` (`semana`/`mes`) por sección |
-| Método de pago | **No** | en el gasto, y una lista de medios por usuario |
-| Dinero disponible | **No** | y el método con el que entró |
-| Objetivos con contribuciones | **Parcial.** Existe `goals` | contribuciones con fecha, tipo (`pagué`/`separé`) y moneda |
-| Aportes de inversión | **No** | y con la cotización congelada (§3.3) |
-| Perfil de riesgo | **No** | `porQue`, `reaccion`, `yaInvierte` |
-| Nivel financiero | **No** | 4 valores |
-| Reserva / alcancía | **Parcial.** Hay `reserva_estado()` | revisar si sirve |
-| Grupos | **No** | es una demo entera, sin backend |
-| Género `otro` con texto libre | **No.** El check de `user_profiles.gender` solo admite `femenino/masculino/prefiero_no_decir` | ampliar el check |
-| Edad por rango | **No.** `user_profiles.age` es un `int` | el v2 pregunta rangos, no edad exacta |
-| Zona, convivencia, cómo conoció | **No** | |
+| Tipo de gasto (`necesario / urgente / impulsivo / otro`) | falta | columna en `transactions`, o `metadata`. Como se filtra y se grafica, mejor columna |
+| Método de pago | falta | columna en `transactions` + lista de medios por usuario |
+| Secciones propias | **choca** (ver 2.3) | tabla `expense_sections` por usuario |
+| Tope por sección | falta | `monto` + `periodo` (`semana`/`mes`) |
+| Dinero disponible | falta | saldo por usuario y por medio de pago |
+| Contribuciones a un objetivo | falta | `goals` guarda el objetivo, no los aportes. Falta tabla con fecha, monto, moneda y `kind` (`pagué`/`separé`) |
+| `goals` vs el objetivo del v2 | **parcial** | hoy: `amount_ars` + `timeframe_months`. El v2: horizonte en texto, moneda, y `montoModo` que admite "todavía no sé". Un objetivo sin monto no entra en `amount_ars numeric not null` |
+| Aportes de inversión | falta | no son `expense` ni `income`: tabla propia, reusando `exchange_rate_id` |
+| Perfil de riesgo | falta | `porQue`, `reaccion`, `yaInvierte` |
+| Nivel financiero | falta | 4 valores |
+| Zona, convivencia, cómo conoció | falta | |
+| Género `otro` con texto | **choca** | el `check` de `user_profiles.gender` solo admite `femenino/masculino/prefiero_no_decir` |
+| Edad | **choca** | `user_profiles.age` es `int`; el v2 pregunta rangos |
+| **Grupos y gastos en conjunto** | **falta todo, y es el más grande** | ver 2.4 |
 
-> **Ojo con `user_profiles`.** Dos campos del v2 no entran en el esquema actual
-> tal como está: el género `otro` (el `check` lo rechaza) y la edad, que en v2
-> es un rango y en la tabla es un entero. Si se conecta sin migrar, esos dos
-> insert fallan.
+### 2.3 El choque de las categorías
 
----
+Las categorías del esquema son un **conjunto cerrado de 13**:
+`beauty, cafeterias, delivery, entertainment, gym, health, housing, other,
+restaurants, subscriptions, supermarket, therapy, transport`.
+Hay un `check` en `variable_expense_estimates.category` y una función
+`fina_canon_category(raw)` que mapea texto libre a uno de esos con regex.
+
+**El v2 deja escribir cualquier sección.** Si alguien crea "Mascota",
+`fina_canon_category` la manda a `'other'` y se pierde la distinción: en la app
+ve "Mascota" y en cualquier análisis del servidor ve "otros". Hay que decidir
+una de dos:
+
+1. **Secciones libres por usuario** (tabla propia) y el canon queda solo para
+   que el bot adivine a qué sección existente mandar un gasto. Es lo que pide el
+   diseño del v2.
+2. Mantener el conjunto cerrado y **sacar del v2** la posibilidad de escribir
+   secciones. Contradice el flujo que acabamos de construir.
+
+### 2.4 Los grupos no son una tabla más: rompen el modelo de acceso
+
+Esto es lo más importante de todo el documento.
+
+**Todas las policies de RLS de hoy son de dueño único.** Sin excepción:
+
+```sql
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id)
+```
+
+Un grupo necesita exactamente lo contrario: que **Ana pueda leer filas cuyo
+`user_id` es de Sofi**. Eso no se arregla con una columna — es un modelo de
+acceso distinto. Lo que hace falta:
+
+- `groups` y `group_members` (con rol y estado de invitación).
+- Que los gastos en conjunto sepan a qué grupo pertenecen y **cómo se reparten**
+  entre miembros: un gasto de $30.000 pagado por Ana y dividido entre tres no es
+  un gasto de $30.000 para cada una. Eso es una tabla de repartos
+  (`quién debe cuánto de qué gasto`), y con eso aparecen los saldos entre
+  personas.
+- **Policies nuevas basadas en pertenencia**, del estilo
+  `exists (select 1 from group_members gm where gm.group_id = t.group_id and gm.user_id = auth.uid())`.
+  Escribirlas mal es una filtración de datos financieros entre usuarias, así que
+  esto se prueba con dos cuentas reales antes de salir.
+- Decidir qué ve un miembro: ¿solo los gastos del grupo, o también los
+  personales de las demás? La respuesta obvia es "solo los del grupo", y el
+  esquema tiene que hacerla imposible de violar, no solo improbable.
+
+Y ojo: **los grupos del v2 hoy son una demo**. Viven en el `localStorage` de un
+solo navegador, con miembros de ejemplo. No hay invitaciones reales, no hay dos
+personas compartiendo nada. Lo que está construido es la idea, no la función.
+
+### 2.5 Entonces, ¿qué migra?
+
+Resumen honesto:
+
+- **Nada urgente**, mientras el v2 siga en `localStorage`.
+- **Bastante**, en el momento en que se conecte: unas 6-8 tablas nuevas y
+  cambios en `user_profiles`, `goals` y `transactions`.
+- **Y un rediseño del modelo de acceso** para los grupos, que es trabajo de
+  seguridad, no de features.
 
 ## 3. Lo que el bot tiene que saber
 
