@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   COLORS, DeviceFrame, CheckIcon, Chip, OtroChip, Nota, Cta,
-  Titulo, Apoyo, Contador, OpcionesGrid, OpcionesLista, OpcionesMulti, BotonFantasma,
+  Titulo, Apoyo, Contador, OpcionesGrid, OpcionesLista, OpcionesMulti, BotonFantasma, LinkLegal,
   formatThousands, parseMoneyInput,
   saveV2Categorias, saveV2Nombre,
   saveV2PerfilOnboarding, saveV2TerminosAceptados,
@@ -13,6 +13,7 @@ import {
 import { IconChat, IconChevron, IconBasura } from './FinaIcons';
 import { useAuth } from '../../lib/auth';
 import { formatearTelefonoAr, telefonoE164, telefonoValidoAr } from '../../lib/telefono';
+import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 import { crearObjetivo, crearSeccion, guardarPerfil, guardarPerfilInversor } from '../../api/v2';
 import { esperarCola } from '../../api/v2/almacen';
 
@@ -819,7 +820,7 @@ export function OnboardingV2() {
 
               {currentKey === 'zona' && (
                 <>
-                  <Titulo>¿En dónde andás viviendo?</Titulo>
+                  <Titulo>¿Dónde vivís?</Titulo>
                   <OpcionesGrid opciones={ZONAS} valor={zona} onElegir={(id) => elegir(setZona, id)} />
                 </>
               )}
@@ -852,19 +853,24 @@ export function OnboardingV2() {
                   <Titulo>¿Se te hace tedioso llevar el control de tu plata?</Titulo>
                   <OpcionesGrid opciones={SI_NO} valor={tedioso} onElegir={setTedioso} />
                   {tedioso && (
-                    <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.ink }}>
+                    /* Todo lo que habla del bot de WhatsApp va en lima. Es la
+                       funcionalidad más fuerte de FINA y estaba contada en un
+                       cartel oscuro, que en una pantalla de papel claro lee
+                       como una nota al pie. El lima es relleno y el texto va
+                       en tinta: sobre lima nunca va blanco (regla 2). */
+                    <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.lima }}>
                       <div className="flex items-center gap-3">
-                        <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.darkLine, color: COLORS.onDark }}><IconChat size={24} /></span>
+                        <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}><IconChat size={24} /></span>
                         <div className="flex flex-col">
-                          <p className="text-[18px] font-bold" style={{ color: COLORS.onDark }}>
+                          <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>
                             {tedioso === 'si' ? 'Tranqui — para eso está tu FINA en WhatsApp' : 'Igual te va a encantar tu FINA en WhatsApp'}
                           </p>
-                          <p className="text-[14px]" style={{ color: COLORS.onDarkSoft }}>Sin planillas, sin abrir la app.</p>
+                          <p className="text-[14px]" style={{ color: COLORS.limaText }}>Sin planillas, sin abrir la app.</p>
                         </div>
                       </div>
-                      <p className="text-[15px] leading-relaxed" style={{ color: COLORS.onDark }}>
+                      <p className="text-[15px] leading-relaxed" style={{ color: COLORS.ink }}>
                         Le escribís tu gasto como se lo contarías a una amiga —{' '}
-                        <span className="font-semibold" style={{ color: COLORS.onDark }}>“gasté 5.000 en el súper”</span>{' '}
+                        <span className="font-semibold">“gasté 5.000 en el súper”</span>{' '}
                         — y FINA lo registra sola, al toque. También te responde dudas y te avisa cómo venís.
                       </p>
                     </div>
@@ -947,11 +953,11 @@ export function OnboardingV2() {
                         </div>
                       </div>
                     ))}
-                    <div className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: COLORS.ink }}>
-                      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.darkLine, color: COLORS.onDark }}><IconChat size={24} /></span>
+                    <div className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: COLORS.lima }}>
+                      <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}><IconChat size={24} /></span>
                       <div>
-                        <p className="font-bold text-[16px]" style={{ color: COLORS.onDark }}>Tu bot de WhatsApp</p>
-                        <p className="text-[14px]" style={{ color: COLORS.onDarkSoft }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
+                        <p className="font-bold text-[16px]" style={{ color: COLORS.ink }}>Tu bot de WhatsApp</p>
+                        <p className="text-[14px]" style={{ color: COLORS.limaText }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
                       </div>
                     </div>
                   </div>
@@ -989,7 +995,7 @@ export function OnboardingV2() {
                       {aceptoTerminos && <CheckIcon />}
                     </span>
                     <span className="text-[15px] font-medium" style={{ color: COLORS.ink }}>
-                      Acepto los <span className="underline font-semibold">términos y condiciones</span> y la <span className="underline font-semibold">política de privacidad</span>.
+                      Acepto los <LinkLegal url={TERMINOS_URL}>términos y condiciones</LinkLegal> y la <LinkLegal url={PRIVACIDAD_URL}>política de privacidad</LinkLegal>.
                     </span>
                   </button>
                 </>
@@ -1022,6 +1028,16 @@ export function OnboardingV2() {
                   <p className="text-[14px]" style={{ color: COLORS.inkFaint }}>
                     Te lo pedimos para que puedas registrar gastos por WhatsApp. Todavía no lo verificamos con un SMS.
                   </p>
+                  {/* Los términos se aceptaron un paso antes, con su casilla y
+                      su fecha guardada. Acá van los LINKS, no una segunda
+                      aceptación: es el momento en que la persona crea la
+                      cuenta, y es donde va a buscarlos si los quiere leer.
+                      Pedir el consentimiento dos veces no lo hace más válido,
+                      sólo más molesto. */}
+                  <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                    Al crear tu cuenta valen los <LinkLegal url={TERMINOS_URL}>términos y condiciones</LinkLegal>{' '}
+                    y la <LinkLegal url={PRIVACIDAD_URL}>política de privacidad</LinkLegal> que aceptaste.
+                  </p>
                   {errorAuth && (
                     <p role="alert" className="text-[15px] font-semibold" style={{ color: COLORS.coralDark }}>{errorAuth}</p>
                   )}
@@ -1035,12 +1051,17 @@ export function OnboardingV2() {
                 </>
               )}
 
+              {/* La única pantalla del flujo que va centrada. No es una pregunta
+                  —no hay nada que leer y contestar— es un momento, y el
+                  personaje en el medio es el que manda la composición. Antes el
+                  título quedaba a la izquierda y la línea de abajo centrada,
+                  con Fini flotando entre las dos. */}
               {currentKey === 'login' && finished && (
-                <>
-                  <div className="flex justify-center py-2"><Fini state="logro" size={150} /></div>
-                  <Titulo>¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</Titulo>
-                  <p className="text-[16px] text-center" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
-                </>
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <div className="py-2"><Fini state="logro" size={150} /></div>
+                  <Titulo className="text-center">¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</Titulo>
+                  <p className="text-[16px]" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
+                </div>
               )}
             </motion.div>
         </div>

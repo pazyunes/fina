@@ -122,8 +122,8 @@ export function VerificarTelefono() {
         <div className="flex flex-col gap-3">
           {/* El código se muestra igual que el link: si abre WhatsApp desde la
               computadora y manda desde el celular, tiene que poder copiarlo. */}
-          <div className="rounded-2xl px-4 py-3 flex flex-col gap-1" style={{ background: COLORS.tint }}>
-            <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>Tu código</span>
+          <div className="rounded-2xl px-4 py-3 flex flex-col gap-1" style={{ background: COLORS.limaSoft }}>
+            <span className="text-[14px]" style={{ color: COLORS.limaText }}>Tu código</span>
             <span
               className="text-[24px] font-bold tabular-nums tracking-[0.12em]"
               style={{ color: COLORS.ink, fontFamily: FONTS.mono }}

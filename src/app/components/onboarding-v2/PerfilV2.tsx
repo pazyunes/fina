@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import { ArmarGrupoBtn, COLORS, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
 import { VerificarTelefono } from './VerificarTelefono';
+import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
@@ -241,12 +242,39 @@ export function PerfilV2() {
 
       <ArmarGrupoBtn />
 
+      {/* Estos tres eran botones sin `onClick`: se podían tocar y no pasaba
+          nada. Los dos legales ahora son links de verdad cuando la URL exista
+          (ver lib/legales.ts) y, mientras no exista, no se pueden tocar — que
+          es más honesto que un botón que promete algo y no hace nada. */}
       <div className="flex flex-col">
-        {['Términos y condiciones', 'Política de privacidad', 'Enviar feedback'].map((txt) => (
-          <button key={txt} type="button" className="v2-focus text-left text-[15px] font-medium min-h-[48px] py-3 border-b last:border-b-0" style={{ color: COLORS.inkSoft, borderColor: COLORS.line }}>
-            {txt}
-          </button>
+        {[
+          { txt: 'Términos y condiciones', url: TERMINOS_URL },
+          { txt: 'Política de privacidad', url: PRIVACIDAD_URL },
+        ].map(({ txt, url }) => (
+          url ? (
+            <a
+              key={txt}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="v2-focus flex items-center text-left text-[15px] font-medium min-h-[48px] py-3 border-b"
+              style={{ color: COLORS.inkSoft, borderColor: COLORS.line }}
+            >
+              {txt}
+            </a>
+          ) : (
+            <span
+              key={txt}
+              className="flex items-center text-left text-[15px] font-medium min-h-[48px] py-3 border-b"
+              style={{ color: COLORS.inkFaint, borderColor: COLORS.line }}
+            >
+              {txt}
+            </span>
+          )
         ))}
+        <button type="button" className="v2-focus text-left text-[15px] font-medium min-h-[48px] py-3" style={{ color: COLORS.inkSoft }}>
+          Enviar feedback
+        </button>
       </div>
     </div>
   );

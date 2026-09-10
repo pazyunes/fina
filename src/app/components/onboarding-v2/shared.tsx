@@ -832,6 +832,20 @@ export function OtroChip({ abierto, onClick }: { abierto: boolean; onClick: () =
 // ahora es texto con una regla vertical al costado. La caja tenía 1.11 de
 // contraste — no destacaba el texto, solo agregaba un contorno más. La regla
 // hace el mismo trabajo (decir "esto es aparte") con un elemento en vez de cuatro.
+/**
+ * Menciona un texto legal: link si ya está publicado, texto plano si todavía
+ * no. Ver src/app/lib/legales.ts — mientras la URL sea null, tocar no lleva a
+ * un 404.
+ */
+export function LinkLegal({ url, children }: { url: string | null; children: React.ReactNode }) {
+  if (!url) return <span className="font-semibold">{children}</span>;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="v2-focus underline font-semibold" style={{ color: 'inherit' }}>
+      {children}
+    </a>
+  );
+}
+
 export function Nota({ children }: { children: React.ReactNode }) {
   return (
     <p

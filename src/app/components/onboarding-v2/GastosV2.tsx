@@ -594,16 +594,20 @@ export function GastosV2() {
                     <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>Lo cargás acá, a mano, en un toque.</span>
                   </span>
                 </button>
+                {/* Relleno lima, no hairline como la opción de al lado:
+                    registrar hablando es la funcionalidad más fuerte de FINA y
+                    con las dos opciones iguales quedaba escondida abajo. El
+                    texto va en tinta — sobre lima nunca va blanco (regla 2). */}
                 <button
                   type="button"
                   onClick={() => setWaStep(true)}
-                  className="v2-focus text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
-                  style={{ borderColor: COLORS.line }}
+                  className="v2-focus text-left rounded-2xl p-4 flex items-start gap-3 transition-transform active:scale-[0.99]"
+                  style={{ background: COLORS.lima }}
                 >
-                  <span className="shrink-0" style={{ color: COLORS.brand }}><IconChat size={22} /></span>
+                  <span className="shrink-0" style={{ color: COLORS.ink }}><IconChat size={22} /></span>
                   <span className="flex flex-col">
                     <span className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Desde WhatsApp</span>
-                    <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>Se lo contás a FINA hablando, sin cargar nada.</span>
+                    <span className="text-[14px]" style={{ color: COLORS.limaText }}>Se lo contás a FINA hablando, sin cargar nada.</span>
                   </span>
                 </button>
                 <button type="button" onClick={() => setChooser(false)} className="v2-focus text-[15px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>Cancelar</button>
@@ -611,14 +615,14 @@ export function GastosV2() {
             ) : (
               <>
                 <p className="text-[20px] font-bold" style={{ color: COLORS.ink }}>Registrá tu gasto por WhatsApp</p>
-                <div className="flex flex-col gap-2.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.brandSoft }}>
+                <div className="flex flex-col gap-2.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }}>
                   {[
                     'Abrí el chat de FINA en WhatsApp.',
                     'Escribile tu gasto como se lo contarías a una amiga. Ej: "gasté 5.000 en el súper".',
                     'FINA lo registra solo y lo ves acá en tus gastos.',
                   ].map((t, i) => (
                     <div key={i} className="flex gap-2.5 items-start">
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[14px] font-bold" style={{ background: COLORS.brand, color: COLORS.surface }}>{i + 1}</span>
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[14px] font-bold" style={{ background: COLORS.lima, color: COLORS.ink }}>{i + 1}</span>
                       <span className="flex-1 text-[15px]" style={{ color: COLORS.ink }}>{t}</span>
                     </div>
                   ))}
@@ -629,7 +633,7 @@ export function GastosV2() {
                   rel="noopener noreferrer"
                   onClick={() => setChooser(false)}
                   className="v2-focus w-full rounded-2xl py-3.5 text-center text-[18px] font-bold transition-transform active:scale-[0.99]"
-                  style={{ background: COLORS.brand, color: COLORS.surface }}
+                  style={{ background: COLORS.lima, color: COLORS.ink }}
                 >
                   Ir a WhatsApp
                 </a>
