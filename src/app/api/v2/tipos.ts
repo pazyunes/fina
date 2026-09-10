@@ -150,6 +150,11 @@ export type Perfil = {
   onboarding: Record<string, unknown> | null;
   /** URL pública de la foto de perfil, o null. Se sube con `subirFoto`. */
   fotoUrl: string | null;
+  /**
+   * Cuándo se probó que el teléfono es suyo, o null si es sólo declarado.
+   * Se verifica mandándole un código al bot de WhatsApp (migración 0026).
+   */
+  telefonoVerificadoEn: string | null;
 };
 
 /** Todo lo que la app necesita de una usuaria, en una sola carga. */
@@ -181,6 +186,7 @@ export const PERFIL_VACIO: Perfil = {
   terminosAceptadosEn: null,
   onboarding: null,
   fotoUrl: null,
+  telefonoVerificadoEn: null,
 };
 
 export const ESTADO_VACIO: EstadoV2 = {

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import { ArmarGrupoBtn, COLORS, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
+import { VerificarTelefono } from './VerificarTelefono';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
@@ -229,6 +230,14 @@ export function PerfilV2() {
           )}
         </section>
       )}
+
+      {/* Verificar el teléfono. Va acá y no en el onboarding a propósito: en el
+          onboarding la persona todavía no tiene motivo para irse a WhatsApp, y
+          cortarle el alta para mandarla a otra app es la mejor forma de que no
+          termine ninguna de las dos cosas. Acá entra cuando ya está adentro. */}
+      <section>
+        <VerificarTelefono />
+      </section>
 
       <ArmarGrupoBtn />
 

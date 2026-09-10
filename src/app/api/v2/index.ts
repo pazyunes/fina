@@ -66,6 +66,7 @@ type FilaPerfil = {
   main_goal: string | null; how_found_us: string | null; financial_level: string | null;
   reserve_ars: number | null; phone: string | null; terms_accepted_at: string | null;
   onboarding_v2: Record<string, unknown> | null; avatar_path: string | null;
+  phone_verified_at: string | null;
 };
 
 function aPerfil(f: FilaPerfil | null): Perfil {
@@ -87,6 +88,7 @@ function aPerfil(f: FilaPerfil | null): Perfil {
     terminosAceptadosEn: f.terms_accepted_at,
     onboarding: f.onboarding_v2,
     fotoUrl: f.avatar_path ? urlDeFoto(f.avatar_path) : null,
+    telefonoVerificadoEn: f.phone_verified_at,
   };
 }
 
@@ -94,7 +96,7 @@ async function leerPerfil(uid: string): Promise<Resultado<Perfil>> {
   const r = await correr<FilaPerfil>('leerPerfil', () =>
     supabase
       .from('user_profiles')
-      .select('name, gender, gender_other, age_range, zone, cohabitation, income_sources, income_stability, main_goal, how_found_us, financial_level, reserve_ars, phone, terms_accepted_at, onboarding_v2, avatar_path')
+      .select('name, gender, gender_other, age_range, zone, cohabitation, income_sources, income_stability, main_goal, how_found_us, financial_level, reserve_ars, phone, terms_accepted_at, onboarding_v2, avatar_path, phone_verified_at')
       .eq('id', uid)
       .maybeSingle(),
   );
@@ -584,6 +586,35 @@ export async function borrarAporte(id: string): Promise<Resultado<null>> {
   return correr<null>('borrarAporte', () =>
     supabase.from('investment_contributions').delete().eq('id', id).then(({ error }) => ({ data: null, error })),
   );
+}
+
+// ── Verificación del teléfono por WhatsApp ───────────────────────────────
+// El bot no puede escribirle primero a nadie (WhatsApp sólo deja iniciar una
+// conversación con plantilla aprobada y pagando), así que la verificación va al
+// revés: la persona le manda un código al bot. Eso prueba que el número es suyo
+// —la misma garantía que un OTP por SMS— y de paso deja la conversación abierta.
+//
+// Ver la migración 0026 y docs/whatsapp-bot-flujo-v2.md §3.1.c.
+
+export async function pedirCodigoTelefono(telefono: string | null): Promise<Resultado<string>> {
+  return correr<string>('pedirCodigoTelefono', () =>
+    supabase.rpc('pedir_codigo_telefono', { telefono }).then(({ data, error }) => ({
+      data: data as string | null,
+      error,
+    })),
+  );
+}
+
+/** El momento en que se verificó, o null. Se consulta mientras se espera. */
+export async function leerTelefonoVerificado(): Promise<Resultado<{ verificadoEn: string | null; telefono: string | null }>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla('sin sesión', 'leerTelefonoVerificado');
+  const r = await correr<{ phone: string | null; phone_verified_at: string | null } | null>(
+    'leerTelefonoVerificado',
+    () => supabase.from('user_profiles').select('phone, phone_verified_at').eq('id', uid).maybeSingle(),
+  );
+  if (r.error !== null) return falla(r.error, 'leerTelefonoVerificado');
+  return ok({ verificadoEn: r.data?.phone_verified_at ?? null, telefono: r.data?.phone ?? null });
 }
 
 // ── Foto de perfil ───────────────────────────────────────────────────────

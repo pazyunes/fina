@@ -55,7 +55,7 @@ Y verificar de nuevo con el select de arriba.
 
 ## Las migraciones: qué son y en qué orden
 
-Seis archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
+Siete archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
 resultado antes de pasar al siguiente.
 
 | Orden | Archivo | Qué agrega |
@@ -66,6 +66,7 @@ resultado antes de pasar al siguiente.
 | 4 | `0023_v2_perfil.sql` | Lo que el onboarding v2 pregunta y no entraba: género "otro", edad por rango, zona, nivel financiero, reserva |
 | 5 | `0024_v2_huecos.sql` | Los huecos que aparecieron al cablear la app de verdad (ver abajo) |
 | 6 | `0025_mover_saldo.sql` | `mover_saldo(medio, delta)`: mueve el saldo de un medio de pago de forma atómica. Apareció probando el alta real — el gasto descontaba en la pantalla y no en la base |
+| 7 | `0026_verificar_telefono_whatsapp.sql` | Verificar el teléfono mandándole un código al bot de WhatsApp, en vez de por SMS |
 
 ### Qué trae la 0024 y por qué
 
@@ -196,13 +197,27 @@ Si algo no se guarda, la app **te lo dice**: aparece una banda arriba con
 
 ---
 
-## Lo único que queda pendiente a propósito
+## La verificación del teléfono, y por qué no es un SMS
 
-**Verificación del teléfono por SMS.** El teléfono se pide y se guarda (el bot
-lo necesita para reconocerte), pero no se verifica. La pantalla que pedía un
-código se sacó: aceptaba cualquier número de 4 dígitos, o sea que no verificaba
-nada y encima le hacía creer a la persona que su teléfono estaba validado.
+La pantalla que pedía un código de 4 dígitos se sacó: aceptaba cualquier número,
+o sea que no verificaba nada y encima le hacía creer a la persona que su
+teléfono estaba validado.
 
-Cuando se conecte un proveedor de SMS, el dato ya está: `user_profiles.phone`
-tiene el teléfono y `phone_verified_at` (que existe desde la 0003) está
-esperando la fecha.
+En vez de un SMS, **el que verifica es el bot** (migración 0026): desde Perfil
+la persona pide un código, la app le abre WhatsApp con el código ya escrito, y
+al enviarlo el bot confirma que el número es suyo.
+
+Tres razones para esto y no un OTP por SMS:
+
+- Un SMS cuesta plata por mensaje y en Argentina las operadoras filtran, así que
+  una parte no llega.
+- Abre la puerta al fraude de *SMS pumping*: alguien dispara miles de códigos a
+  números premium y la cuenta la pagás vos.
+- Y no resuelve el problema de fondo: **el bot no puede escribirle primero a
+  nadie.** WhatsApp sólo deja iniciar una conversación con plantilla aprobada y
+  pagando. Con el teléfono verificado por SMS, la persona igual nunca le habló
+  al bot. Verificando por WhatsApp, la conversación queda abierta.
+
+Del lado del bot hay que agregar un caso: si el mensaje matchea
+`FINA-VERIF-([A-Z0-9]{6})`, llamar a `verificar_telefono_por_whatsapp`. Está
+todo en `docs/bot-cambios-a-hacer.md`, punto 2.

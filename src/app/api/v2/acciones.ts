@@ -294,6 +294,33 @@ export function borrarAporte(id: string) {
   push(() => api.borrarAporte(id));
 }
 
+// ── Verificación del teléfono ────────────────────────────────────────────
+export async function pedirCodigoTelefono(telefono: string | null): Promise<{ codigo: string | null; error: string | null }> {
+  const r = await api.pedirCodigoTelefono(telefono);
+  if (r.error !== null) return { codigo: null, error: r.error };
+  return { codigo: r.data, error: null };
+}
+
+/**
+ * Pregunta si el bot ya verificó el teléfono.
+ *
+ * La app consulta cada unos segundos mientras la pantalla está abierta: el que
+ * confirma es el bot, del otro lado, así que no hay forma de que nos avise. Es
+ * una espera corta y acotada a esa pantalla.
+ */
+export async function refrescarTelefono(): Promise<boolean> {
+  const r = await api.leerTelefonoVerificado();
+  if (r.error !== null || r.data.verificadoEn === null) return false;
+  parchearEstado({
+    perfil: {
+      ...leerEstado().perfil,
+      telefono: r.data.telefono,
+      telefonoVerificadoEn: r.data.verificadoEn,
+    },
+  });
+  return true;
+}
+
 // ── Foto de perfil ───────────────────────────────────────────────────────
 export async function subirFoto(archivo: File): Promise<{ url: string | null; error: string | null }> {
   const r = await api.subirFoto(archivo);

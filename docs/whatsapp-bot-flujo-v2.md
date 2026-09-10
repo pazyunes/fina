@@ -5,6 +5,11 @@
 verdad y las siete pantallas leen y escriben en las tablas.
 **Para quién:** quien tenga que tocar el bot.
 
+> **Si sólo querés la lista de cambios a hacer, está en
+> `docs/bot-cambios-a-hacer.md`** — autocontenido, cinco puntos, con el SQL de
+> cada uno. Este documento es el contexto: por qué el esquema quedó así y qué
+> decisiones hay detrás.
+
 ---
 
 ## Lo primero, porque cambia todo lo demás
@@ -29,11 +34,13 @@ Lo que falta es del lado del bot:
 1. **Normalizar el teléfono igual que la app** (§3.1). Es lo más importante de
    este documento: si se hace mal, el bot no reconoce a nadie que se haya
    registrado en el flujo nuevo.
-2. **Escribir con las columnas nuevas** (§3.1.b y §3.2): sección, tipo de
+2. **Atender el mensaje de verificación** (§3.1.c). Sin esto nadie puede
+   verificar su teléfono.
+3. **Escribir con las columnas nuevas** (§3.1.b y §3.2): sección, tipo de
    gasto, método de pago, y `source = 'whatsapp'`. Si escribe sin ellas, el
    gasto aparece en la app sin sección y sin clasificar.
-3. **Mover el saldo con `mover_saldo`** y no con un `update` (§3.1.b).
-4. **Sumar por `amount_ars`** si informa totales, no por el monto que se tipeó
+4. **Mover el saldo con la suma atómica** y no con un `update` (§3.1.b).
+5. **Sumar por `amount_ars`** si informa totales, no por el monto que se tipeó
    (§3.1.b).
 
 ---
@@ -237,7 +244,8 @@ Todo lo de arriba, en seis migraciones (**0020 a 0025**), que ya están
 | 0022 | `groups`, `group_members`, `group_expense_splits`, `transactions.group_id`, y el **modelo de acceso nuevo** (`es_miembro_de`, `unirse_a_grupo`) |
 | 0023 | Lo que el onboarding pregunta: género "otro", edad por rango, zona, nivel financiero, reserva, `avatar_path` |
 | 0024 | `transactions.original_amount` (vuelve), `goals.description`/`amount_mode`/`amount_min_ars`, `user_profiles.onboarding_v2`, `investment_profiles.completed_at`, la vista `group_member_names`, la función `crear_grupo`, el bucket `avatars`, y los checks de moneda ampliados |
-| 0025 | `mover_saldo(medio, delta)`: mueve el saldo de un medio de pago de forma atómica. **Es la que tiene que usar el bot** para descontar un gasto (ver §3.1.b) |
+| 0025 | `mover_saldo(medio, delta)`: mueve el saldo de un medio de pago de forma atómica. El bot tiene que hacer lo mismo con el `user_id` explícito (ver §3.1.b) |
+| 0026 | `phone_verifications` + `pedir_codigo_telefono` + `verificar_telefono_por_whatsapp`: verificar el teléfono mandándole un código al bot (ver §3.1.c) |
 
 El detalle de cada una y qué probar después está en
 `supabase/README-migraciones-v2.md`.
@@ -278,17 +286,51 @@ posible el índice único de `user_profiles.phone`.
 > string tal cual en `user_profiles.phone` **no encuentra a nadie**. Hay que
 > sacarle el `54`, sacarle el `9`, y volver a armar `+54` + los 10 dígitos.
 
-**El teléfono no está verificado.** Se pide y se guarda como *declarado*: la
-pantalla que pedía un código por SMS se sacó porque aceptaba cualquier número de
-4 dígitos, o sea que no verificaba nada. `phone_verified_at` sigue en `null`
-para todas. Dos consecuencias para el bot:
+**El teléfono se verifica con el propio bot** (ver §3.1.c). Hasta que la
+persona lo verifique queda como *declarado*, y eso tiene dos consecuencias:
 
-- Dos personas podrían haber puesto un número que no es el suyo. El índice único
-  evita el duplicado, no la mentira.
+- Alguien podría haber puesto un número que no es el suyo. El índice único
+  evita el duplicado, no la mentira. `phone_verified_at` es el que dice si está
+  probado.
 - Un número que escribe al bot y **no** está en `user_profiles` es alguien que
   todavía no tiene cuenta, o que la creó con otro número. Hay que tratarlo con
   un alta o con un "no te reconozco, ¿me confirmás el mail con el que te
   registraste?", nunca con un error.
+
+### 3.1.c Verificar el teléfono: el bot es el que verifica
+
+**Por qué no es un SMS.** Lo obvio sería un OTP por SMS, pero cuesta plata por
+mensaje, en Argentina las operadoras filtran y una parte no llega, abre la
+puerta al fraude de *SMS pumping*, y sobre todo **no resuelve el problema de
+fondo**: el bot no puede escribirle primero a nadie. WhatsApp sólo deja iniciar
+una conversación con plantilla aprobada y pagando. Con el teléfono verificado
+por SMS, la persona igual nunca le habló al bot y el bot igual no puede
+hablarle.
+
+Así que la verificación va al revés: **la persona le manda un código al bot.**
+Recibir un mensaje de un número prueba que lo controla —la misma garantía que un
+OTP— no cuesta nada, y deja la conversación abierta.
+
+El flujo:
+
+1. La app pide un código con `pedir_codigo_telefono()` (6 caracteres, 15
+   minutos de vida, uno solo vivo por vez, máximo 5 por hora).
+2. La app abre WhatsApp con el texto `FINA-VERIF-XXXXXX` ya escrito.
+3. La persona toca enviar.
+4. **El bot** ve que el mensaje matchea `FINA-VERIF-([A-Z0-9]{6})` y llama a
+   `verificar_telefono_por_whatsapp(codigo, telefono_del_remitente)`.
+5. La app, que está consultando cada 3 segundos, ve `phone_verified_at` y sigue.
+
+La función devuelve un texto (`ok`, `codigo_invalido`, `codigo_vencido`,
+`telefono_en_uso`, `telefono_invalido`) para que el bot pueda contestar distinto
+en cada caso. Está locked a `service_role`: si fuera ejecutable desde el
+navegador, cualquiera podría verificar un teléfono que no es suyo pasando el
+número a mano, que es justo lo que se quiere evitar.
+
+**Se verifica el número del REMITENTE**, no el que la persona escribió en el
+formulario: el que se puede probar es el que mandó el mensaje.
+
+Migración: `0026_verificar_telefono_whatsapp.sql`.
 
 ### 3.1.b Qué escribe el bot y con qué `source`
 
