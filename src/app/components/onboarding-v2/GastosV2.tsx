@@ -29,14 +29,17 @@ type Periodo = 'semana' | 'mes';
 type Moneda = 'ARS' | 'USD';
 type Tope = { monto: number; periodo: Periodo };
 type Categoria = { id: string; nombre: string };
-type Gasto = { id: string; monto: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number };
+type Gasto = { id: string; monto: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number; metodoPago?: string };
 // Nota: el total gastado / disponible siguen calculándose en pesos — un
 // gasto en USD se registra y se muestra con su propio signo (US$), pero
 // todavía no convertimos a un tipo de cambio real para sumarlo al total.
 function fmtGasto(g: { monto: number; moneda: Moneda }): string {
   return g.moneda === 'USD' ? `US$${g.monto.toLocaleString('es-AR')}` : fmtMoney(g.monto);
 }
-type EstadoGastos = { categorias: Categoria[]; gastos: Gasto[]; disponible: number; reserva: number; topes: Record<string, Tope> };
+// `metodosPago` son los medios con los que fuiste cargando plata disponible,
+// del más reciente al más viejo. Al registrar un gasto se ofrecen esos, que es
+// la lista corta y real de "de dónde puede haber salido".
+type EstadoGastos = { categorias: Categoria[]; gastos: Gasto[]; disponible: number; reserva: number; topes: Record<string, Tope>; metodosPago?: string[] };
 
 // El "tipo de gasto" es una CLASIFICACIÓN que eligió la persona, no un juicio:
 // las etiquetas son hues categóricos de identidad (para distinguir en la barra
@@ -50,6 +53,18 @@ const TIPO_INFO: Record<TipoGasto, { label: string; color: string }> = {
   otro: { label: 'Otro', color: COLORS.sky },
 };
 const TIPOS: TipoGasto[] = ['necesario', 'urgente', 'impulsivo', 'otro'];
+
+// Secciones sugeridas. Es la misma lista que ofrecía el onboarding: las que la
+// persona marcó allá ya entran como suyas (ver estadoInicial), y el resto queda
+// acá para no obligarla a tipear "Supermercado" a mano.
+const SECCIONES_SUGERIDAS = [
+  'Delivery', 'Restaurantes', 'Cafeterías', 'Salidas y entretenimiento',
+  'Supermercado', 'Transporte', 'Belleza y cuidado personal', 'Ropa',
+  'Suscripciones', 'Compras online', 'Farmacia', 'Regalos',
+];
+
+// Medios de pago sugeridos, para la primera vez que no hay ninguno cargado.
+const METODOS_SUGERIDOS = ['Efectivo', 'Débito', 'Crédito', 'Mercado Pago', 'Transferencia'];
 
 // Hues categóricos por sección — identidad para el donut y los puntitos. Los
 // montos nunca toman estos colores: siempre tinta neutral.
@@ -74,6 +89,7 @@ function estadoInicial(): EstadoGastos {
     disponible: 0,
     reserva: 0,
     topes: {},
+    metodosPago: [],
   };
 }
 
@@ -104,6 +120,13 @@ export function GastosV2() {
   const [ngCatId, setNgCatId] = useState<string | null>(categorias[0]?.id ?? null);
   const [ngNuevaCat, setNgNuevaCat] = useState('');
   const [ngTipo, setNgTipo] = useState<TipoGasto>('necesario');
+  const [ngMetodo, setNgMetodo] = useState<string | null>(null);
+  const [ngMetodoOtro, setNgMetodoOtro] = useState('');
+  // Medio con el que se carga la plata disponible.
+  const [addDispMetodo, setAddDispMetodo] = useState<string | null>(null);
+  const [addDispMetodoOtro, setAddDispMetodoOtro] = useState('');
+  // Ventana del donut: "este mes" o "esta semana".
+  const [ventana, setVentana] = useState<Periodo>('mes');
 
   // Buscador por nombre + orden. Los filtros por sección y por tipo se sacaron:
   // las secciones ya están separadas arriba, así que filtrar la lista por
@@ -113,8 +136,21 @@ export function GastosV2() {
   const [busqueda, setBusqueda] = useState('');
   const [orden, setOrden] = useState<'recientes' | 'monto'>('recientes');
 
-  const totalGastado = gastos.reduce((s, g) => s + g.monto, 0);
-  const gastadoEn = (catId: string) => gastos.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.monto, 0);
+  // El total y el donut miran una VENTANA, no todo el historial: "gastado"
+  // sin período no se puede comparar con nada, y un tope es por semana o por
+  // mes. Se toma el mes o la semana en curso, no los últimos 30/7 días: es lo
+  // que la persona tiene en la cabeza cuando piensa "cuánto gasté este mes".
+  const desdeVentana = (() => {
+    const d = new Date();
+    if (ventana === 'mes') return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    const dia = (d.getDay() + 6) % 7; // lunes = 0
+    const lunes = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dia);
+    return lunes.getTime();
+  })();
+  const gastosVentana = gastos.filter((g) => g.ts >= desdeVentana);
+
+  const totalGastado = gastosVentana.reduce((s, g) => s + g.monto, 0);
+  const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.monto, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
 
   const donutCategorias = categorias
@@ -123,8 +159,16 @@ export function GastosV2() {
 
   const porTipo = TIPOS.map((t) => ({
     tipo: t,
-    monto: gastos.filter((g) => g.tipo === t).reduce((s, g) => s + g.monto, 0),
+    monto: gastosVentana.filter((g) => g.tipo === t).reduce((s, g) => s + g.monto, 0),
   })).filter((t) => t.monto > 0);
+
+  // Sugeridas que todavía no son secciones propias.
+  const sugeridasDisponibles = SECCIONES_SUGERIDAS.filter(
+    (n) => !categorias.some((c) => c.id === slug(n)),
+  );
+  // Medios ofrecidos al registrar un gasto: los que ya usaste primero; si no
+  // hay ninguno, los sugeridos.
+  const metodosOfrecidos = (estado.metodosPago?.length ? estado.metodosPago : METODOS_SUGERIDOS);
 
   const gastosFiltrados = gastos
     .filter((g) => !busqueda.trim() || g.descripcion.toLowerCase().includes(busqueda.trim().toLowerCase()))
@@ -134,8 +178,19 @@ export function GastosV2() {
   function agregarDinero() {
     const n = parseMoneyInput(addDispVal);
     if (!n) return;
-    setEstado((s) => ({ ...s, disponible: s.disponible + n }));
+    const metodo = (addDispMetodo === 'otro' ? addDispMetodoOtro.trim() : addDispMetodo) || '';
+    setEstado((s) => ({
+      ...s,
+      disponible: s.disponible + n,
+      // El método usado sube al principio de la lista: al registrar un gasto se
+      // ofrecen los más recientes primero.
+      metodosPago: metodo
+        ? [metodo, ...(s.metodosPago ?? []).filter((m) => m !== metodo)].slice(0, 6)
+        : s.metodosPago,
+    }));
     setAddDispVal('');
+    setAddDispMetodo(null);
+    setAddDispMetodoOtro('');
     setAddingDisponible(false);
   }
 
@@ -150,9 +205,18 @@ export function GastosV2() {
     if (monto <= 0) return;
     const catId = ngNuevaCat.trim() ? crearCategoria(ngNuevaCat.trim()) : ngCatId;
     if (!catId) return;
-    const nuevo: Gasto = { id: String(Date.now()), monto, moneda: ngMoneda, descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label, categoriaId: catId, tipo: ngTipo, ts: Date.now() };
-    setEstado((s) => ({ ...s, gastos: [nuevo, ...s.gastos], disponible: ngMoneda === 'ARS' ? Math.max(s.disponible - monto, 0) : s.disponible }));
+    const metodo = (ngMetodo === 'otro' ? ngMetodoOtro.trim() : ngMetodo) || undefined;
+    const nuevo: Gasto = { id: String(Date.now()), monto, moneda: ngMoneda, descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label, categoriaId: catId, tipo: ngTipo, ts: Date.now(), metodoPago: metodo };
+    setEstado((s) => ({
+      ...s,
+      gastos: [nuevo, ...s.gastos],
+      disponible: ngMoneda === 'ARS' ? Math.max(s.disponible - monto, 0) : s.disponible,
+      metodosPago: metodo
+        ? [metodo, ...(s.metodosPago ?? []).filter((m) => m !== metodo)].slice(0, 6)
+        : s.metodosPago,
+    }));
     setNgMonto(''); setNgMoneda('ARS'); setNgDesc(''); setNgNuevaCat(''); setNgTipo('necesario');
+    setNgMetodo(null); setNgMetodoOtro('');
     setAddingGasto(false);
     setOpenCatId(catId);
   }
@@ -173,12 +237,27 @@ export function GastosV2() {
         <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>Todo lo que registrás, en un solo lugar. Ponéle un tope a cada sección.</p>
       </header>
 
+      {/* "Gastado" sin período no se puede comparar con nada, y los topes son
+          por semana o por mes. Se elige una ventana y el donut, el total y la
+          distribución por tipo la respetan. Va a lo ancho y arriba porque
+          manda sobre todo el resumen, no solo sobre el donut. */}
+      <SegmentedTab
+        options={[{ id: 'mes' as Periodo, label: 'Este mes' }, { id: 'semana' as Periodo, label: 'Esta semana' }]}
+        value={ventana}
+        onChange={setVentana}
+        trackColor={COLORS.tint}
+      />
+
       {/* En desktop, todo lo de abajo se acomoda en grilla; en mobile sigue
           siendo una sola columna apilada (idéntico a antes). */}
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:gap-5 lg:gap-y-5 lg:grid-flow-row-dense lg:items-start">
       {/* Resumen: donut + disponible/gastado — el DATO CENTRAL, única tarjeta elevada */}
       <div className={`rounded-2xl p-4 flex gap-4 items-center lg:h-full ${porTipo.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`} style={CARD_ELEVADA}>
-        <Donut segments={donutCategorias} centerLabel="Gastado" centerValue={fmtMontoCompacto(totalGastado)} />
+        <Donut
+          segments={donutCategorias}
+          centerLabel={ventana === 'mes' ? 'Este mes' : 'Esta semana'}
+          centerValue={fmtMontoCompacto(totalGastado)}
+        />
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <div>
             <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Dinero disponible</p>
@@ -189,20 +268,62 @@ export function GastosV2() {
               + Agregar dinero disponible
             </button>
           ) : (
-            <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
               <input
                 autoFocus
                 aria-label="Monto a agregar a tu dinero disponible"
-                className="v2-focus flex-1 min-w-0 rounded-xl px-2.5 py-1.5 text-[14px] transition-colors"
+                className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[15px] transition-colors"
                 style={INPUT_STYLE}
                 placeholder="Monto"
                 inputMode="decimal"
                 value={addDispVal}
                 onChange={(e) => setAddDispVal(formatThousands(e.target.value))}
               />
-              <button type="button" onClick={agregarDinero} className="v2-focus rounded-xl px-2.5 text-[14px] font-bold shrink-0 transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
-                Ok
-              </button>
+              {/* Se pregunta el medio acá para que después, al registrar un
+                  gasto, se puedan ofrecer los que de verdad tenés. */}
+              <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿En qué lo tenés?</p>
+              <div className="flex flex-wrap gap-1.5">
+                {metodosOfrecidos.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setAddDispMetodo(m)}
+                    className="v2-focus rounded-lg px-2.5 py-1 text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                    style={addDispMetodo === m
+                      ? { background: COLORS.brand, color: COLORS.surface }
+                      : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                  >
+                    {m}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setAddDispMetodo('otro')}
+                  className="v2-focus rounded-lg px-2.5 py-1 text-[14px] font-semibold border border-dashed transition-all duration-100 active:scale-95"
+                  style={{ background: addDispMetodo === 'otro' ? COLORS.brandSoft : COLORS.surface, color: addDispMetodo === 'otro' ? COLORS.brandDark : COLORS.ink, borderColor: COLORS.lineStrong }}
+                >
+                  + Otro
+                </button>
+              </div>
+              {addDispMetodo === 'otro' && (
+                <input
+                  autoFocus
+                  aria-label="En qué tenés esa plata"
+                  className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[15px] transition-colors"
+                  style={INPUT_STYLE}
+                  placeholder="Ej: Ualá"
+                  value={addDispMetodoOtro}
+                  onChange={(e) => setAddDispMetodoOtro(e.target.value)}
+                />
+              )}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { setAddingDisponible(false); setAddDispMetodo(null); setAddDispMetodoOtro(''); }} className="v2-focus flex-1 rounded-xl py-2 text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+                  Cancelar
+                </button>
+                <button type="button" onClick={agregarDinero} disabled={parseMoneyInput(addDispVal) <= 0} className="v2-focus flex-[2] rounded-xl py-2 text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
+                  Agregar
+                </button>
+              </div>
             </div>
           )}
           {/* Total y disponible los cargó la persona → declarado (§5.1). */}
@@ -274,43 +395,69 @@ export function GastosV2() {
             onChange={(e) => setNgDesc(e.target.value)}
           />
 
-          <div>
-            <p className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>Sección</p>
-            <div className="flex flex-wrap gap-2">
-              {categorias.map((c) => {
-                const sel = ngCatId === c.id && !ngNuevaCat;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => { setNgCatId(c.id); setNgNuevaCat(''); }}
-                    className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold transition-all duration-100 active:scale-95"
-                    style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-                  >
-                    {c.nombre}
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => { setNgCatId(null); setNgNuevaCat(' '); }}
-                className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold border border-dashed transition-all duration-100 active:scale-95"
-                style={{ background: ngNuevaCat ? COLORS.brandSoft : COLORS.surface, color: ngNuevaCat ? COLORS.brandDark : COLORS.ink, borderColor: COLORS.lineStrong }}
-              >
-                + Nueva
-              </button>
+          {/* Secciones en dos grupos: las que ya usás y las sugeridas que
+              todavía no tenés. Antes había una sola fila con las tuyas y un
+              "+ Nueva" que te dejaba tipeando "Supermercado" a mano. */}
+          <div className="flex flex-col gap-2.5">
+            <div>
+              <p className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>Tus secciones</p>
+              <div className="flex flex-wrap gap-2">
+                {categorias.length === 0 && (
+                  <p className="text-[14px]" style={{ color: COLORS.inkFaint }}>Todavía no tenés ninguna — elegí una de abajo.</p>
+                )}
+                {categorias.map((c) => {
+                  const sel = ngCatId === c.id && !ngNuevaCat;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => { setNgCatId(c.id); setNgNuevaCat(''); }}
+                      className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold transition-all duration-100 active:scale-95"
+                      style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                    >
+                      {c.nombre}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {ngNuevaCat && (
-              <input
-                autoFocus
-                aria-label="Nombre de la nueva sección"
-                className="v2-focus mt-2 w-full rounded-xl px-3 py-2 text-[15px] transition-colors"
-                style={INPUT_STYLE}
-                placeholder="Nombre de la sección"
-                value={ngNuevaCat.trim()}
-                onChange={(e) => setNgNuevaCat(e.target.value || ' ')}
-              />
+
+            {sugeridasDisponibles.length > 0 && (
+              <div>
+                <p className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>Otras secciones</p>
+                <div className="flex flex-wrap gap-2">
+                  {sugeridasDisponibles.map((nombre) => {
+                    const sel = !ngCatId && ngNuevaCat.trim() === nombre;
+                    return (
+                      <button
+                        key={nombre}
+                        type="button"
+                        onClick={() => { setNgCatId(null); setNgNuevaCat(nombre); }}
+                        className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold transition-all duration-100 active:scale-95"
+                        style={sel
+                          ? { background: COLORS.brand, color: COLORS.surface }
+                          : { background: COLORS.surface, color: COLORS.inkSoft, border: `1.5px dashed ${COLORS.lineStrong}` }}
+                      >
+                        {nombre}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
+
+            <div>
+              <label htmlFor="ng-nueva" className="text-[14px] font-bold mb-1.5 block" style={{ color: COLORS.inkSoft }}>O escribí una</label>
+              <input
+                id="ng-nueva"
+                aria-label="Nombre de la sección"
+                className="v2-focus w-full rounded-xl px-3 py-2 text-[15px] transition-colors"
+                style={INPUT_STYLE}
+                placeholder="Ej: Mascota"
+                value={ngNuevaCat.trim()}
+                onChange={(e) => { setNgNuevaCat(e.target.value); if (e.target.value) setNgCatId(null); }}
+              />
+            </div>
           </div>
 
           <div>
@@ -331,6 +478,48 @@ export function GastosV2() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Con qué lo pagaste. Se ofrecen primero los medios con los que ya
+              cargaste plata disponible: es la lista corta y real de de dónde
+              pudo haber salido. Si no hay ninguno todavía, van los sugeridos. */}
+          <div>
+            <p className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Con qué lo pagaste?</p>
+            <div className="flex flex-wrap gap-2">
+              {metodosOfrecidos.map((m) => {
+                const sel = ngMetodo === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setNgMetodo(m)}
+                    className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold transition-all duration-100 active:scale-95"
+                    style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setNgMetodo('otro')}
+                className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold border border-dashed transition-all duration-100 active:scale-95"
+                style={{ background: ngMetodo === 'otro' ? COLORS.brandSoft : COLORS.surface, color: ngMetodo === 'otro' ? COLORS.brandDark : COLORS.ink, borderColor: COLORS.lineStrong }}
+              >
+                + Otro
+              </button>
+            </div>
+            {ngMetodo === 'otro' && (
+              <input
+                autoFocus
+                aria-label="Con qué lo pagaste"
+                className="v2-focus mt-2 w-full rounded-xl px-3 py-2 text-[15px] transition-colors"
+                style={INPUT_STYLE}
+                placeholder="Ej: Ualá"
+                value={ngMetodoOtro}
+                onChange={(e) => setNgMetodoOtro(e.target.value)}
+              />
+            )}
           </div>
 
           <div className="flex gap-2 mt-1">
@@ -461,7 +650,7 @@ export function GastosV2() {
                   </div>
                 </div>
                 <span className="shrink-0 flex items-center gap-2">
-                  {!tope && <span className="text-[14px]" style={{ color: COLORS.inkFaint }}>Sin tope</span>}
+                  {!tope && <span className="text-[14px] font-semibold" style={{ color: COLORS.brand }}>Agregar tope</span>}
                   <span style={{ color: COLORS.inkFaint }}>
                     <IconChevron size={16} style={{ transform: open ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 120ms' }} />
                   </span>

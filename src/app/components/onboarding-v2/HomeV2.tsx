@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Fini } from './Fini';
+import { MisVisualizaciones } from './MisVisualizaciones';
 import { useNavigate } from 'react-router';
-import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, formatThousands, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
-import { IconChevron, IconFuego, IconGastos, IconGrupo, IconInversiones, IconObjetivos, IconPerfil, IconReserva, IconSparkle } from './FinaIcons';
-import type { ComponentType } from 'react';
+import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { IconChevron, IconFuego, IconGrupo, IconPerfil, IconReserva } from './FinaIcons';
 
 
 // "Tu próximo paso" — el hilo estilo Duolingo: una sola acción, la más útil
@@ -36,14 +36,32 @@ function proximoPaso(): { titulo: string; msg: string; cta: string; to: string }
 }
 
 // Racha: días consecutivos (terminando hoy) con al menos un gasto.
-function rachaDeGastos(): number {
-  const g = loadV2GastosState<{ gastos: { ts?: number }[] }>();
-  if (!g) return 0;
-  const dias = new Set(g.gastos.filter((x) => x.ts).map((x) => new Date(x.ts as number).toDateString()));
-  let s = 0;
+// Racha: días consecutivos (terminando hoy) con al menos un gasto. Devuelve
+// también el DETALLE de cada día, para poder contestar "¿por qué tengo 4?" —
+// un número de racha sin poder abrirlo es un puntaje, no un dato.
+type DiaRacha = { fecha: string; etiqueta: string; cuantos: number; descripciones: string[] };
+function rachaDeGastos(): { dias: number; detalle: DiaRacha[] } {
+  const g = loadV2GastosState<{ gastos: { ts?: number; descripcion?: string }[] }>();
+  if (!g) return { dias: 0, detalle: [] };
+  const porDia = new Map<string, { ts: number; descripcion?: string }[]>();
+  for (const x of g.gastos) {
+    if (!x.ts) continue;
+    const k = new Date(x.ts).toDateString();
+    porDia.set(k, [...(porDia.get(k) ?? []), { ts: x.ts, descripcion: x.descripcion }]);
+  }
+  const detalle: DiaRacha[] = [];
   const d = new Date();
-  while (dias.has(d.toDateString())) { s++; d.setDate(d.getDate() - 1); }
-  return s;
+  while (porDia.has(d.toDateString())) {
+    const items = porDia.get(d.toDateString())!;
+    detalle.push({
+      fecha: d.toDateString(),
+      etiqueta: fechaDisplay(items[0].ts),
+      cuantos: items.length,
+      descripciones: items.map((i) => i.descripcion || 'Un gasto').slice(0, 3),
+    });
+    d.setDate(d.getDate() - 1);
+  }
+  return { dias: detalle.length, detalle };
 }
 
 // ── Anillo de bienestar financiero (estilo Headspace/Apple Watch) ──────
@@ -126,6 +144,7 @@ export function HomeV2() {
   const b = datosBienestar();
   const paso = proximoPaso();
   const racha = rachaDeGastos();
+  const [rachaAbierta, setRachaAbierta] = useState(false);
 
   // Reserva ("alcancía") — se movió acá desde Gastos.
   // PRUEBA — "Fini aterriza en el avatar", estilo Netflix. La animación la
@@ -175,10 +194,10 @@ export function HomeV2() {
   // Un solo lugar por sección: cada fila muestra su dato y lleva a su pantalla.
   // Ya no llevan color propio — el color por sección era otra forma de decir
   // "esto es una caja distinta", y con tintes de 1.1 de contraste no decía nada.
-  const secciones: { Icon: ComponentType<{ size?: number }>; label: string; to: string; metric: string }[] = [
-    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá el primero' },
-    { Icon: IconObjetivos, label: 'Objetivos', to: '/onboarding-v2/objetivos', metric: b.objetivosPct !== null ? `${b.objetivosPct}% de avance` : 'Sumá uno' },
-    { Icon: IconInversiones, label: 'Inversiones', to: '/onboarding-v2/inversiones', metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
+  const secciones: { emoji: string; label: string; to: string; metric: string }[] = [
+    { emoji: '🧾', label: 'Gastos', to: '/onboarding-v2/gastos', metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá el primero' },
+    { emoji: '🎯', label: 'Objetivos', to: '/onboarding-v2/objetivos', metric: b.objetivosPct !== null ? `${b.objetivosPct}% de avance` : 'Sumá uno' },
+    { emoji: '🌱', label: 'Inversiones', to: '/onboarding-v2/inversiones', metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
   ];
 
   return (
@@ -230,16 +249,26 @@ export function HomeV2() {
             : <span style={{ opacity: aterrizando ? 0 : 1 }}><Fini state="idle" size={40} /></span>}
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>{saludoDelDia()}</p>
-          <Titulo className="!text-[26px] lg:!text-[30px] truncate">{nombre || 'Tu FINA'}</Titulo>
+          {/* Saludo y nombre en una sola línea. "Tu FINA" era el fallback sin
+              nombre y terminaba siendo lo que veías: genérico donde tendría
+              que estar lo personal. */}
+          <Titulo className="!text-[24px] lg:!text-[28px]">
+            {saludoDelDia()}{nombre ? `, ${nombre}` : ''}
+          </Titulo>
         </div>
         {/* Racha. Con 0 días todavía no es un dato: se muestra tenue como
             invitación (por-descubrir), no como un cero que parece un error. */}
-        {racha > 0 ? (
-          <div className="flex flex-col items-center shrink-0" style={{ color: COLORS.brand }}>
-            <span className="flex items-center gap-1 text-[20px] font-bold leading-none"><IconFuego size={16} /> <span className="font-mono tabular-nums">{racha}</span></span>
-            <span className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>{racha === 1 ? 'día' : 'días'}</span>
-          </div>
+        {racha.dias > 0 ? (
+          <button
+            type="button"
+            onClick={() => setRachaAbierta((v) => !v)}
+            aria-expanded={rachaAbierta}
+            className="v2-focus flex flex-col items-center shrink-0 min-h-[44px] px-1 rounded-xl"
+            style={{ color: COLORS.brand }}
+          >
+            <span className="flex items-center gap-1 text-[20px] font-bold leading-none"><IconFuego size={16} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
+            <span className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>{racha.dias === 1 ? 'día' : 'días'}</span>
+          </button>
         ) : (
           <div className="flex flex-col items-center shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Todavía no arrancaste tu racha">
             <IconFuego size={16} />
@@ -248,47 +277,87 @@ export function HomeV2() {
         )}
       </header>
 
+      {/* Detalle de la racha: qué registraste cada día. Un número que no se
+          puede abrir es un puntaje; abriéndolo es un dato. */}
+      {rachaAbierta && racha.dias > 0 && (
+        <section className="flex flex-col gap-2 -mt-4">
+          <TituloSeccion>Tu racha, día por día</TituloSeccion>
+          <div className="flex flex-col">
+            {racha.detalle.map((d) => (
+              <div key={d.fecha} className="flex items-baseline gap-3 py-2.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+                <span className="w-16 shrink-0 text-[14px] font-semibold" style={{ color: COLORS.ink }}>{d.etiqueta}</span>
+                <span className="flex-1 min-w-0 text-[14px]" style={{ color: COLORS.inkSoft }}>
+                  {d.descripciones.join(', ')}{d.cuantos > 3 ? ` y ${d.cuantos - 3} más` : ''}
+                </span>
+                <span className="shrink-0 text-[13px] font-mono tabular-nums" style={{ color: COLORS.inkFaint }}>
+                  {d.cuantos} {d.cuantos === 1 ? 'gasto' : 'gastos'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* LA tarjeta elevada de la app. Es la única, y por eso funciona: cuando
           todo era tarjeta, ser tarjeta no significaba nada. */}
-      <section
-        className="rounded-[22px] p-5 flex flex-col gap-4"
-        style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}`, boxShadow: '0 2px 14px rgba(43,33,24,0.06)' }}
-      >
-        <div className="flex items-start gap-3.5">
-          <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}><IconSparkle size={22} /></span>
-          <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.brand, fontFamily: FONTS.mono }}>Tu próximo paso</p>
-            <p className="font-bold text-[20px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
+      {/* PRUEBA — el próximo paso lo dice Fini, no una tarjeta. Se saca el
+          contorno y el ícono de chispita: queda el personaje, lo que hay que
+          hacer, y el botón. El CTA va en LIMA, que es el color que la guía
+          reserva para el momento de valor (§3.3) — y como el lima tiene 1.43
+          de contraste sobre el papel, el texto encima va en TINTA, nunca en
+          blanco: sobre relleno de color el texto es tinta (§3.3). */}
+      <section className="flex items-end gap-1 pt-1">
+        <div className="shrink-0 -mb-1">
+          <Fini state="idle" size={92} />
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col gap-3">
+          <div
+            className="relative rounded-[20px] rounded-bl-md px-4 py-3.5"
+            style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
+          >
+            <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>Tu próximo paso</p>
+            <p className="font-bold text-[19px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
             <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>{paso.msg}</p>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate(paso.to)}
+            className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold transition-transform duration-100 active:scale-[0.99]"
+            style={{ background: COLORS.lima, color: COLORS.ink }}
+          >
+            {paso.cta}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate(paso.to)}
-          className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold transition-transform duration-100 active:scale-[0.99]"
-          style={{ background: COLORS.brand, color: COLORS.surface }}
-        >
-          {paso.cta}
-        </button>
       </section>
 
-      {/* Tus secciones. Eran tres fichas tintadas en grilla; los tres tintes
-          estaban a 1.1 del fondo, así que las fichas se leían como un bloque
-          gris único. Como filas, el nombre y el dato de cada una se leen. */}
+      {/* PRUEBA — las tres secciones en UNA línea, con emoji.
+          Ojo: esto revierte una decisión que ya estaba tomada. Hay un commit
+          entero ("migración total de emojis a iconos de línea... sin emojis
+          visibles en la UI") y la guía §2.1 pide iconografía monolineal, no
+          pictogramas. Se hace porque es un pedido explícito, pero si el
+          emoji no convence, los iconos de línea siguen disponibles en
+          FinaIcons y el cambio es de una línea. */}
       <section className="flex flex-col gap-2">
         <TituloSeccion>Tus secciones</TituloSeccion>
-        <div className="flex flex-col">
+        <div className="grid grid-cols-3 gap-2">
           {secciones.map((s) => (
-            <Fila
+            <button
               key={s.label}
-              icon={<s.Icon size={18} />}
-              label={s.label}
-              valor={s.metric}
+              type="button"
               onClick={() => navigate(s.to)}
-            />
+              className="v2-focus flex flex-col items-center gap-1 min-h-[88px] justify-center rounded-2xl px-1.5 py-3 transition-all duration-100 active:scale-[0.97]"
+              style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
+            >
+              <span className="text-[26px] leading-none" aria-hidden>{s.emoji}</span>
+              <span className="text-[14px] font-bold leading-tight text-center" style={{ color: COLORS.ink }}>{s.label}</span>
+              <span className="text-[12px] leading-tight text-center" style={{ color: COLORS.inkSoft }}>{s.metric}</span>
+            </button>
           ))}
         </div>
       </section>
+
+      {/* PRUEBA — gráficos armados con los datos que ya hay guardados. */}
+      <MisVisualizaciones />
 
       {/* Reservas + perfil */}
       <section className="flex flex-col gap-2">
