@@ -507,6 +507,9 @@ export function OnboardingV2() {
         tipo: 'individual',
         moneda: objMoneda,
         horizonte: horizonteDelObjetivo(),
+        // Acá el monto se tipeó exacto. Sin decirlo, el objetivo quedaba con
+        // `amount_mode` en null, o sea "nunca se preguntó", que no es el caso.
+        modoMonto: 'exacto',
         montoTotal: parseMoneyInput(objMonto),
       });
       if (r.error) return r.error;

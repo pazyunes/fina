@@ -125,11 +125,13 @@ export async function registrarGasto(g: {
 }): Promise<{ gasto: Gasto | null; error: string | null }> {
   const conv = await aPesos(g.monto, g.moneda);
   if (conv.error !== null) return { gasto: null, error: conv.error };
+  const montoArs = conv.montoArs ?? 0; // ARS/USD siempre convierten
 
   const gasto: Gasto = {
     id: nuevoId(),
     monto: g.monto,
     moneda: g.moneda,
+    montoArs,
     descripcion: g.descripcion,
     seccionId: g.seccionId,
     tipo: g.tipo,
@@ -142,7 +144,6 @@ export async function registrarGasto(g: {
   const est = leerEstado();
   // El gasto descuenta del medio con el que se pagó. Es lo que hace que
   // "¿de dónde salió?" tenga respuesta.
-  const montoArs = conv.montoArs ?? 0; // ARS/USD siempre convierten
   const mediosPago = g.metodoPago
     ? est.mediosPago.map((m) => (m.nombre === g.metodoPago
       ? { ...m, saldo: m.saldo - montoArs, usadoEn: new Date().toISOString() }
@@ -163,7 +164,14 @@ export async function registrarGasto(g: {
 }
 
 export function borrarGasto(id: string) {
-  parchearEstado({ gastos: leerEstado().gastos.filter((g) => g.id !== id) });
+  const est = leerEstado();
+  const gasto = est.gastos.find((g) => g.id === id);
+  // La plata vuelve al medio con el que se pagó: si sólo desapareciera el
+  // gasto, el disponible quedaría descontado por algo que ya no existe.
+  const mediosPago = gasto?.metodoPago
+    ? est.mediosPago.map((m) => (m.nombre === gasto.metodoPago ? { ...m, saldo: m.saldo + gasto.montoArs } : m))
+    : est.mediosPago;
+  parchearEstado({ gastos: est.gastos.filter((g) => g.id !== id), mediosPago });
   push(() => api.borrarGasto(id));
 }
 

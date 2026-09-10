@@ -1258,7 +1258,7 @@ export function SegmentedTab<T extends string>({
 
 export type VistaGastos = {
   categorias: { id: string; nombre: string }[];
-  gastos: { id: string; monto: number; moneda: MonedaV2; descripcion: string; categoriaId: string; tipo: string; ts: number; metodoPago?: string }[];
+  gastos: { id: string; monto: number; montoArs: number; moneda: MonedaV2; descripcion: string; categoriaId: string; tipo: string; ts: number; metodoPago?: string }[];
   disponible: number;
   reserva: number;
   topes: Record<string, { monto: number; periodo: 'semana' | 'mes' }>;
@@ -1270,7 +1270,7 @@ export function vistaGastos(): VistaGastos {
   return {
     categorias: db.secciones.map((x) => ({ id: x.id, nombre: x.nombre })),
     gastos: db.gastos.map((g) => ({
-      id: g.id, monto: g.monto, moneda: g.moneda, descripcion: g.descripcion,
+      id: g.id, monto: g.monto, montoArs: g.montoArs, moneda: g.moneda, descripcion: g.descripcion,
       categoriaId: g.seccionId ?? '', tipo: g.tipo, ts: g.ts,
       metodoPago: g.metodoPago ?? undefined,
     })),

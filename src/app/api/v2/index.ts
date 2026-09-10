@@ -223,24 +223,25 @@ export async function listarMediosPago(): Promise<Resultado<MedioPago[]>> {
   })));
 }
 
-/** Suma plata disponible a un medio. Lo crea si no existía. */
-export async function sumarDisponible(medio: string, monto: number): Promise<Resultado<null>> {
-  const uid = await idUsuaria();
-  if (!uid) return falla<null>('sin sesión', 'sumarDisponible');
-  const nombre = medio.trim() || 'Efectivo';
-
-  const actual = await correr<FilaMedio | null>('sumarDisponible/leer', () =>
-    supabase.from('payment_methods').select('id, name, balance_ars, last_used_at')
-      .eq('user_id', uid).eq('name', nombre).maybeSingle(),
+/**
+ * Mueve el saldo de un medio de pago. `delta` negativo descuenta. Lo crea si
+ * no existía.
+ *
+ * Va por RPC (`mover_saldo`, migración 0025) y NO por un "leer el saldo,
+ * restar, escribir" desde acá: entre la lectura y la escritura puede entrar
+ * otro gasto —del otro teléfono, o del bot, que escribe para todas— y esa
+ * escritura se perdería. Un saldo que se pisa es plata que la persona cree
+ * tener y no tiene.
+ */
+export async function moverSaldo(medio: string, delta: number): Promise<Resultado<null>> {
+  return correr<null>('moverSaldo', () =>
+    supabase.rpc('mover_saldo', { medio, delta }).then(({ error }) => ({ data: null, error })),
   );
-  if (actual.error !== null) return falla<null>(actual.error, 'sumarDisponible');
+}
 
-  const saldo = Number(actual.data?.balance_ars ?? 0) + monto;
-  return correr<null>('sumarDisponible/upsert', () =>
-    supabase.from('payment_methods')
-      .upsert({ user_id: uid, name: nombre, balance_ars: saldo, last_used_at: new Date().toISOString() }, { onConflict: 'user_id,name' })
-      .then(({ error }) => ({ data: null, error })),
-  );
+/** Suma plata disponible a un medio. */
+export function sumarDisponible(medio: string, monto: number): Promise<Resultado<null>> {
+  return moverSaldo(medio, monto);
 }
 
 // ── Gastos ───────────────────────────────────────────────────────────────
@@ -258,6 +259,7 @@ function aGasto(f: FilaGasto): Gasto {
     // es el equivalente congelado a la cotización de ese día.
     monto: moneda === 'USD' ? Number(f.original_amount ?? f.amount_ars) : Number(f.amount_ars),
     moneda,
+    montoArs: Number(f.amount_ars),
     descripcion: f.description ?? '',
     seccionId: f.section_id,
     tipo: (f.expense_type ?? 'otro') as TipoGasto,
@@ -321,10 +323,29 @@ export async function registrarGasto(g: {
   return ok(aGasto(r.data[0]));
 }
 
+/**
+ * Borra un gasto y le devuelve la plata al medio con el que se pagó.
+ *
+ * Se lee la fila antes de borrarla: el monto en pesos y el medio salen de ahí,
+ * no de lo que crea el cliente. Si sólo se borrara el gasto, el disponible
+ * quedaría descontado para siempre por algo que ya no existe.
+ */
 export async function borrarGasto(id: string): Promise<Resultado<null>> {
-  return correr<null>('borrarGasto', () =>
+  const previo = await correr<{ amount_ars: number; payment_method: string | null } | null>('borrarGasto/leer', () =>
+    supabase.from('transactions').select('amount_ars, payment_method').eq('id', id).maybeSingle(),
+  );
+
+  const borrado = await correr<null>('borrarGasto', () =>
     supabase.from('transactions').delete().eq('id', id).then(({ error }) => ({ data: null, error })),
   );
+  if (borrado.error !== null) return borrado;
+
+  const medio = previo.data?.payment_method;
+  if (medio) {
+    const saldo = await moverSaldo(medio, Number(previo.data?.amount_ars ?? 0));
+    if (saldo.error !== null) return falla<null>(saldo.error, 'borrarGasto/saldo');
+  }
+  return ok(null);
 }
 
 // ── Objetivos ────────────────────────────────────────────────────────────

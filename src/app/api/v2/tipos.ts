@@ -35,6 +35,12 @@ export type Gasto = {
   monto: number;
   /** Un gasto siempre entra al total en pesos, así que su moneda se convierte. */
   moneda: MonedaConvertible;
+  /**
+   * El equivalente en pesos, congelado a la cotización del día del gasto.
+   * En pesos es igual a `monto`. Hace falta guardarlo acá y no recalcularlo
+   * para poder devolver la plata al medio de pago si el gasto se borra.
+   */
+  montoArs: number;
   descripcion: string;
   seccionId: string | null;
   tipo: TipoGasto;
