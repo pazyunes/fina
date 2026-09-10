@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { IconChevron, IconClose, IconGastos, IconGrupo, IconObjetivos, IconSparkle } from './FinaIcons';
 import './onboarding-v2.css';
+import { estaHidratado, leerEstado } from '../../api/v2/almacen';
+import * as acciones from '../../api/v2/acciones';
 
 // REDISEÑO v2 — piezas compartidas entre el onboarding y las pantallas
 // post-onboarding.
@@ -283,23 +285,50 @@ export function slug(s: string): string {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// PUENTE ENTRE LAS PANTALLAS Y SUPABASE
+//
+// Las pantallas leen su estado de forma síncrona, así que estas funciones
+// siguen siendo síncronas: leen del almacén (la copia en memoria que se
+// hidrató al entrar) y sólo caen a localStorage cuando el almacén todavía no
+// se llenó — durante el onboarding, antes de que exista la cuenta.
+//
+// Al escribir hacen tres cosas: pintan la copia en memoria (para que la
+// interfaz responda en el mismo frame), dejan la copia en localStorage (para
+// sobrevivir un refresh con la red caída) y encolan la escritura contra
+// Supabase, que es la única verdad.
+// ─────────────────────────────────────────────────────────────────────────
+
+function leerLocal(clave: string): string | null {
+  try { return localStorage.getItem(clave); } catch { return null; }
+}
+function escribirLocal(clave: string, valor: string | null) {
+  try {
+    if (valor === null) localStorage.removeItem(clave);
+    else localStorage.setItem(clave, valor);
+  } catch { /* modo privado, cuota llena: no es crítico */ }
+}
+function leerLocalJson<T>(clave: string, porDefecto: T): T {
+  const raw = leerLocal(clave);
+  if (!raw) return porDefecto;
+  try { return JSON.parse(raw) as T; } catch { return porDefecto; }
+}
+
+// Las escrituras van por `acciones`, que pinta la copia en memoria y encola la
+// escritura contra Supabase. Durante el onboarding todavía no hay sesión: ahí
+// `acciones` no escribe nada y las respuestas viajan en la copia local, que se
+// sube entera al crear la cuenta (ver `guardarEnSupabase` en OnboardingV2).
+
 // Puente Onboarding → toda la app: el nombre es lo primero que personaliza
 // todo — saludo en Home, mensajes del bot, pantalla final. Sin esto la app
 // se siente un formulario; con esto se siente que te habla a vos.
 const LS_NOMBRE = 'fina_v2_nombre';
 export function saveV2Nombre(nombre: string) {
-  try {
-    localStorage.setItem(LS_NOMBRE, nombre);
-  } catch {
-    // no crítico
-  }
+  escribirLocal(LS_NOMBRE, nombre);
+  acciones.guardarPerfil({ nombre });
 }
 export function loadV2Nombre(): string {
-  try {
-    return localStorage.getItem(LS_NOMBRE) || '';
-  } catch {
-    return '';
-  }
+  return leerEstado().perfil.nombre || leerLocal(LS_NOMBRE) || '';
 }
 
 // PRUEBA — bandera de "Fini tiene que aterrizar en el avatar". La deja el
@@ -454,20 +483,20 @@ export function ArmarGrupoBtn() {
 // tiene backend todavía) — se guarda en localStorage de este navegador.
 const LS_CATEGORIAS = 'fina_v2_categorias_gasto';
 export function saveV2Categorias(categorias: string[]) {
-  try {
-    localStorage.setItem(LS_CATEGORIAS, JSON.stringify(categorias));
-  } catch {
-    // localStorage puede no estar disponible (modo privado, etc.) — no es crítico.
+  escribirLocal(LS_CATEGORIAS, JSON.stringify(categorias));
+  // Sólo se CREAN las que faltan. Borrar una sección se hace desde Gastos, con
+  // su propia confirmación: acá no se puede distinguir "la saqué" de "esta
+  // lista venía incompleta", y borrar por omisión se llevaría los gastos.
+  const existentes = new Set(leerEstado().secciones.map((x) => x.nombre));
+  for (const nombre of categorias) {
+    if (existentes.has(nombre)) continue;
+    acciones.crearSeccion(nombre);
   }
 }
 export function loadV2Categorias(): string[] {
-  try {
-    const raw = localStorage.getItem(LS_CATEGORIAS);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const secciones = leerEstado().secciones;
+  if (secciones.length > 0) return secciones.map((x) => x.nombre);
+  return leerLocalJson<string[]>(LS_CATEGORIAS, []).filter((x) => typeof x === 'string');
 }
 
 // Puente Onboarding → Inversiones: si contestó el mini-perfil ("¿con qué
@@ -479,20 +508,28 @@ export function loadV2Categorias(): string[] {
 export type InversionesPerfil = { porQue: string; reaccion: string; yaInvierte?: 'si' | 'no' };
 const LS_INV_PERFIL = 'fina_v2_inversiones_perfil';
 export function saveV2InversionesPerfil(p: InversionesPerfil | null) {
-  try {
-    if (!p) { localStorage.removeItem(LS_INV_PERFIL); return; }
-    localStorage.setItem(LS_INV_PERFIL, JSON.stringify(p));
-  } catch {
-    // no crítico
-  }
+  escribirLocal(LS_INV_PERFIL, p ? JSON.stringify(p) : null);
+  if (!p) return;
+  const anterior = leerEstado().perfilInversor;
+  const siguiente = {
+    porQue: p.porQue,
+    reaccion: p.reaccion,
+    yaInvierte: p.yaInvierte === undefined ? (anterior?.yaInvierte ?? null) : p.yaInvierte === 'si',
+    enQue: anterior?.enQue ?? [],
+    bancos: anterior?.bancos ?? [],
+  };
+  acciones.guardarPerfilInversor(siguiente);
 }
 export function loadV2InversionesPerfil(): InversionesPerfil | null {
-  try {
-    const raw = localStorage.getItem(LS_INV_PERFIL);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
+  const p = leerEstado().perfilInversor;
+  if (p && p.porQue && p.reaccion) {
+    return {
+      porQue: p.porQue,
+      reaccion: p.reaccion,
+      yaInvierte: p.yaInvierte === null ? undefined : p.yaInvierte ? 'si' : 'no',
+    };
   }
+  return leerLocalJson<InversionesPerfil | null>(LS_INV_PERFIL, null);
 }
 
 // Puente Onboarding → Objetivos: si dijo que ya tiene objetivos en mente y
@@ -540,37 +577,63 @@ export type PerfilOnboarding = {
 };
 const LS_PERFIL_ONB = 'fina_v2_perfil_onboarding';
 export function saveV2PerfilOnboarding(p: PerfilOnboarding) {
-  try {
-    localStorage.setItem(LS_PERFIL_ONB, JSON.stringify(p));
-  } catch {
-    // no crítico
-  }
+  escribirLocal(LS_PERFIL_ONB, JSON.stringify(p));
+  acciones.guardarPerfil({
+    zona: p.zona,
+    convivencia: p.convivencia,
+    ingresos: p.ingresos,
+    estabilidadIngresos: p.estabilidadIngresos,
+    comoConocio: p.comoConocio,
+    metaPrincipal: p.meta ?? null,
+    onboarding: {
+      margenPropio: p.margenPropio,
+      gastosFijos: p.gastosFijos,
+      categoriasRecortar: p.categoriasRecortar,
+      ahorra: p.ahorra,
+      invierte: p.invierte,
+      controlaGastos: p.controlaGastos,
+    },
+  });
 }
 export function loadV2PerfilOnboarding(): PerfilOnboarding | null {
-  try {
-    const raw = localStorage.getItem(LS_PERFIL_ONB);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
+  const perfil = leerEstado().perfil;
+  // Se reconstruye desde las columnas tipadas + el jsonb. Si nunca se guardó
+  // nada (perfil recién creado), se cae a la copia local del onboarding.
+  if (perfil.zona || perfil.ingresos.length > 0 || perfil.onboarding) {
+    const extra = (perfil.onboarding ?? {}) as Record<string, unknown>;
+    const texto = (k: string) => (typeof extra[k] === 'string' ? (extra[k] as string) : null);
+    const lista = (k: string) => (Array.isArray(extra[k]) ? (extra[k] as string[]) : []);
+    return {
+      zona: perfil.zona,
+      convivencia: perfil.convivencia,
+      ingresos: perfil.ingresos,
+      estabilidadIngresos: perfil.estabilidadIngresos,
+      margenPropio: texto('margenPropio'),
+      gastosFijos: lista('gastosFijos'),
+      categoriasRecortar: lista('categoriasRecortar'),
+      ahorra: texto('ahorra'),
+      invierte: texto('invierte'),
+      controlaGastos: texto('controlaGastos'),
+      comoConocio: perfil.comoConocio,
+      meta: perfil.metaPrincipal,
+    };
   }
+  return leerLocalJson<PerfilOnboarding | null>(LS_PERFIL_ONB, null);
 }
 
 // Aceptación de términos y condiciones — falta real en el onboarding (no
 // existía ningún paso de esto), no una idea copiada de otra app.
 const LS_TERMINOS = 'fina_v2_terminos_aceptados';
 export function saveV2TerminosAceptados(v: boolean) {
-  try {
-    localStorage.setItem(LS_TERMINOS, v ? '1' : '0');
-  } catch {
-    // no crítico
-  }
+  escribirLocal(LS_TERMINOS, v ? '1' : '0');
+  // Se guarda CUÁNDO los aceptó, no un booleano: para un consentimiento la
+  // fecha es el dato que importa si alguna vez hay que probarlo.
+  const cuando = v ? new Date().toISOString() : null;
+  acciones.guardarPerfil({ terminosAceptadosEn: cuando });
 }
 export function loadV2TerminosAceptados(): boolean {
-  try {
-    return localStorage.getItem(LS_TERMINOS) === '1';
-  } catch {
-    return false;
-  }
+  if (leerEstado().perfil.terminosAceptadosEn) return true;
+  return leerLocal(LS_TERMINOS) === '1';
 }
 
 // Nivel de conocimiento financiero — NO se pregunta en el onboarding: vive
@@ -579,18 +642,11 @@ export function loadV2TerminosAceptados(): boolean {
 // asesor pueda calibrar cómo explicar las cosas.
 const LS_NIVEL_FIN = 'fina_v2_nivel_financiero';
 export function saveV2NivelFinanciero(nivel: string) {
-  try {
-    localStorage.setItem(LS_NIVEL_FIN, nivel);
-  } catch {
-    // no crítico
-  }
+  escribirLocal(LS_NIVEL_FIN, nivel);
+  acciones.guardarPerfil({ nivelFinanciero: nivel });
 }
 export function loadV2NivelFinanciero(): string | null {
-  try {
-    return localStorage.getItem(LS_NIVEL_FIN);
-  } catch {
-    return null;
-  }
+  return leerEstado().perfil.nivelFinanciero ?? leerLocal(LS_NIVEL_FIN);
 }
 
 // Donut de progreso/distribución (conic-gradient, sin librerías de charts).
@@ -1228,10 +1284,12 @@ export const loadV2InversionesState = <T,>() => loadV2State<T>(LS_INVERSIONES_ST
 // para no pisar las categorías/gastos que administra esa pantalla.
 const LS_RESERVA = 'fina_v2_reserva';
 export function saveV2Reserva(monto: number) {
-  try { localStorage.setItem(LS_RESERVA, String(monto)); } catch { /* no crítico */ }
+  escribirLocal(LS_RESERVA, String(monto));
+  acciones.guardarPerfil({ reserva: monto });
 }
 export function loadV2Reserva(): number {
-  try { return Number(localStorage.getItem(LS_RESERVA)) || 0; } catch { return 0; }
+  if (estaHidratado()) return leerEstado().perfil.reserva;
+  return Number(leerLocal(LS_RESERVA)) || 0;
 }
 
 // Cartel "Así arrancás en FINA" de Home — se puede cerrar con la X y no

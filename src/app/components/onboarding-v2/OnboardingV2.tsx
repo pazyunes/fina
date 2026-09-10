@@ -11,11 +11,16 @@ import {
   saveV2InversionesPerfil, saveV2ObjetivosState, marcarFiniAterriza,
 } from './shared';
 import { IconChat, IconChevron, IconBasura } from './FinaIcons';
+import { useAuth } from '../../lib/auth';
+import { formatearTelefonoAr, telefonoE164, telefonoValidoAr } from '../../lib/telefono';
+import { crearObjetivo, crearSeccion, guardarPerfil, guardarPerfilInversor } from '../../api/v2';
+import { esperarCola } from '../../api/v2/almacen';
 
-// REDISEÑO — Onboarding v2 (rama dev)
+// Onboarding v2 — el flujo de entrada real.
 //
-// Sandbox aislado — el estado es 100% local (localStorage), no hay backend
-// todavía. TONO: ninguna pregunta pide un monto ni una cifra exacta — todo
+// Al final de este flujo se CREA la cuenta en Supabase y se guardan las
+// respuestas contra la base. localStorage sigue existiendo, pero como copia de
+// trabajo de la sesión, no como el único lugar donde vive el dato. TONO: ninguna pregunta pide un monto ni una cifra exacta — todo
 // se pregunta como quien cuenta su situación. "Otro" siempre es una opción
 // más (con su propio estilo de "caja para escribir", no un chip igual a
 // los demás) y lo que se escribe ahí se guarda de verdad.
@@ -38,7 +43,14 @@ type Situacion = SituacionId | null;
 type ObjetivoId = 'invertir' | 'ahorrar' | 'objetivo' | 'no_claro';
 type ComoVieneId = 'justo' | 'sobra' | 'no_llega' | 'hago_lo_que_quiero' | 'no_lo_tengo_en_cuenta' | 'prefiero_no_decir' | 'otro';
 type Nivel = 'nada' | 'poco' | 'bastante' | 'todo';
-type PasoLogin = 'datos' | 'verificar';
+// 'datos' → escribe mail/contraseña/teléfono · 'confirmar' → Supabase pidió
+// confirmar el mail antes de dar sesión.
+//
+// NO hay paso de "verificar el teléfono": mandar SMS todavía no está armado, y
+// una pantalla que acepta cualquier código de 4 dígitos no verifica nada — sólo
+// le hace creer a la persona que su teléfono quedó validado. El teléfono se
+// pide igual porque el bot lo necesita, pero se guarda como declarado.
+type PasoLogin = 'datos' | 'confirmar';
 
 // DIRECCIÓN C — una pregunta por pantalla. `generoEdad` se partió en `genero` +
 // `edad` y `perfilInversor` en `invReaccion` + `invYaInvierte`: eran las dos
@@ -255,15 +267,34 @@ function MultiOtroChips({ opciones, seleccion, toggle, otro }: { opciones: Opcio
   );
 }
 
+// Los mensajes de Supabase vienen en inglés y en jerga ("User already
+// registered"). Los que se pueden anticipar se traducen a algo accionable; el
+// resto se muestra tal cual, porque un mensaje raro es más útil que un
+// "algo salió mal" que no dice nada.
+function traducirErrorAuth(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes('already registered') || m.includes('already been registered')) {
+    return 'Ya hay una cuenta con ese mail. Podés iniciar sesión.';
+  }
+  if (m.includes('duplicate') && m.includes('phone')) {
+    return 'Ese teléfono ya está usado por otra cuenta.';
+  }
+  if (m.includes('invalid email')) return 'Ese mail no parece válido.';
+  if (m.includes('password')) return 'La contraseña no cumple los requisitos.';
+  if (m.includes('rate limit') || m.includes('too many')) {
+    return 'Demasiados intentos seguidos. Esperá un minuto y probá de nuevo.';
+  }
+  if (m.includes('failed to fetch') || m.includes('network')) {
+    return 'No pudimos conectarnos. Fijate la conexión y probá otra vez.';
+  }
+  return msg;
+}
+
 function emailValido(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
 function passwordValida(v: string) { return v.length >= 8 && /[A-Z]/.test(v) && /[0-9]/.test(v) && /[^A-Za-z0-9]/.test(v); }
-function telefonoValido(v: string) { return v.replace(/\D/g, '').length >= 8; }
-function formatearTelefonoAr(v: string): string {
-  const d = v.replace(/\D/g, '').slice(0, 10);
-  if (d.length <= 2) return d;
-  if (d.length <= 6) return `${d.slice(0, 2)} ${d.slice(2)}`;
-  return `${d.slice(0, 2)} ${d.slice(2, 6)}-${d.slice(6)}`;
-}
+// El teléfono se normaliza y valida en src/app/lib/telefono.ts, que es el mismo
+// archivo que usa el login viejo. Tiene que ser UNA sola regla: es la llave con
+// la que el bot de WhatsApp encuentra a la persona.
 
 function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
@@ -277,6 +308,7 @@ function Campo({ label, error, children }: { label: string; error?: string; chil
 
 export function OnboardingV2() {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [nombre, setNombre] = useState('');
   const [genero, setGenero] = useState<Genero>(null);
@@ -333,7 +365,8 @@ export function OnboardingV2() {
   const [telefono, setTelefono] = useState('');
   const [pasoLogin, setPasoLogin] = useState<PasoLogin>('datos');
   const [intentoLogin, setIntentoLogin] = useState(false);
-  const [codigoVerif, setCodigoVerif] = useState('');
+  const [creando, setCreando] = useState(false);
+  const [errorAuth, setErrorAuth] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
 
   const flow = useMemo<StepKey[]>(() => {
@@ -374,7 +407,7 @@ export function OnboardingV2() {
   const categoriasElegidas = [...categoriasGasto, ...categoriasOtro.custom];
   const sufijoGenero = genero === 'masculino' ? 'os' : genero === 'femenino' ? 'as' : '@s';
 
-  const telefonoOk = telefonoValido(telefono);
+  const telefonoOk = telefonoValidoAr(telefono);
   const emailOk = emailValido(email);
   const passwordOk = passwordValida(password);
 
@@ -389,10 +422,7 @@ export function OnboardingV2() {
     if (key === 'objetivoInversion') return !!invPorQue;
     if (key === 'definirObjetivo') return objNombre.trim().length > 0 && parseMoneyInput(objMonto) > 0;
     if (key === 'terminos') return aceptoTerminos;
-    if (key === 'login') {
-      if (pasoLogin === 'datos') return emailOk && passwordOk && telefonoOk;
-      return codigoVerif.trim().length >= 4;
-    }
+    if (key === 'login') return emailOk && passwordOk && telefonoOk;
     return true;
   }
 
@@ -401,6 +431,85 @@ export function OnboardingV2() {
     return valor;
   }
 
+  // Las respuestas que la app lee en bloque y nunca filtra. Van a
+  // user_profiles.onboarding_v2 (jsonb) — ver la migración 0024.
+  function armarOnboarding() {
+    return {
+      situacion,
+      gastosFijos: [...gastosFijos, ...gastosFijosOtro.custom],
+      categoriasRecortar: recortarNinguna ? [] : categoriasRecortarSel,
+      asignacion,
+      tedioso,
+      comoViene,
+      comoVieneOtro: comoVieneOtroTxt.trim() || null,
+      categoriasGasto: categoriasElegidas,
+    };
+  }
+
+  // Sube TODO lo que se contestó a Supabase. Corre después de crear la cuenta,
+  // porque hasta que no hay sesión no hay `auth.uid()` y ninguna policy deja
+  // escribir. Devuelve el primer error que aparezca: si el perfil no se
+  // guardó, la persona tiene que enterarse antes de entrar a una app que va a
+  // mostrarle su nombre en blanco.
+  async function guardarEnSupabase(): Promise<string | null> {
+    const perfil = await guardarPerfil({
+      nombre: nombre.trim(),
+      genero: genero,
+      generoOtro: genero === 'otro' ? (generoOtroTxt.trim() || null) : null,
+      rangoEdad: edad,
+      zona,
+      convivencia: [...convivencia, ...convivenciaOtro.custom],
+      ingresos: [...ingresos, ...ingresosOtro.custom],
+      estabilidadIngresos: resuelto(estabilidadIngresos, estabilidadOtroTxt),
+      metaPrincipal: meta,
+      comoConocio: resuelto(comoConocio, comoConocioOtroTxt),
+      telefono: telefonoE164(telefono) || null,
+      terminosAceptadosEn: aceptoTerminos ? new Date().toISOString() : null,
+      onboarding: armarOnboarding(),
+    });
+    if (perfil.error) return perfil.error;
+
+    // Las secciones de gasto que eligió se crean como filas: son las que le van
+    // a aparecer en Gastos sin que tenga que escribirlas de nuevo.
+    for (const nombreSeccion of categoriasElegidas) {
+      const r = await crearSeccion(nombreSeccion);
+      if (r.error) return r.error;
+    }
+
+    if (meta === 'invertir' && invReaccion && invPorQue) {
+      const r = await guardarPerfilInversor({
+        porQue: invPorQue,
+        reaccion: invReaccion,
+        yaInvierte: invYaInvierte === null ? null : invYaInvierte === 'si',
+        enQue: [],
+        bancos: [],
+      });
+      if (r.error) return r.error;
+    }
+
+    if (meta === 'objetivo' && objNombre.trim() && parseMoneyInput(objMonto) > 0) {
+      const r = await crearObjetivo({
+        nombre: objNombre.trim(),
+        tipo: 'individual',
+        moneda: objMoneda,
+        horizonte: horizonteDelObjetivo(),
+        montoTotal: parseMoneyInput(objMonto),
+      });
+      if (r.error) return r.error;
+    }
+
+    await esperarCola();
+    return null;
+  }
+
+  function horizonteDelObjetivo(): string {
+    return objFecha
+      ? new Date(objFecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'Lo antes posible';
+  }
+
+  // Copia local. Es lo que hace que Home/Gastos pinten al instante al terminar
+  // el onboarding, sin esperar la primera lectura contra la base.
   function guardarTodo() {
     saveV2Nombre(nombre.trim());
     saveV2Categorias(categoriasElegidas);
@@ -428,9 +537,7 @@ export function OnboardingV2() {
 
     // Rama "Objetivo puntual" → creamos el objetivo ya cargado en Objetivos.
     if (meta === 'objetivo' && objNombre.trim() && parseMoneyInput(objMonto) > 0) {
-      const horizonte = objFecha
-        ? new Date(objFecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
-        : 'Lo antes posible';
+      const horizonte = horizonteDelObjetivo();
       saveV2ObjetivosState([{
         id: `onb-${Date.now()}`,
         nombre: objNombre.trim(),
@@ -476,14 +583,45 @@ export function OnboardingV2() {
     (currentKey === 'comoConocio' && comoConocio === 'otro');
   const pideCta = !AUTO_AVANCE.includes(currentKey) || esperandoOtro;
 
+  // Crea la cuenta de verdad y sube las respuestas. Antes esta pantalla no
+  // creaba nada: aceptaba cualquier código y seguía. Ahora, si Supabase
+  // rechaza el mail o el teléfono, la persona se queda acá y ve por qué.
+  async function crearCuenta() {
+    if (creando) return;
+    setCreando(true);
+    setErrorAuth(null);
+
+    const { error, needsConfirmation } = await signUp(email.trim(), password, telefonoE164(telefono));
+    if (error) {
+      setErrorAuth(traducirErrorAuth(error));
+      setCreando(false);
+      return;
+    }
+
+    // Sin sesión todavía: Supabase pide confirmar el mail. Las respuestas no se
+    // pueden subir ahora (no hay auth.uid()), así que quedan en la copia local
+    // y se suben cuando entre. Se le dice, no se le esconde.
+    if (needsConfirmation) {
+      guardarTodo();
+      setPasoLogin('confirmar');
+      setCreando(false);
+      return;
+    }
+
+    guardarTodo();
+    const errorGuardado = await guardarEnSupabase();
+    setCreando(false);
+    if (errorGuardado) { setErrorAuth(`Tu cuenta se creó, pero no pudimos guardar tus respuestas: ${errorGuardado}`); return; }
+    setFinished(true);
+  }
+
   function onNext() {
     if (currentKey === 'login') {
       if (finished) { marcarFiniAterriza(); navigate('/onboarding-v2/home'); return; }
+      if (pasoLogin === 'confirmar') { navigate('/login'); return; }
       setIntentoLogin(true);
       if (!stepValid('login')) return;
-      if (pasoLogin === 'datos') { setPasoLogin('verificar'); setIntentoLogin(false); return; }
-      guardarTodo();
-      setFinished(true);
+      void crearCuenta();
       return;
     }
     if (!stepValid(currentKey)) return;
@@ -506,7 +644,7 @@ export function OnboardingV2() {
   const ctaLabel = finished
     ? 'Ir a mi FINA'
     : currentKey === 'login'
-      ? (pasoLogin === 'datos' ? 'Continuar' : 'Verificar y empezar')
+      ? (creando ? 'Creando tu cuenta…' : pasoLogin === 'confirmar' ? 'Ir a iniciar sesión' : 'Crear mi cuenta')
       : CTA_LABELS[currentKey];
 
   // La pantalla intermedia se arma según lo que eligió — mostramos primero
@@ -857,7 +995,7 @@ export function OnboardingV2() {
                       <input
                         className={`flex-1 ${inputClass}`}
                         style={inputStyle(intentoLogin && !telefonoOk)}
-                        placeholder="9 11 1234-5678"
+                        placeholder="11 1234-5678"
                         inputMode="numeric"
                         value={telefono}
                         onChange={(e) => setTelefono(formatearTelefonoAr(e.target.value))}
@@ -865,15 +1003,19 @@ export function OnboardingV2() {
                       />
                     </div>
                   </Campo>
+                  <p className="text-[14px]" style={{ color: COLORS.inkFaint }}>
+                    Te lo pedimos para que puedas registrar gastos por WhatsApp. Todavía no lo verificamos con un SMS.
+                  </p>
+                  {errorAuth && (
+                    <p role="alert" className="text-[15px] font-semibold" style={{ color: COLORS.coralDark }}>{errorAuth}</p>
+                  )}
                 </>
               )}
 
-              {currentKey === 'login' && !finished && pasoLogin === 'verificar' && (
+              {currentKey === 'login' && !finished && pasoLogin === 'confirmar' && (
                 <>
-                  <Titulo>Verificá tu teléfono</Titulo>
-                  <Apoyo>Te mandamos un código a +54 {telefono || 'tu teléfono'}.</Apoyo>
-                  <input aria-label="Código de verificación" className={inputClass} style={inputStyle()} placeholder="Código" inputMode="numeric" value={codigoVerif} onChange={(e) => setCodigoVerif(e.target.value)} />
-                  <p className="text-[14px]" style={{ color: COLORS.inkFaint }}>Modo de prueba: todavía no mandamos SMS de verdad — escribí cualquier código de 4 a 6 dígitos.</p>
+                  <Titulo>Confirmá tu mail</Titulo>
+                  <Apoyo>Te mandamos un mail a {email.trim()}. Tocá el link y volvé a entrar: tus respuestas ya quedaron guardadas.</Apoyo>
                 </>
               )}
 
@@ -893,7 +1035,7 @@ export function OnboardingV2() {
         {(pideCta || (!finished && SKIPPABLE.includes(currentKey))) && (
           <div className="px-6 pt-3 pb-6 flex flex-col gap-2.5 w-full lg:max-w-xl lg:mx-auto lg:pb-10">
             {pideCta && (
-              <Cta label={ctaLabel} disabled={!finished && currentKey !== 'login' && !stepValid(currentKey)} onClick={onNext} />
+              <Cta label={ctaLabel} disabled={creando || (!finished && currentKey !== 'login' && !stepValid(currentKey))} onClick={onNext} />
             )}
             {!finished && SKIPPABLE.includes(currentKey) && (
               <BotonFantasma label="Saltar por ahora" onClick={onSkip} />

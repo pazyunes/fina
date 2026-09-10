@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
 import { BottomNavV2 } from './BottomNavV2';
 import { SidebarV2 } from './SidebarV2';
-import { COLOR_VARS, COLORS, FONT_VARS } from './shared';
+import { COLOR_VARS, COLORS, FONT_VARS, Cta, Titulo, Apoyo } from './shared';
+import { Fini } from './Fini';
+import { useAuth } from '../../lib/auth';
+import { AlmacenProvider, useAlmacen } from '../../api/v2/AlmacenProvider';
 
 // REDISEÑO v2 — layout compartido por Home/Gastos/Objetivos/Inversiones.
 // RESPONSIVE:
@@ -11,6 +14,51 @@ import { COLOR_VARS, COLORS, FONT_VARS } from './shared';
 //     flotante del chat.
 //   - Desktop (lg+): menú LATERAL (SidebarV2) a la izquierda + contenido ancho
 //     centrado. Se deja atrás el "marco de teléfono". El menú de abajo se oculta.
+// Puerta de entrada a las pantallas de adentro.
+//
+// Sin sesión no hay nada que mostrar: las policies de Supabase no devuelven ni
+// una fila sin `auth.uid()`. Antes estas pantallas se podían abrir sueltas
+// porque el estado era todo local; ahora, sin cuenta, lo único honesto es
+// mandar a hacer el onboarding.
+function Puerta({ children }: { children: React.ReactNode }) {
+  const { session, loading } = useAuth();
+  const { listo, error, recargar } = useAlmacen();
+
+  // Mientras se resuelve la sesión no se decide nada: si redirigiéramos acá,
+  // recargar la página con sesión válida te echaría al onboarding.
+  if (loading) return <Cargando />;
+  if (!session) return <Navigate to="/onboarding-v2" replace />;
+
+  if (error !== null) {
+    return (
+      <div className="min-h-full grid place-items-center px-6 py-16">
+        <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+          <Fini state="error" size={130} />
+          <Titulo>No pudimos traer tus datos</Titulo>
+          <Apoyo>{error}</Apoyo>
+          <div className="w-full pt-2"><Cta label="Probar de nuevo" onClick={() => void recargar()} /></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!listo) return <Cargando />;
+  return <>{children}</>;
+}
+
+// Fini esperando en vez de un spinner: es el único momento de la app donde hay
+// que esperar sin poder hacer nada, y el personaje ya existe para eso.
+function Cargando() {
+  return (
+    <div className="min-h-full grid place-items-center px-6 py-16">
+      <div className="flex flex-col items-center gap-3">
+        <Fini state="pensando" size={120} />
+        <p className="text-[16px]" style={{ color: COLORS.inkSoft }}>Trayendo tus datos…</p>
+      </div>
+    </div>
+  );
+}
+
 export function V2Layout() {
   const { pathname } = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -23,6 +71,7 @@ export function V2Layout() {
   }, [pathname]);
 
   return (
+    <AlmacenProvider>
     <div
       className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col lg:flex-row overflow-hidden"
       style={{ background: COLORS.paper, ...FONT_VARS, ...COLOR_VARS }}
@@ -38,7 +87,7 @@ export function V2Layout() {
             que el contenido necesita ese despeje extra o la última fila queda
             tapada por el círculo. */}
         <div className="mx-auto w-full lg:max-w-[1120px] pb-16 lg:pb-12">
-          <Outlet />
+          <Puerta><Outlet /></Puerta>
         </div>
       </div>
 
@@ -47,5 +96,6 @@ export function V2Layout() {
         <BottomNavV2 />
       </div>
     </div>
+    </AlmacenProvider>
   );
 }
