@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Fini } from './Fini';
+import { Fini, type FiniState } from './Fini';
+import { FiniDice, FiniPresenta } from './FiniDice';
+import { PantallazoFeature } from './PantallazoFeature';
 import { useNavigate } from 'react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   COLORS, DeviceFrame, CheckIcon, Chip, OtroChip, Nota, Cta,
   Titulo, Apoyo, Contador, OpcionesGrid, OpcionesLista, OpcionesMulti, BotonFantasma, LinkLegal,
+  TituloSeccion,
   formatThousands, parseMoneyInput,
   saveV2Categorias, saveV2Nombre,
   saveV2PerfilOnboarding, saveV2TerminosAceptados,
@@ -62,6 +65,37 @@ type StepKey =
   | 'ingresos' | 'estabilidadIngresos' | 'tedioso'
   | 'invReaccion' | 'invYaInvierte' | 'objetivoInversion' | 'definirObjetivo'
   | 'intermedia' | 'comoConocio' | 'terminos' | 'login';
+
+// Qué dice Fini en cada pantalla, y con qué cara.
+//
+// Es la línea de apoyo de cada paso, movida al globo del personaje. Las que ya
+// existían se conservan tal cual; las que faltaban se escribieron para que
+// ninguna pantalla del flujo quede sin acompañamiento — pedido explícito:
+// "que aparezca más veces el personaje, que sea más principal".
+//
+// `null` = esa pantalla no lleva a Fini en la franja de arriba, porque el
+// personaje ya es el protagonista adentro (la bienvenida y la llegada) o
+// porque el propio contenido ya es un cartel que habla (la intermedia).
+const FINI_DICE: Record<StepKey, { dice: string; estado: FiniState } | null> = {
+  intro: null,
+  nombre: { dice: 'Así te vamos a hablar de acá en adelante.', estado: 'saludo' },
+  genero: { dice: 'Elegí la que mejor te represente hoy — después vas a poder hacer todo lo demás igual.', estado: 'idle' },
+  edad: { dice: 'Nos sirve para comparar tu situación con la de gente parecida a vos.', estado: 'idle' },
+  objetivo: { dice: 'Con esto armamos por dónde arrancar. Después podés cambiarlo cuando quieras.', estado: 'pensando' },
+  situacion: { dice: 'No hace falta que sea exacto — con que sea parecido a tu realidad alcanza.', estado: 'idle' },
+  zona: { dice: 'Los precios y las opciones para invertir cambian según dónde estés.', estado: 'idle' },
+  ingresos: { dice: 'Podés marcar más de una. Muchos no tenemos una sola fuente.', estado: 'idle' },
+  estabilidadIngresos: { dice: 'Con esto afinamos qué opciones tienen más sentido para vos.', estado: 'idle' },
+  tedioso: { dice: 'Contame la verdad — si te da fiaca, hay una forma de hacerlo sin abrir la app.', estado: 'idle' },
+  invReaccion: { dice: 'No hay respuesta correcta. Sirve para saber cuánto vaivén te resulta cómodo.', estado: 'pensando' },
+  invYaInvierte: { dice: 'Si todavía no, no importa: la mayoría arranca justo acá.', estado: 'idle' },
+  objetivoInversion: { dice: 'Nunca movemos tu plata — esto es solo para recomendarte según vos.', estado: 'idle' },
+  definirObjetivo: { dice: 'Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.', estado: 'progreso' },
+  intermedia: null,
+  comoConocio: { dice: 'Última, prometido. Nos ayuda a saber dónde contarle a más gente.', estado: 'idle' },
+  terminos: { dice: 'Tus datos son privados — solo se usan para darte recomendaciones a vos. Nunca los compartimos ni los vendemos.', estado: 'idle' },
+  login: { dice: 'Todos los meses vas a poder ver cómo venís.', estado: 'idle' },
+};
 
 const CTA_LABELS: Record<StepKey, string> = {
   intro: 'Empezar',
@@ -642,6 +676,10 @@ export function OnboardingV2() {
 
   const showTop = currentIdx > 0 && currentKey !== 'login';
 
+  // Lo que dice Fini en esta pantalla. En la de llegada no va: ahí el
+  // personaje está adentro, grande y centrado.
+  const finiDice = FINI_DICE[currentKey];
+
   // Una sola barra continua, no cuatro segmentos por sección. Los segmentos
   // decían en qué bloque estabas pero nunca cuánto faltaba en total; el
   // contador de arriba ya dice el bloque, así que la barra puede decir el resto.
@@ -702,6 +740,17 @@ export function OnboardingV2() {
           </header>
         )}
 
+        {/* Fini, en su propia franja FUERA del área que scrollea.
+            Antes era el primer elemento del bloque de contenido, así que en una
+            pantalla con varias opciones quedaba arriba del scroll y había que
+            subir para verlo. Un acompañante al que hay que ir a buscar no
+            acompaña. */}
+        {finiDice && !finished && (
+          <div className="shrink-0 px-6 pt-3 pb-1 w-full lg:max-w-xl lg:mx-auto">
+            <FiniDice dice={finiDice.dice} state={finiDice.estado} />
+          </div>
+        )}
+
         {/* DISTRIBUCIÓN — el arreglo del vacío del 60%.
             El contenido estaba pegado arriba y el CTA al fondo, así que en una
             pantalla con cuatro opciones quedaba medio celular vacío en el medio.
@@ -721,7 +770,7 @@ export function OnboardingV2() {
             >
               {currentKey === 'intro' && (
                 <>
-                  <div className="flex justify-center pb-1"><Fini state="saludo" size={132} /></div>
+                  <FiniPresenta dice="¡Hola! Soy Fini y te voy a acompañar." state="saludo" size={132} />
                   <Titulo>
                     Llegó tu momento de cambiar la historia de tus finanzas
                   </Titulo>
@@ -758,7 +807,6 @@ export function OnboardingV2() {
               {currentKey === 'nombre' && (
                 <>
                   <Titulo>¿Cómo te llamamos?</Titulo>
-                  <Apoyo>Así te vamos a hablar de acá en adelante.</Apoyo>
                   <input
                     autoFocus
                     aria-label="Tu nombre"
@@ -800,9 +848,7 @@ export function OnboardingV2() {
               {currentKey === 'objetivo' && (
                 <>
                   <Titulo>¿Qué es lo que más querés lograr con tu plata?</Titulo>
-                  <Apoyo>Elegí la que mejor te represente hoy — después vas a poder hacer todo lo demás igual.</Apoyo>
                   <OpcionesLista opciones={OBJETIVOS} valor={meta} onElegir={setMeta} />
-                  <div className="flex justify-center py-1"><Fini state="idle" size={104} /></div>
                   {meta && (
                     <div className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[15px] font-semibold" style={{ color: COLORS.ink, background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
                       {objetivoBubble}
@@ -885,7 +931,6 @@ export function OnboardingV2() {
               {currentKey === 'invReaccion' && (
                 <>
                   <Titulo>Estás en una inversión que sube y baja, pero promete crecer a 5 años. ¿Qué hacés?</Titulo>
-                  <Apoyo>Nunca movemos tu plata — esto es solo para recomendarte según vos.</Apoyo>
                   <OpcionesLista
                     opciones={REACCIONES_INVERSION}
                     valor={invReaccion}
@@ -908,7 +953,6 @@ export function OnboardingV2() {
               {currentKey === 'objetivoInversion' && (
                 <>
                   <Titulo>¿Con qué objetivo querés invertir esa plata?</Titulo>
-                  <Apoyo>Con esto afinamos qué opciones tienen más sentido para vos.</Apoyo>
                   <OpcionesLista
                     opciones={PLAZOS_INVERSION}
                     valor={invPorQue}
@@ -920,7 +964,6 @@ export function OnboardingV2() {
               {currentKey === 'definirObjetivo' && (
                 <>
                   <Titulo>¿Cuál es ese objetivo?</Titulo>
-                  <Apoyo>Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.</Apoyo>
                   <input autoFocus aria-label="Nombre de tu objetivo" className={inputClass} style={inputStyle()} placeholder="Ej: Viaje a Bariloche" value={objNombre} onChange={(e) => setObjNombre(e.target.value)} />
                   <div className="flex items-center justify-between">
                     <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
@@ -939,21 +982,35 @@ export function OnboardingV2() {
                 </>
               )}
 
+              {/* MITAD DEL FLUJO — el punto donde hay que dar una razón para
+                  seguir contestando. Antes eran tres tarjetas con un título y
+                  una frase cada una: contaban las features en vez de
+                  mostrarlas, y encima las tres a la vez, así que ninguna
+                  pesaba.
+
+                  Ahora se muestra UNA: la de lo que la persona dijo que quiere
+                  lograr, con datos de ejemplo, para que vea de qué se trata
+                  antes de tener datos propios. Las otras dos siguen listadas
+                  abajo, chicas, para que se sepa que están. */}
               {currentKey === 'intermedia' && (
                 <>
-                  <div className="flex justify-center pb-1"><Fini state="insight" size={120} /></div>
+                  <FiniDice
+                    dice={meta === 'invertir' ? 'Mirá lo que vas a poder simular con tu perfil.' : meta === 'ahorrar' ? 'Mirá cómo se va a ir viendo tu reserva.' : meta === 'objetivo' ? 'Así lo vas a ver cada vez que entres.' : 'Mirá lo que FINA va a armar con lo que registres.'}
+                    state="insight"
+                  />
                   <Titulo>{meta === 'invertir' ? 'Tu plata, lista para crecer' : meta === 'ahorrar' ? 'Tu ahorro, siempre a la vista' : meta === 'objetivo' ? '¡Tu objetivo ya está en marcha!' : 'Así se va a ir viendo tu FINA'}</Titulo>
-                  <Apoyo>{meta === 'invertir' ? 'Con tu perfil listo, esto es lo que te espera adentro.' : meta === 'ahorrar' ? 'Esto es lo que vas a poder hacer para que te sobre cada vez más.' : meta === 'objetivo' ? 'Lo vas a ver con su progreso, y todo esto además.' : 'Todo lo que FINA va a hacer por vos.'}</Apoyo>
-                  <div className="flex flex-col gap-3">
-                    {previewsOrdenados.map((p) => (
-                      <div key={p.titulo} className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: p.bg }}>
-                        <div>
-                          <p className="font-bold text-[16px]" style={{ color: COLORS.ink }}>{p.titulo}</p>
-                          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{p.desc}</p>
-                        </div>
+                  <PantallazoFeature meta={meta} nombreObjetivo={objNombre} />
+                  <Nota>Los números son de ejemplo. Los tuyos aparecen cuando empieces a registrar.</Nota>
+
+                  <div className="flex flex-col gap-2 pt-1">
+                    <TituloSeccion>Y además</TituloSeccion>
+                    {previewsOrdenados.slice(1).map((p) => (
+                      <div key={p.titulo} className="flex items-baseline gap-2">
+                        <span className="font-bold text-[15px] shrink-0" style={{ color: COLORS.ink }}>{p.titulo}:</span>
+                        <span className="text-[15px]" style={{ color: COLORS.inkSoft }}>{p.desc}</span>
                       </div>
                     ))}
-                    <div className="rounded-2xl p-4 flex items-center gap-3.5" style={{ background: COLORS.lima }}>
+                    <div className="rounded-2xl p-4 flex items-center gap-3.5 mt-1" style={{ background: COLORS.lima }}>
                       <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}><IconChat size={24} /></span>
                       <div>
                         <p className="font-bold text-[16px]" style={{ color: COLORS.ink }}>Tu bot de WhatsApp</p>
@@ -979,7 +1036,6 @@ export function OnboardingV2() {
               {currentKey === 'terminos' && (
                 <>
                   <Titulo>Antes de seguir</Titulo>
-                  <Apoyo>Tus datos son privados — solo se usan para darte recomendaciones a vos. Nunca los compartimos ni los vendemos.</Apoyo>
                   <button
                     type="button"
                     role="checkbox"
@@ -1004,7 +1060,6 @@ export function OnboardingV2() {
               {currentKey === 'login' && !finished && pasoLogin === 'datos' && (
                 <>
                   <Titulo>Guardá tu progreso</Titulo>
-                  <Apoyo>Todos los meses vas a poder ver cómo venís.</Apoyo>
                   <Campo label="Mail" error={intentoLogin && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Campo obligatorio') : undefined}>
                     <input className={inputClass} style={inputStyle(intentoLogin && !emailOk)} placeholder="vos@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
                   </Campo>

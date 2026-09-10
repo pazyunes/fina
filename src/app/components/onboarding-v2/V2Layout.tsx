@@ -94,9 +94,31 @@ function Cargando() {
   );
 }
 
+// Franja de color arriba de cada pantalla.
+//
+// Los colores NO son decorativos: cada uno es el que la paleta ya le asigna a
+// esa sección (ver COLORS en shared.tsx). Gastos va en el neutro cálido a
+// propósito — la guía pide que los gastos se muestren neutrales, y pintarlos de
+// un color sería empezar a opinar sobre ellos desde el fondo de la pantalla.
+//
+// Es la variante Soft de cada color, no el pleno: arriba de la franja va el
+// título en tinta, y sobre un relleno pleno no llegaría al contraste.
+const FRANJA: { ruta: string; color: string }[] = [
+  { ruta: '/onboarding-v2/home', color: COLORS.brandSoft },     // violeta — la identidad
+  { ruta: '/onboarding-v2/gastos', color: COLORS.tint },        // neutro cálido — un gasto no es un error
+  { ruta: '/onboarding-v2/objetivos', color: COLORS.limaSoft }, // lima — valor, algo que avanza
+  { ruta: '/onboarding-v2/inversiones', color: COLORS.skySoft }, // estructural — plata seria, sin ruido
+  { ruta: '/onboarding-v2/perfil', color: COLORS.starSoft },    // star — vos
+  { ruta: '/onboarding-v2/grupos', color: COLORS.starSoft },    // star — tu gente
+];
+
+const ALTO_FRANJA = 132;
+
 export function V2Layout() {
   const { pathname } = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const franja = FRANJA.find((f) => pathname.startsWith(f.ruta))?.color ?? COLORS.paper;
 
   // Al cambiar de pantalla, volver SIEMPRE al principio. El scroll vive en
   // este contenedor (no en window), así que hay que resetearlo a mano — si no,
@@ -117,7 +139,16 @@ export function V2Layout() {
       {/* Contenido — lienzo ancho en desktop. Cada pantalla decide su propio
           layout adentro (Home usa varias columnas; las demás se centran en una
           columna legible con lg:max-w-2xl lg:mx-auto en su propio contenedor). */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
+      {/* La franja va como fondo del contenedor que scrollea y no como un
+          bloque aparte: así ninguna pantalla tiene que saber que existe, y
+          entra sin tocar el markup de las seis. Se va con el scroll, que es lo
+          que corresponde — una barra de color pegada arriba se come 130px de
+          alto en un celular y no dice nada nuevo. */}
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 overflow-y-auto"
+        style={{ background: `linear-gradient(to bottom, ${franja} 0, ${franja} ${ALTO_FRANJA}px, ${COLORS.paper} ${ALTO_FRANJA}px)` }}
+      >
         <AvisoGuardado />
         {/* El botón de chat sobresale 20px por encima de la barra (-mt-5), así
             que el contenido necesita ese despeje extra o la última fila queda
