@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router';
 import { useAuth } from '../lib/auth';
 import { Splash } from './Splash';
+import { APP_CERRADA } from '../mantenimiento';
 
 // Entry-point en `/`. Reglas:
 //   - Sin sesión → muestra Splash (FINA + 2 CTAs).
@@ -11,6 +12,14 @@ import { Splash } from './Splash';
 // un loading silencioso para evitar el flash de Splash a usuarios logueados.
 export function RootRedirect() {
   const { session, loading, hasReport } = useAuth();
+
+  // Mientras la app está CERRADA (ver mantenimiento.ts), quien entra con la
+  // llave va al flujo nuevo. Antes caía en el Splash del flujo viejo, que es
+  // lo que sigue viviendo en `/`: el rediseño todavía no reemplazó a la app
+  // real, es una ruta aparte. Sin esto, entrar por /?ver=fina mostraba la
+  // pantalla vieja y había que saberse /onboarding-v2 de memoria.
+  // El flujo viejo sigue alcanzable escribiendo /login, /result, etc.
+  if (APP_CERRADA) return <Navigate to="/onboarding-v2" replace />;
 
   // Loading inicial de la sesión.
   if (loading) return <CenteredLoading />;
