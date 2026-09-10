@@ -1,33 +1,33 @@
 # Adaptar el bot de WhatsApp al flujo v2
 
-**Fecha:** 2026-09-10
-**Estado del flujo v2:** rediseñado y funcionando, **sin backend**.
-**Para quién:** quien tenga que tocar el bot, y quien tenga que escribir las
-migraciones que hoy no existen.
+**Fecha:** 2026-09-10 (actualizado cuando la app quedó cableada)
+**Estado del flujo v2:** conectado a Supabase. El onboarding crea la cuenta de
+verdad y las siete pantallas leen y escriben en las tablas.
+**Para quién:** quien tenga que tocar el bot.
 
 ---
 
 ## Lo primero, porque cambia todo lo demás
 
-**El flujo v2 no guarda nada en Supabase.** Todo vive en el `localStorage` del
-navegador de cada persona. Verificado: los archivos de
-`src/app/components/onboarding-v2/` tienen **cero** referencias a `supabase`, a
-`api/` y a `lib/auth` — 38 usos de `localStorage` y nada más.
+**El flujo v2 ya escribe en Supabase.** Dejó de vivir en el `localStorage` del
+navegador: ahora hay usuarias reales en `auth.users`, con su fila en
+`user_profiles` y su teléfono cargado.
 
-Consecuencias directas:
+Lo que eso habilita: **el bot y la app escriben en el MISMO lugar.** Un gasto
+que la persona carga por WhatsApp aparece en la app, y uno que carga en la app
+lo ve el bot. Eso era imposible antes.
 
-- **No hay migraciones nuevas que correr.** `main` y `dev` tienen exactamente
-  las mismas 19 migraciones. El rediseño no agregó ni una tabla ni una columna.
-- **El bot todavía no puede leer ni escribir nada del flujo v2.** No hay dónde.
-  Un gasto registrado en la app v2 vive en el celular de esa persona y el bot no
-  lo ve; un gasto que el bot registre no aparece en la app v2.
-- **La app real sigue intacta.** El onboarding viejo (`/personal-data`,
-  `/activity`, …) sigue escribiendo en `reports.user_data` y en las tablas
-  normalizadas, como siempre. El bot que existe hoy sigue funcionando contra eso.
+Lo que hace falta para que funcione:
 
-O sea: **el trabajo de backend del flujo v2 está entero por hacer.** Este
-documento existe para que ese trabajo y el del bot se diseñen juntos, en vez de
-descubrir el desfasaje después.
+1. **Correr las migraciones 0020 a 0024.** Ver
+   `supabase/README-migraciones-v2.md`. Hasta que no estén, las tablas de las
+   que habla este documento no existen.
+2. **Que el bot escriba con las columnas nuevas** (§2 y §3.2): sección, tipo de
+   gasto, método de pago. Si escribe sin ellas, el gasto aparece en la app sin
+   sección y sin clasificar.
+3. **Que el bot normalice el teléfono igual que la app** (§3.1). Es la única
+   cosa de este documento que, si se hace mal, hace que el bot no reconozca a
+   nadie.
 
 ---
 
@@ -111,12 +111,11 @@ Quince pantallas, una pregunta por pantalla. Las de opción única avanzan solas
 
 ---
 
-## 2. ¿Cambian las tablas? Sí, y bastante
+## 2. Las tablas del v2 (ya escritas: migraciones 0020-0024)
 
-Cuidado con una confusión que es fácil de tener: **"no hay migraciones nuevas"**
-describe el estado del repo hoy, **no** que el esquema alcance. `main` y `dev`
-tienen las mismas 19 migraciones porque el flujo v2 no persiste nada todavía. En
-el momento en que persista, hay que migrar bastante.
+Esta sección explica **por qué** el esquema quedó como quedó: qué de lo viejo
+se pudo reusar, qué hubo que agregar, y cuál fue el problema difícil (los
+grupos). Si sólo querés la lista de lo que hay que correr, saltá a §2.5.
 
 ### 2.1 Lo que YA sirve (más de lo que parecía)
 
@@ -144,24 +143,28 @@ Tres cosas que ya están resueltas ahí:
 - **`occurred_at` separado de `created_at`**: cuándo pasó el gasto vs cuándo se
   cargó. El bot lo necesita para "ayer gasté…".
 
-### 2.2 Lo que hay que agregar
+### 2.2 Lo que hubo que agregar
 
-| Concepto del v2 | Estado | Qué hacer |
+Esta tabla es el análisis que originó las migraciones: la columna **Estado**
+dice cómo estaba el esquema *antes*, y **Solución** lo que quedó. Todo lo de
+acá está resuelto en 0020-0024.
+
+| Concepto del v2 | Estado antes | Solución |
 | --- | --- | --- |
-| Tipo de gasto (`necesario / urgente / impulsivo / otro`) | falta | columna en `transactions`, o `metadata`. Como se filtra y se grafica, mejor columna |
-| Método de pago | falta | columna en `transactions` + lista de medios por usuario |
-| Secciones propias | **choca** (ver 2.3) | tabla `expense_sections` por usuario |
-| Tope por sección | falta | `monto` + `periodo` (`semana`/`mes`) |
-| Dinero disponible | falta | saldo por usuario y por medio de pago |
-| Contribuciones a un objetivo | falta | `goals` guarda el objetivo, no los aportes. Falta tabla con fecha, monto, moneda y `kind` (`pagué`/`separé`) |
-| `goals` vs el objetivo del v2 | **parcial** | hoy: `amount_ars` + `timeframe_months`. El v2: horizonte en texto, moneda, y `montoModo` que admite "todavía no sé". Un objetivo sin monto no entra en `amount_ars numeric not null` |
-| Aportes de inversión | falta | no son `expense` ni `income`: tabla propia, reusando `exchange_rate_id` |
-| Perfil de riesgo | falta | `porQue`, `reaccion`, `yaInvierte` |
-| Nivel financiero | falta | 4 valores |
-| Zona, convivencia, cómo conoció | falta | |
-| Género `otro` con texto | **choca** | el `check` de `user_profiles.gender` solo admite `femenino/masculino/prefiero_no_decir` |
-| Edad | **choca** | `user_profiles.age` es `int`; el v2 pregunta rangos |
-| **Grupos y gastos en conjunto** | **falta todo, y es el más grande** | ver 2.4 |
+| Tipo de gasto (`necesario / urgente / impulsivo / otro`) | faltaba | columna en `transactions`, o `metadata`. Como se filtra y se grafica, mejor columna |
+| Método de pago | faltaba | columna en `transactions` + lista de medios por usuario |
+| Secciones propias | **chocaba** (ver 2.3) | tabla `expense_sections` por usuario |
+| Tope por sección | faltaba | `monto` + `periodo` (`semana`/`mes`) |
+| Dinero disponible | faltaba | saldo por usuario y por medio de pago |
+| Contribuciones a un objetivo | faltaba | `goals` guarda el objetivo, no los aportes → tabla `goal_contributions` con fecha, monto, moneda y `kind` (`paid`/`saved`) |
+| `goals` vs el objetivo del v2 | **parcial** | tenía `amount_ars` + `timeframe_months`, los dos `not null`. El v2 necesita horizonte en texto, moneda, y un modo de monto que admita "todavía no sé" → los dos `not null` se relajaron (0021) y se agregaron `amount_mode` + `amount_min_ars` (0024) |
+| Aportes de inversión | faltaba | no son `expense` ni `income`: tabla propia, reusando `exchange_rate_id` |
+| Perfil de riesgo | faltaba | `investment_profiles`, con `completed_at` para saber si terminó el quiz |
+| Nivel financiero | faltaba | `user_profiles.financial_level` |
+| Zona, convivencia, cómo conoció | faltaba | columnas en `user_profiles` (0023). El resto de las respuestas del cuestionario, que se leen en bloque, van a `onboarding_v2` jsonb (0024) |
+| Género `otro` con texto | **chocaba** | el `check` de `user_profiles.gender` solo admite `femenino/masculino/prefiero_no_decir` |
+| Edad | **chocaba** | `user_profiles.age` es `int`; el v2 pregunta rangos |
+| **Grupos y gastos en conjunto** | **faltaba todo, y era el más grande** | ver 2.4 |
 
 ### 2.3 El choque de las categorías
 
@@ -215,28 +218,102 @@ Y ojo: **los grupos del v2 hoy son una demo**. Viven en el `localStorage` de un
 solo navegador, con miembros de ejemplo. No hay invitaciones reales, no hay dos
 personas compartiendo nada. Lo que está construido es la idea, no la función.
 
-### 2.5 Entonces, ¿qué migra?
+### 2.5 Entonces, ¿qué migró?
 
-Resumen honesto:
+Todo lo de arriba, en cinco migraciones (**0020 a 0024**), que están escritas y
+**hay que correr**:
 
-- **Nada urgente**, mientras el v2 siga en `localStorage`.
-- **Bastante**, en el momento en que se conecte: unas 6-8 tablas nuevas y
-  cambios en `user_profiles`, `goals` y `transactions`.
-- **Y un rediseño del modelo de acceso** para los grupos, que es trabajo de
-  seguridad, no de features.
+| Migración | Qué agrega |
+| --- | --- |
+| 0020 | `expense_sections` (con tope por período), `payment_methods` (con saldo), y las columnas del v2 en `transactions`: `expense_type`, `payment_method`, `section_id` |
+| 0021 | `goal_contributions`, `investment_profiles`, `investment_contributions`. Relaja `goals` para objetivos sin monto |
+| 0022 | `groups`, `group_members`, `group_expense_splits`, `transactions.group_id`, y el **modelo de acceso nuevo** (`es_miembro_de`, `unirse_a_grupo`) |
+| 0023 | Lo que el onboarding pregunta: género "otro", edad por rango, zona, nivel financiero, reserva, `avatar_path` |
+| 0024 | `transactions.original_amount` (vuelve), `goals.description`/`amount_mode`/`amount_min_ars`, `user_profiles.onboarding_v2`, `investment_profiles.completed_at`, la vista `group_member_names`, el bucket `avatars`, y los checks de moneda ampliados |
+
+El detalle de cada una y qué probar después está en
+`supabase/README-migraciones-v2.md`.
+
+Ninguna borra ni renombra nada: los checks que se tocan se **amplían**, las
+columnas nuevas son nullables o con default, y la policy nueva en
+`transactions` **se suma** a la que ya había (las policies del mismo comando se
+combinan con OR). La app vieja tiene que seguir funcionando igual.
 
 ## 3. Lo que el bot tiene que saber
 
-### 3.1 La identidad sigue siendo el teléfono
+### 3.1 La identidad es el teléfono, y hay UNA forma canónica
 
-El bot identifica a la persona por su número. Eso no cambia:
-`user_profiles.phone` existe, con `check` de formato E.164
-(`^\+[1-9][0-9]{1,14}$`) y `phone_verified_at`.
+El onboarding v2 **ya guarda el teléfono**. Lo pide en el último paso, junto con
+el mail y la contraseña, y lo escribe en `user_profiles.phone`.
 
-**Lo que cambia es que el onboarding v2 todavía no lo guarda.** Hoy pide el
-teléfono y lo tira. Cuando se conecte, el bot no puede asumir que toda persona
-que usó la app v2 tenga teléfono cargado: hay que manejar el caso "número
-desconocido" con un alta, no con un error.
+**La forma canónica es `+54` + 10 dígitos, SIN el 9 de celular.**
+
+Está en `src/app/lib/telefono.ts`, que es el único lugar donde la app normaliza
+un teléfono (lo usan el login viejo y el onboarding nuevo). La regla completa:
+
+```
+1. quedarse sólo con los dígitos
+2. si empieza con 0, sacarlo         (formato local: 011…)
+3. si empieza con 9, sacarlo         (ningún código de área argentino
+                                      empieza con 9, así que un 9 adelante
+                                      es siempre el prefijo de celular)
+4. tienen que quedar 10 dígitos      (área + abonado)
+5. prefijar +54
+```
+
+O sea: `11 5555-6666`, `9 11 5555-6666` y `011 5555-6666` son **el mismo
+teléfono**, y los tres se guardan como `+541155556666`. Eso es lo que hace
+posible el índice único de `user_profiles.phone`.
+
+> **Esto es lo que el bot tiene que hacer y es fácil de errar.** WhatsApp
+> entrega los números argentinos **con** el 9: `5491155556666`. Buscar ese
+> string tal cual en `user_profiles.phone` **no encuentra a nadie**. Hay que
+> sacarle el `54`, sacarle el `9`, y volver a armar `+54` + los 10 dígitos.
+
+**El teléfono no está verificado.** Se pide y se guarda como *declarado*: la
+pantalla que pedía un código por SMS se sacó porque aceptaba cualquier número de
+4 dígitos, o sea que no verificaba nada. `phone_verified_at` sigue en `null`
+para todas. Dos consecuencias para el bot:
+
+- Dos personas podrían haber puesto un número que no es el suyo. El índice único
+  evita el duplicado, no la mentira.
+- Un número que escribe al bot y **no** está en `user_profiles` es alguien que
+  todavía no tiene cuenta, o que la creó con otro número. Hay que tratarlo con
+  un alta o con un "no te reconozco, ¿me confirmás el mail con el que te
+  registraste?", nunca con un error.
+
+### 3.1.b Qué escribe el bot y con qué `source`
+
+`transactions.source` distingue de dónde salió cada gasto y tiene tres valores:
+`whatsapp`, `web` y `manual`. La app escribe **siempre** `web`; el bot tiene que
+escribir **siempre** `whatsapp`. La app usa ese campo para poder decir "esto lo
+cargaste por WhatsApp".
+
+Un gasto cargado por el bot, con las columnas del v2:
+
+```sql
+insert into transactions (
+  user_id, occurred_at, type, amount_ars, currency, original_amount,
+  exchange_rate_id, description, section_id, expense_type, payment_method, source
+) values (
+  :uid, :cuando, 'expense', :monto_ars, 'ARS', null,
+  null, :descripcion, :section_id, :tipo, :metodo, 'whatsapp'
+);
+```
+
+- `section_id` sale de `expense_sections` **de esa usuaria** (`where user_id =
+  :uid and archived = false`). Si no matchea ninguna, se puede crear una nueva o
+  dejar `null` — la app muestra los gastos sin sección, no se rompe.
+- `expense_type` acepta `necesario`, `urgente`, `impulsivo`, `otro`. Es un
+  juicio de la persona: si no lo dijo, va `otro`. **No inferirlo.**
+- `payment_method` es texto libre a propósito. Los que ya usó están en
+  `payment_methods` de esa usuaria, ordenados por `last_used_at desc`.
+- Si el bot toca `payment_methods.balance_ars`, tiene que **restar** lo gastado:
+  ese saldo es el "dinero disponible" que la app muestra arriba.
+
+El bot escribe con la `service_role` key, que **saltea RLS**. O sea que las
+policies no lo protegen de escribir en la fila equivocada: el `user_id` correcto
+es responsabilidad del bot.
 
 ### 3.2 Registrar un gasto por chat: qué preguntar ahora
 
@@ -295,21 +372,24 @@ en la app; el bot no debería repetirlo.
 
 ---
 
-## 4. Orden sugerido para conectar todo
+## 4. Orden para conectar el bot
 
-1. **Definir el esquema del v2** con la tabla de §2 en la mano. Es el paso que
-   desbloquea todo lo demás.
-2. **Escribir las migraciones**, con su policy de RLS. Recordar: *cada tabla con
-   RLS necesita su policy de `UPDATE` o los updates fallan en silencio.*
-3. **Reemplazar `localStorage` por la capa `api/`** en el sandbox v2. Hoy no
-   pasa por ahí, y la regla 6 de `CLAUDE.md` dice que ningún componente hace
-   `fetch` directo.
-4. **Conectar el login de verdad** y guardar el teléfono.
-5. **Recién ahí, adaptar el bot**, que va a poder leer y escribir lo mismo que la
-   app.
+Los pasos 1 a 4 de la versión anterior de este documento **ya están hechos**
+(capa `api/`, reemplazo de `localStorage`, login real, teléfono guardado). Lo
+que queda:
 
-Hacerlo al revés — tocar el bot antes de que exista el esquema — es escribir
-contra una forma que todavía no está decidida.
+1. **Correr las migraciones 0020-0024** (`supabase/README-migraciones-v2.md`).
+2. **Cambiar la resolución de identidad del bot** para que normalice el teléfono
+   como en §3.1. Es el cambio que, si falta, hace que el bot no reconozca a
+   nadie que se haya registrado en el flujo nuevo.
+3. **Agregar las columnas nuevas al insert de gastos** (§3.1.b): `section_id`,
+   `expense_type`, `payment_method`, y `source = 'whatsapp'`.
+4. **Ofrecer las secciones que la persona YA tiene** antes de sugerir otras
+   (§3.2), leyendo `expense_sections`.
+5. **Ofrecer los medios de pago que ya usó**, de `payment_methods` ordenado por
+   `last_used_at desc`.
+6. **Probar el ida y vuelta**: cargar un gasto por WhatsApp y verlo aparecer en
+   la app al recargar; cargar uno en la app y que el bot lo pueda leer.
 
 ---
 
@@ -322,9 +402,19 @@ contra una forma que todavía no está decidida.
 - **El repo no tenía typecheck y ahora sí.** `npm run typecheck` tiene que pasar
   antes de cualquier PR. `npm run build` **no** valida tipos: usa esbuild, que
   borra las anotaciones sin chequearlas.
-- **Los grupos son una demo.** Viven en el `localStorage` de un solo navegador.
-  No hay forma de que dos personas compartan un grupo. Mostrarlo como algo que
-  ya funciona sería mentir.
-- **El JSON de `localStorage` se castea sin validar.** Un registro viejo o mal
-  formado renderiza `undefined` en pantalla. Cuando esto pase a Supabase,
-  validar en el borde.
+- **Los grupos son reales.** El grupo es una fila en `groups`, el código lo
+  genera la base y es único, y quien lo recibe entra desde su propio teléfono.
+  Es el único lugar donde una usuaria ve datos de otra, y está contenido: las
+  policies de la 0022 dejan ver sólo a quienes comparten grupo, y de ellas sólo
+  el nombre y la actividad. **La actividad es cuánto REGISTRÁS, nunca cuánto
+  gastás.** Si el bot alguna vez suma actividad, tiene que respetar eso.
+- **Ninguna moneda salvo ARS y USD se puede pasar a pesos.** FINA tiene una sola
+  cotización, la del dólar blue. Un objetivo en euros lleva su cuenta en euros y
+  `goal_contributions.amount_ars` queda en `null`, que significa "no se puede
+  saber" — distinto de cero. Si el bot lee esa columna, tiene que manejar el
+  `null`.
+- **La app avisa cuando algo no se guardó.** Hay una banda arriba de todas las
+  pantallas con el mensaje de Supabase, y se queda hasta que la escritura salga
+  bien. No hay guardados silenciosos: la regla es que un guardado que falla en
+  silencio es peor que uno que falla, porque la persona sigue confiando en un
+  número que no existe. Conviene que el bot tenga el mismo criterio.

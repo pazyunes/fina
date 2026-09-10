@@ -19,7 +19,14 @@ export function RootRedirect() {
   // real, es una ruta aparte. Sin esto, entrar por /?ver=fina mostraba la
   // pantalla vieja y había que saberse /onboarding-v2 de memoria.
   // El flujo viejo sigue alcanzable escribiendo /login, /result, etc.
-  if (APP_CERRADA) return <Navigate to="/onboarding-v2" replace />;
+  //
+  // Con sesión va directo a Home: ahora las cuentas del v2 son reales, y
+  // mandar a alguien que ya tiene cuenta a rehacer el onboarding sería
+  // pedirle que conteste de nuevo todo lo que ya contestó.
+  if (APP_CERRADA) {
+    if (loading) return <CenteredLoading />;
+    return <Navigate to={session ? '/onboarding-v2/home' : '/onboarding-v2'} replace />;
+  }
 
   // Loading inicial de la sesión.
   if (loading) return <CenteredLoading />;

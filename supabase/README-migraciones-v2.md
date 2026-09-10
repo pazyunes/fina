@@ -2,6 +2,11 @@
 
 **Nadie corrió estas migraciones todavía.** Yo no tengo acceso a tu Supabase.
 
+La app **ya está cableada contra Supabase**: el onboarding crea la cuenta de
+verdad y las siete pantallas leen y escriben en estas tablas. O sea que hasta
+que no corras las migraciones, la app nueva va a mostrar errores de guardado —
+no porque esté mal, sino porque las tablas no existen todavía.
+
 ---
 
 ## Lo primero: el borrado de usuarios, ¿funcionó?
@@ -43,7 +48,7 @@ Y verificar de nuevo con el select de arriba.
 
 ## Las migraciones: qué son y en qué orden
 
-Cuatro archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
+Cinco archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
 resultado antes de pasar al siguiente.
 
 | Orden | Archivo | Qué agrega |
@@ -52,6 +57,42 @@ resultado antes de pasar al siguiente.
 | 2 | `0021_v2_objetivos_inversiones.sql` | Contribuciones a objetivos, perfil de riesgo, aportes de inversión. Relaja `goals` para admitir objetivos sin monto y en dólares |
 | 3 | `0022_v2_grupos.sql` | **La delicada.** Grupos, membresías, competencias y gastos en conjunto con repartos — y el modelo de acceso nuevo |
 | 4 | `0023_v2_perfil.sql` | Lo que el onboarding v2 pregunta y no entraba: género "otro", edad por rango, zona, nivel financiero, reserva |
+| 5 | `0024_v2_huecos.sql` | Los huecos que aparecieron al cablear la app de verdad (ver abajo) |
+
+### Qué trae la 0024 y por qué
+
+La escribí después, cuando conecté la app: son las cosas que no se veían
+leyendo el esquema y sí al hacer que las pantallas escribieran.
+
+1. **`transactions.original_amount` vuelve.** La 0009 la había borrado con un
+   argumento correcto para entonces: era un espejo que nadie leía, porque el
+   monto en dólares vivía en `reports.user_data` (jsonb). El flujo v2 no usa
+   ese jsonb — lee las tablas directo. Si cargás "20 USD", el número que
+   tipeaste tiene que poder recuperarse tal cual, no reconstruirse dividiendo
+   por una cotización que ya cambió.
+2. **Objetivos: `description`, `amount_mode` y `amount_min_ars`.** El objetivo
+   tiene un "por qué", y el monto puede ser exacto, un rango, o "todavía no
+   sé". Un objetivo sin monto guarda `null`, no `0`: $0 sería un objetivo
+   gratis.
+3. **Los checks de moneda se amplían a ocho monedas.** Esto era un bug que iba
+   a explotar en producción: el selector de Objetivos ofrece peso, dólar, euro,
+   real, peso chileno, uruguayo, libra y peso mexicano, y la 0021 dejó el check
+   en ARS/USD. Cualquier objetivo en euros fallaba en el insert. Además
+   `goal_contributions.amount_ars` pasa a nullable: FINA tiene una sola
+   cotización (dólar blue), así que un aporte en euros no se puede pasar a
+   pesos — `null` ahí significa "no se puede saber", que es distinto de cero.
+4. **`user_profiles.onboarding_v2` (jsonb).** Las diez respuestas del
+   cuestionario que la app lee siempre juntas y nunca filtra. Van a un jsonb y
+   no a diez columnas porque el cuestionario cambia seguido.
+5. **`investment_profiles.completed_at`.** Distingue "contestó las dos
+   preguntas del onboarding" de "hizo el quiz completo". Sin esto no se sabe si
+   al entrar a Inversiones hay que abrir el quiz o el resultado.
+6. **La vista `group_member_names`.** Un ranking sin nombres no es un ranking,
+   y `user_profiles` es owner-only. La vista expone **exactamente un dato de
+   más**: el nombre de pila de quienes comparten grupo con vos. El filtro vive
+   dentro de la vista, no en el cliente.
+7. **El bucket `avatars`.** Con policies por carpeta: cada persona escribe sólo
+   en `<su-id>/`.
 
 ### Cómo correrlas
 
@@ -111,28 +152,49 @@ Cosas concretas a verificar:
 
 ---
 
-## Y esto es lo que TODAVÍA falta después de las migraciones
+## Después de correrlas: qué probar en la app
 
-Correr las cuatro migraciones **no hace que la app nueva funcione de verdad.**
-Crea el lugar donde guardar; falta que la app lo use. Hoy el flujo v2 guarda
-todo en `localStorage` y no hace una sola consulta a Supabase.
+En este orden, porque cada paso depende del anterior.
 
-En orden, lo que queda:
+1. **Crear una cuenta.** Entrá al onboarding, contestá todo y creá la cuenta con
+   un mail de prueba. Al terminar tenés que caer en Home con tu nombre arriba.
+   - Si Supabase te pide confirmar el mail, vas a ver la pantalla "Confirmá tu
+     mail". Tus respuestas quedaron guardadas y se suben cuando entrés.
+   - Si querés evitar ese paso mientras probás: Supabase → Authentication →
+     Providers → Email → apagá **Confirm email**.
+2. **Que el nombre y las secciones estén en la base.** En el SQL editor:
+   ```sql
+   select name, phone, main_goal, terms_accepted_at from user_profiles order by created_at desc limit 1;
+   select name, slug from expense_sections order by created_at;
+   ```
+   El teléfono tiene que estar como `+54` + 10 dígitos, **sin el 9**.
+3. **Cargar plata disponible y un gasto.** Después:
+   ```sql
+   select description, amount_ars, currency, original_amount, expense_type, payment_method, source
+   from transactions where type = 'expense' order by occurred_at desc limit 5;
+   ```
+   `source` tiene que decir `web`. Un gasto en dólares tiene que tener
+   `original_amount` con lo que tipeaste y `amount_ars` con el equivalente.
+4. **Recargar la página.** Todo tiene que seguir ahí. Esta es la prueba de que
+   dejó de vivir en el navegador.
+5. **Abrirla en otro dispositivo** (o una ventana privada) e iniciar sesión con
+   la misma cuenta. Tiene que aparecer lo mismo. Antes esto no pasaba.
+6. **Un objetivo y un aporte de inversión.** Mismo criterio.
+7. **Grupos, con dos cuentas de verdad** (ver la sección de abajo, es la única
+   parte que puede filtrar datos entre personas).
 
-1. **Capa `api/`** para el v2 (regla 6 de `CLAUDE.md`: ningún componente hace
-   `fetch` directo). Una función por operación: crear sección, registrar gasto,
-   sumar aporte, etc.
-2. **Reemplazar los `load/save` de `localStorage`** en
-   `src/app/components/onboarding-v2/shared.tsx` por esas llamadas. Son 38 usos.
-3. **Conectar el login de verdad.** Hoy el del v2 es una maqueta: pide mail,
-   contraseña y teléfono, valida el formato, acepta cualquier código de
-   verificación y **no crea ningún usuario**. Sin esto no hay `auth.uid()`, y
-   sin `auth.uid()` ninguna de las policies de arriba puede funcionar.
-4. **Guardar el teléfono**, que es como el bot identifica a la persona.
-5. **Grupos de verdad**: invitación, entrar por código, ranking con datos de
-   las dos personas. Hoy es una demo en un solo navegador.
-6. **Foto de perfil a Storage**, en vez de base64 en el navegador.
-7. **Adaptar el bot**, recién cuando todo lo anterior esté.
+Si algo no se guarda, la app **te lo dice**: aparece una banda arriba con
+"Algo no se guardó" y el mensaje de Supabase. No hay guardados silenciosos.
 
-El paso 3 es el que bloquea todo lo demás: sin usuarios reales en el flujo
-nuevo, las tablas quedan vacías por más que existan.
+---
+
+## Lo único que queda pendiente a propósito
+
+**Verificación del teléfono por SMS.** El teléfono se pide y se guarda (el bot
+lo necesita para reconocerte), pero no se verifica. La pantalla que pedía un
+código se sacó: aceptaba cualquier número de 4 dígitos, o sea que no verificaba
+nada y encima le hacía creer a la persona que su teléfono estaba validado.
+
+Cuando se conecte un proveedor de SMS, el dato ya está: `user_profiles.phone`
+tiene el teléfono y `phone_verified_at` (que existe desde la 0003) está
+esperando la fecha.

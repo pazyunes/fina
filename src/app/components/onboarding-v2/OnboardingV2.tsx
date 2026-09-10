@@ -308,7 +308,18 @@ function Campo({ label, error, children }: { label: string; error?: string; chil
 
 export function OnboardingV2() {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, session, loading: cargandoSesion } = useAuth();
+
+  // Quien ya tiene sesión no rehace el onboarding: iría a contestar de nuevo
+  // todo lo que ya contestó y al final `signUp` le diría que el mail existe.
+  // Sólo al montar: después de crear la cuenta acá también hay sesión, y este
+  // efecto no tiene que sacar a nadie de la pantalla de "llegaste a FINA".
+  const yaTeniaSesion = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (cargandoSesion) return;
+    if (yaTeniaSesion.current === null) yaTeniaSesion.current = !!session;
+    if (yaTeniaSesion.current) navigate('/onboarding-v2/home', { replace: true });
+  }, [cargandoSesion, session, navigate]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [nombre, setNombre] = useState('');
   const [genero, setGenero] = useState<Genero>(null);
@@ -726,6 +737,17 @@ export function OnboardingV2() {
                     ))}
                   </ul>
                   <p className="text-[18px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
+                  {/* Quien ya tiene cuenta necesita una puerta. Sin esto, en un
+                      teléfono nuevo la única salida era el onboarding entero, y
+                      al final Supabase le iba a decir que el mail ya existe. */}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login')}
+                    className="v2-focus self-start text-[16px] font-semibold underline rounded-full py-2"
+                    style={{ color: COLORS.brand }}
+                  >
+                    Ya tengo cuenta
+                  </button>
                 </>
               )}
 
