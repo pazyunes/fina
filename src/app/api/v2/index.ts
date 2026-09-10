@@ -2,7 +2,8 @@ import { correr, falla, idUsuaria, ok, slugify, supabase, type Resultado } from 
 import {
   ESTADO_VACIO, PERFIL_VACIO,
   type AporteInversion, type Contribucion, type EstadoV2, type Gasto, type Grupo,
-  type MedioPago, type MiembroGrupo, type Moneda, type Objetivo, type Perfil,
+  type MedioPago, type MiembroGrupo, type Moneda, type MonedaConvertible,
+  type Objetivo, type Perfil,
   type PerfilInversor, type Periodo, type Seccion, type TipoGasto,
 } from './tipos';
 
@@ -64,7 +65,7 @@ type FilaPerfil = {
   income_sources: string[] | null; income_stability: string | null;
   main_goal: string | null; how_found_us: string | null; financial_level: string | null;
   reserve_ars: number | null; phone: string | null; terms_accepted_at: string | null;
-  onboarding_v2: Record<string, unknown> | null;
+  onboarding_v2: Record<string, unknown> | null; avatar_path: string | null;
 };
 
 function aPerfil(f: FilaPerfil | null): Perfil {
@@ -85,6 +86,7 @@ function aPerfil(f: FilaPerfil | null): Perfil {
     telefono: f.phone,
     terminosAceptadosEn: f.terms_accepted_at,
     onboarding: f.onboarding_v2,
+    fotoUrl: f.avatar_path ? urlDeFoto(f.avatar_path) : null,
   };
 }
 
@@ -92,7 +94,7 @@ async function leerPerfil(uid: string): Promise<Resultado<Perfil>> {
   const r = await correr<FilaPerfil>('leerPerfil', () =>
     supabase
       .from('user_profiles')
-      .select('name, gender, gender_other, age_range, zone, cohabitation, income_sources, income_stability, main_goal, how_found_us, financial_level, reserve_ars, phone, terms_accepted_at, onboarding_v2')
+      .select('name, gender, gender_other, age_range, zone, cohabitation, income_sources, income_stability, main_goal, how_found_us, financial_level, reserve_ars, phone, terms_accepted_at, onboarding_v2, avatar_path')
       .eq('id', uid)
       .maybeSingle(),
   );
@@ -249,7 +251,7 @@ type FilaGasto = {
 };
 
 function aGasto(f: FilaGasto): Gasto {
-  const moneda = (f.currency === 'USD' ? 'USD' : 'ARS') as Moneda;
+  const moneda: MonedaConvertible = f.currency === 'USD' ? 'USD' : 'ARS';
   return {
     id: f.id,
     // En USD el monto que la persona tipeó vive en original_amount; amount_ars
@@ -280,7 +282,7 @@ export async function listarGastos(): Promise<Resultado<Gasto[]>> {
 
 export async function registrarGasto(g: {
   id?: string;
-  monto: number; moneda: Moneda; montoArs: number; cotizacionId?: string | null;
+  monto: number; moneda: MonedaConvertible; montoArs: number; cotizacionId?: string | null;
   descripcion: string; seccionId: string | null; tipo: TipoGasto;
   metodoPago: string | null; grupoId?: string | null; ts?: number;
 }): Promise<Resultado<Gasto>> {
@@ -328,14 +330,15 @@ export async function borrarGasto(id: string): Promise<Resultado<null>> {
 // ── Objetivos ────────────────────────────────────────────────────────────
 type FilaObjetivo = {
   id: string; title: string; description: string | null; amount_ars: number | null;
+  amount_min_ars: number | null; amount_mode: string | null;
   currency: string; horizon_label: string | null; kind: string; status: string;
-  goal_contributions: { id: string; amount: number; currency: string; amount_ars: number; kind: string; label: string | null; occurred_at: string }[] | null;
+  goal_contributions: { id: string; amount: number; currency: string; amount_ars: number; kind: string; label: string | null; occurred_at: string; user_id: string }[] | null;
 };
 
 export async function listarObjetivos(): Promise<Resultado<Objetivo[]>> {
   const r = await correr<FilaObjetivo[]>('listarObjetivos', () =>
     supabase.from('goals')
-      .select('id, title, description, amount_ars, currency, horizon_label, kind, status, goal_contributions(id, amount, currency, amount_ars, kind, label, occurred_at)')
+      .select('id, title, description, amount_ars, amount_min_ars, amount_mode, currency, horizon_label, kind, status, goal_contributions(id, amount, currency, amount_ars, kind, label, occurred_at, user_id)')
       .order('created_at', { ascending: true }),
   );
   if (r.error !== null) return falla<Objetivo[]>(r.error, 'listarObjetivos');
@@ -346,17 +349,20 @@ export async function listarObjetivos(): Promise<Resultado<Objetivo[]>> {
     tipo: (f.kind === 'grupal' ? 'grupal' : 'individual') as Objetivo['tipo'],
     moneda: (f.currency === 'USD' ? 'USD' : 'ARS') as Moneda,
     horizonte: f.horizon_label,
+    modoMonto: (f.amount_mode as Objetivo['modoMonto']) ?? null,
     montoTotal: f.amount_ars == null ? null : Number(f.amount_ars),
+    montoMin: f.amount_min_ars == null ? null : Number(f.amount_min_ars),
     estado: (f.status as Objetivo['estado']) ?? 'active',
     contribuciones: (f.goal_contributions ?? [])
       .map((c): Contribucion => ({
         id: c.id,
         monto: Number(c.amount),
         moneda: (c.currency === 'USD' ? 'USD' : 'ARS') as Moneda,
-        montoArs: Number(c.amount_ars),
+        montoArs: c.amount_ars == null ? null : Number(c.amount_ars),
         kind: c.kind === 'paid' ? 'paid' : 'saved',
         label: c.label,
         ts: new Date(c.occurred_at).getTime(),
+        deUserId: c.user_id,
       }))
       .sort((a, b) => b.ts - a.ts),
   })));
@@ -366,6 +372,7 @@ export async function crearObjetivo(o: {
   id?: string;
   nombre: string; descripcion?: string; tipo?: 'individual' | 'grupal';
   moneda?: Moneda; horizonte?: string | null; montoTotal: number | null;
+  modoMonto?: Objetivo['modoMonto']; montoMin?: number | null;
 }): Promise<Resultado<Objetivo>> {
   const uid = await idUsuaria();
   if (!uid) return falla<Objetivo>('sin sesión', 'crearObjetivo');
@@ -377,6 +384,8 @@ export async function crearObjetivo(o: {
       title: o.nombre.trim(),
       description: o.descripcion?.trim() || null,
       amount_ars: o.montoTotal,
+      amount_min_ars: o.montoMin ?? null,
+      amount_mode: o.modoMonto ?? null,
       currency: o.moneda ?? 'ARS',
       horizon_label: o.horizonte ?? null,
       kind: o.tipo ?? 'individual',
@@ -391,13 +400,15 @@ export async function crearObjetivo(o: {
     tipo: o.tipo ?? 'individual',
     moneda: o.moneda ?? 'ARS',
     horizonte: o.horizonte ?? null,
+    modoMonto: o.modoMonto ?? null,
     montoTotal: o.montoTotal,
+    montoMin: o.montoMin ?? null,
     estado: 'active',
     contribuciones: [],
   });
 }
 
-export async function editarObjetivo(id: string, o: Partial<Pick<Objetivo, 'nombre' | 'descripcion' | 'tipo' | 'moneda' | 'horizonte' | 'montoTotal' | 'estado'>>): Promise<Resultado<null>> {
+export async function editarObjetivo(id: string, o: Partial<Pick<Objetivo, 'nombre' | 'descripcion' | 'tipo' | 'moneda' | 'horizonte' | 'montoTotal' | 'montoMin' | 'modoMonto' | 'estado'>>): Promise<Resultado<null>> {
   const fila: Record<string, unknown> = {};
   if (o.nombre !== undefined) fila.title = o.nombre;
   if (o.descripcion !== undefined) fila.description = o.descripcion || null;
@@ -405,6 +416,8 @@ export async function editarObjetivo(id: string, o: Partial<Pick<Objetivo, 'nomb
   if (o.moneda !== undefined) fila.currency = o.moneda;
   if (o.horizonte !== undefined) fila.horizon_label = o.horizonte;
   if (o.montoTotal !== undefined) fila.amount_ars = o.montoTotal;
+  if (o.montoMin !== undefined) fila.amount_min_ars = o.montoMin;
+  if (o.modoMonto !== undefined) fila.amount_mode = o.modoMonto;
   if (o.estado !== undefined) fila.status = o.estado;
   if (Object.keys(fila).length === 0) return ok(null);
 
@@ -421,7 +434,7 @@ export async function borrarObjetivo(id: string): Promise<Resultado<null>> {
 
 export async function sumarContribucion(objetivoId: string, c: {
   id?: string;
-  monto: number; moneda: Moneda; montoArs: number; cotizacionId?: string | null;
+  monto: number; moneda: Moneda; montoArs: number | null; cotizacionId?: string | null;
   kind: 'paid' | 'saved'; label?: string | null; ts?: number;
 }): Promise<Resultado<Contribucion>> {
   const uid = await idUsuaria();
@@ -444,7 +457,7 @@ export async function sumarContribucion(objetivoId: string, c: {
   if (r.error !== null || !r.data?.[0]) return falla<Contribucion>(r.error ?? 'sin fila', 'sumarContribucion');
   return ok({
     id: r.data[0].id, monto: c.monto, moneda: c.moneda, montoArs: c.montoArs,
-    kind: c.kind, label: c.label ?? null, ts: c.ts ?? Date.now(),
+    kind: c.kind, label: c.label ?? null, ts: c.ts ?? Date.now(), deUserId: uid,
   });
 }
 
@@ -456,9 +469,9 @@ export async function borrarContribucion(id: string): Promise<Resultado<null>> {
 
 // ── Inversiones ──────────────────────────────────────────────────────────
 export async function leerPerfilInversor(): Promise<Resultado<PerfilInversor | null>> {
-  const r = await correr<{ horizon: string | null; reaction: string | null; already_invests: boolean | null; invests_in: string[] | null; wallets: string[] | null } | null>(
+  const r = await correr<{ horizon: string | null; reaction: string | null; already_invests: boolean | null; invests_in: string[] | null; wallets: string[] | null; completed_at: string | null } | null>(
     'leerPerfilInversor',
-    () => supabase.from('investment_profiles').select('horizon, reaction, already_invests, invests_in, wallets').maybeSingle(),
+    () => supabase.from('investment_profiles').select('horizon, reaction, already_invests, invests_in, wallets, completed_at').maybeSingle(),
   );
   if (r.error !== null) return falla<PerfilInversor | null>(r.error, 'leerPerfilInversor');
   if (!r.data) return ok(null);
@@ -468,6 +481,7 @@ export async function leerPerfilInversor(): Promise<Resultado<PerfilInversor | n
     yaInvierte: r.data.already_invests,
     enQue: r.data.invests_in ?? [],
     bancos: r.data.wallets ?? [],
+    completadoEn: r.data.completed_at,
   });
 }
 
@@ -482,6 +496,7 @@ export async function guardarPerfilInversor(p: PerfilInversor): Promise<Resultad
       already_invests: p.yaInvierte,
       invests_in: p.enQue,
       wallets: p.bancos,
+      completed_at: p.completadoEn,
     }, { onConflict: 'user_id' }).then(({ error }) => ({ data: null, error })),
   );
 }
@@ -498,7 +513,7 @@ export async function listarAportes(): Promise<Resultado<AporteInversion[]>> {
     id: f.id,
     instrumento: f.instrument,
     monto: Number(f.amount),
-    moneda: (f.currency === 'USD' ? 'USD' : 'ARS') as Moneda,
+    moneda: (f.currency === 'USD' ? 'USD' : 'ARS') as MonedaConvertible,
     montoArs: Number(f.amount_ars),
     cotizacion: null,
     ts: new Date(f.occurred_at).getTime(),
@@ -507,7 +522,7 @@ export async function listarAportes(): Promise<Resultado<AporteInversion[]>> {
 
 export async function sumarAporte(a: {
   id?: string;
-  instrumento: string; monto: number; moneda: Moneda; montoArs: number; cotizacionId?: string | null; ts?: number;
+  instrumento: string; monto: number; moneda: MonedaConvertible; montoArs: number; cotizacionId?: string | null; ts?: number;
 }): Promise<Resultado<AporteInversion>> {
   const uid = await idUsuaria();
   if (!uid) return falla<AporteInversion>('sin sesión', 'sumarAporte');
@@ -531,7 +546,7 @@ export async function sumarAporte(a: {
   });
 }
 
-export async function editarAporte(id: string, a: { instrumento?: string; monto?: number; moneda?: Moneda; montoArs?: number; cotizacionId?: string | null }): Promise<Resultado<null>> {
+export async function editarAporte(id: string, a: { instrumento?: string; monto?: number; moneda?: MonedaConvertible; montoArs?: number; cotizacionId?: string | null }): Promise<Resultado<null>> {
   const fila: Record<string, unknown> = {};
   if (a.instrumento !== undefined) fila.instrument = a.instrumento;
   if (a.monto !== undefined) fila.amount = a.monto;
@@ -548,6 +563,69 @@ export async function borrarAporte(id: string): Promise<Resultado<null>> {
   return correr<null>('borrarAporte', () =>
     supabase.from('investment_contributions').delete().eq('id', id).then(({ error }) => ({ data: null, error })),
   );
+}
+
+// ── Foto de perfil ───────────────────────────────────────────────────────
+// La foto va a Storage, no a la fila. Antes vivía como data URL (base64) en
+// localStorage: no sobrevivía a cambiar de teléfono, no la podían ver las
+// demás miembras del grupo, y hacía pesado cada arranque de la app.
+//
+// La ruta es `<uid>/avatar.<ext>` y las policies del bucket sólo dejan escribir
+// dentro de la carpeta propia (ver la migración 0024). El bucket es público en
+// lectura porque la foto se muestra en el ranking del grupo, y firmar una URL
+// por avatar en cada render es latencia sin beneficio: la ruta es un uuid, no
+// se adivina.
+const BUCKET_AVATARES = 'avatars';
+
+export async function subirFoto(archivo: File): Promise<Resultado<string>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<string>('sin sesión', 'subirFoto');
+
+  const ext = (archivo.name.split('.').pop() ?? 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const ruta = `${uid}/avatar.${ext}`;
+
+  const sub = await correr<null>('subirFoto', () =>
+    supabase.storage.from(BUCKET_AVATARES)
+      // upsert: reemplaza la foto anterior en vez de acumular una por cambio.
+      .upload(ruta, archivo, { upsert: true, contentType: archivo.type || undefined })
+      .then(({ error }) => ({ data: null, error })),
+  );
+  if (sub.error !== null) return falla<string>(sub.error, 'subirFoto');
+
+  const guardar = await guardarRutaFoto(ruta);
+  if (guardar.error !== null) return falla<string>(guardar.error, 'subirFoto/perfil');
+  return ok(urlDeFoto(ruta));
+}
+
+export async function borrarFoto(): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<null>('sin sesión', 'borrarFoto');
+
+  const actual = await correr<{ avatar_path: string | null } | null>('borrarFoto/leer', () =>
+    supabase.from('user_profiles').select('avatar_path').eq('id', uid).maybeSingle(),
+  );
+  const ruta = actual.data?.avatar_path;
+  if (ruta) {
+    await correr<null>('borrarFoto/storage', () =>
+      supabase.storage.from(BUCKET_AVATARES).remove([ruta]).then(({ error }) => ({ data: null, error })),
+    );
+  }
+  return guardarRutaFoto(null);
+}
+
+function guardarRutaFoto(ruta: string | null): Promise<Resultado<null>> {
+  return correr<null>('guardarRutaFoto', async () => {
+    const uid = await idUsuaria();
+    if (!uid) return { data: null, error: { message: 'sin sesión' } };
+    const { error } = await supabase.from('user_profiles').update({ avatar_path: ruta }).eq('id', uid);
+    return { data: null, error };
+  });
+}
+
+/** URL pública de una ruta del bucket. Cache-buster para ver el cambio ya. */
+export function urlDeFoto(ruta: string): string {
+  const { data } = supabase.storage.from(BUCKET_AVATARES).getPublicUrl(ruta);
+  return `${data.publicUrl}?v=${Date.now()}`;
 }
 
 // ── Grupos ───────────────────────────────────────────────────────────────

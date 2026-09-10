@@ -8,7 +8,7 @@ import {
   formatThousands, parseMoneyInput,
   saveV2Categorias, saveV2Nombre,
   saveV2PerfilOnboarding, saveV2TerminosAceptados,
-  saveV2InversionesPerfil, saveV2ObjetivosState, marcarFiniAterriza,
+  saveV2InversionesPerfil, marcarFiniAterriza,
 } from './shared';
 import { IconChat, IconChevron, IconBasura } from './FinaIcons';
 import { useAuth } from '../../lib/auth';
@@ -483,6 +483,9 @@ export function OnboardingV2() {
         yaInvierte: invYaInvierte === null ? null : invYaInvierte === 'si',
         enQue: [],
         bancos: [],
+        // El quiz completo se hace en la pantalla de Inversiones: acá sólo se
+        // contestaron dos preguntas.
+        completadoEn: null,
       });
       if (r.error) return r.error;
     }
@@ -535,21 +538,9 @@ export function OnboardingV2() {
       saveV2InversionesPerfil({ porQue: invPorQue, reaccion: invReaccion, yaInvierte: invYaInvierte ?? undefined });
     }
 
-    // Rama "Objetivo puntual" → creamos el objetivo ya cargado en Objetivos.
-    if (meta === 'objetivo' && objNombre.trim() && parseMoneyInput(objMonto) > 0) {
-      const horizonte = horizonteDelObjetivo();
-      saveV2ObjetivosState([{
-        id: `onb-${Date.now()}`,
-        nombre: objNombre.trim(),
-        descripcion: '',
-        tipo: 'individual',
-        moneda: objMoneda,
-        horizonte,
-        montoModo: 'exacto',
-        montoTotal: parseMoneyInput(objMonto),
-        contribuciones: [],
-      }]);
-    }
+    // Rama "Objetivo puntual": el objetivo se crea como fila en `goals` dentro
+    // de `guardarEnSupabase`, no acá. Antes viajaba por localStorage hasta la
+    // pantalla de Objetivos, así que existía sólo en ese navegador.
   }
 
   // ── Auto-avance ───────────────────────────────────────────────────────

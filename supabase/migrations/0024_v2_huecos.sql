@@ -23,14 +23,69 @@ alter table transactions
 comment on column transactions.original_amount is
   'Monto tal como lo tipeó la persona cuando currency <> ARS. amount_ars es su equivalente congelado a exchange_rate_id.';
 
--- ── 2) `goals.description` ───────────────────────────────────────────────
+-- ── 2) Objetivos: el "por qué" y el monto que todavía no se sabe ─────────
 -- En el v2 el objetivo tiene nombre corto ("Viaje a Brasil") y una frase de
--- por qué. Sin esta columna el "por qué" se perdía, que es justo la parte que
+-- por qué. Sin `description` el "por qué" se perdía, que es justo la parte que
 -- hace que alguien no abandone el objetivo.
 alter table goals
   add column if not exists description text;
 
--- ── 3) El resto de las respuestas del onboarding ─────────────────────────
+-- El v2 no obliga a poner un monto exacto: se puede decir "entre tanto y
+-- tanto" o "todavía no sé". Eso NO es lo mismo que un objetivo de $0, y la
+-- diferencia importa para el §5 de la guía (un dato estimado se muestra como
+-- rango, nunca como número exacto).
+--   amount_mode = 'exacto'      → amount_ars es el monto
+--   amount_mode = 'rango'       → amount_min_ars .. amount_ars
+--   amount_mode = 'desconocido' → todavía no lo sabe (amount_ars null)
+--   amount_mode = null          → nunca se preguntó (viene del onboarding)
+alter table goals
+  add column if not exists amount_min_ars numeric check (amount_min_ars is null or amount_min_ars >= 0),
+  add column if not exists amount_mode text;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'goals_amount_mode_check') then
+    alter table goals
+      add constraint goals_amount_mode_check
+      check (amount_mode is null or amount_mode in ('exacto','rango','desconocido'));
+  end if;
+end $$;
+
+-- ── 3) Un objetivo puede estar en la moneda en la que se paga ────────────
+-- El selector de moneda de Objetivos ofrece ocho monedas (peso, dólar, euro,
+-- real, peso chileno, uruguayo, libra, peso mexicano), pero la 0021 dejó el
+-- check en ARS/USD: cualquier objetivo en euros o reales fallaba en el insert.
+-- Un pasaje a Brasil se paga en reales y el objetivo tiene que poder decirlo.
+alter table goals drop constraint if exists goals_currency_check;
+alter table goals
+  add constraint goals_currency_check
+  check (currency in ('ARS','USD','EUR','BRL','CLP','UYU','GBP','MXN'));
+
+alter table goal_contributions drop constraint if exists goal_contributions_currency_check;
+alter table goal_contributions
+  add constraint goal_contributions_currency_check
+  check (currency in ('ARS','USD','EUR','BRL','CLP','UYU','GBP','MXN'));
+
+-- El progreso de un objetivo se calcula EN SU PROPIA MONEDA (juntaste 400 de
+-- 1.200 euros), así que no hace falta convertir para que la pantalla funcione.
+-- Y no se puede: FINA tiene una sola cotización, la del dólar blue. Antes esta
+-- columna era `not null`, o sea que un aporte en euros obligaba a inventar un
+-- equivalente en pesos. Ahora null significa algo preciso: "no hay cotización
+-- para esta moneda", que es distinto de cero.
+alter table goal_contributions alter column amount_ars drop not null;
+alter table goal_contributions drop constraint if exists goal_contributions_amount_ars_check;
+alter table goal_contributions
+  add constraint goal_contributions_amount_ars_check
+  check (amount_ars is null or amount_ars > 0);
+
+comment on column goal_contributions.amount_ars is
+  'Equivalente en pesos congelado a exchange_rate_id. null = la moneda del aporte no tiene cotización en FINA (sólo hay dólar blue).';
+
+comment on column goals.amount_ars is
+  'El monto objetivo, EN LA MONEDA de la columna `currency` (el nombre quedó del esquema viejo). Con amount_mode = rango, el techo del rango.';
+
+
+-- ── 4) El resto de las respuestas del onboarding ─────────────────────────
 -- La 0023 le dio columna propia a las respuestas que se CONSULTAN (género,
 -- rango de edad, zona, meta principal, nivel financiero…). Quedan afuera unas
 -- diez más —cómo viene el mes, gastos fijos, qué recortaría, cuánto le importa
@@ -48,7 +103,16 @@ comment on column user_profiles.onboarding_v2 is
   'Respuestas del onboarding v2 que se leen en bloque. Lo que se consulta o filtra tiene columna propia.';
 
 
--- ── 4) Nombres de las demás miembras de tu grupo ─────────────────────────
+-- ── 5) El quiz de inversiones se terminó o no ────────────────────────────
+-- Sin esto no hay forma de distinguir "contestó las dos preguntas del
+-- onboarding" de "hizo el quiz completo": el perfil inversor existe en los dos
+-- casos. Y la diferencia decide qué pantalla se abre — quien ya lo terminó no
+-- tiene que volver a hacerlo cada vez que entra.
+alter table investment_profiles
+  add column if not exists completed_at timestamptz;
+
+
+-- ── 6) Nombres de las demás miembras de tu grupo ─────────────────────────
 -- Un ranking sin nombres no es un ranking. Pero user_profiles es owner-only,
 -- así que desde el cliente no se puede leer el nombre de otra persona.
 --
@@ -72,7 +136,7 @@ grant select on group_member_names to authenticated;
 comment on view group_member_names is
   'Sólo el nombre de las miembras de los grupos a los que pertenece auth.uid(). El filtro vive en la vista a propósito.';
 
--- ── 5) Bucket de fotos de perfil ─────────────────────────────────────────
+-- ── 7) Bucket de fotos de perfil ─────────────────────────────────────────
 -- Hoy la foto se guarda en base64 en localStorage: no sobrevive a cambiar de
 -- teléfono y hace pesado cada arranque. Va a Storage, con la ruta en
 -- user_profiles.avatar_path (que agregó la 0023).

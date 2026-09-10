@@ -5,6 +5,7 @@ import { IconChevron, IconClose, IconGastos, IconGrupo, IconObjetivos, IconSpark
 import './onboarding-v2.css';
 import { estaHidratado, leerEstado } from '../../api/v2/almacen';
 import * as acciones from '../../api/v2/acciones';
+import type { Grupo as GrupoV2, Moneda as MonedaV2 } from '../../api/v2/tipos';
 
 // REDISEÑO v2 — piezas compartidas entre el onboarding y las pantallas
 // post-onboarding.
@@ -319,6 +320,49 @@ function leerLocalJson<T>(clave: string, porDefecto: T): T {
 // `acciones` no escribe nada y las respuestas viajan en la copia local, que se
 // sube entera al crear la cuenta (ver `guardarEnSupabase` en OnboardingV2).
 
+/**
+ * Sube las respuestas que quedaron sólo en la copia local.
+ *
+ * Pasa en un caso concreto: si Supabase pide confirmar el mail, al terminar el
+ * onboarding todavía NO hay sesión, así que las respuestas no se pudieron
+ * escribir. Quedaron en localStorage y esta función las sube la primera vez que
+ * la persona entra con su cuenta.
+ *
+ * Sólo escribe lo que la base no tiene. Nunca pisa un dato de Supabase con uno
+ * local: si ya cambió el nombre desde otro teléfono, ese es el que vale.
+ */
+export function subirPendientesLocales() {
+  if (!estaHidratado()) return;
+  const db = leerEstado();
+
+  const nombreLocal = leerLocal(LS_NOMBRE);
+  if (!db.perfil.nombre && nombreLocal) acciones.guardarPerfil({ nombre: nombreLocal });
+
+  const nivelLocal = leerLocal(LS_NIVEL_FIN);
+  if (!db.perfil.nivelFinanciero && nivelLocal) acciones.guardarPerfil({ nivelFinanciero: nivelLocal });
+
+  if (!db.perfil.terminosAceptadosEn && leerLocal(LS_TERMINOS) === '1') {
+    // No se sabe cuándo los aceptó (la copia local sólo guardaba un sí/no), así
+    // que se registra el momento en que se pudo escribir.
+    acciones.guardarPerfil({ terminosAceptadosEn: new Date().toISOString() });
+  }
+
+  const reservaLocal = Number(leerLocal(LS_RESERVA)) || 0;
+  if (db.perfil.reserva === 0 && reservaLocal > 0) acciones.guardarPerfil({ reserva: reservaLocal });
+
+  const perfilOnbLocal = leerLocalJson<PerfilOnboarding | null>(LS_PERFIL_ONB, null);
+  if (!db.perfil.onboarding && perfilOnbLocal) saveV2PerfilOnboarding(perfilOnbLocal);
+
+  if (db.secciones.length === 0) {
+    for (const nombre of leerLocalJson<string[]>(LS_CATEGORIAS, [])) {
+      if (typeof nombre === 'string' && nombre.trim()) acciones.crearSeccion(nombre);
+    }
+  }
+
+  const invLocal = leerLocalJson<InversionesPerfil | null>(LS_INV_PERFIL, null);
+  if (!db.perfilInversor && invLocal?.porQue && invLocal?.reaccion) saveV2InversionesPerfil(invLocal);
+}
+
 // Puente Onboarding → toda la app: el nombre es lo primero que personaliza
 // todo — saludo en Home, mensajes del bot, pantalla final. Sin esto la app
 // se siente un formulario; con esto se siente que te habla a vos.
@@ -363,53 +407,45 @@ export function saludoDelDia(): string {
   return 'Buenas noches';
 }
 
-// Foto de perfil — se guarda como data URL (base64) en localStorage, no
-// hay backend todavía para subir archivos de verdad.
-const LS_FOTO = 'fina_v2_foto';
-export function saveV2Foto(dataUrl: string | null) {
-  try {
-    if (!dataUrl) { localStorage.removeItem(LS_FOTO); return; }
-    localStorage.setItem(LS_FOTO, dataUrl);
-  } catch {
-    // no crítico
-  }
-}
+// Foto de perfil — va a Supabase Storage (bucket `avatars`, migración 0024).
+// Antes era una data URL en base64 en localStorage: no sobrevivía a cambiar de
+// teléfono, no la veían las demás miembras del grupo, y se cargaba entera en
+// memoria en cada arranque.
 export function loadV2Foto(): string | null {
-  try {
-    return localStorage.getItem(LS_FOTO);
-  } catch {
-    return null;
-  }
+  return leerEstado().perfil.fotoUrl;
 }
 
-// Grupo — CONCEPTO/EJEMPLO todavía: no hay cuentas ni backend real para
-// que dos personas compartan datos entre dispositivos, así que esto vive
-// 100% en tu propio localStorage. Sirve para probar la idea (competir por
-// actividad, objetivos compartidos) antes de invertir en la parte de
-// cuentas reales — mostralo como demo, no como "así ya funciona".
-export type Miembro = { nombre: string; actividad: number; sosVos?: boolean };
-export type Grupo = { nombre: string; codigo: string; miembros: Miembro[] };
-const LS_GRUPO = 'fina_v2_grupo';
-export function saveV2Grupo(g: Grupo | null) {
-  try {
-    if (!g) { localStorage.removeItem(LS_GRUPO); return; }
-    localStorage.setItem(LS_GRUPO, JSON.stringify(g));
-  } catch {
-    // no crítico
-  }
+/**
+ * Sube la foto y devuelve su URL, o el error.
+ *
+ * Espera la respuesta en vez de pintar optimista: una imagen que se ve puesta y
+ * no está subida es peor que un segundo de espera, porque desaparece sola al
+ * recargar y no se entiende por qué.
+ */
+export async function subirV2Foto(archivo: File): Promise<{ url: string | null; error: string | null }> {
+  return acciones.subirFoto(archivo);
 }
-export function loadV2Grupo(): Grupo | null {
-  try {
-    const raw = localStorage.getItem(LS_GRUPO);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+
+export async function borrarV2Foto(): Promise<string | null> {
+  return acciones.borrarFoto();
+}
+
+// Grupo — ahora real. Vive en Supabase (tablas `groups` y `group_members`,
+// migración 0022), no en el localStorage de un navegador: dos personas en dos
+// teléfonos distintos ven el mismo grupo y el mismo ranking.
+//
+// Es el único lugar de la app donde una usuaria lee filas de otra, y está
+// contenido a propósito: las policies dejan ver SOLO a quienes comparten grupo,
+// y de ellas SOLO el nombre y la actividad. Ni sus gastos, ni su teléfono.
+export type { Grupo, MiembroGrupo as Miembro } from '../../api/v2/tipos';
+
+export function loadV2Grupo(): GrupoV2 | null {
+  return leerEstado().grupo;
 }
 
 // Invitar de verdad (share sheet nativo, o copiar al portapapeles si no hay)
 // — se usa desde Grupos y desde el flujo de crear un objetivo en conjunto.
-export async function invitarAGrupo(g: Grupo): Promise<'compartido' | 'copiado' | 'nada'> {
+export async function invitarAGrupo(g: GrupoV2): Promise<'compartido' | 'copiado' | 'nada'> {
   const texto = `Unite a "${g.nombre}" en FINA con el código ${g.codigo}`;
   if (navigator.share) {
     try {
@@ -427,29 +463,11 @@ export async function invitarAGrupo(g: Grupo): Promise<'compartido' | 'copiado' 
   }
 }
 
-function codigoAlAzar(): string {
-  const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let c = '';
-  for (let i = 0; i < 5; i++) c += letras[Math.floor(Math.random() * letras.length)];
-  return `FINA-${c}`;
-}
-// Arma un grupo con compañeras de EJEMPLO + vos (con tu nombre real) — se
-// usa tanto desde el onboarding ("¿individual o con amigas?") como desde
-// Grupos ("Crear un grupo"). Mismo criterio de siempre: sin backend real
-// todavía, esto prueba la idea.
-export function crearGrupoDemo(nombreGrupo: string): Grupo {
-  const yo = loadV2Nombre() || 'Vos';
-  return {
-    nombre: nombreGrupo,
-    codigo: codigoAlAzar(),
-    miembros: [
-      { nombre: 'Caro', actividad: 6 },
-      { nombre: yo, actividad: 3, sosVos: true },
-      { nombre: 'Male', actividad: 2 },
-      { nombre: 'Juli', actividad: 1 },
-    ],
-  };
-}
+// Se fue `crearGrupoDemo`. Armaba un grupo con tres compañeras inventadas
+// (Caro, Male, Juli) y un código que no existía en ninguna parte: servía para
+// ver la pantalla, pero mostraba un ranking falso. Crear un grupo ahora es
+// `acciones.crearGrupo`, que inserta la fila, genera un código real y te deja
+// como owner; las demás entran con `acciones.unirseAGrupo(codigo)`.
 
 // Botón "armar grupo" reutilizable — va en TODAS las pantallas menos Home
 // (en Home, en cambio, se muestra directamente el ranking del grupo). Si ya
@@ -517,6 +535,7 @@ export function saveV2InversionesPerfil(p: InversionesPerfil | null) {
     yaInvierte: p.yaInvierte === undefined ? (anterior?.yaInvierte ?? null) : p.yaInvierte === 'si',
     enQue: anterior?.enQue ?? [],
     bancos: anterior?.bancos ?? [],
+    completadoEn: anterior?.completadoEn ?? null,
   };
   acciones.guardarPerfilInversor(siguiente);
 }
@@ -532,28 +551,9 @@ export function loadV2InversionesPerfil(): InversionesPerfil | null {
   return leerLocalJson<InversionesPerfil | null>(LS_INV_PERFIL, null);
 }
 
-// Puente Onboarding → Objetivos: si dijo que ya tiene objetivos en mente y
-// los nombró, aparecen ya creados (sin monto todavía) para completar ahí —
-// ahora con el plazo y la moneda que ya contestó en el onboarding, en vez de
-// solo el nombre a secas.
-export type ObjetivoInicial = { nombre: string; horizonte: string | null; moneda: 'ARS' | 'USD' };
-const LS_OBJETIVOS_INICIALES = 'fina_v2_objetivos_iniciales';
-export function saveV2ObjetivosIniciales(objetivos: ObjetivoInicial[]) {
-  try {
-    localStorage.setItem(LS_OBJETIVOS_INICIALES, JSON.stringify(objetivos));
-  } catch {
-    // no crítico
-  }
-}
-export function loadV2ObjetivosIniciales(): ObjetivoInicial[] {
-  try {
-    const raw = localStorage.getItem(LS_OBJETIVOS_INICIALES);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+// (Se fue el puente `ObjetivosIniciales`. El objetivo que se define en el
+// onboarding ya no viaja por localStorage hasta la pantalla de Objetivos: se
+// crea como fila en `goals` al momento de crear la cuenta.)
 
 // Puente Onboarding → toda la app: perfil ampliado con las señales de
 // situación/hábitos que hoy no tienen otra sección propia (Gastos/Objetivos/
@@ -1244,40 +1244,79 @@ export function SegmentedTab<T extends string>({
   );
 }
 
-// ── Persistencia real de Gastos / Objetivos / Inversiones ──────────────
-// Antes, lo que cargabas en cada sección vivía solo en el estado de esa
-// pantalla y se perdía apenas navegabas a otra (Home, por ejemplo). Sin
-// esto, ni un buscador de gastos ni un resumen tipo "anillo de bienestar"
-// en Home pueden ser reales — no habría nada persistente que leer. Genérico
-// a propósito (cada pantalla define su propia forma de estado) para no
-// duplicar los tipos acá.
-function saveV2State(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // no crítico
-  }
+
+// ── Vistas de sólo lectura para Home, Perfil y Mis visualizaciones ──────
+//
+// Antes cada una de esas pantallas leía el blob que Gastos/Objetivos/
+// Inversiones guardaban en localStorage, con un tipo "Lite" propio y un cast.
+// Eran tres formas distintas del mismo dato y tres oportunidades de que se
+// desincronizaran.
+//
+// Ahora leen de acá, que es una proyección del almacén con tipos de verdad.
+// Son SÓLO LECTURA a propósito: quien quiera cambiar algo llama a `acciones`,
+// no reescribe un blob entero.
+
+export type VistaGastos = {
+  categorias: { id: string; nombre: string }[];
+  gastos: { id: string; monto: number; moneda: MonedaV2; descripcion: string; categoriaId: string; tipo: string; ts: number; metodoPago?: string }[];
+  disponible: number;
+  reserva: number;
+  topes: Record<string, { monto: number; periodo: 'semana' | 'mes' }>;
+  metodosPago: string[];
+};
+
+export function vistaGastos(): VistaGastos {
+  const db = leerEstado();
+  return {
+    categorias: db.secciones.map((x) => ({ id: x.id, nombre: x.nombre })),
+    gastos: db.gastos.map((g) => ({
+      id: g.id, monto: g.monto, moneda: g.moneda, descripcion: g.descripcion,
+      categoriaId: g.seccionId ?? '', tipo: g.tipo, ts: g.ts,
+      metodoPago: g.metodoPago ?? undefined,
+    })),
+    disponible: Math.max(db.mediosPago.reduce((t, m) => t + m.saldo, 0), 0),
+    reserva: db.perfil.reserva,
+    topes: Object.fromEntries(
+      db.secciones.filter((x) => x.tope !== null).map((x) => [x.id, x.tope as { monto: number; periodo: 'semana' | 'mes' }]),
+    ),
+    metodosPago: db.mediosPago.map((m) => m.nombre),
+  };
 }
-function loadV2State<T>(key: string): T | null {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : null;
-  } catch {
-    return null;
-  }
+
+export type VistaObjetivo = {
+  id: string;
+  nombre: string;
+  moneda: MonedaV2;
+  /** 0 = no hay monto con el que calcular progreso (null en la base). */
+  montoTotal: number;
+  contribuciones: { monto: number; ts: number }[];
+};
+
+export function vistaObjetivos(): VistaObjetivo[] {
+  return leerEstado().objetivos.map((o) => ({
+    id: o.id,
+    nombre: o.nombre,
+    moneda: o.moneda,
+    montoTotal: o.montoTotal ?? 0,
+    contribuciones: o.contribuciones.map((c) => ({ monto: c.monto, ts: c.ts })),
+  }));
 }
 
-const LS_GASTOS_STATE = 'fina_v2_gastos_state';
-export const saveV2GastosState = (s: unknown) => saveV2State(LS_GASTOS_STATE, s);
-export const loadV2GastosState = <T,>() => loadV2State<T>(LS_GASTOS_STATE);
+export type VistaInversiones = {
+  /** true si terminó el quiz y ya tiene un perfil inversor armado. */
+  completado: boolean;
+  aportes: { id: string; monto: number; montoArs: number; instrumentoId: string; ts: number }[];
+};
 
-const LS_OBJETIVOS_STATE = 'fina_v2_objetivos_state';
-export const saveV2ObjetivosState = (s: unknown) => saveV2State(LS_OBJETIVOS_STATE, s);
-export const loadV2ObjetivosState = <T,>() => loadV2State<T>(LS_OBJETIVOS_STATE);
-
-const LS_INVERSIONES_STATE = 'fina_v2_inversiones_state';
-export const saveV2InversionesState = (s: unknown) => saveV2State(LS_INVERSIONES_STATE, s);
-export const loadV2InversionesState = <T,>() => loadV2State<T>(LS_INVERSIONES_STATE);
+export function vistaInversiones(): VistaInversiones {
+  const db = leerEstado();
+  return {
+    completado: !!db.perfilInversor?.completadoEn,
+    aportes: db.aportes.map((a) => ({
+      id: a.id, monto: a.monto, montoArs: a.montoArs, instrumentoId: a.instrumento, ts: a.ts,
+    })),
+  };
+}
 
 // Reserva ("alcancía") — se movió de Gastos a Home (arriba de todo, al lado
 // del perfil). Vive en su propia clave, independiente del estado de Gastos,

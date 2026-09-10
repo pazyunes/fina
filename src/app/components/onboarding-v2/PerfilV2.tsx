@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
-import { ArmarGrupoBtn, COLORS, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
+import { ArmarGrupoBtn, COLORS, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
@@ -19,25 +19,25 @@ function Check({ size = 12 }: { size?: number }) {
     </svg>
   );
 }
-type GastosLite = { gastos: unknown[]; topes: Record<string, unknown> };
-type ObjetivoLite = { montoTotal: number };
 function itemsPerfil() {
-  const g = loadV2GastosState<GastosLite>();
-  const objetivos = loadV2ObjetivosState<ObjetivoLite[]>() ?? [];
+  const g = vistaGastos();
+  const objetivos = vistaObjetivos();
   return [
-    { label: 'Agregá tu primer gasto', hecho: !!g && g.gastos.length > 0, to: '/onboarding-v2/gastos' },
-    { label: 'Definí un tope para recortar algo', hecho: !!g && Object.keys(g.topes).length > 0, to: '/onboarding-v2/gastos' },
+    { label: 'Agregá tu primer gasto', hecho: g.gastos.length > 0, to: '/onboarding-v2/gastos' },
+    { label: 'Definí un tope para recortar algo', hecho: Object.keys(g.topes).length > 0, to: '/onboarding-v2/gastos' },
     { label: 'Sumá un objetivo', hecho: objetivos.length > 0, to: '/onboarding-v2/objetivos' },
   ];
 }
 
-// REDISEÑO v2 — Perfil: foto (de verdad, se guarda en este navegador) +
+// REDISEÑO v2 — Perfil: foto (se sube a Supabase Storage) +
 // nombre editable, checklist de "completá tu perfil", y la puerta de
 // entrada a "Mis grupos". Se llega tocando el avatar en Home.
 export function PerfilV2() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [foto, setFoto] = useState<string | null>(() => loadV2Foto());
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
   const [nombre, setNombre] = useState(() => loadV2Nombre());
   const [guardado, setGuardado] = useState(false);
   const [nivel, setNivel] = useState<string | null>(() => loadV2NivelFinanciero());
@@ -54,16 +54,21 @@ export function PerfilV2() {
     fileRef.current?.click();
   }
 
-  function onFotoElegida(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFotoElegida(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result);
-      setFoto(dataUrl);
-      saveV2Foto(dataUrl);
-    };
-    reader.readAsDataURL(file);
+    // Vista previa local mientras sube, para que el toque tenga respuesta
+    // inmediata. Si la subida falla se vuelve a la foto anterior: dejar la
+    // previa puesta haría creer que quedó guardada.
+    const anterior = foto;
+    setFoto(URL.createObjectURL(file));
+    setSubiendoFoto(true);
+    setErrorFoto(null);
+
+    const r = await subirV2Foto(file);
+    setSubiendoFoto(false);
+    if (r.error !== null) { setFoto(anterior); setErrorFoto('No pudimos subir la foto. Probá de nuevo.'); return; }
+    setFoto(r.url);
   }
 
   function guardarNombre() {
@@ -110,7 +115,13 @@ export function PerfilV2() {
             Cambiar
           </span>
         </button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" aria-label="Elegir foto de perfil" onChange={onFotoElegida} />
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" aria-label="Elegir foto de perfil" onChange={(e) => void onFotoElegida(e)} />
+        {subiendoFoto && (
+          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Subiendo tu foto…</p>
+        )}
+        {errorFoto && (
+          <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorFoto}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">

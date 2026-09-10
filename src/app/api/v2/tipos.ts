@@ -2,7 +2,16 @@
 // componentes no vuelven a declararlas (§9 de la guía — los tipos compartidos
 // viven en la capa de API porque son el contrato con el backend).
 
-export type Moneda = 'ARS' | 'USD';
+// Las monedas que la app ofrece elegir. FINA tiene UNA cotización (dólar
+// blue), así que sólo ARS y USD se pueden pasar a pesos; en las demás, el
+// objetivo lleva su cuenta en su propia moneda (juntaste 400 de 1.200 euros).
+export type Moneda = 'ARS' | 'USD' | 'EUR' | 'BRL' | 'CLP' | 'UYU' | 'GBP' | 'MXN';
+
+/** Las únicas que se pueden convertir a pesos. */
+export type MonedaConvertible = 'ARS' | 'USD';
+export function esConvertible(m: Moneda): m is MonedaConvertible {
+  return m === 'ARS' || m === 'USD';
+}
 export type Periodo = 'semana' | 'mes';
 export type TipoGasto = 'necesario' | 'urgente' | 'impulsivo' | 'otro';
 export type KindAporte = 'paid' | 'saved';
@@ -24,7 +33,8 @@ export type MedioPago = {
 export type Gasto = {
   id: string;
   monto: number;
-  moneda: Moneda;
+  /** Un gasto siempre entra al total en pesos, así que su moneda se convierte. */
+  moneda: MonedaConvertible;
   descripcion: string;
   seccionId: string | null;
   tipo: TipoGasto;
@@ -39,11 +49,21 @@ export type Contribucion = {
   id: string;
   monto: number;
   moneda: Moneda;
-  montoArs: number;
+  /** null = esa moneda no tiene cotización en FINA. No es cero. */
+  montoArs: number | null;
   kind: KindAporte;
   label: string | null;
   ts: number;
+  /** Quién lo puso. En un objetivo grupal es la que hace la diferencia. */
+  deUserId: string;
 };
+
+/**
+ * Cómo se sabe cuánto cuesta el objetivo.
+ * 'exacto' → montoTotal · 'rango' → montoMin..montoTotal ·
+ * 'desconocido' → todavía no lo sabe · null → nunca se preguntó.
+ */
+export type ModoMonto = 'exacto' | 'rango' | 'desconocido';
 
 export type Objetivo = {
   id: string;
@@ -52,8 +72,11 @@ export type Objetivo = {
   tipo: 'individual' | 'grupal';
   moneda: Moneda;
   horizonte: string | null;
+  modoMonto: ModoMonto | null;
   /** null = "todavía no sé cuánto" — se muestra como por-descubrir, no como 0 */
   montoTotal: number | null;
+  /** Sólo cuando modoMonto === 'rango'. */
+  montoMin: number | null;
   estado: 'active' | 'achieved' | 'cancelled';
   contribuciones: Contribucion[];
 };
@@ -64,13 +87,20 @@ export type PerfilInversor = {
   yaInvierte: boolean | null;
   enQue: string[];
   bancos: string[];
+  /**
+   * Cuándo terminó el quiz completo. null = todavía no.
+   * No alcanza con que el perfil exista: las dos preguntas del onboarding ya
+   * lo crean, y quien sólo pasó por ahí tiene que seguir el quiz donde quedó.
+   */
+  completadoEn: string | null;
 };
 
 export type AporteInversion = {
   id: string;
   instrumento: string;
   monto: number;
-  moneda: Moneda;
+  /** Los instrumentos de FINA se valúan en pesos o dólares. */
+  moneda: MonedaConvertible;
   montoArs: number;
   cotizacion: number | null;
   ts: number;
@@ -112,6 +142,8 @@ export type Perfil = {
    * jsonb porque el cuestionario cambia seguido: ver la migración 0024.
    */
   onboarding: Record<string, unknown> | null;
+  /** URL pública de la foto de perfil, o null. Se sube con `subirFoto`. */
+  fotoUrl: string | null;
 };
 
 /** Todo lo que la app necesita de una usuaria, en una sola carga. */
@@ -142,6 +174,7 @@ export const PERFIL_VACIO: Perfil = {
   telefono: null,
   terminosAceptadosEn: null,
   onboarding: null,
+  fotoUrl: null,
 };
 
 export const ESTADO_VACIO: EstadoV2 = {

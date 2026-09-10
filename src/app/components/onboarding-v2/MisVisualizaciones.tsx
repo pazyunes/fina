@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ComponentType } from 'react';
 import { IconBalanza, IconCalendario, IconGastos, IconObjetivos } from './FinaIcons';
-import { COLORS, FONTS, TituloSeccion, fmtMoney, fmtMontoCompacto, loadV2GastosState, loadV2InversionesState, loadV2ObjetivosState } from './shared';
+import { COLORS, FONTS, TituloSeccion, fmtMoney, fmtMontoCompacto, vistaGastos, vistaInversiones, vistaObjetivos } from './shared';
 
 // PRUEBA — "Mis visualizaciones" en Home. Se eligen entre varios gráficos
 // armados con los datos que ya hay guardados: nada inventado, y si no alcanzan
@@ -11,9 +11,6 @@ import { COLORS, FONTS, TituloSeccion, fmtMoney, fmtMontoCompacto, loadV2GastosS
 // grilla recesiva, y ningún dato sin su unidad.
 
 type GastoLite = { monto: number; ts?: number; categoriaId: string; tipo: string; descripcion?: string };
-type EstadoGastosLite = { gastos: GastoLite[]; categorias: { id: string; nombre: string }[] };
-type ObjLite = { nombre: string; montoTotal: number; contribuciones: { monto: number }[] };
-type InvLite = { aportes: { monto: number; montoArs?: number; ts: number }[] };
 
 type VizId = 'porSeccion' | 'porDia' | 'porTipo' | 'objetivos';
 // Iconos de línea, no emojis (§2.1: iconografía monolineal). Las etiquetas se
@@ -95,15 +92,15 @@ function Columnas({ dias }: { dias: { etiqueta: string; valor: number }[] }) {
 
 export function MisVisualizaciones() {
   const [viz, setViz] = useState<VizId>('porSeccion');
-  const g = loadV2GastosState<EstadoGastosLite>();
-  const objetivos = loadV2ObjetivosState<ObjLite[]>() ?? [];
-  const inv = loadV2InversionesState<InvLite>();
-  const gastos = g?.gastos ?? [];
+  const g = vistaGastos();
+  const objetivos = vistaObjetivos();
+  const inv = vistaInversiones();
+  const gastos = g.gastos;
 
   function contenido() {
     if (viz === 'porSeccion') {
       if (gastos.length === 0) return <SinDatos>Cuando registres tu primer gasto, acá vas a ver en qué se te va.</SinDatos>;
-      const porCat = (g?.categorias ?? [])
+      const porCat = g.categorias
         .map((c, i) => ({
           label: c.nombre,
           valor: gastos.filter((x) => x.categoriaId === c.id).reduce((a, x) => a + x.monto, 0),

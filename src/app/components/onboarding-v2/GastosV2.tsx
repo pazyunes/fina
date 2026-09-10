@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, loadV2Categorias, loadV2GastosState, parseMoneyInput, saveV2GastosState, slug } from './shared';
+import { useEffect, useMemo, useState } from 'react';
+import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput, slug } from './shared';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
+import * as acciones from '../../api/v2/acciones';
+import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
 import { IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { WHATSAPP_URL } from '../WhatsAppFab';
@@ -19,10 +22,11 @@ import { WHATSAPP_URL } from '../WhatsAppFab';
 // Las categorías que la persona marcó en el onboarding ("¿en qué se te
 // suele ir la plata?") ya aparecen acá como secciones — ver shared.tsx.
 //
-// Todo esto ahora PERSISTE de verdad (antes vivía solo en el estado de esta
-// pantalla y se perdía al navegar a Home y volver) — hace falta para que el
-// buscador tenga algo real que buscar, y para que Home pueda resumir tu
-// bienestar financiero con datos de verdad.
+// PERSISTENCIA: esta pantalla no guarda nada por su cuenta. Lee del almacén
+// (la copia en memoria de lo que hay en Supabase) y escribe llamando a
+// `acciones`, que actualiza esa copia y encola la escritura contra la base.
+// Antes el estado vivía en un blob de localStorage: se perdía al cambiar de
+// teléfono y el bot de WhatsApp no podía verlo.
 
 type TipoGasto = 'urgente' | 'impulsivo' | 'necesario' | 'otro';
 type Periodo = 'semana' | 'mes';
@@ -76,30 +80,43 @@ const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.
 const CARD_ELEVADA: React.CSSProperties = { background: COLORS.surface, boxShadow: '0 2px 8px rgba(43,33,24,0.08)' };
 const INPUT_STYLE: React.CSSProperties = { background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}` };
 
-// Cuenta nueva: acá solo entra lo que la persona puso en el onboarding — sin
-// categorías ni gastos de ejemplo inventados. Si ya había estado antes en
-// esta sección, se retoma lo que dejó (persistido); si no, arranca de las
-// categorías del onboarding con todo lo demás en cero.
-function estadoInicial(): EstadoGastos {
-  const persistido = loadV2GastosState<EstadoGastos>();
-  if (persistido) return persistido;
-  return {
-    categorias: loadV2Categorias().map((nombre) => ({ id: slug(nombre), nombre })),
-    gastos: [],
-    disponible: 0,
-    reserva: 0,
-    topes: {},
-    metodosPago: [],
-  };
-}
-
 export function GastosV2() {
-  const [estado, setEstado] = useState<EstadoGastos>(estadoInicial);
+  const { estado: db } = useAlmacen();
+
+  // El estado de esta pantalla es una VISTA de lo que hay en la base, no una
+  // copia aparte. Las secciones traen su tope adentro; el disponible es la
+  // suma de lo que hay en cada medio de pago.
+  const estado = useMemo<EstadoGastos>(() => ({
+    categorias: db.secciones.map((s) => ({ id: s.id, nombre: s.nombre })),
+    gastos: db.gastos.map((g) => ({
+      id: g.id,
+      monto: g.monto,
+      moneda: g.moneda,
+      descripcion: g.descripcion,
+      categoriaId: g.seccionId ?? '',
+      tipo: g.tipo,
+      ts: g.ts,
+      metodoPago: g.metodoPago ?? undefined,
+    })),
+    // Se muestra en cero y no en negativo: un disponible negativo es un dato
+    // sobre los medios de pago (gastaste más de lo que cargaste en ese medio),
+    // y ese detalle vive en la lista de medios, no en el número de arriba.
+    disponible: Math.max(db.mediosPago.reduce((t, m) => t + m.saldo, 0), 0),
+    reserva: db.perfil.reserva,
+    topes: Object.fromEntries(
+      db.secciones.filter((s) => s.tope !== null).map((s) => [s.id, s.tope as Tope]),
+    ),
+    metodosPago: db.mediosPago.map((m) => m.nombre),
+  }), [db]);
   const { categorias, gastos, disponible, topes } = estado;
 
-  useEffect(() => {
-    saveV2GastosState(estado);
-  }, [estado]);
+  // La cotización se pide al entrar, no al tocar "guardar": si la persona carga
+  // un gasto en dólares, el valor ya está y no espera a la red.
+  useEffect(() => { precargarCotizacion(); }, []);
+
+  // Errores de conversión (no se pudo traer el dólar). Los de guardado los
+  // reporta el almacén.
+  const [errorGasto, setErrorGasto] = useState<string | null>(null);
 
   // Los sobres arrancan SIEMPRE cerrados (antes se abría el primero solo).
   const [openCatId, setOpenCatId] = useState<string | null>(null);
@@ -163,8 +180,10 @@ export function GastosV2() {
   })).filter((t) => t.monto > 0);
 
   // Sugeridas que todavía no son secciones propias.
+  // Se compara por slug del NOMBRE: el id ahora es el uuid de la fila, así que
+  // "¿ya tiene Delivery?" se responde por nombre, no por id.
   const sugeridasDisponibles = SECCIONES_SUGERIDAS.filter(
-    (n) => !categorias.some((c) => c.id === slug(n)),
+    (n) => !categorias.some((c) => slug(c.nombre) === slug(n)),
   );
   // Medios ofrecidos al registrar un gasto: los que ya usaste primero; si no
   // hay ninguno, los sugeridos.
@@ -179,15 +198,9 @@ export function GastosV2() {
     const n = parseMoneyInput(addDispVal);
     if (!n) return;
     const metodo = (addDispMetodo === 'otro' ? addDispMetodoOtro.trim() : addDispMetodo) || '';
-    setEstado((s) => ({
-      ...s,
-      disponible: s.disponible + n,
-      // El método usado sube al principio de la lista: al registrar un gasto se
-      // ofrecen los más recientes primero.
-      metodosPago: metodo
-        ? [metodo, ...(s.metodosPago ?? []).filter((m) => m !== metodo)].slice(0, 6)
-        : s.metodosPago,
-    }));
+    // El medio usado sube al principio de la lista (queda con `usadoEn` de
+    // ahora): al registrar un gasto se ofrecen los más recientes primero.
+    acciones.sumarDisponible(metodo, n);
     setAddDispVal('');
     setAddDispMetodo(null);
     setAddDispMetodoOtro('');
@@ -195,26 +208,32 @@ export function GastosV2() {
   }
 
   function crearCategoria(nombre: string): string {
-    const id = slug(nombre);
-    setEstado((s) => (s.categorias.some((c) => c.id === id) ? s : { ...s, categorias: [...s.categorias, { id, nombre }] }));
-    return id;
+    const ya = categorias.find((c) => slug(c.nombre) === slug(nombre));
+    if (ya) return ya.id;
+    return acciones.crearSeccion(nombre).id;
   }
 
-  function agregarGasto() {
+  async function agregarGasto() {
     const monto = parseMoneyInput(ngMonto);
     if (monto <= 0) return;
     const catId = ngNuevaCat.trim() ? crearCategoria(ngNuevaCat.trim()) : ngCatId;
     if (!catId) return;
-    const metodo = (ngMetodo === 'otro' ? ngMetodoOtro.trim() : ngMetodo) || undefined;
-    const nuevo: Gasto = { id: String(Date.now()), monto, moneda: ngMoneda, descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label, categoriaId: catId, tipo: ngTipo, ts: Date.now(), metodoPago: metodo };
-    setEstado((s) => ({
-      ...s,
-      gastos: [nuevo, ...s.gastos],
-      disponible: ngMoneda === 'ARS' ? Math.max(s.disponible - monto, 0) : s.disponible,
-      metodosPago: metodo
-        ? [metodo, ...(s.metodosPago ?? []).filter((m) => m !== metodo)].slice(0, 6)
-        : s.metodosPago,
-    }));
+    const metodo = (ngMetodo === 'otro' ? ngMetodoOtro.trim() : ngMetodo) || null;
+
+    // En dólares hay que congelar la cotización, y eso puede fallar sin red.
+    // Si falla, el modal se queda abierto con lo que escribió: perder el gasto
+    // que acaba de tipear sería peor que la espera.
+    setErrorGasto(null);
+    const r = await acciones.registrarGasto({
+      monto,
+      moneda: ngMoneda,
+      descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label,
+      seccionId: catId,
+      tipo: ngTipo,
+      metodoPago: metodo,
+    });
+    if (r.error !== null) { setErrorGasto(r.error); return; }
+
     setNgMonto(''); setNgMoneda('ARS'); setNgDesc(''); setNgNuevaCat(''); setNgTipo('necesario');
     setNgMetodo(null); setNgMetodoOtro('');
     setAddingGasto(false);
@@ -225,7 +244,7 @@ export function GastosV2() {
     const monto = parseMoneyInput(topeEditMonto[catId] || '');
     if (monto <= 0) return;
     const periodo = topeEditPeriodo[catId] || 'semana';
-    setEstado((s) => ({ ...s, topes: { ...s.topes, [catId]: { monto, periodo } } }));
+    acciones.guardarTope(catId, { monto, periodo });
   }
 
   return (
@@ -522,13 +541,17 @@ export function GastosV2() {
             )}
           </div>
 
+          {errorGasto && (
+            <p role="alert" className="text-[14px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{errorGasto}</p>
+          )}
+
           <div className="flex gap-2 mt-1">
             <button type="button" onClick={() => setAddingGasto(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
               Cancelar
             </button>
             <button
               type="button"
-              onClick={agregarGasto}
+              onClick={() => void agregarGasto()}
               disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim())}
               className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95"
               style={{ background: COLORS.brand, color: COLORS.surface }}

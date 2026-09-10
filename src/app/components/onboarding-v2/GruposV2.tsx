@@ -1,18 +1,23 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { COLORS, Grupo, Titulo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, saveV2Grupo } from './shared';
+import { COLORS, Titulo, invitarAGrupo } from './shared';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
+import * as acciones from '../../api/v2/acciones';
 import { Fini } from './Fini';
 import { IconChevron } from './FinaIcons';
 
-// REDISEÑO v2 — Grupos: competir con amigas por actividad (cuánto
-// registraste) y, en Objetivos, armar metas grupales. Todavía no hay
-// cuentas ni backend real (esto es 100% localStorage de este navegador),
-// así que las compañeras de grupo son un EJEMPLO para probar la idea —
-// se avisa explícito abajo, nunca se hace pasar por datos reales.
+// Grupos: competir con amigas por actividad (cuánto REGISTRÁS, nunca cuánto
+// gastás) y, en Objetivos, armar metas grupales.
 //
-// Invitar SÍ es real: comparte (o copia) el código con el share sheet
-// nativo del celular — lo que no hay todavía es el otro lado (que una
-// amiga entre con ese código desde su propio teléfono y sincronice).
+// Es real de punta a punta: el grupo es una fila en `groups`, el código lo
+// genera la base y es único, e invitar comparte ese código con el share sheet
+// del celular. Quien lo recibe entra desde su propio teléfono y ve el mismo
+// ranking.
+//
+// Es el único lugar de FINA donde una usuaria ve datos de otra, y está
+// contenido: las policies (migración 0022) dejan ver SOLO a quienes comparten
+// grupo, y de ellas sólo el nombre y la actividad. Ni sus gastos, ni su
+// teléfono, ni sus objetivos individuales.
 
 // Check propio (currentColor) — el color lo pone el contenedor para
 // respetar el contraste (§3.3: sobre relleno, tinta; nunca blanco sobre lima).
@@ -32,31 +37,40 @@ export function GruposV2() {
   // vino, así el volver devuelve al lugar real y no a un default arbitrario.
   const origen = (location.state as { from?: string } | null)?.from ?? '/onboarding-v2/home';
 
-  const [grupo, setGrupo] = useState<Grupo | null>(() => loadV2Grupo());
+  // El grupo sale del almacén: es una fila de Supabase compartida con las
+  // demás miembras, no un objeto de esta pantalla.
+  const { estado: db } = useAlmacen();
+  const grupo = db.grupo;
   const [nombreGrupo, setNombreGrupo] = useState('');
   const [codigoTxt, setCodigoTxt] = useState('');
   const [modo, setModo] = useState<'elegir' | 'crear' | 'unirse'>('elegir');
   const [copiado, setCopiado] = useState(false);
+  // Crear y unirse SÍ esperan la respuesta del servidor: el código lo genera
+  // la base, y unirse puede fallar porque el código no existe. Pintar el grupo
+  // antes de saberlo sería mostrarle que entró a un grupo que no existe.
+  const [trabajando, setTrabajando] = useState(false);
+  const [errorGrupo, setErrorGrupo] = useState<string | null>(null);
 
-  function crear() {
-    if (!nombreGrupo.trim()) return;
-    const g = crearGrupoDemo(nombreGrupo.trim());
-    setGrupo(g);
-    saveV2Grupo(g);
+  async function crear() {
+    if (!nombreGrupo.trim() || trabajando) return;
+    setTrabajando(true); setErrorGrupo(null);
+    const r = await acciones.crearGrupo(nombreGrupo.trim());
+    setTrabajando(false);
+    if (r.error !== null) setErrorGrupo(r.error);
   }
 
-  function unirse() {
-    if (!codigoTxt.trim()) return;
-    // Demo: cualquier código te mete al mismo grupo de ejemplo.
-    const g = crearGrupoDemo('Ahorrando juntas');
-    setGrupo(g);
-    saveV2Grupo(g);
+  async function unirse() {
+    if (!codigoTxt.trim() || trabajando) return;
+    setTrabajando(true); setErrorGrupo(null);
+    const r = await acciones.unirseAGrupo(codigoTxt.trim());
+    setTrabajando(false);
+    if (r.error !== null) setErrorGrupo(r.error);
   }
 
-  function salir() {
+  async function salir() {
     if (!window.confirm('¿Salir del grupo?')) return;
-    setGrupo(null);
-    saveV2Grupo(null);
+    const error = await acciones.salirDelGrupo();
+    if (error !== null) setErrorGrupo(error);
   }
 
   async function invitar() {
@@ -165,13 +179,14 @@ export function GruposV2() {
             />
             <button
               type="button"
-              onClick={crear}
-              disabled={!nombreGrupo.trim()}
+              onClick={() => void crear()}
+              disabled={!nombreGrupo.trim() || trabajando}
               className="v2-focus rounded-2xl py-3.5 font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
-              Crear grupo
+              {trabajando ? 'Creando…' : 'Crear grupo'}
             </button>
+            {errorGrupo && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorGrupo}</p>}
           </div>
         )}
 
@@ -189,13 +204,14 @@ export function GruposV2() {
             />
             <button
               type="button"
-              onClick={unirse}
-              disabled={!codigoTxt.trim()}
+              onClick={() => void unirse()}
+              disabled={!codigoTxt.trim() || trabajando}
               className="v2-focus rounded-2xl py-3.5 font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
-              Unirme
+              {trabajando ? 'Entrando…' : 'Unirme'}
             </button>
+            {errorGrupo && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorGrupo}</p>}
           </div>
         )}
       </div>
@@ -210,7 +226,7 @@ export function GruposV2() {
       <Volver />
       <div className="flex items-center justify-between gap-3">
         <Titulo>{grupo.nombre}</Titulo>
-        <button type="button" onClick={salir} className="v2-focus text-[14px] font-semibold underline rounded-full px-2 py-2" style={{ color: COLORS.inkSoft }}>Salir</button>
+        <button type="button" onClick={() => void salir()} className="v2-focus text-[14px] font-semibold underline rounded-full px-2 py-2" style={{ color: COLORS.inkSoft }}>Salir</button>
       </div>
 
       <button
@@ -258,7 +274,7 @@ export function GruposV2() {
       </div>
 
       <p className="text-[14px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-        Esto es una vista de ejemplo para probar la idea — cuando conectemos cuentas reales, acá vas a ver la actividad real de cada una.
+        El puntaje es cuánto registrás, no cuánto gastás. Nadie del grupo ve tus gastos ni tus montos.
       </p>
     </div>
   );

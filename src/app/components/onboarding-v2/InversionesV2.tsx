@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, loadV2InversionesPerfil, loadV2InversionesState, parseMoneyInput, saveV2InversionesState } from './shared';
+import { useEffect, useMemo, useState } from 'react';
+import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput } from './shared';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
+import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
 import { useDisplayCurrency, useMoney } from '../../lib/displayCurrency';
 import { fetchExchangeRate } from '../../lib/exchangeRate';
@@ -9,7 +11,7 @@ import { fetchExchangeRate } from '../../lib/exchangeRate';
 // pregunta si ya invertís (y en qué) y qué bancos/billeteras usás — y con
 // eso arma recomendaciones que tienen en cuenta lo que ya hacés y desde
 // dónde lo podés hacer. Mismo catálogo/lógica que InversionesPage.tsx de
-// la app real, adaptado a este sandbox sin backend.
+// la app real, adaptado al flujo v2.
 //
 // Una vez armado el perfil, la pantalla se divide en 3 (pedido explícito):
 // Recomendaciones / Mis inversiones / Mi evolución. Todo en el diseño CLARO
@@ -118,16 +120,9 @@ type Aporte = {
 // Lecturas tolerantes con lo ya guardado.
 const monedaDe = (a: Aporte): Moneda => a.moneda ?? 'ARS';
 const montoArsDe = (a: Aporte): number => a.montoArs ?? a.monto;
-type PersistidoInv = {
-  completado: boolean; // llegó a la pantalla de resultado alguna vez
-  porQue: string | null;
-  reaccion: string | null;
-  yaInvierte: 'si' | 'no' | null;
-  enQue: string[];
-  bancos: string[];
-  aportes: Aporte[];
-  monedaInv?: Moneda;
-};
+// (Se fue `PersistidoInv`: era la forma del blob que esta pantalla guardaba en
+// localStorage. Ahora el perfil inversor y los aportes son filas de Supabase,
+// con su forma en api/v2/tipos.ts.)
 
 // Tarjeta clara estándar de FINA v2. El borde va por token (hairline), no por
 // el color por defecto de Tailwind, para no dejar un color fuera de la paleta.
@@ -142,18 +137,29 @@ export function InversionesV2() {
   // todo tal cual quedó (perfil + aportes) en vez de hacerla repetir el
   // quiz cada vez que entra. Si en el onboarding ya contestó el
   // mini-perfil, arranca directo desde "¿ya invertís?".
-  const persistido = loadV2InversionesState<PersistidoInv>();
-  const [prefilledPerfil] = useState(() => !!loadV2InversionesPerfil());
-  const [paso, setPaso] = useState<Paso>(() => (persistido?.completado ? 'resultado' : 'intro'));
-  const [porQue, setPorQue] = useState<string | null>(() => persistido?.porQue ?? loadV2InversionesPerfil()?.porQue ?? null);
-  const [reaccion, setReaccion] = useState<string | null>(() => persistido?.reaccion ?? loadV2InversionesPerfil()?.reaccion ?? null);
+  // Todo sale del almacén: el perfil inversor es una fila de
+  // `investment_profiles` y los aportes son filas de
+  // `investment_contributions`. Antes esta pantalla guardaba un blob en
+  // localStorage, así que los aportes no existían para el bot ni sobrevivían
+  // a cambiar de teléfono.
+  const { estado: db } = useAlmacen();
+  const perfilGuardado = db.perfilInversor;
+
+  const [prefilledPerfil] = useState(() => !!(perfilGuardado?.porQue && perfilGuardado?.reaccion));
+  // `completadoEn` y no "existe el perfil": las dos preguntas del onboarding ya
+  // crean la fila, y quien sólo pasó por ahí tiene que seguir el quiz.
+  const [paso, setPaso] = useState<Paso>(() => (perfilGuardado?.completadoEn ? 'resultado' : 'intro'));
+  const [porQue, setPorQue] = useState<string | null>(() => perfilGuardado?.porQue ?? null);
+  const [reaccion, setReaccion] = useState<string | null>(() => perfilGuardado?.reaccion ?? null);
   // "¿Invertís?" ya se contestó en el onboarding (pregunta de hábitos, con
   // más matices que un sí/no) — si esa respuesta viajó hasta acá, no se
   // repregunta de nuevo.
-  const [prefilledYaInvierte] = useState(() => !!loadV2InversionesPerfil()?.yaInvierte);
-  const [yaInvierte, setYaInvierte] = useState<'si' | 'no' | null>(() => persistido?.yaInvierte ?? loadV2InversionesPerfil()?.yaInvierte ?? null);
-  const [enQue, setEnQue] = useState<string[]>(() => persistido?.enQue ?? []);
-  const [bancos, setBancos] = useState<string[]>(() => persistido?.bancos ?? []);
+  const [prefilledYaInvierte] = useState(() => perfilGuardado?.yaInvierte !== null && perfilGuardado?.yaInvierte !== undefined);
+  const [yaInvierte, setYaInvierte] = useState<'si' | 'no' | null>(
+    () => (perfilGuardado?.yaInvierte === null || perfilGuardado?.yaInvierte === undefined ? null : perfilGuardado.yaInvierte ? 'si' : 'no'),
+  );
+  const [enQue, setEnQue] = useState<string[]>(() => perfilGuardado?.enQue ?? []);
+  const [bancos, setBancos] = useState<string[]>(() => perfilGuardado?.bancos ?? []);
   const [tab, setTab] = useState<Tab>('recos');
   // ── Moneda de visualización (ARS / USD) ────────────────────────────────
   // Ahora sí está cableada. No hace falta nada nuevo: la app ya tiene el
@@ -161,12 +167,14 @@ export function InversionesV2() {
   // cachea en Supabase), `fetchExchangeRate` y el contexto DisplayCurrency, que
   // envuelve toda la app desde App.tsx. Lo único que faltaba era pedir la
   // cotización desde acá: el efecto que la trae vive en Main.tsx, que es el
-  // shell autenticado, y el sandbox v2 cuelga de rutas públicas que no pasan
-  // por ahí.
+  // shell autenticado, y las rutas del v2 no pasan por ahí.
   //
   // En `vite` local la función no corre (vite sirve api/dolar.ts como módulo),
   // así que fetchExchangeRate devuelve null y el toggle queda deshabilitado
   // solo-ARS. En el preview de Vercel funciona.
+  //
+  // Lo mismo aplica al aporte en dólares: sin cotización no se puede congelar
+  // el equivalente en pesos, y la carga avisa en vez de inventar un número.
   const { rate, setRate, currency, setCurrency } = useDisplayCurrency();
   const { fmt, fmtKpi, isUsd } = useMoney();
   useEffect(() => {
@@ -175,9 +183,6 @@ export function InversionesV2() {
     fetchExchangeRate().then((r) => { if (vivo && r?.rate) setRate(r.rate); });
     return () => { vivo = false; };
   }, [rate, setRate]);
-
-  // Se conserva el valor viejo de `monedaInv` para no pisar datos guardados.
-  const monedaInv = persistido?.monedaInv;
 
   // Instrumento abierto en el detalle. Reemplaza al viejo set `expandido`, que
   // desplegaba el "por qué" dentro de la propia fila y hacía crecer la lista.
@@ -225,15 +230,17 @@ export function InversionesV2() {
     // mover el aporte a hoy y romper la evolución. La cotización SÍ se
     // reescribe con la de hoy si se pasa a dólares, porque es una carga nueva
     // en esa moneda; si sigue en pesos, no hay cotización que guardar.
-    setAportes((prev) => prev.map((a) => (
-      a.id === editandoId
-        ? { ...a, ...nuevoAporte(monto), cotizacion: aporteMoneda === 'USD' && rate ? rate : undefined, instrumentoId: aporteInstrId }
-        : a
-    )));
+    const datos = nuevoAporte(monto);
+    acciones.editarAporte(editandoId, {
+      instrumento: aporteInstrId,
+      monto: datos.monto,
+      moneda: datos.moneda ?? 'ARS',
+      montoArs: datos.montoArs,
+    });
   }
   function borrarAporte() {
     if (!editandoId) return;
-    setAportes((prev) => prev.filter((a) => a.id !== editandoId));
+    acciones.borrarAporte(editandoId);
   }
   useEffect(() => {
     if (!aporteAbierto) return;
@@ -249,7 +256,16 @@ export function InversionesV2() {
     return () => window.removeEventListener('keydown', alTeclear);
   }, [detalle]);
 
-  const [aportes, setAportes] = useState<Aporte[]>(() => persistido?.aportes ?? []);
+  const aportes = useMemo<Aporte[]>(() => db.aportes.map((a) => ({
+    id: a.id,
+    monto: a.monto,
+    moneda: a.moneda,
+    cotizacion: a.cotizacion ?? undefined,
+    montoArs: a.montoArs,
+    instrumentoId: a.instrumento,
+    ts: a.ts,
+  })), [db.aportes]);
+  const [errorAporte, setErrorAporte] = useState<string | null>(null);
   const [aporteMonto, setAporteMonto] = useState('');
   const [aporteInstrId, setAporteInstrId] = useState<string>(INSTRUMENTOS[0].id);
   // Moneda en la que se está cargando ESTE aporte. Es independiente de la
@@ -257,9 +273,24 @@ export function InversionesV2() {
   // dólares y cargar un aporte que hiciste en pesos.
   const [aporteMoneda, setAporteMoneda] = useState<Moneda>('ARS');
 
+  // El perfil se guarda cuando cambia alguna de sus respuestas. Los aportes NO
+  // pasan por acá: cada uno se escribe en el momento en que se carga.
   useEffect(() => {
-    saveV2InversionesState({ completado: paso === 'resultado', porQue, reaccion, yaInvierte, enQue, bancos, aportes, monedaInv });
-  }, [paso, porQue, reaccion, yaInvierte, enQue, bancos, aportes, monedaInv]);
+    // Nada que guardar todavía: no se contestó ni la primera pregunta.
+    if (!porQue && !reaccion && yaInvierte === null && enQue.length === 0 && bancos.length === 0) return;
+    acciones.guardarPerfilInversor({
+      porQue,
+      reaccion,
+      yaInvierte: yaInvierte === null ? null : yaInvierte === 'si',
+      enQue,
+      bancos,
+      // La fecha se pone una sola vez: es cuándo terminó el quiz, no la última
+      // vez que tocó algo.
+      completadoEn: paso === 'resultado'
+        ? (perfilGuardado?.completadoEn ?? new Date().toISOString())
+        : (perfilGuardado?.completadoEn ?? null),
+    });
+  }, [paso, porQue, reaccion, yaInvierte, enQue, bancos]);
 
   const pasos: Paso[] = [
     ...(prefilledPerfil ? [] : (['q1', 'q2'] as Paso[])),
@@ -303,11 +334,19 @@ export function InversionesV2() {
     return { monto, moneda: 'ARS', montoArs: monto };
   }
 
-  function agregarAporte() {
+  /** Devuelve si se pudo cargar: el modal se cierra sólo si salió bien. */
+  async function agregarAporte(): Promise<boolean> {
     const monto = parseMoneyInput(aporteMonto);
-    if (monto <= 0) return;
-    setAportes((a) => [{ id: String(Date.now()), ...nuevoAporte(monto), instrumentoId: aporteInstrId, ts: Date.now() }, ...a]);
+    if (monto <= 0) return false;
+    setErrorAporte(null);
+    const r = await acciones.sumarAporte({
+      instrumento: aporteInstrId,
+      monto,
+      moneda: aporteMoneda,
+    });
+    if (r.error !== null) { setErrorAporte(r.error); return false; }
     setAporteMonto('');
+    return true;
   }
 
   // Toggle segmentado claro reutilizable (moneda / tabs / modo evolución).
@@ -547,10 +586,19 @@ export function InversionesV2() {
                 )}
               </div>
 
+              {errorAporte && (
+                <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorAporte}</p>
+              )}
+
               <Cta
                 label={editandoId ? 'Guardar cambios' : 'Guardar'}
                 disabled={parseMoneyInput(aporteMonto) <= 0}
-                onClick={() => { if (editandoId) guardarEdicion(); else agregarAporte(); cerrarAporte(); }}
+                // El modal se cierra sólo si el aporte se pudo cargar: si falla
+                // la cotización, se queda abierto con el monto ya escrito.
+                onClick={() => {
+                  if (editandoId) { guardarEdicion(); cerrarAporte(); return; }
+                  void agregarAporte().then((ok) => { if (ok) cerrarAporte(); });
+                }}
               />
 
               {/* Borrar. La confirmación se pide en el mismo lugar en vez de un

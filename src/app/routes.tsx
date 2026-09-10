@@ -40,15 +40,16 @@ export const router = createBrowserRouter([
     element: <Login />,
   },
   {
-    // REDISEÑO (rama feat/rediseno-onboarding-v2) — sandbox público, sin
-    // sesión ni Supabase, solo para iterar el diseño del onboarding nuevo.
-    // No reemplaza /personal-data ni el resto del flujo real todavía.
+    // Onboarding real: es la puerta de entrada a FINA. Es público a propósito
+    // (todavía no hay cuenta cuando arranca) y crea la cuenta en el último
+    // paso. Todo lo que se contesta acá se guarda en Supabase.
     path: "/onboarding-v2",
     element: <OnboardingV2 />,
   },
   {
-    // REDISEÑO — post-onboarding: Home/Gastos/Objetivos/Inversiones con el
-    // menú de abajo nuevo. Mismo sandbox público, mismo estado 100% local.
+    // Post-onboarding: Home / Gastos / Objetivos / Inversiones / Perfil /
+    // Grupos. Piden sesión: V2Layout tiene la puerta, y sin
+    // `auth.uid()` las policies de Supabase no devuelven ni una fila.
     element: <V2Layout />,
     children: [
       { path: "/onboarding-v2/home", element: <HomeV2 /> },

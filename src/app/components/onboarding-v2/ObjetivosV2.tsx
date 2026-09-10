@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Fini } from './Fini';
-import { ArmarGrupoBtn, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, SegmentedTab, Titulo, TituloSeccion, crearGrupoDemo, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Grupo, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, parseMoneyInput, saveV2Grupo, saveV2ObjetivosState, useCountUp } from './shared';
+import { ArmarGrupoBtn, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
+import * as acciones from '../../api/v2/acciones';
+import { precargarCotizacion } from '../../api/v2/cotizacion';
+import type { Moneda as MonedaV2 } from '../../api/v2/tipos';
 
 // Sugerencias para arrancar cuando todavía no hay objetivos — le dan
 // emoción/juego a la pantalla vacía; tocás una y abre el modal precargado.
@@ -35,7 +39,9 @@ const SUGERENCIAS_OBJETIVO = [
 type Kind = 'paid' | 'saved';
 type MontoModo = 'exacto' | 'rango' | 'desconocido';
 type TipoObjetivo = 'individual' | 'grupal';
-type Moneda = string;
+// La moneda sale del contrato de datos, no se redeclara: era `string`, y con
+// eso "AR$" o cualquier typo pasaba el typecheck y llegaba a la base.
+type Moneda = MonedaV2;
 
 // Catálogo de monedas — las más usadas acá arriba (ARS/USD) y después
 // cualquier otra, para el dropdown al elegir la moneda de un objetivo. Sin
@@ -43,7 +49,7 @@ type Moneda = string;
 // (ARS/USD…), no con un emoji de bandera. Es un demo local, así que no
 // cotizamos entre monedas: cada objetivo lleva su moneda y sus montos se
 // muestran en ella.
-const MONEDAS: { code: string; label: string }[] = [
+const MONEDAS: { code: Moneda; label: string }[] = [
   { code: 'ARS', label: 'Peso argentino' },
   { code: 'USD', label: 'Dólar' },
   { code: 'EUR', label: 'Euro' },
@@ -209,23 +215,14 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
   );
 }
 
-// Si ya había estado antes acá, retoma lo persistido; si no, arranca de los
-// objetivos nombrados en el onboarding (sin monto todavía).
-function objetivosIniciales(): Objetivo[] {
-  const persistido = loadV2ObjetivosState<Objetivo[]>();
-  if (persistido) return persistido;
-  return loadV2ObjetivosIniciales().map((oi, i) => ({
-    id: `onb-${i}-${oi.nombre}`,
-    nombre: oi.nombre,
-    descripcion: '',
-    tipo: 'individual',
-    moneda: oi.moneda,
-    horizonte: oi.horizonte,
-    montoModo: null,
-    montoTotal: 0,
-    contribuciones: [],
-  }));
-}
+// Los objetivos salen del almacén (tabla `goals` + `goal_contributions`). Esta
+// pantalla no guarda nada por su cuenta: escribe llamando a `acciones`.
+//
+// `montoTotal: 0` acá significa "no hay monto con el que calcular progreso" y
+// se corresponde con `amount_ars = null` en la base. NO son lo mismo
+// conceptualmente —$0 sería un objetivo gratis— y por eso la base guarda null
+// y `modoMonto` dice por qué: 'desconocido' (no lo sabe) o null (no se
+// preguntó). Ver la migración 0024.
 
 function buildMonto(modo: MontoModo, montoTxt: string, minTxt: string): { montoModo: MontoModo; montoTotal: number; montoMin?: number } {
   if (modo === 'desconocido') return { montoModo: 'desconocido', montoTotal: 0 };
@@ -340,8 +337,40 @@ function MontoPicker({
 }
 
 export function ObjetivosV2() {
-  const [objetivos, setObjetivos] = useState<Objetivo[]>(objetivosIniciales);
-  useEffect(() => { saveV2ObjetivosState(objetivos); }, [objetivos]);
+  const { estado: db } = useAlmacen();
+  const miUserId = db.grupo?.miembros.find((m) => m.sosVos)?.userId ?? '';
+  const nombrePorUserId = useMemo(
+    () => new Map((db.grupo?.miembros ?? []).map((m) => [m.userId, m.nombre])),
+    [db.grupo],
+  );
+
+  const objetivos = useMemo<Objetivo[]>(() => db.objetivos.map((o) => ({
+    id: o.id,
+    nombre: o.nombre,
+    descripcion: o.descripcion,
+    tipo: o.tipo,
+    moneda: o.moneda,
+    horizonte: o.horizonte,
+    montoModo: o.modoMonto,
+    montoTotal: o.montoTotal ?? 0,
+    montoMin: o.montoMin ?? undefined,
+    contribuciones: o.contribuciones.map((c) => ({
+      id: c.id,
+      monto: c.monto,
+      moneda: c.moneda,
+      kind: c.kind,
+      label: c.label ?? '',
+      ts: c.ts,
+      // En un objetivo grupal importa quién puso qué. El nombre sale de las
+      // miembras del grupo; si la contribución es tuya, "Vos".
+      de: c.deUserId === miUserId
+        ? (loadV2Nombre() || 'Vos')
+        : (nombrePorUserId.get(c.deUserId) ?? 'Alguien'),
+    })),
+  })), [db.objetivos, miUserId, nombrePorUserId]);
+
+  useEffect(() => { precargarCotizacion(); }, []);
+  const [errorRegistro, setErrorRegistro] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -381,9 +410,8 @@ export function ObjetivosV2() {
   const [celebrar, setCelebrar] = useState(false);
   const [celebrarBig, setCelebrarBig] = useState(false);
 
-  const [grupo, setGrupoLocal] = useState(() => loadV2Grupo());
+  const grupo = db.grupo;
   const [invitado, setInvitado] = useState(false);
-  const miNombre = loadV2Nombre() || 'Vos';
 
   async function invitarGente() {
     if (!grupo) return;
@@ -394,28 +422,37 @@ export function ObjetivosV2() {
   const abierto = objetivos.find((o) => o.id === openId) || null;
   useEffect(() => { if (abierto) setRegMoneda(abierto.moneda); }, [abierto?.id]);
 
-  function crearObjetivo() {
+  async function crearObjetivo() {
     if (!nombre.trim()) return;
-    const id = String(Date.now());
     const monto = buildMonto(montoModo, montoTotal, montoMinTxt);
     const horizonteFinal = horizonteFecha ? new Date(horizonteFecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) : horizonte;
-    setObjetivos((os) => [...os, {
-      id, nombre: nombre.trim(), descripcion: descripcion.trim(), tipo, moneda, horizonte: horizonteFinal,
-      contribuciones: [], ...monto,
-    }]);
+    const creado = acciones.crearObjetivo({
+      nombre: nombre.trim(),
+      descripcion: descripcion.trim(),
+      tipo,
+      moneda,
+      horizonte: horizonteFinal,
+      modoMonto: monto.montoModo,
+      // 0 no es un monto: si no lo sabe, la base guarda null.
+      montoTotal: monto.montoTotal > 0 ? monto.montoTotal : null,
+      montoMin: monto.montoMin ?? null,
+    });
+
+    // Objetivo en conjunto sin grupo todavía → se crea el grupo de verdad, con
+    // su código, para poder invitar. Antes esto armaba un grupo de ejemplo con
+    // miembras inventadas.
     if (tipo === 'grupal' && invitarNombre.trim() && !grupo) {
-      const nuevoGrupo = crearGrupoDemo(invitarNombre.trim());
-      saveV2Grupo(nuevoGrupo);
-      setGrupoLocal(nuevoGrupo);
+      await acciones.crearGrupo(invitarNombre.trim());
     }
+
     setNombre(''); setDescripcion(''); setMontoTotal(''); setMontoMinTxt(''); setMontoModo('exacto'); setTipo('individual');
     setMoneda('ARS'); setInvitarNombre(''); setHorizonte(null); setHorizonteFecha('');
     setCreating(false);
-    setOpenId(id);
+    setOpenId(creado.id);
   }
 
   function borrarObjetivo(id: string) {
-    setObjetivos((os) => os.filter((o) => o.id !== id));
+    acciones.borrarObjetivo(id);
     if (openId === id) setOpenId(null);
   }
 
@@ -441,24 +478,32 @@ export function ObjetivosV2() {
     if (!abierto || !editNombre.trim()) return;
     const horizonteFinal = editHorizonteFecha ? new Date(editHorizonteFecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) : editHorizonte;
     const monto = buildMonto(editMontoModo, editMontoTotal, editMontoMin);
-    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, nombre: editNombre.trim(), descripcion: editDescripcion.trim(), tipo: editTipo, moneda: editMoneda, horizonte: horizonteFinal, montoMin: undefined, ...monto } : o)));
+    acciones.editarObjetivo(abierto.id, {
+      nombre: editNombre.trim(),
+      descripcion: editDescripcion.trim(),
+      tipo: editTipo,
+      moneda: editMoneda,
+      horizonte: horizonteFinal,
+      modoMonto: monto.montoModo,
+      montoTotal: monto.montoTotal > 0 ? monto.montoTotal : null,
+      montoMin: monto.montoMin ?? null,
+    });
     setEditando(false);
   }
 
-  function agregarRegistro() {
+  async function agregarRegistro() {
     if (!abierto) return;
     const monto = parseMoneyInput(regMonto);
     if (monto <= 0) return;
-    const nuevo: Contribucion = {
-      id: String(Date.now()),
+
+    setErrorRegistro(null);
+    const r = await acciones.sumarContribucion(abierto.id, {
       monto,
       moneda: regMoneda,
       kind,
       label: regLabel.trim() || (kind === 'paid' ? 'Pago' : 'Separado'),
-      ts: Date.now(),
-      de: miNombre,
-    };
-    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, contribuciones: [nuevo, ...o.contribuciones] } : o)));
+    });
+    if (r.error !== null) { setErrorRegistro(r.error); return; }
     setRegLabel(''); setRegMonto('');
     // Celebración: burst normal, o grande si con este registro llegás a la meta.
     const prevSaved = saved(abierto);
@@ -471,14 +516,18 @@ export function ObjetivosV2() {
 
   function borrarRegistro(regId: string) {
     if (!abierto) return;
-    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, contribuciones: o.contribuciones.filter((c) => c.id !== regId) } : o)));
+    acciones.borrarContribucion(abierto.id, regId);
   }
 
   function completarMontoTotal() {
     if (!abierto) return;
     const monto = buildMonto(montoModoEdit, montoTotalEdit, montoMinEdit);
     if (monto.montoModo !== 'desconocido' && monto.montoTotal <= 0) return;
-    setObjetivos((os) => os.map((o) => (o.id === abierto.id ? { ...o, ...monto } : o)));
+    acciones.editarObjetivo(abierto.id, {
+      modoMonto: monto.montoModo,
+      montoTotal: monto.montoTotal > 0 ? monto.montoTotal : null,
+      montoMin: monto.montoMin ?? null,
+    });
     setMontoTotalEdit(''); setMontoMinEdit(''); setMontoModoEdit('exacto');
   }
 
@@ -728,7 +777,7 @@ export function ObjetivosV2() {
             <div className="shrink-0"><MonedaDropdown value={regMoneda} onChange={setRegMoneda} /></div>
             <button
               type="button"
-              onClick={agregarRegistro}
+              onClick={() => void agregarRegistro()}
               disabled={parseMoneyInput(regMonto) <= 0}
               aria-label="Sumar registro"
               className="v2-focus rounded-xl px-4 flex items-center justify-center font-bold v2-disabled transition-all duration-100 active:scale-95 shrink-0"
@@ -737,6 +786,9 @@ export function ObjetivosV2() {
               <IconMas size={18} />
             </button>
           </div>
+          {errorRegistro && (
+            <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorRegistro}</p>
+          )}
         </div>
 
         {/* Historial de registros */}
@@ -809,7 +861,7 @@ export function ObjetivosV2() {
           montoTxt={montoTotal} setMontoTxt={setMontoTotal}
           minTxt={montoMinTxt} setMinTxt={setMontoMinTxt}
         />
-        <Cta label="Agregar objetivo" disabled={!nombre.trim() || (tipo === 'grupal' && !grupo && !invitarNombre.trim())} onClick={crearObjetivo} />
+        <Cta label="Agregar objetivo" disabled={!nombre.trim() || (tipo === 'grupal' && !grupo && !invitarNombre.trim())} onClick={() => void crearObjetivo()} />
         {tipo === 'grupal' && !grupo && !invitarNombre.trim() && (
           <p className="text-[14px] text-center" style={{ color: COLORS.coralDark }}>Ponele nombre al grupo para poder invitar gente.</p>
         )}

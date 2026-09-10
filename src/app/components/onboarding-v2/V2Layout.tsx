@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { BottomNavV2 } from './BottomNavV2';
 import { SidebarV2 } from './SidebarV2';
-import { COLOR_VARS, COLORS, FONT_VARS, Cta, Titulo, Apoyo } from './shared';
+import { COLOR_VARS, COLORS, FONT_VARS, Cta, Titulo, Apoyo, subirPendientesLocales } from './shared';
 import { Fini } from './Fini';
 import { useAuth } from '../../lib/auth';
 import { AlmacenProvider, useAlmacen } from '../../api/v2/AlmacenProvider';
@@ -24,6 +24,11 @@ function Puerta({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
   const { listo, error, recargar } = useAlmacen();
 
+  // Si el onboarding terminó sin sesión (Supabase pidió confirmar el mail),
+  // las respuestas quedaron en la copia local. Se suben la primera vez que
+  // entra con su cuenta.
+  useEffect(() => { if (listo) subirPendientesLocales(); }, [listo]);
+
   // Mientras se resuelve la sesión no se decide nada: si redirigiéramos acá,
   // recargar la página con sesión válida te echaría al onboarding.
   if (loading) return <Cargando />;
@@ -44,6 +49,36 @@ function Puerta({ children }: { children: React.ReactNode }) {
 
   if (!listo) return <Cargando />;
   return <>{children}</>;
+}
+
+// Cartel de "esto no se guardó".
+//
+// Va acá, arriba de todo y en todas las pantallas, y no en cada pantalla por
+// separado: una escritura encolada puede fallar después de que la persona ya
+// se fue a otra pantalla, y ahí el aviso tiene que seguirla. Se queda hasta
+// que la escritura salga bien — no se va solo, porque irse solo es volver a
+// dejarle creer que el número que ve está guardado.
+function AvisoGuardado() {
+  const { guardado, recargar } = useAlmacen();
+  if (guardado.tipo !== 'error') return null;
+  return (
+    <div
+      role="alert"
+      className="px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap"
+      style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}
+    >
+      <span className="text-[14px] font-semibold">
+        Algo no se guardó: {guardado.mensaje}
+      </span>
+      <button
+        type="button"
+        onClick={() => void recargar()}
+        className="v2-focus text-[14px] font-bold underline shrink-0"
+      >
+        Volver a cargar
+      </button>
+    </div>
+  );
 }
 
 // Fini esperando en vez de un spinner: es el único momento de la app donde hay
@@ -83,6 +118,7 @@ export function V2Layout() {
           layout adentro (Home usa varias columnas; las demás se centran en una
           columna legible con lg:max-w-2xl lg:mx-auto en su propio contenedor). */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
+        <AvisoGuardado />
         {/* El botón de chat sobresale 20px por encima de la barra (-mt-5), así
             que el contenido necesita ese despeje extra o la última fila queda
             tapada por el círculo. */}

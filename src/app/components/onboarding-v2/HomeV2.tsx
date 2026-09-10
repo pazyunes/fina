@@ -3,23 +3,23 @@ import type { ComponentType } from 'react';
 import { Fini } from './Fini';
 import { MisVisualizaciones } from './MisVisualizaciones';
 import { useNavigate } from 'react-router';
-import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2Grupo, loadV2InversionesPerfil, loadV2Nombre, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva, vistaGastos, vistaInversiones, vistaObjetivos } from './shared';
 import { IconChevron, IconFuego, IconGastos, IconGrupo, IconInversiones, IconObjetivos, IconPerfil, IconReserva } from './FinaIcons';
 
 
 // "Tu próximo paso" — el hilo estilo Duolingo: una sola acción, la más útil
 // según en qué punto está la persona. Da coherencia al dashboard sin
 // despojarlo: es la tarjeta que lidera, y el resto queda como estaba.
-type EstadoPaso = { gastos: { ts?: number }[]; topes: Record<string, unknown> };
-type ObjPaso = { nombre: string; montoTotal: number; montoModo: string | null; contribuciones: { monto: number }[] };
 function proximoPaso(): { titulo: string; msg: string; cta: string; to: string } {
-  const g = loadV2GastosState<EstadoPaso>();
-  const objetivos = loadV2ObjetivosState<ObjPaso[]>() ?? [];
+  const g = vistaGastos();
+  const objetivos = vistaObjetivos();
   const invPerfil = loadV2InversionesPerfil();
-  if (!g || g.gastos.length === 0) {
+  if (g.gastos.length === 0) {
     return { titulo: 'Registrá tu primer gasto', msg: 'Con eso ya te armamos tus secciones y tu análisis solo.', cta: 'Registrar un gasto', to: '/onboarding-v2/gastos' };
   }
-  const objIncompleto = objetivos.find((o) => o.montoModo === null || (o.montoModo !== 'desconocido' && !(o.montoTotal > 0)));
+  // montoTotal 0 = la base tiene null = todavía no hay monto con el que
+  // calcular progreso. Es exactamente el objetivo que hay que completar.
+  const objIncompleto = objetivos.find((o) => o.montoTotal <= 0);
   if (objIncompleto) {
     return { titulo: `Completá “${objIncompleto.nombre}”`, msg: 'Ponéle un monto para empezar a ver tu progreso.', cta: 'Completar objetivo', to: '/onboarding-v2/objetivos' };
   }
@@ -42,8 +42,8 @@ function proximoPaso(): { titulo: string; msg: string; cta: string; to: string }
 // un número de racha sin poder abrirlo es un puntaje, no un dato.
 type DiaRacha = { fecha: string; etiqueta: string; cuantos: number; descripciones: string[] };
 function rachaDeGastos(): { dias: number; detalle: DiaRacha[] } {
-  const g = loadV2GastosState<{ gastos: { ts?: number; descripcion?: string }[] }>();
-  if (!g) return { dias: 0, detalle: [] };
+  const g = vistaGastos();
+  if (g.gastos.length === 0) return { dias: 0, detalle: [] };
   const porDia = new Map<string, { ts: number; descripcion?: string }[]>();
   for (const x of g.gastos) {
     if (!x.ts) continue;
@@ -72,18 +72,14 @@ function rachaDeGastos(): { dias: number; detalle: DiaRacha[] } {
 // dibuja (no es "0% = mal", es "todavía no hay nada que mostrar acá"), y
 // si NINGÚN arco tiene datos, el anillo entero no aparece: en una pantalla
 // de celular, no vale la pena el espacio de algo que no dice nada todavía.
-type GastosLite = { categorias: { id: string; nombre: string }[]; gastos: { categoriaId: string; monto: number; ts?: number }[]; topes: Record<string, { monto: number; periodo: 'semana' | 'mes' }> };
-type ObjetivoLite = { montoTotal: number; contribuciones: { monto: number }[] };
-type InversionesLite = { aportes: { ts: number }[] };
-
 function datosBienestar() {
-  const g = loadV2GastosState<GastosLite>();
-  const objetivos = loadV2ObjetivosState<ObjetivoLite[]>() ?? [];
-  const inv = loadV2InversionesState<InversionesLite>();
+  const g = vistaGastos();
+  const objetivos = vistaObjetivos();
+  const inv = vistaInversiones();
 
   let gastosPct: number | null = null;
   let gastosTexto = '';
-  if (g) {
+  {
     // Un tope es POR PERÍODO: "$25.000 por mes" se compara contra lo gastado
     // este mes, no contra todo el historial. Antes se sumaba todo, así que a
     // los pocos meses cualquier sección quedaba excedida para siempre y el
@@ -123,7 +119,7 @@ function datosBienestar() {
 
   let inversionPct: number | null = null;
   let inversionTexto = '';
-  if (inv && inv.aportes.length > 0) {
+  if (inv.aportes.length > 0) {
     const ahora = new Date();
     const esteMes = inv.aportes.some((a) => {
       const d = new Date(a.ts);
