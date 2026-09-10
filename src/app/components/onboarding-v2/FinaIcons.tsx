@@ -190,6 +190,20 @@ export function IconGrupo(p: IconProps) {
 }
 
 // Calendario
+// Balanza — "necesario vs impulso": dos platos comparándose. Faltaba en el
+// set y era el único de las visualizaciones sin ícono propio.
+export function IconBalanza(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 4.5v15M8 19.5h8" />
+      <path d="M4 8h16" />
+      <path d="M4 8l-2.2 4.2a3.1 3.1 0 0 0 4.4 0Z" />
+      <path d="M20 8l2.2 4.2a3.1 3.1 0 0 1-4.4 0Z" />
+      <circle cx="12" cy="5.6" r="1.4" />
+    </Svg>
+  );
+}
+
 export function IconCalendario(p: IconProps) {
   return (
     <Svg {...p}>

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import type { ComponentType } from 'react';
+import { IconBalanza, IconCalendario, IconGastos, IconObjetivos } from './FinaIcons';
 import { COLORS, FONTS, TituloSeccion, fmtMoney, fmtMontoCompacto, loadV2GastosState, loadV2InversionesState, loadV2ObjetivosState } from './shared';
 
 // PRUEBA — "Mis visualizaciones" en Home. Se eligen entre varios gráficos
@@ -14,12 +16,24 @@ type ObjLite = { nombre: string; montoTotal: number; contribuciones: { monto: nu
 type InvLite = { aportes: { monto: number; montoArs?: number; ts: number }[] };
 
 type VizId = 'porSeccion' | 'porDia' | 'porTipo' | 'objetivos';
-const VIZ: { id: VizId; label: string; emoji: string }[] = [
-  { id: 'porSeccion', label: 'En qué se me va', emoji: '🧾' },
-  { id: 'porDia', label: 'Día por día', emoji: '📅' },
-  { id: 'porTipo', label: 'Necesario vs impulso', emoji: '⚖️' },
-  { id: 'objetivos', label: 'Mis objetivos', emoji: '🎯' },
+// Iconos de línea, no emojis (§2.1: iconografía monolineal). Las etiquetas se
+// acortaron para que las cuatro entren en una sola fila; el título del gráfico
+// de abajo ya dice qué estás mirando, así que el chip no necesita la frase
+// entera.
+const VIZ: { id: VizId; label: string; Icon: ComponentType<{ size?: number }> }[] = [
+  { id: 'porSeccion', label: 'Por sección', Icon: IconGastos },
+  { id: 'porDia', label: 'Por día', Icon: IconCalendario },
+  { id: 'porTipo', label: 'Por tipo', Icon: IconBalanza },
+  { id: 'objetivos', label: 'Objetivos', Icon: IconObjetivos },
 ];
+
+// Lo que el chip no dice, lo dice el subtítulo del gráfico.
+const VIZ_SUBTITULO: Record<VizId, string> = {
+  porSeccion: 'En qué se te va la plata',
+  porDia: 'Cuánto gastaste cada día de la semana',
+  porTipo: 'Cuánto fue necesario y cuánto impulso',
+  objetivos: 'Cuánto te falta para cada uno',
+};
 
 const PALETA = [COLORS.brand, COLORS.naranja, COLORS.star, COLORS.lima, COLORS.lila, COLORS.brandDark];
 
@@ -168,26 +182,37 @@ export function MisVisualizaciones() {
   return (
     <section className="flex flex-col gap-3">
       <TituloSeccion>Mis visualizaciones</TituloSeccion>
-      <div className="flex flex-wrap gap-2">
+      {/* Una sola fila. Si en una pantalla angosta no entran las cuatro, se
+          desplaza en horizontal en vez de saltar a un segundo renglón: la fila
+          de filtros arriba del gráfico tiene que leerse como una sola cosa.
+          El scrollbar se oculta porque el corte del último chip ya avisa que
+          hay más. */}
+      <div
+        className="flex gap-2 overflow-x-auto flex-nowrap -mx-6 px-6"
+        style={{ scrollbarWidth: 'none' }}
+        role="tablist"
+      >
         {VIZ.map((v) => {
           const on = viz === v.id;
           return (
             <button
               key={v.id}
               type="button"
+              role="tab"
+              aria-selected={on}
               onClick={() => setViz(v.id)}
-              aria-pressed={on}
-              className="v2-focus inline-flex items-center gap-1.5 min-h-[44px] rounded-full px-3.5 text-[14.5px] font-semibold transition-all duration-100 active:scale-[0.97]"
+              className="v2-focus inline-flex items-center gap-1.5 min-h-[44px] shrink-0 rounded-full px-3.5 text-[14.5px] font-semibold whitespace-nowrap transition-all duration-100 active:scale-[0.97]"
               style={on
                 ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
                 : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
             >
-              <span aria-hidden>{v.emoji}</span>
+              <span aria-hidden style={{ color: on ? COLORS.surface : COLORS.brand }}><v.Icon size={18} /></span>
               {v.label}
             </button>
           );
         })}
       </div>
+      <p className="text-[14px] -mt-1" style={{ color: COLORS.inkSoft }}>{VIZ_SUBTITULO[viz]}</p>
       <div className="pt-1">{contenido()}</div>
     </section>
   );

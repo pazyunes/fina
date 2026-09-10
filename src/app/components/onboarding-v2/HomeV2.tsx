@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ComponentType } from 'react';
 import { Fini } from './Fini';
 import { MisVisualizaciones } from './MisVisualizaciones';
 import { useNavigate } from 'react-router';
 import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2GastosState, loadV2Grupo, loadV2InversionesPerfil, loadV2InversionesState, loadV2Nombre, loadV2ObjetivosState, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
-import { IconChevron, IconFuego, IconGrupo, IconPerfil, IconReserva } from './FinaIcons';
+import { IconChevron, IconFuego, IconGastos, IconGrupo, IconInversiones, IconObjetivos, IconPerfil, IconReserva } from './FinaIcons';
 
 
 // "Tu próximo paso" — el hilo estilo Duolingo: una sola acción, la más útil
@@ -71,7 +72,7 @@ function rachaDeGastos(): { dias: number; detalle: DiaRacha[] } {
 // dibuja (no es "0% = mal", es "todavía no hay nada que mostrar acá"), y
 // si NINGÚN arco tiene datos, el anillo entero no aparece: en una pantalla
 // de celular, no vale la pena el espacio de algo que no dice nada todavía.
-type GastosLite = { categorias: { id: string; nombre: string }[]; gastos: { categoriaId: string; monto: number }[]; topes: Record<string, { monto: number; periodo: 'semana' | 'mes' }> };
+type GastosLite = { categorias: { id: string; nombre: string }[]; gastos: { categoriaId: string; monto: number; ts?: number }[]; topes: Record<string, { monto: number; periodo: 'semana' | 'mes' }> };
 type ObjetivoLite = { montoTotal: number; contribuciones: { monto: number }[] };
 type InversionesLite = { aportes: { ts: number }[] };
 
@@ -83,11 +84,25 @@ function datosBienestar() {
   let gastosPct: number | null = null;
   let gastosTexto = '';
   if (g) {
+    // Un tope es POR PERÍODO: "$25.000 por mes" se compara contra lo gastado
+    // este mes, no contra todo el historial. Antes se sumaba todo, así que a
+    // los pocos meses cualquier sección quedaba excedida para siempre y el
+    // indicador se clavaba en 0%.
+    const inicioDe = (periodo: 'semana' | 'mes') => {
+      const d = new Date();
+      if (periodo === 'mes') return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      const dia = (d.getDay() + 6) % 7; // lunes = 0
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate() - dia).getTime();
+    };
     const conTope = g.categorias.filter((c) => g.topes[c.id]);
     if (conTope.length > 0) {
       const dentro = conTope.filter((c) => {
-        const gastado = g.gastos.filter((x) => x.categoriaId === c.id).reduce((s, x) => s + x.monto, 0);
-        return gastado <= g.topes[c.id].monto;
+        const tope = g.topes[c.id];
+        const desde = inicioDe(tope.periodo);
+        const gastado = g.gastos
+          .filter((x) => x.categoriaId === c.id && (x.ts ?? 0) >= desde)
+          .reduce((s, x) => s + x.monto, 0);
+        return gastado <= tope.monto;
       });
       gastosPct = Math.round((dentro.length / conTope.length) * 100);
       gastosTexto = `${dentro.length} de ${conTope.length} secciones dentro del tope`;
@@ -194,10 +209,10 @@ export function HomeV2() {
   // Un solo lugar por sección: cada fila muestra su dato y lleva a su pantalla.
   // Ya no llevan color propio — el color por sección era otra forma de decir
   // "esto es una caja distinta", y con tintes de 1.1 de contraste no decía nada.
-  const secciones: { emoji: string; label: string; to: string; metric: string }[] = [
-    { emoji: '🧾', label: 'Gastos', to: '/onboarding-v2/gastos', metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá el primero' },
-    { emoji: '🎯', label: 'Objetivos', to: '/onboarding-v2/objetivos', metric: b.objetivosPct !== null ? `${b.objetivosPct}% de avance` : 'Sumá uno' },
-    { emoji: '🌱', label: 'Inversiones', to: '/onboarding-v2/inversiones', metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
+  const secciones: { Icon: ComponentType<{ size?: number }>; label: string; to: string; metric: string }[] = [
+    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : 'Registrá el primero' },
+    { Icon: IconObjetivos, label: 'Objetivos', to: '/onboarding-v2/objetivos', metric: b.objetivosPct !== null ? `${b.objetivosPct}% de avance` : 'Sumá uno' },
+    { Icon: IconInversiones, label: 'Inversiones', to: '/onboarding-v2/inversiones', metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
   ];
 
   return (
@@ -330,13 +345,9 @@ export function HomeV2() {
         </div>
       </section>
 
-      {/* PRUEBA — las tres secciones en UNA línea, con emoji.
-          Ojo: esto revierte una decisión que ya estaba tomada. Hay un commit
-          entero ("migración total de emojis a iconos de línea... sin emojis
-          visibles en la UI") y la guía §2.1 pide iconografía monolineal, no
-          pictogramas. Se hace porque es un pedido explícito, pero si el
-          emoji no convence, los iconos de línea siguen disponibles en
-          FinaIcons y el cambio es de una línea. */}
+      {/* Las tres secciones en UNA línea. Con iconos de línea, no emojis:
+          se vuelve a la migración que ya estaba hecha (§2.1 pide iconografía
+          monolineal, y hay un commit entero que saca los emojis de la UI). */}
       <section className="flex flex-col gap-2">
         <TituloSeccion>Tus secciones</TituloSeccion>
         <div className="grid grid-cols-3 gap-2">
@@ -348,7 +359,7 @@ export function HomeV2() {
               className="v2-focus flex flex-col items-center gap-1 min-h-[88px] justify-center rounded-2xl px-1.5 py-3 transition-all duration-100 active:scale-[0.97]"
               style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
             >
-              <span className="text-[26px] leading-none" aria-hidden>{s.emoji}</span>
+              <span style={{ color: COLORS.brand }}><s.Icon size={24} /></span>
               <span className="text-[14px] font-bold leading-tight text-center" style={{ color: COLORS.ink }}>{s.label}</span>
               <span className="text-[12px] leading-tight text-center" style={{ color: COLORS.inkSoft }}>{s.metric}</span>
             </button>
