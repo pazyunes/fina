@@ -1,0 +1,50 @@
+/* onboarding-v2 — estilos base scopeados al sandbox del rediseño.
+   No toca la app real: solo aplica a los elementos con estas clases, que
+   viven únicamente dentro de onboarding-v2. Los colores entran por CSS vars
+   derivadas de COLORS (ver COLOR_VARS en shared.tsx): acá no hay hex sueltos.
+   Alineado a la guía de frontend §11: foco SIEMPRE visible. */
+
+/* Foco visible. Nunca outline:none sin reemplazo. */
+.v2-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v2-focus) 45%, transparent);
+}
+/* Cuando el control ya tiene su propia sombra, el anillo se suma sin pisarla. */
+.v2-focus {
+  outline: none;
+}
+
+/* Estado deshabilitado de los botones de acción. `opacity-40` sobre el violeta
+   producía un lavanda con texto blanco encima: fallaba contraste y además no
+   se leía como "deshabilitado", solo como "violeta más claro". Acá el relleno
+   se cambia por el neutro, con borde y texto que sí contrastan. */
+.v2-disabled:disabled,
+.v2-disabled[aria-disabled='true'] {
+  background: var(--v2-disabled-bg) !important;
+  color: var(--v2-disabled-fg) !important;
+  border: 1.5px solid var(--v2-disabled-borde) !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
+/* PRUEBA — "Fini aterriza en el avatar", estilo Netflix.
+   Va en CSS y no con `motion` a propósito: una animación JS depende de
+   requestAnimationFrame, y si el frame loop se frena (pestaña en segundo plano,
+   webview que pausa el render) la animación queda clavada en el frame inicial
+   con el personaje gigante en el medio de la pantalla — o sea que el modo de
+   falla es el peor posible. En CSS el compositor la resuelve solo.
+
+   El punto de partida lo calcula Home midiendo su propio avatar y lo pasa por
+   --fini-dx / --fini-dy / --fini-k. El destino es siempre 0,0 escala 1, así el
+   aterrizaje calza al pixel en cualquier viewport. */
+.v2-fini-aterriza {
+  animation: v2_fini_aterriza 900ms cubic-bezier(0.22, 1, 0.36, 1) 250ms both;
+}
+@keyframes v2_fini_aterriza {
+  from { transform: translate(var(--fini-dx, 0px), var(--fini-dy, 0px)) scale(var(--fini-k, 4)); }
+  to   { transform: translate(0px, 0px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Sin vuelo: el avatar ya está en su lugar. */
+  .v2-fini-aterriza { animation: none; opacity: 0; }
+}

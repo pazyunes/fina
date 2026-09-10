@@ -7,6 +7,15 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RootRedirect } from "./components/RootRedirect";
 import { OnboardingGate } from "./components/OnboardingGate";
 import { FeedbackController } from "./components/FeedbackModal";
+import { OnboardingV2 } from "./components/onboarding-v2/OnboardingV2";
+import { V2Layout } from "./components/onboarding-v2/V2Layout";
+import { HomeV2 } from "./components/onboarding-v2/HomeV2";
+import { GastosV2 } from "./components/onboarding-v2/GastosV2";
+import { ObjetivosV2 } from "./components/onboarding-v2/ObjetivosV2";
+import { InversionesV2 } from "./components/onboarding-v2/InversionesV2";
+import { PerfilV2 } from "./components/onboarding-v2/PerfilV2";
+import { GruposV2 } from "./components/onboarding-v2/GruposV2";
+import { FiniPlayground } from "./components/onboarding-v2/FiniPlayground";
 
 // Layout que persiste entre las rutas de onboarding/informe: renderiza la
 // pantalla (Outlet) + el controlador de encuestas, que detecta cuándo salís de
@@ -29,6 +38,32 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    // REDISEÑO (rama feat/rediseno-onboarding-v2) — sandbox público, sin
+    // sesión ni Supabase, solo para iterar el diseño del onboarding nuevo.
+    // No reemplaza /personal-data ni el resto del flujo real todavía.
+    path: "/onboarding-v2",
+    element: <OnboardingV2 />,
+  },
+  {
+    // REDISEÑO — post-onboarding: Home/Gastos/Objetivos/Inversiones con el
+    // menú de abajo nuevo. Mismo sandbox público, mismo estado 100% local.
+    element: <V2Layout />,
+    children: [
+      { path: "/onboarding-v2/home", element: <HomeV2 /> },
+      { path: "/onboarding-v2/gastos", element: <GastosV2 /> },
+      { path: "/onboarding-v2/objetivos", element: <ObjetivosV2 /> },
+      { path: "/onboarding-v2/inversiones", element: <InversionesV2 /> },
+      { path: "/onboarding-v2/perfil", element: <PerfilV2 /> },
+      { path: "/onboarding-v2/grupos", element: <GruposV2 /> },
+    ],
+  },
+  {
+    // PRUEBA (rama prueba/fini) — banco de pruebas del personaje. Fuera del
+    // V2Layout a propósito: no lleva menú, es una pantalla de taller.
+    path: "/onboarding-v2/fini",
+    element: <FiniPlayground />,
   },
   {
     // Pública: llega desde el link del mail de recuperación (sesión de recovery).

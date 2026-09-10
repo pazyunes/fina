@@ -1,2 +1,14 @@
 packages:
   - '.'
+allowBuilds:
+  '@tailwindcss/oxide': set this to true or false
+  esbuild: set this to true or false
+
+# Los tipos de React quedan fijados en 18 para todo el árbol. Sin esto,
+# @types/react-dom arrastra @types/react@19 y conviven dos definiciones de JSX:
+# los componentes de las librerías quedan tipados contra React 19 y no son
+# asignables a ReactNode de React 18. Eso solo producía 175 errores TS2786
+# ("no es un elemento JSX válido") que no eran bugs del código de FINA.
+overrides:
+  '@types/react': 18.3.12
+  '@types/react-dom': 18.3.1

@@ -1,2 +1,6 @@
-/* Poppins — fuente geométrica redondeada (estilo Cocos Capital), Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+/* FINA · tipografía
+   - Outfit    → display/títulos de onboarding-v2 (guía frontend.md §3.4)
+   - Baloo 2   → display/títulos de la app real (todavía sin migrar)
+   - Figtree   → cuerpo / UI (sans-serif limpia)
+   - IBM Plex Mono → montos y datos (tabular-nums) */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Baloo+2:wght@500;600;700;800&family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');

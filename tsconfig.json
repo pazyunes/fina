@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+
+    /* Vite compila con esbuild; tsc acá solo chequea tipos, no emite nada. */
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* `strict` incluye noImplicitAny, que es lo que hace cumplir la regla 7 de
+       CLAUDE.md ("sin any"): sin esto, un parámetro sin tipo pasa como `any`
+       silencioso y la regla no la valida nadie. */
+    "strict": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "api", "vite.config.ts"]
+}

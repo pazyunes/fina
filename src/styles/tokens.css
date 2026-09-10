@@ -1,0 +1,55 @@
+/* ─────────────────────────────────────────────────────────────────────
+   FINA · Design Tokens (fuente de verdad) — Manual de Identidad v2.0
+   theme.css los consume para mapear las variables que ya usa la app
+   (--primary, --font-sans, etc.).
+   ───────────────────────────────────────────────────────────────────── */
+:root {
+  /* Marca — violeta */
+  --fina-violeta: #7626B3;      /* primario: botones, marca, trazo de íconos */
+  --fina-violeta-700: #5C1B8E;  /* hover / pressed */
+  --fina-violeta-900: #431C72;  /* contorno de Fini, fondos plenos, banners */
+  --fina-violeta-400: #A56BE0;  /* trazos secundarios, bordes activos, foco */
+  --fina-violeta-100: #F0E7FA;  /* superficie tintada suave */
+
+  /* Amarillo */
+  --fina-amarillo: #FFC93C;     /* Fini, logros, badges, CTA secundarios */
+  --fina-amarillo-700: #C4820C; /* texto/íconos sobre amarillo claro */
+  --fina-amarillo-300: #FFE9A8;
+  --fina-amarillo-100: #FFF6DE;
+
+  /* Fideo magenta — extremidades de Fini */
+  --fina-fideo: #C23FA8;
+
+  /* Neutros / superficies */
+  --fina-tinta: #1F1B2E;   /* texto principal */
+  --fina-gris: #6B647A;    /* subtítulos, labels */
+  --fina-linea: #E9E3F1;   /* separadores, contornos de tarjeta */
+  --fina-tinte: #F0E7FA;   /* violeta 100 = superficie de apoyo */
+  --fina-papel: #FBFAF8;   /* fondo app (calidez, evita blanco puro) */
+  --fina-blanco: #FFFFFF;  /* tarjetas / elevación */
+
+  /* Semánticos por categoría + versión suave */
+  --fina-gastos: #F4557A;        --fina-gastos-100: #FFE7EC;
+  --fina-objetivos: #16A97A;     --fina-objetivos-100: #DFF4EC;
+  --fina-inversiones: #3D6FF5;   --fina-inversiones-100: #E2EAFF;
+  --fina-grupos: #E8952B;        --fina-grupos-100: #FDEEDA;
+  --fina-error: #DD3350;         --fina-error-100: #FCE4E8;
+
+  /* Tipografía editorial */
+  --fina-display: "Baloo 2", ui-rounded, "Figtree", system-ui, sans-serif;
+  --fina-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --fina-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Radios */
+  --fina-r-xs: 8px;
+  --fina-r-sm: 12px;
+  --fina-r-md: 18px;
+  --fina-r-lg: 24px;
+  --fina-r-full: 999px;
+
+  /* Modo noche (referencia del manual — todavía no cableado en la app) */
+  --fina-dark-bg: #171227;
+  --fina-dark-surface: #241C3B;
+  --fina-dark-linea: #362B52;
+  --fina-dark-texto: #F3EEFA;
+}
