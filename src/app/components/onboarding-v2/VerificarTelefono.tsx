@@ -69,10 +69,13 @@ export function VerificarTelefono() {
     const r = await acciones.pedirCodigoTelefono(telefono);
     setPidiendo(false);
     if (r.error !== null || !r.codigo) {
+      const msg = r.error ?? '';
       setError(
-        r.error?.includes('demasiados')
-          ? 'Pediste varios códigos seguidos. Esperá un rato y probá de nuevo.'
-          : 'No pudimos generar el código. Probá de nuevo.',
+        msg.includes('esperá unos segundos')
+          ? 'Esperá unos segundos y probá de nuevo.'
+          : msg.includes('demasiados')
+            ? 'Pediste muchos códigos seguidos. Esperá un rato y probá de nuevo.'
+            : 'No pudimos generar el código. Probá de nuevo.',
       );
       return;
     }

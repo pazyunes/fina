@@ -55,7 +55,7 @@ Y verificar de nuevo con el select de arriba.
 
 ## Las migraciones: qué son y en qué orden
 
-Siete archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
+Ocho archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
 resultado antes de pasar al siguiente.
 
 | Orden | Archivo | Qué agrega |
@@ -67,6 +67,7 @@ resultado antes de pasar al siguiente.
 | 5 | `0024_v2_huecos.sql` | Los huecos que aparecieron al cablear la app de verdad (ver abajo) |
 | 6 | `0025_mover_saldo.sql` | `mover_saldo(medio, delta)`: mueve el saldo de un medio de pago de forma atómica. Apareció probando el alta real — el gasto descontaba en la pantalla y no en la base |
 | 7 | `0026_verificar_telefono_whatsapp.sql` | Verificar el teléfono mandándole un código al bot de WhatsApp, en vez de por SMS |
+| 8 | `0027_limites_verificacion.sql` | Corrige dónde va el freno de la verificación: el tope de la 0026 trababa a la persona honesta y no al ataque |
 
 ### Qué trae la 0024 y por qué
 

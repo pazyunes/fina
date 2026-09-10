@@ -123,13 +123,20 @@ caso, porque el motivo cambia qué tiene que hacer la persona:
 | `codigo_vencido` | pasaron más de 15 minutos | "Ese código venció. Pedí uno nuevo desde tu perfil en la app." |
 | `telefono_en_uso` | ese número ya está en otra cuenta de FINA | "Este número ya está usado por otra cuenta. Escribinos si es un error." |
 | `telefono_invalido` | el número no quedó bien armado | revisar el paso 1 — es un bug del bot, no de la persona |
+| `demasiados_intentos` | 10 códigos fallidos desde ese número en la última hora | "Probaste varios códigos que no eran. Esperá un rato y pedí uno nuevo en la app." |
 
 **Importante:** el número que se verifica es el del **remitente**, no el que la
 persona escribió en el formulario de la app. El que se puede probar es el que
 mandó el mensaje. La función se encarga de guardarlo.
 
-El código **se usa una sola vez** y vive **15 minutos**. La persona puede pedir
-hasta 5 por hora.
+El código **se usa una sola vez** y vive **15 minutos**.
+
+Hay un freno del lado de los intentos: **a los 10 códigos fallidos desde el
+mismo número en una hora, la función deja de responder** y devuelve
+`demasiados_intentos`. Está para cortar a alguien que pruebe códigos al azar
+para pegarle a uno vivo (si le pegara, su número quedaría pegado a la cuenta de
+otra persona). El bot no tiene que hacer nada especial: sólo contestar ese
+estado como cualquier otro.
 
 ---
 

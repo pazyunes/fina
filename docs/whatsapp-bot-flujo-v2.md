@@ -314,7 +314,7 @@ OTP— no cuesta nada, y deja la conversación abierta.
 El flujo:
 
 1. La app pide un código con `pedir_codigo_telefono()` (6 caracteres, 15
-   minutos de vida, uno solo vivo por vez, máximo 5 por hora).
+   minutos de vida, uno solo vivo por vez).
 2. La app abre WhatsApp con el texto `FINA-VERIF-XXXXXX` ya escrito.
 3. La persona toca enviar.
 4. **El bot** ve que el mensaje matchea `FINA-VERIF-([A-Z0-9]{6})` y llama a
@@ -322,15 +322,26 @@ El flujo:
 5. La app, que está consultando cada 3 segundos, ve `phone_verified_at` y sigue.
 
 La función devuelve un texto (`ok`, `codigo_invalido`, `codigo_vencido`,
-`telefono_en_uso`, `telefono_invalido`) para que el bot pueda contestar distinto
-en cada caso. Está locked a `service_role`: si fuera ejecutable desde el
+`telefono_en_uso`, `telefono_invalido`, `demasiados_intentos`) para que el bot
+pueda contestar distinto en cada caso. Está locked a `service_role`: si fuera ejecutable desde el
 navegador, cualquiera podría verificar un teléfono que no es suyo pasando el
 número a mano, que es justo lo que se quiere evitar.
 
 **Se verifica el número del REMITENTE**, no el que la persona escribió en el
 formulario: el que se puede probar es el que mandó el mensaje.
 
-Migración: `0026_verificar_telefono_whatsapp.sql`.
+Migraciones: `0026_verificar_telefono_whatsapp.sql` y
+`0027_limites_verificacion.sql`.
+
+**Dónde va el freno.** La 0026 limitaba cuántos códigos se PIDEN (5 por hora), y
+estaba mal por dos motivos: era demasiado poco —el código vence a los 15
+minutos, así que en una hora entran cuatro vencimientos naturales y una persona
+distraída quemaba los cinco sin hacer nada raro— y no frenaba lo que había que
+frenar. Limitar los pedidos no protege contra el ataque real, que es del otro
+lado: mandarle al bot códigos al azar hasta pegarle a uno vivo. La 0027 mueve el
+freno a los INTENTOS (10 fallidos por hora desde el mismo número) y deja el
+pedido con un anti-machaque de 20 segundos más un techo alto que nadie real
+alcanza.
 
 ### 3.1.b Qué escribe el bot y con qué `source`
 
