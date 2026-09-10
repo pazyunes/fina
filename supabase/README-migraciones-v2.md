@@ -7,6 +7,13 @@ verdad y las siete pantallas leen y escriben en estas tablas. O sea que hasta
 que no corras las migraciones, la app nueva va a mostrar errores de guardado —
 no porque esté mal, sino porque las tablas no existen todavía.
 
+> **Estado al 10 de septiembre de 2026: las seis están corridas y el flujo se
+> probó de punta a punta contra la base real** (alta de cuenta, teléfono,
+> perfil, secciones, gastos en pesos y en dólares, objetivos con
+> contribuciones, perfil inversor, aportes, grupo con código, foto a Storage y
+> saldo por medio de pago). Lo de abajo queda como referencia de qué hace cada
+> una y qué verificar si alguna vez hay que rehacer la base.
+
 ---
 
 ## Lo primero: el borrado de usuarios, ¿funcionó?
@@ -48,7 +55,7 @@ Y verificar de nuevo con el select de arriba.
 
 ## Las migraciones: qué son y en qué orden
 
-Cinco archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
+Seis archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
 resultado antes de pasar al siguiente.
 
 | Orden | Archivo | Qué agrega |
@@ -58,6 +65,7 @@ resultado antes de pasar al siguiente.
 | 3 | `0022_v2_grupos.sql` | **La delicada.** Grupos, membresías, competencias y gastos en conjunto con repartos — y el modelo de acceso nuevo |
 | 4 | `0023_v2_perfil.sql` | Lo que el onboarding v2 pregunta y no entraba: género "otro", edad por rango, zona, nivel financiero, reserva |
 | 5 | `0024_v2_huecos.sql` | Los huecos que aparecieron al cablear la app de verdad (ver abajo) |
+| 6 | `0025_mover_saldo.sql` | `mover_saldo(medio, delta)`: mueve el saldo de un medio de pago de forma atómica. Apareció probando el alta real — el gasto descontaba en la pantalla y no en la base |
 
 ### Qué trae la 0024 y por qué
 

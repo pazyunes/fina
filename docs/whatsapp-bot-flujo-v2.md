@@ -17,17 +17,24 @@ Lo que eso habilita: **el bot y la app escriben en el MISMO lugar.** Un gasto
 que la persona carga por WhatsApp aparece en la app, y uno que carga en la app
 lo ve el bot. Eso era imposible antes.
 
-Lo que hace falta para que funcione:
+**Las migraciones 0020 a 0025 ya están corridas**, y el flujo se probó de punta
+a punta contra la base real: alta de cuenta, teléfono, perfil, secciones,
+gastos en pesos y en dólares con la cotización congelada, objetivos con
+contribuciones, perfil inversor, aportes, grupo con código, foto a Storage y
+saldo por medio de pago. O sea que las tablas de las que habla este documento
+existen y tienen datos.
 
-1. **Correr las migraciones 0020 a 0024.** Ver
-   `supabase/README-migraciones-v2.md`. Hasta que no estén, las tablas de las
-   que habla este documento no existen.
-2. **Que el bot escriba con las columnas nuevas** (§2 y §3.2): sección, tipo de
-   gasto, método de pago. Si escribe sin ellas, el gasto aparece en la app sin
-   sección y sin clasificar.
-3. **Que el bot normalice el teléfono igual que la app** (§3.1). Es la única
-   cosa de este documento que, si se hace mal, hace que el bot no reconozca a
-   nadie.
+Lo que falta es del lado del bot:
+
+1. **Normalizar el teléfono igual que la app** (§3.1). Es lo más importante de
+   este documento: si se hace mal, el bot no reconoce a nadie que se haya
+   registrado en el flujo nuevo.
+2. **Escribir con las columnas nuevas** (§3.1.b y §3.2): sección, tipo de
+   gasto, método de pago, y `source = 'whatsapp'`. Si escribe sin ellas, el
+   gasto aparece en la app sin sección y sin clasificar.
+3. **Mover el saldo con `mover_saldo`** y no con un `update` (§3.1.b).
+4. **Sumar por `amount_ars`** si informa totales, no por el monto que se tipeó
+   (§3.1.b).
 
 ---
 
@@ -220,8 +227,8 @@ personas compartiendo nada. Lo que está construido es la idea, no la función.
 
 ### 2.5 Entonces, ¿qué migró?
 
-Todo lo de arriba, en cinco migraciones (**0020 a 0024**), que están escritas y
-**hay que correr**:
+Todo lo de arriba, en seis migraciones (**0020 a 0025**), que ya están
+**corridas** en la base de producción:
 
 | Migración | Qué agrega |
 | --- | --- |
@@ -229,7 +236,8 @@ Todo lo de arriba, en cinco migraciones (**0020 a 0024**), que están escritas y
 | 0021 | `goal_contributions`, `investment_profiles`, `investment_contributions`. Relaja `goals` para objetivos sin monto |
 | 0022 | `groups`, `group_members`, `group_expense_splits`, `transactions.group_id`, y el **modelo de acceso nuevo** (`es_miembro_de`, `unirse_a_grupo`) |
 | 0023 | Lo que el onboarding pregunta: género "otro", edad por rango, zona, nivel financiero, reserva, `avatar_path` |
-| 0024 | `transactions.original_amount` (vuelve), `goals.description`/`amount_mode`/`amount_min_ars`, `user_profiles.onboarding_v2`, `investment_profiles.completed_at`, la vista `group_member_names`, el bucket `avatars`, y los checks de moneda ampliados |
+| 0024 | `transactions.original_amount` (vuelve), `goals.description`/`amount_mode`/`amount_min_ars`, `user_profiles.onboarding_v2`, `investment_profiles.completed_at`, la vista `group_member_names`, la función `crear_grupo`, el bucket `avatars`, y los checks de moneda ampliados |
+| 0025 | `mover_saldo(medio, delta)`: mueve el saldo de un medio de pago de forma atómica. **Es la que tiene que usar el bot** para descontar un gasto (ver §3.1.b) |
 
 El detalle de cada una y qué probar después está en
 `supabase/README-migraciones-v2.md`.
@@ -308,8 +316,35 @@ insert into transactions (
   juicio de la persona: si no lo dijo, va `otro`. **No inferirlo.**
 - `payment_method` es texto libre a propósito. Los que ya usó están en
   `payment_methods` de esa usuaria, ordenados por `last_used_at desc`.
-- Si el bot toca `payment_methods.balance_ars`, tiene que **restar** lo gastado:
-  ese saldo es el "dinero disponible" que la app muestra arriba.
+- **Un gasto en dólares llena tres columnas**, no una: `original_amount` con lo
+  que la persona dijo (20), `amount_ars` con el equivalente (30.800) y
+  `exchange_rate_id` con la cotización que se usó. Es el patrón de §3.3.
+- **Todo lo que SUMA en la app usa `amount_ars`**, nunca `original_amount`. Es
+  la regla que hace que un gasto de US$20 entre al total del mes como $30.800 y
+  no como $20 (era un bug real: el mes se veía $30.780 más barato). Si el bot
+  informa totales, tiene que sumar igual.
+- **El saldo se mueve con `mover_saldo(medio, delta)`, nunca con un `update`.**
+  Ese saldo es el "dinero disponible" que la app muestra arriba, y un gasto lo
+  tiene que restar (`delta` negativo). La función está en la migración 0025 y
+  existe justamente por el bot: un `select` del saldo, restar en memoria y un
+  `update` pierde escrituras si entra otro gasto en el medio, y el bot es el
+  más expuesto a eso porque escribe para todas las usuarias a la vez. La
+  función suma el delta dentro de una sola sentencia, así dos gastos
+  simultáneos se restan los dos.
+
+  ```sql
+  -- descontar un gasto de $5.000 pagado con Mercado Pago
+  select mover_saldo('Mercado Pago', -5000);
+  -- y si el bot alguna vez borra un gasto, devolver la plata:
+  select mover_saldo('Mercado Pago', 5000);
+  ```
+
+  Ojo: `mover_saldo` usa `auth.uid()`, así que desde el bot (que va con
+  `service_role` y sin sesión de usuaria) hay que hacer el mismo
+  `insert ... on conflict do update set balance_ars = payment_methods.balance_ars + delta`
+  con el `user_id` explícito. Lo que **no** se puede hacer es el read-modify-write.
+  También crea el medio si no existía, con saldo negativo — que es la verdad:
+  se gastó con algo que nunca se cargó.
 
 El bot escribe con la `service_role` key, que **saltea RLS**. O sea que las
 policies no lo protegen de escribir en la fila equivocada: el `user_id` correcto
@@ -374,16 +409,18 @@ en la app; el bot no debería repetirlo.
 
 ## 4. Orden para conectar el bot
 
-Los pasos 1 a 4 de la versión anterior de este documento **ya están hechos**
-(capa `api/`, reemplazo de `localStorage`, login real, teléfono guardado). Lo
-que queda:
+Del lado de la app ya está todo: capa `api/`, reemplazo de `localStorage`,
+login real, teléfono guardado, y las migraciones corridas. Lo que queda es del
+lado del bot:
 
-1. **Correr las migraciones 0020-0024** (`supabase/README-migraciones-v2.md`).
-2. **Cambiar la resolución de identidad del bot** para que normalice el teléfono
+1. **Cambiar la resolución de identidad del bot** para que normalice el teléfono
    como en §3.1. Es el cambio que, si falta, hace que el bot no reconozca a
    nadie que se haya registrado en el flujo nuevo.
-3. **Agregar las columnas nuevas al insert de gastos** (§3.1.b): `section_id`,
-   `expense_type`, `payment_method`, y `source = 'whatsapp'`.
+2. **Agregar las columnas nuevas al insert de gastos** (§3.1.b): `section_id`,
+   `expense_type`, `payment_method`, y `source = 'whatsapp'`. Y las tres de un
+   gasto en dólares.
+3. **Descontar el saldo con la suma atómica** (§3.1.b), nunca con un
+   read-modify-write.
 4. **Ofrecer las secciones que la persona YA tiene** antes de sugerir otras
    (§3.2), leyendo `expense_sections`.
 5. **Ofrecer los medios de pago que ya usó**, de `payment_methods` ordenado por
