@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArmarGrupoBtn, COLORS, Face, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
+import { IconPerfil } from './FinaIcons';
+import { ArmarGrupoBtn, COLORS, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2GastosState, loadV2Nombre, loadV2NivelFinanciero, loadV2ObjetivosState, saveV2Foto, saveV2Nombre, saveV2NivelFinanciero } from './shared';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
@@ -96,7 +97,9 @@ export function PerfilV2() {
           {foto ? (
             <img src={foto} alt="Tu foto de perfil" className="w-full h-full object-cover" />
           ) : (
-            <Face color={COLORS.brand} size={96} mood="happy" />
+            <span className="w-full h-full flex items-center justify-center" style={{ background: COLORS.brandSoft, color: COLORS.brand }}>
+              <IconPerfil size={44} />
+            </span>
           )}
           {/* Scrim de tinta sobre la foto para que la etiqueta se lea (media
               overlay, no decoración de color). */}

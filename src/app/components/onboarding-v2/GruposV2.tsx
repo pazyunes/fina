@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { COLORS, Face, Grupo, Titulo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, saveV2Grupo } from './shared';
+import { COLORS, Grupo, Titulo, crearGrupoDemo, invitarAGrupo, loadV2Grupo, saveV2Grupo } from './shared';
+import { Fini } from './Fini';
 import { IconChevron } from './FinaIcons';
 
 // REDISEÑO v2 — Grupos: competir con amigas por actividad (cuánto
@@ -100,7 +101,7 @@ export function GruposV2() {
         {modo === 'elegir' && (
           <div className="flex flex-col gap-4 py-2">
             <div className="flex items-center gap-3">
-              <div className="shrink-0"><Face color={COLORS.star} size={56} mood="happy" /></div>
+              <div className="shrink-0"><Fini state="vacio" size={104} /></div>
               <div className="min-w-0">
                 <p className="font-bold text-[18px] leading-tight" style={{ color: COLORS.ink }}>Armá tu primer grupo</p>
                 <p className="text-[15px] mt-1" style={{ color: COLORS.inkSoft }}>Con amigas y amigos para verse la actividad de la semana y motivarse entre todas.</p>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, Face, SegmentedTab, Titulo, TituloSeccion, crearGrupoDemo, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Grupo, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, parseMoneyInput, saveV2Grupo, saveV2ObjetivosState, useCountUp } from './shared';
+import { Fini } from './Fini';
+import { ArmarGrupoBtn, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, SegmentedTab, Titulo, TituloSeccion, crearGrupoDemo, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Grupo, loadV2Nombre, loadV2ObjetivosIniciales, loadV2ObjetivosState, loadV2PerfilOnboarding, parseMoneyInput, saveV2Grupo, saveV2ObjetivosState, useCountUp } from './shared';
 
 // Sugerencias para arrancar cuando todavía no hay objetivos — le dan
 // emoción/juego a la pantalla vacía; tocás una y abre el modal precargado.
@@ -667,9 +668,12 @@ export function ObjetivosV2() {
         )}
 
         {done && (
-          <p className="rounded-2xl px-4 py-3.5 text-[16px] font-bold text-center" style={{ background: COLORS.lima, color: COLORS.ink }}>
-            ¡Ya juntaste todo lo que necesitás para este objetivo!
-          </p>
+          <div className="flex flex-col items-center gap-2 py-2">
+            <Fini state="logro" size={132} />
+            <p className="rounded-2xl px-4 py-3.5 text-[16px] font-bold text-center" style={{ background: COLORS.lima, color: COLORS.ink }}>
+              ¡Ya juntaste todo lo que necesitás para este objetivo!
+            </p>
+          </div>
         )}
 
         {!done && consejoPara(abierto, estado) && (
@@ -822,7 +826,6 @@ export function ObjetivosV2() {
               : 'Ponéle nombre a eso que querés lograr. Lo hacemos juntas, a tu ritmo.'}
           </p>
         </div>
-        <div className="shrink-0"><Face color={COLORS.brand} size={68} mood="happy" /></div>
       </header>
 
       {/* Desktop: 2 columnas (lista principal + barra lateral). Mobile: apilado. */}
@@ -833,6 +836,7 @@ export function ObjetivosV2() {
       {/* Estado vacío con onda: sugerencias para arrancar (abren el modal) */}
       {objetivos.length === 0 && (
         <div className="flex flex-col gap-2.5 pt-1">
+          <div className="flex justify-center py-1"><Fini state="vacio" size={116} /></div>
           <TituloSeccion>¿Con qué arrancás?</TituloSeccion>
           {/* Grilla en vez de chips que envuelven: seis sugerencias de largos
               distintos quedaban en escalera (2 + 3 + 1). En dos columnas se

@@ -1,0 +1,198 @@
+/* PRUEBA — animaciones de Fini. Copiado tal cual del prototipo en Svelte,
+   con un solo agregado: el bloque de tokens de abajo, para que los colores del
+   personaje salgan de tokens.css en vez de los hex del prototipo.
+   Esta rama es descartable: `git checkout dev` y desaparece todo.
+
+   Los hex del SVG eran near-misses de tokens que YA existen en tokens.css:
+     #D22C93 (extremidades) ~ --fina-fideo   #C23FA8
+     #2F1560 (contorno)     ~ --fina-violeta-900 #431C72
+   El manual v2.0 ya define los colores de Fini, asi que se usan esos. */
+
+.fini-svg{
+  --fini-limb: var(--fina-fideo, #C23FA8);
+  --fini-ink:  var(--fina-violeta-900, #431C72);
+}
+
+/* Fini — animaciones del personaje de FINA.
+   Se importa desde Fini.svelte. Todo son transformaciones sobre las mismas partes:
+   cuerpo, cara, ojos, dos brazos, dos piernas y props sueltos.
+   Variables: --fini-size (tamaño), --fini-sp (ritmo), --fini-limb (color de extremidades),
+   --fini-ink (contorno), --fini-iter (infinite | 1). */
+
+.fini-svg{
+  --sp: var(--fini-sp, 1);
+  width: var(--fini-size, 150px);
+  height: auto;
+  overflow: visible;
+  display: block;
+}
+/* ================= PERSONAJE ================= */
+.fini-root,.fini-body,.fini-face,.fini-eyes,.fini-arm,.fini-leg{transform-box:fill-box}
+.fini-props *{transform-box:fill-box;transform-origin:50% 50%}
+.fini-root{transform-origin:50% 92%}
+.fini-body{transform-origin:50% 86%}
+.fini-arm-l{transform-origin:100% 10%}
+.fini-arm-r{transform-origin:0% 10%}
+.fini-leg-l,.fini-leg-r{transform-origin:50% 0%}
+.fini-eyes{transform-origin:50% 50%}
+.fini-lm path,.fini-lm ellipse{stroke:var(--fini-limb, #D22C93)}
+.fini-star{stroke:var(--fini-ink, #2F1560)}
+.fini-ink{fill:var(--fini-ink, #2F1560)}
+.fini-ink-s{stroke:var(--fini-ink, #2F1560)}
+.fini-mouth-open,.fini-brows,.fini-props > *{opacity:0}
+
+/* parpadeo base, siempre activo */
+.fini-eyes{animation:fini_blink calc(5.4s * var(--sp)) var(--fini-iter, infinite)}
+@keyframes fini_blink{0%,92%,100%{scale:1 1}95.5%{scale:1 .08}}
+.fini-paused *{animation-play-state:paused !important}
+
+/* --- respiración (base) --- */
+.fini-st-idle .fini-body{animation:fini_breathe calc(3.2s * var(--sp)) ease-in-out var(--fini-iter, infinite) alternate}
+.fini-st-idle .fini-root{animation:fini_bob calc(3.2s * var(--sp)) ease-in-out var(--fini-iter, infinite) alternate}
+.fini-st-idle .fini-arm-l{animation:fini_swayL calc(3.2s * var(--sp)) ease-in-out var(--fini-iter, infinite) alternate}
+.fini-st-idle .fini-arm-r{animation:fini_swayR calc(3.2s * var(--sp)) ease-in-out var(--fini-iter, infinite) alternate}
+@keyframes fini_breathe{from{scale:1 1}to{scale:1.02 .975}}
+@keyframes fini_bob{from{translate:0 0}to{translate:0 -4px}}
+@keyframes fini_swayL{from{rotate:0deg}to{rotate:4deg}}
+@keyframes fini_swayR{from{rotate:0deg}to{rotate:-4deg}}
+
+/* --- saludo --- */
+.fini-st-saludo .fini-arm-r{animation:fini_wave calc(2.6s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+.fini-st-saludo .fini-body{animation:fini_leanSaludo calc(2.6s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+.fini-st-saludo .fini-mouth{opacity:0}
+.fini-st-saludo .fini-mouth-open{opacity:1}
+@keyframes fini_wave{
+  0%,100%{rotate:0deg}
+  10%{rotate:-62deg}
+  22%{rotate:-36deg}
+  34%{rotate:-62deg}
+  46%{rotate:-36deg}
+  58%{rotate:-62deg}
+  74%{rotate:0deg}
+}
+@keyframes fini_leanSaludo{0%,100%{rotate:0deg}20%,58%{rotate:-3.5deg}}
+
+/* --- dato recibido --- */
+.fini-st-registro .fini-root{animation:fini_entra calc(2.8s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-registro .fini-prop-check{animation:fini_check calc(2.8s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-registro .fini-arm-r{animation:fini_flickR calc(2.8s * var(--sp)) var(--fini-iter, infinite)}
+@keyframes fini_entra{
+  0%{translate:-150px 0;opacity:0;rotate:-8deg}
+  8%{opacity:1}
+  20%{translate:10px 0;rotate:3deg;scale:1.07 .93}
+  28%{translate:0 0;rotate:0deg;scale:.95 1.06}
+  36%{scale:1.02 .98}
+  44%,100%{translate:0 0;rotate:0deg;scale:1 1}
+}
+@keyframes fini_check{0%,26%{opacity:0;scale:.3 .3}34%{opacity:1;scale:1.2 1.2}40%{scale:1 1}82%{opacity:1}92%,100%{opacity:0}}
+@keyframes fini_flickR{0%,20%{rotate:14deg}32%{rotate:-8deg}44%,100%{rotate:0deg}}
+
+/* --- pensando / procesando --- */
+.fini-st-pensando .fini-body{animation:fini_rock calc(2.8s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+.fini-st-pensando .fini-eyes{translate:0 -5px;animation:fini_blink calc(3.4s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-pensando .fini-prop-dots{opacity:1}
+.fini-st-pensando .fini-prop-dots circle{animation:fini_dot calc(1.5s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+.fini-st-pensando .fini-prop-dots circle:nth-child(2){animation-delay:calc(.18s * var(--sp))}
+.fini-st-pensando .fini-prop-dots circle:nth-child(3){animation-delay:calc(.36s * var(--sp))}
+@keyframes fini_rock{0%,100%{rotate:-5deg}50%{rotate:5deg}}
+@keyframes fini_dot{0%,100%{opacity:.25;scale:.7 .7}45%{opacity:1;scale:1.15 1.15}}
+
+/* --- idea / sugerencia --- */
+.fini-st-insight .fini-prop-bulb{animation:fini_bulb calc(3s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-insight .fini-arm-r{animation:fini_pointUp calc(3s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-insight .fini-root{animation:fini_hopSmall calc(3s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-insight .fini-body{animation:fini_glow calc(3s * var(--sp)) var(--fini-iter, infinite)}
+@keyframes fini_bulb{0%,14%{opacity:0;scale:.2 .2}22%{opacity:1;scale:1.28 1.28}30%{scale:.95 .95}36%{scale:1 1}80%{opacity:1}92%,100%{opacity:0;scale:1 1}}
+@keyframes fini_pointUp{0%,10%{rotate:0deg}22%{rotate:-84deg}30%{rotate:-72deg}38%,78%{rotate:-80deg}92%,100%{rotate:0deg}}
+@keyframes fini_hopSmall{0%,14%,100%{translate:0 0;scale:1 1}18%{scale:1.05 .94}24%{translate:0 -16px;scale:.97 1.05}32%{translate:0 0;scale:1.03 .97}40%{scale:1 1}}
+@keyframes fini_glow{0%,16%,60%,100%{filter:none}30%{filter:brightness(1.13)}}
+
+/* --- progreso --- */
+.fini-st-progreso .fini-root{animation:fini_hop calc(1.8s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-progreso .fini-arm-l{animation:fini_hopArmL calc(1.8s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-progreso .fini-arm-r{animation:fini_hopArmR calc(1.8s * var(--sp)) var(--fini-iter, infinite)}
+@keyframes fini_hop{
+  0%,58%,100%{translate:0 0;scale:1 1}
+  10%{scale:1.07 .91}
+  26%{translate:0 -38px;scale:.94 1.09}
+  42%{translate:0 0;scale:1.08 .9}
+  52%{scale:1 1}
+}
+@keyframes fini_hopArmL{0%,58%,100%{rotate:0deg}26%{rotate:26deg}}
+@keyframes fini_hopArmR{0%,58%,100%{rotate:0deg}26%{rotate:-26deg}}
+
+/* --- objetivo cumplido --- */
+.fini-st-logro .fini-root{animation:fini_hop2 calc(2.4s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-logro .fini-arm-l{animation:fini_upL calc(2.4s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-logro .fini-arm-r{animation:fini_upR calc(2.4s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-logro .fini-prop-spark{opacity:1}
+.fini-st-logro .fini-prop-spark circle{animation:fini_burst calc(2.4s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-logro .fini-prop-spark circle:nth-child(2){animation-delay:calc(.06s * var(--sp))}
+.fini-st-logro .fini-prop-spark circle:nth-child(3){animation-delay:calc(.12s * var(--sp))}
+.fini-st-logro .fini-prop-spark circle:nth-child(4){animation-delay:calc(.18s * var(--sp))}
+.fini-st-logro .fini-prop-spark circle:nth-child(5){animation-delay:calc(.24s * var(--sp))}
+.fini-st-logro .fini-mouth{opacity:0}
+.fini-st-logro .fini-mouth-open{opacity:1}
+@keyframes fini_hop2{
+  0%,72%,100%{translate:0 0;scale:1 1}
+  6%{scale:1.08 .9}
+  18%{translate:0 -46px;scale:.93 1.1}
+  30%{translate:0 0;scale:1.09 .89}
+  38%{scale:1 1}
+  46%{translate:0 -30px;scale:.95 1.07}
+  58%{translate:0 0;scale:1.06 .93}
+  66%{scale:1 1}
+}
+@keyframes fini_upL{0%,72%,100%{rotate:0deg}14%,60%{rotate:62deg}}
+@keyframes fini_upR{0%,72%,100%{rotate:0deg}14%,60%{rotate:-62deg}}
+@keyframes fini_burst{0%,10%{opacity:0;scale:.2 .2}22%{opacity:1;scale:1.3 1.3}40%{opacity:1;scale:1 1}70%,100%{opacity:0;scale:.7 .7}}
+
+/* --- atención / gasto inesperado --- */
+.fini-st-alerta .fini-body{animation:fini_mira calc(3.4s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+.fini-st-alerta .fini-eyes{animation:fini_miraOjos calc(3.4s * var(--sp)) ease-in-out var(--fini-iter, infinite), fini_blink calc(5.4s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-alerta .fini-arm-r{animation:fini_alertArm calc(3.4s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+.fini-st-alerta .fini-brows{opacity:1}
+.fini-st-alerta .fini-prop-ring{animation:fini_ring calc(3.4s * var(--sp)) var(--fini-iter, infinite)}
+@keyframes fini_mira{0%,100%{rotate:0deg}18%,72%{rotate:6deg}}
+@keyframes fini_miraOjos{0%,100%{translate:0 0}18%,72%{translate:7px 0}}
+@keyframes fini_alertArm{0%,10%,92%,100%{rotate:0deg}24%{rotate:-52deg}34%{rotate:-42deg}44%,80%{rotate:-50deg}}
+@keyframes fini_ring{0%,22%{opacity:0;scale:.5 .5}34%{opacity:1;scale:1 1}56%{opacity:.75;scale:1.35 1.35}70%,100%{opacity:0;scale:1.6 1.6}}
+
+/* --- estado vacío --- */
+.fini-st-vacio .fini-arm-l{rotate:22deg;animation:fini_shrugL calc(4s * var(--sp)) ease-in-out var(--fini-iter, infinite) alternate}
+.fini-st-vacio .fini-arm-r{rotate:-22deg;animation:fini_shrugR calc(4s * var(--sp)) ease-in-out var(--fini-iter, infinite) alternate}
+.fini-st-vacio .fini-body{animation:fini_shrugBody calc(4s * var(--sp)) ease-in-out var(--fini-iter, infinite) alternate}
+.fini-st-vacio .fini-brows{opacity:.9}
+@keyframes fini_shrugL{from{rotate:18deg}to{rotate:30deg}}
+@keyframes fini_shrugR{from{rotate:-18deg}to{rotate:-30deg}}
+@keyframes fini_shrugBody{from{rotate:-2.5deg;scale:1 .985}to{rotate:2.5deg;scale:1 1}}
+
+/* --- error / caída --- */
+.fini-st-error .fini-root{animation:fini_tropieza calc(3.2s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-error .fini-leg-l{animation:fini_legStumbleL calc(3.2s * var(--sp)) var(--fini-iter, infinite)}
+.fini-st-error .fini-leg-r{animation:fini_legStumbleR calc(3.2s * var(--sp)) var(--fini-iter, infinite)}
+@keyframes fini_tropieza{
+  0%,6%{rotate:0deg;translate:0 0}
+  12%{rotate:-15deg;translate:-14px 10px}
+  20%{rotate:9deg;translate:8px 3px}
+  27%{rotate:-5deg;translate:-3px 0}
+  34%{rotate:2deg}
+  42%,100%{rotate:0deg;translate:0 0}
+}
+@keyframes fini_legStumbleL{0%,6%,42%,100%{rotate:0deg}14%{rotate:-16deg}24%{rotate:7deg}}
+@keyframes fini_legStumbleR{0%,6%,42%,100%{rotate:0deg}14%{rotate:12deg}24%{rotate:-6deg}}
+
+/* --- cierre --- */
+.fini-st-cierre .fini-arm-l{animation:fini_bajaL calc(3.6s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+.fini-st-cierre .fini-arm-r{animation:fini_bajaR calc(3.6s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+.fini-st-cierre .fini-body{animation:fini_asienta calc(3.6s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+.fini-st-cierre .fini-eyes{animation:fini_cierraOjos calc(3.6s * var(--sp)) ease-in-out var(--fini-iter, infinite)}
+@keyframes fini_bajaL{0%{rotate:34deg}30%,100%{rotate:0deg}}
+@keyframes fini_bajaR{0%{rotate:-34deg}30%,100%{rotate:0deg}}
+@keyframes fini_asienta{0%{scale:1 1;rotate:0deg}34%{scale:1.03 .96}50%{scale:1 1;rotate:1.5deg}80%{rotate:-1.5deg}100%{rotate:0deg}}
+@keyframes fini_cierraOjos{0%,52%{scale:1 1}66%,94%{scale:1 .1}100%{scale:1 1}}
+
+
+@media (prefers-reduced-motion: reduce){
+  .fini-svg *{animation:none !important}
+}

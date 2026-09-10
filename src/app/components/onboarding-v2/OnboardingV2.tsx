@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fini } from './Fini';
 import { useNavigate } from 'react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import {
-  COLORS, DeviceFrame, Face, CheckIcon, Chip, OtroChip, Nota, Cta,
+  COLORS, DeviceFrame, CheckIcon, Chip, OtroChip, Nota, Cta,
   Titulo, Apoyo, Contador, OpcionesGrid, OpcionesLista, OpcionesMulti, BotonFantasma,
   formatThousands, parseMoneyInput,
   saveV2Categorias, saveV2Nombre,
@@ -92,8 +93,6 @@ const AUTO_AVANCE: StepKey[] = [
 // Pasos que cuentan para el contador "Pregunta N de M" — los de trámite
 // (intro, intermedia, términos, login) no son preguntas y no suman.
 const NO_ES_PREGUNTA: StepKey[] = ['intro', 'intermedia', 'terminos', 'login'];
-
-const FACE_COLOR = COLORS.brand;
 
 const GENEROS: { id: GeneroId; label: string; muted?: boolean }[] = [
   { id: 'femenino', label: 'Femenino' },
@@ -578,6 +577,7 @@ export function OnboardingV2() {
             >
               {currentKey === 'intro' && (
                 <>
+                  <div className="flex justify-center pb-1"><Fini state="saludo" size={132} /></div>
                   <Titulo>
                     Llegó tu momento de cambiar la historia de tus finanzas
                   </Titulo>
@@ -647,7 +647,7 @@ export function OnboardingV2() {
                   <Titulo>¿Qué es lo que más querés lograr con tu plata?</Titulo>
                   <Apoyo>Elegí la que mejor te represente hoy — después vas a poder hacer todo lo demás igual.</Apoyo>
                   <OpcionesLista opciones={OBJETIVOS} valor={meta} onElegir={setMeta} />
-                  <div className="flex justify-center py-1"><Face color={FACE_COLOR} size={90} mood="happy" /></div>
+                  <div className="flex justify-center py-1"><Fini state="idle" size={104} /></div>
                   {meta && (
                     <div className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[15px] font-semibold" style={{ color: COLORS.ink, background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
                       {objetivoBubble}
@@ -781,6 +781,7 @@ export function OnboardingV2() {
 
               {currentKey === 'intermedia' && (
                 <>
+                  <div className="flex justify-center pb-1"><Fini state="insight" size={120} /></div>
                   <Titulo>{meta === 'invertir' ? 'Tu plata, lista para crecer' : meta === 'ahorrar' ? 'Tu ahorro, siempre a la vista' : meta === 'objetivo' ? '¡Tu objetivo ya está en marcha!' : 'Así se va a ir viendo tu FINA'}</Titulo>
                   <Apoyo>{meta === 'invertir' ? 'Con tu perfil listo, esto es lo que te espera adentro.' : meta === 'ahorrar' ? 'Esto es lo que vas a poder hacer para que te sobre cada vez más.' : meta === 'objetivo' ? 'Lo vas a ver con su progreso, y todo esto además.' : 'Todo lo que FINA va a hacer por vos.'}</Apoyo>
                   <div className="flex flex-col gap-3">
@@ -878,7 +879,7 @@ export function OnboardingV2() {
 
               {currentKey === 'login' && finished && (
                 <>
-                  <div className="flex justify-center py-2"><Face color={FACE_COLOR} mood="happy" /></div>
+                  <div className="flex justify-center py-2"><Fini state="logro" size={150} /></div>
                   <Titulo>¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</Titulo>
                   <p className="text-[16px] text-center" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
                 </>

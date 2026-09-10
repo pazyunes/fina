@@ -15,6 +15,7 @@ import { ObjetivosV2 } from "./components/onboarding-v2/ObjetivosV2";
 import { InversionesV2 } from "./components/onboarding-v2/InversionesV2";
 import { PerfilV2 } from "./components/onboarding-v2/PerfilV2";
 import { GruposV2 } from "./components/onboarding-v2/GruposV2";
+import { FiniPlayground } from "./components/onboarding-v2/FiniPlayground";
 
 // Layout que persiste entre las rutas de onboarding/informe: renderiza la
 // pantalla (Outlet) + el controlador de encuestas, que detecta cuándo salís de
@@ -57,6 +58,12 @@ export const router = createBrowserRouter([
       { path: "/onboarding-v2/perfil", element: <PerfilV2 /> },
       { path: "/onboarding-v2/grupos", element: <GruposV2 /> },
     ],
+  },
+  {
+    // PRUEBA (rama prueba/fini) — banco de pruebas del personaje. Fuera del
+    // V2Layout a propósito: no lleva menú, es una pantalla de taller.
+    path: "/onboarding-v2/fini",
+    element: <FiniPlayground />,
   },
   {
     // Pública: llega desde el link del mail de recuperación (sesión de recovery).

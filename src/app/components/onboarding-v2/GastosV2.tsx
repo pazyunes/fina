@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, Face, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, loadV2Categorias, loadV2GastosState, parseMoneyInput, saveV2GastosState, slug } from './shared';
+import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, loadV2Categorias, loadV2GastosState, parseMoneyInput, saveV2GastosState, slug } from './shared';
+import { Fini } from './Fini';
 import { IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { WHATSAPP_URL } from '../WhatsAppFab';
 
@@ -428,7 +429,7 @@ export function GastosV2() {
           // (en 'por-descubrir') + la acción (el CTA "+ Agregar gasto" de arriba).
           // Único lugar de esta pantalla donde Fini puede aparecer (§6).
           <div className="py-6 flex flex-col items-center text-center gap-3">
-            <Face color={COLORS.brand} size={56} mood="happy" />
+            <Fini state="vacio" size={116} />
             <div className="flex flex-col gap-1">
               <p className="text-[16px] font-semibold" style={{ color: COLORS.ink }}>Acá van a vivir tus secciones</p>
               <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
