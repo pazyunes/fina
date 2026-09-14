@@ -198,39 +198,8 @@
     line-height: 1.5;
   }
 
-  /* PR7b/c — Scrollbar rosa SIEMPRE visible en desktop.
-     - `overflow-y: scroll` en <html> fuerza que la barra siempre exista
-       (aunque no haya overflow), evitando que macOS/Chrome la auto-oculten.
-     - `scrollbar-gutter: stable` reserva el espacio para que el layout no
-       salte cuando aparece la barra en otras vistas.
-     - Pseudo-elementos `::-webkit-scrollbar` la pintan rosa.
-     - Firefox: scrollbar-width + scrollbar-color.
-     iOS Safari sigue auto-ocultando la barra nativa durante el reposo —
-     es una limitación del WebView que no se puede forzar desde CSS. */
-  html {
-    overflow-y: scroll;
-    scrollbar-gutter: stable;
-  }
-  html, body, * {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(212, 83, 126, 0.55) rgba(212, 83, 126, 0.1);
-  }
-  *::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-  *::-webkit-scrollbar-track {
-    background: rgba(212, 83, 126, 0.1);
-    border-radius: 9999px;
-  }
-  *::-webkit-scrollbar-thumb {
-    background: rgba(212, 83, 126, 0.55);
-    border-radius: 9999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-  }
-  *::-webkit-scrollbar-thumb:hover {
-    background: rgba(212, 83, 126, 0.8);
-    background-clip: padding-box;
-  }
+  /* Sin barra de scroll propia. Antes había una regla que la pintaba rosa y
+     la dejaba SIEMPRE visible: se sacó por pedido de diseño. Ahora cada
+     sistema muestra la suya (en el celular se oculta sola), y las pantallas
+     del onboarding la esconden del todo con `.v2-sin-barra`. */
 }

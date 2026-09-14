@@ -4,7 +4,7 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
-import { IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
+import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { WHATSAPP_URL } from '../WhatsAppFab';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
@@ -33,7 +33,7 @@ type Periodo = 'semana' | 'mes';
 type Moneda = 'ARS' | 'USD';
 type Tope = { monto: number; periodo: Periodo };
 type Categoria = { id: string; nombre: string };
-type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number; metodoPago?: string };
+type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number; metodoPago?: string; origen: 'web' | 'whatsapp' | 'manual' };
 // Cada gasto guarda DOS montos: `monto` es lo que la persona tipeó, en su
 // moneda, y `montoArs` su equivalente en pesos congelado a la cotización de
 // ese día.
@@ -85,6 +85,84 @@ const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.
 const CARD_ELEVADA: React.CSSProperties = { background: COLORS.surface, boxShadow: '0 2px 8px rgba(43,33,24,0.08)' };
 const INPUT_STYLE: React.CSSProperties = { background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}` };
 
+// Desplegable nativo. En el celular abre el selector del sistema, que es lo más
+// cómodo para elegir de una lista larga con el dedo — antes todas las secciones
+// y todos los medios aparecían como botones a la vez y el formulario ocupaba
+// tres pantallas.
+function Desplegable({ id, label, value, onChange, children }: {
+  id: string; label: string; value: string; onChange: (v: string) => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>{label}</label>
+      <div className="relative">
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[16px] transition-colors"
+          // Sin nada elegido, el texto va tenue como un placeholder.
+          style={{ ...INPUT_STYLE, color: value ? COLORS.ink : COLORS.inkFaint }}
+        >
+          {children}
+        </select>
+        <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: COLORS.inkSoft }} aria-hidden>
+          <IconChevron size={16} style={{ transform: 'rotate(90deg)' }} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+const OPCION: React.CSSProperties = { color: COLORS.ink };
+
+// Borrar pide confirmación en el mismo renglón: no se puede deshacer, y el
+// tachito está al lado del monto, donde un toque de más es fácil.
+function BotonBorrar({ gasto, abierto, onClick }: { gasto: Gasto; abierto: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Borrar ${gasto.descripcion}`}
+      aria-expanded={abierto}
+      className="v2-focus w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+      style={{ color: abierto ? COLORS.ink : COLORS.inkFaint }}
+    >
+      <IconBasura size={18} />
+    </button>
+  );
+}
+
+function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () => void }) {
+  return (
+    <div className="mt-2 mb-1 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
+      <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+        ¿Borrar “{gasto.descripcion}” de <span className="font-mono tabular-nums">{fmtGasto(gasto)}</span>?
+        {gasto.metodoPago ? ` La plata vuelve a ${gasto.metodoPago}.` : ''}
+      </p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          autoFocus
+          onClick={onCancelar}
+          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold"
+          style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={() => { onCancelar(); acciones.borrarGasto(gasto.id); }}
+          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-bold transition-all duration-100 active:scale-95"
+          style={{ background: COLORS.ink, color: COLORS.paper }}
+        >
+          Sí, borrar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function GastosV2() {
   const { estado: db } = useAlmacen();
 
@@ -103,6 +181,7 @@ export function GastosV2() {
       tipo: g.tipo,
       ts: g.ts,
       metodoPago: g.metodoPago ?? undefined,
+      origen: g.origen,
     })),
     // Se muestra en cero y no en negativo: un disponible negativo es un dato
     // sobre los medios de pago (gastaste más de lo que cargaste en ese medio),
@@ -140,8 +219,13 @@ export function GastosV2() {
   const [ngMonto, setNgMonto] = useState('');
   const [ngMoneda, setNgMoneda] = useState<Moneda>('ARS');
   const [ngDesc, setNgDesc] = useState('');
-  const [ngCatId, setNgCatId] = useState<string | null>(categorias[0]?.id ?? null);
+  // Sin sección elegida de entrada: con la primera ya marcada, era fácil
+  // registrar un gasto en la sección equivocada sin darse cuenta.
+  const [ngCatId, setNgCatId] = useState<string | null>(null);
   const [ngNuevaCat, setNgNuevaCat] = useState('');
+  const [ngCreandoCat, setNgCreandoCat] = useState(false);
+  // El gasto que se está por borrar (uno a la vez).
+  const [borrando, setBorrando] = useState<string | null>(null);
   const [ngTipo, setNgTipo] = useState<TipoGasto>('necesario');
   const [ngMetodo, setNgMetodo] = useState<string | null>(null);
   const [ngMetodoOtro, setNgMetodoOtro] = useState('');
@@ -242,7 +326,7 @@ export function GastosV2() {
     });
     if (r.error !== null) { setErrorGasto(r.error); return; }
 
-    setNgMonto(''); setNgMoneda('ARS'); setNgDesc(''); setNgNuevaCat(''); setNgTipo('necesario');
+    setNgMonto(''); setNgMoneda('ARS'); setNgDesc(''); setNgNuevaCat(''); setNgCreandoCat(false); setNgCatId(null); setNgTipo('necesario');
     setNgMetodo(null); setNgMetodoOtro('');
     setAddingGasto(false);
     setOpenCatId(catId);
@@ -422,82 +506,89 @@ export function GastosV2() {
             onChange={(e) => setNgDesc(e.target.value)}
           />
 
-          {/* Secciones en dos grupos: las que ya usás y las sugeridas que
-              todavía no tenés. Antes había una sola fila con las tuyas y un
-              "+ Nueva" que te dejaba tipeando "Supermercado" a mano. */}
-          <div className="flex flex-col gap-2.5">
-            <div>
-              <p className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>Tus secciones</p>
-              <div className="flex flex-wrap gap-2">
-                {categorias.length === 0 && (
-                  <p className="text-[14px]" style={{ color: COLORS.inkFaint }}>Todavía no tenés ninguna — elegí una de abajo.</p>
+          {/* Sección, tipo y medio. Antes eran tres grupos de botones con TODAS
+              las opciones a la vista (tus secciones, las sugeridas, cuatro
+              tipos, los medios): en el celular eran tres pantallas de chips
+              antes de llegar a "Agregar". Ahora las listas largas son
+              desplegables y sólo el tipo, que son cuatro palabras cortas,
+              queda a la vista en una fila. */}
+          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
+            <div className="flex flex-col gap-2">
+              <Desplegable
+                id="ng-seccion"
+                label="Sección"
+                value={ngCatId ? `c:${ngCatId}` : ngCreandoCat ? 'nueva' : ngNuevaCat ? `s:${ngNuevaCat}` : ''}
+                onChange={(v) => {
+                  setNgCatId(v.startsWith('c:') ? v.slice(2) : null);
+                  setNgNuevaCat(v.startsWith('s:') ? v.slice(2) : '');
+                  setNgCreandoCat(v === 'nueva');
+                }}
+              >
+                <option value="" disabled style={OPCION}>Elegí una sección</option>
+                {categorias.length > 0 && (
+                  <optgroup label="Tus secciones">
+                    {categorias.map((c) => <option key={c.id} value={`c:${c.id}`} style={OPCION}>{c.nombre}</option>)}
+                  </optgroup>
                 )}
-                {categorias.map((c) => {
-                  const sel = ngCatId === c.id && !ngNuevaCat;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => { setNgCatId(c.id); setNgNuevaCat(''); }}
-                      className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold transition-all duration-100 active:scale-95"
-                      style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-                    >
-                      {c.nombre}
-                    </button>
-                  );
-                })}
-              </div>
+                {sugeridasDisponibles.length > 0 && (
+                  <optgroup label="Otras secciones">
+                    {sugeridasDisponibles.map((n) => <option key={n} value={`s:${n}`} style={OPCION}>{n}</option>)}
+                  </optgroup>
+                )}
+                <option value="nueva" style={OPCION}>+ Crear otra sección</option>
+              </Desplegable>
+              {ngCreandoCat && (
+                <input
+                  autoFocus
+                  aria-label="Nombre de la sección nueva"
+                  className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
+                  style={INPUT_STYLE}
+                  placeholder="Ej: Mascota"
+                  value={ngNuevaCat}
+                  onChange={(e) => setNgNuevaCat(e.target.value)}
+                />
+              )}
             </div>
 
-            {sugeridasDisponibles.length > 0 && (
-              <div>
-                <p className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>Otras secciones</p>
-                <div className="flex flex-wrap gap-2">
-                  {sugeridasDisponibles.map((nombre) => {
-                    const sel = !ngCatId && ngNuevaCat.trim() === nombre;
-                    return (
-                      <button
-                        key={nombre}
-                        type="button"
-                        onClick={() => { setNgCatId(null); setNgNuevaCat(nombre); }}
-                        className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold transition-all duration-100 active:scale-95"
-                        style={sel
-                          ? { background: COLORS.brand, color: COLORS.surface }
-                          : { background: COLORS.surface, color: COLORS.inkSoft, border: `1.5px dashed ${COLORS.lineStrong}` }}
-                      >
-                        {nombre}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="ng-nueva" className="text-[14px] font-bold mb-1.5 block" style={{ color: COLORS.inkSoft }}>O escribí una</label>
-              <input
-                id="ng-nueva"
-                aria-label="Nombre de la sección"
-                className="v2-focus w-full rounded-xl px-3 py-2 text-[15px] transition-colors"
-                style={INPUT_STYLE}
-                placeholder="Ej: Mascota"
-                value={ngNuevaCat.trim()}
-                onChange={(e) => { setNgNuevaCat(e.target.value); if (e.target.value) setNgCatId(null); }}
-              />
+            {/* Con qué lo pagaste. Primero los medios con los que ya cargaste
+                plata disponible; si no hay ninguno, los sugeridos. */}
+            <div className="flex flex-col gap-2">
+              <Desplegable
+                id="ng-medio"
+                label="¿Con qué lo pagaste?"
+                value={ngMetodo ?? ''}
+                onChange={(v) => { setNgMetodo(v || null); if (v !== 'otro') setNgMetodoOtro(''); }}
+              >
+                <option value="" style={OPCION}>Elegí un medio (opcional)</option>
+                {metodosOfrecidos.map((m) => <option key={m} value={m} style={OPCION}>{m}</option>)}
+                <option value="otro" style={OPCION}>+ Otro medio</option>
+              </Desplegable>
+              {ngMetodo === 'otro' && (
+                <input
+                  autoFocus
+                  aria-label="Con qué lo pagaste"
+                  className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
+                  style={INPUT_STYLE}
+                  placeholder="Ej: Ualá"
+                  value={ngMetodoOtro}
+                  onChange={(e) => setNgMetodoOtro(e.target.value)}
+                />
+              )}
             </div>
           </div>
 
-          <div>
-            <p className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</p>
-            <div className="flex flex-wrap gap-2">
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</legend>
+            <div className="grid grid-cols-4 gap-1.5">
               {TIPOS.map((t) => {
                 const sel = ngTipo === t;
                 return (
                   <button
                     key={t}
                     type="button"
+                    aria-pressed={sel}
                     onClick={() => setNgTipo(t)}
-                    className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold transition-all duration-100 active:scale-95"
+                    className="v2-focus rounded-xl px-1 min-h-[44px] text-[14px] font-semibold transition-all duration-100 active:scale-95"
                     style={sel ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                   >
                     {TIPO_INFO[t].label}
@@ -505,49 +596,7 @@ export function GastosV2() {
                 );
               })}
             </div>
-          </div>
-
-          {/* Con qué lo pagaste. Se ofrecen primero los medios con los que ya
-              cargaste plata disponible: es la lista corta y real de de dónde
-              pudo haber salido. Si no hay ninguno todavía, van los sugeridos. */}
-          <div>
-            <p className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Con qué lo pagaste?</p>
-            <div className="flex flex-wrap gap-2">
-              {metodosOfrecidos.map((m) => {
-                const sel = ngMetodo === m;
-                return (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setNgMetodo(m)}
-                    className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold transition-all duration-100 active:scale-95"
-                    style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-                  >
-                    {m}
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => setNgMetodo('otro')}
-                className="v2-focus rounded-xl px-3 py-1.5 text-[15px] font-semibold border border-dashed transition-all duration-100 active:scale-95"
-                style={{ background: ngMetodo === 'otro' ? COLORS.brandSoft : COLORS.surface, color: ngMetodo === 'otro' ? COLORS.brandDark : COLORS.ink, borderColor: COLORS.lineStrong }}
-              >
-                + Otro
-              </button>
-            </div>
-            {ngMetodo === 'otro' && (
-              <input
-                autoFocus
-                aria-label="Con qué lo pagaste"
-                className="v2-focus mt-2 w-full rounded-xl px-3 py-2 text-[15px] transition-colors"
-                style={INPUT_STYLE}
-                placeholder="Ej: Ualá"
-                value={ngMetodoOtro}
-                onChange={(e) => setNgMetodoOtro(e.target.value)}
-              />
-            )}
-          </div>
+          </fieldset>
 
           {errorGasto && (
             <p role="alert" className="text-[14px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{errorGasto}</p>
@@ -710,13 +759,21 @@ export function GastosV2() {
                 <div className="mt-3 pt-3 border-t border-dashed flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
                   {movs.length === 0 && <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no hay movimientos acá.</p>}
                   {movs.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between text-[15px] gap-2" style={{ color: COLORS.ink }}>
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TIPO_INFO[m.tipo].color }} />
-                        <span className="truncate">{m.descripcion}</span>
-                        <span className="shrink-0 text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(m.ts)}</span>
-                      </span>
-                      <span className="shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtGasto(m)}</span>
+                    <div key={m.id}>
+                      <div className="flex items-center justify-between text-[15px] gap-2 min-h-[36px]" style={{ color: COLORS.ink }}>
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TIPO_INFO[m.tipo].color }} />
+                          <span className="truncate">{m.descripcion}</span>
+                          <span className="shrink-0 text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(m.ts)}</span>
+                        </span>
+                        <span className="shrink-0 flex items-center gap-1">
+                          <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtGasto(m)}</span>
+                          {m.origen !== 'whatsapp' && (
+                            <BotonBorrar gasto={m} abierto={borrando === m.id} onClick={() => setBorrando(borrando === m.id ? null : m.id)} />
+                          )}
+                        </span>
+                      </div>
+                      {borrando === m.id && <ConfirmarBorrado gasto={m} onCancelar={() => setBorrando(null)} />}
                     </div>
                   ))}
                   <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
@@ -800,16 +857,24 @@ export function GastosV2() {
           const cat = categorias.find((c) => c.id === g.categoriaId);
           return (
             // Idem: un movimiento no es una tarjeta, es un renglón.
-            <div key={g.id} className="flex items-center gap-2.5 py-3 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[g.tipo].color }} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
-                <p className="text-[14px] flex items-center gap-1.5" style={{ color: COLORS.inkSoft }}>
-                  <span className="truncate">{cat?.nombre ?? 'Sin sección'}</span>
-                  <span className="shrink-0">{fechaDisplay(g.ts)}</span>
-                </p>
+            <div key={g.id} className="py-3 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[g.tipo].color }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
+                  <p className="text-[14px] flex items-center gap-1.5" style={{ color: COLORS.inkSoft }}>
+                    <span className="truncate">{cat?.nombre ?? 'Sin sección'}</span>
+                    <span className="shrink-0">{fechaDisplay(g.ts)}</span>
+                  </p>
+                </div>
+                <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
+                {/* Sólo los cargados en FINA. Los de WhatsApp los registró el
+                    bot, y además cuentan para la racha del día en que llegaron. */}
+                {g.origen !== 'whatsapp' && (
+                  <BotonBorrar gasto={g} abierto={borrando === g.id} onClick={() => setBorrando(borrando === g.id ? null : g.id)} />
+                )}
               </div>
-              <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
+              {borrando === g.id && <ConfirmarBorrado gasto={g} onCancelar={() => setBorrando(null)} />}
             </div>
           );
         })}

@@ -48,3 +48,13 @@
   /* Sin vuelo: el avatar ya está en su lugar. */
   .v2-fini-aterriza { animation: none; opacity: 0; }
 }
+
+/* Scroll sin barra visible. Para las pantallas del onboarding: la barra al
+   costado competía con el contenido y no sumaba nada — se sigue pudiendo
+   scrollear con el dedo, la rueda y el teclado. */
+.v2-sin-barra {
+  scrollbar-width: none;
+}
+.v2-sin-barra::-webkit-scrollbar {
+  display: none;
+}

@@ -99,7 +99,7 @@ export function EntrarV2() {
           </button>
         </header>
 
-        <div className="flex-1 min-h-0 flex flex-col px-6 pt-2 pb-4 overflow-y-auto w-full lg:max-w-xl lg:mx-auto">
+        <div className="flex-1 min-h-0 flex flex-col px-6 pt-2 pb-4 overflow-y-auto v2-sin-barra w-full lg:max-w-xl lg:mx-auto">
           <div className="flex flex-col gap-5 my-auto w-full pb-[10vh]">
             {mailEnviado ? (
               <>

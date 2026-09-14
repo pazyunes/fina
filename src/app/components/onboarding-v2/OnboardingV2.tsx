@@ -740,7 +740,7 @@ export function OnboardingV2() {
             justo sobre el CTA. Cuando el contenido es más alto que la pantalla,
             scrollea normal. En las pantallas SIN Fini (bienvenida, intermedia,
             llegada) se conserva el centrado: ahí el techo sigue vacío. */}
-        <div className="flex-1 min-h-0 flex flex-col px-6 pt-4 pb-4 overflow-y-auto w-full lg:max-w-xl lg:mx-auto">
+        <div className="flex-1 min-h-0 flex flex-col px-6 pt-4 pb-4 overflow-y-auto v2-sin-barra w-full lg:max-w-xl lg:mx-auto">
           <motion.div
               key={finished ? 'finished' : currentKey}
               initial={reduce ? false : { opacity: 0, y: 12 }}
