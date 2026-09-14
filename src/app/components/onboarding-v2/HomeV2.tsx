@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Fini } from './Fini';
 import { MisVisualizaciones } from './MisVisualizaciones';
+import { Recomendaciones } from './Recomendaciones';
 import { useNavigate } from 'react-router';
 import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2Grupo, loadV2Nombre, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
 import { IconChevron, IconFuego, IconGrupo, IconPerfil, IconReserva } from './FinaIcons';
@@ -278,6 +279,10 @@ export function HomeV2() {
       {/* Se fue "Tus secciones" (Gastos / Objetivos / Inversiones en tres
           fichas): repetía el menú de abajo, que ya lleva a las mismas tres
           pantallas y está siempre a la vista. */}
+      {/* Recomendaciones del día, la semana y el mes. Van antes de los gráficos:
+          dicen qué hacer con lo que los gráficos muestran. */}
+      <Recomendaciones />
+
       {/* PRUEBA — gráficos armados con los datos que ya hay guardados. */}
       <MisVisualizaciones />
 

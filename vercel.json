@@ -15,5 +15,10 @@
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/recomendaciones.ts": {
+      "maxDuration": 60
+    }
+  }
 }
