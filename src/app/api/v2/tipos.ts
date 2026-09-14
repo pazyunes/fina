@@ -157,6 +157,34 @@ export type Perfil = {
   telefonoVerificadoEn: string | null;
 };
 
+// ── El paso del día y la racha (migración 0028) ─────────────────────────
+export type PasoGuardado = {
+  /** 'YYYY-MM-DD', el día en Argentina. */
+  dia: string;
+  /** Clave del catálogo de api/v2/pasos.ts. */
+  clave: string;
+  /** Cuándo se detectó cumplido, o null si todavía no. */
+  cumplidoEn: string | null;
+};
+
+export type DiaDeRacha = {
+  dia: string;
+  /** 'paso' = cumplió el paso · 'whatsapp' = le contó un gasto al bot · 'comodin' = el comodín salvó el día */
+  tipo: 'paso' | 'whatsapp' | 'comodin';
+  paso?: string;
+};
+
+export type Racha = {
+  dias: number;
+  hoyCumplido: boolean;
+  /** Si el comodín de esta semana todavía está libre. */
+  comodinDisponible: boolean;
+  /** Del día más reciente al más viejo. */
+  detalle: DiaDeRacha[];
+};
+
+export const RACHA_VACIA: Racha = { dias: 0, hoyCumplido: false, comodinDisponible: true, detalle: [] };
+
 /** Todo lo que la app necesita de una usuaria, en una sola carga. */
 export type EstadoV2 = {
   perfil: Perfil;

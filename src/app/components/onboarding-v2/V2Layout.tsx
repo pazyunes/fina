@@ -6,6 +6,7 @@ import { COLOR_VARS, COLORS, FONT_VARS, Cta, Titulo, Apoyo, subirPendientesLocal
 import { Fini } from './Fini';
 import { useAuth } from '../../lib/auth';
 import { AlmacenProvider, useAlmacen } from '../../api/v2/AlmacenProvider';
+import { PasoDelDiaProvider } from '../../api/v2/PasoDelDiaProvider';
 
 // REDISEÑO v2 — layout compartido por Home/Gastos/Objetivos/Inversiones.
 // RESPONSIVE:
@@ -226,6 +227,9 @@ export function V2Layout() {
 
   return (
     <AlmacenProvider>
+    {/* Adentro del almacén (lee sus datos) y afuera de las pantallas: el paso
+        del día se cumple en la pantalla donde se hace, no donde se muestra. */}
+    <PasoDelDiaProvider>
     <div
       className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col lg:flex-row overflow-hidden"
       style={{ background: COLORS.paper, ...FONT_VARS, ...COLOR_VARS }}
@@ -267,6 +271,7 @@ export function V2Layout() {
         <BottomNavV2 />
       </div>
     </div>
+    </PasoDelDiaProvider>
     </AlmacenProvider>
   );
 }

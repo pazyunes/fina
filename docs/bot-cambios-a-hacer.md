@@ -284,6 +284,44 @@ que es la verdad: se gastó con algo que nunca se cargó.
 
 ---
 
+## 6. La racha: el bot también suma
+
+La app tiene ahora una **racha**: cada día toca un paso distinto, y cumplirlo
+suma un día. **Un día en que la persona le cuenta un gasto al bot también
+suma**, aunque no abra la app — así la racha no castiga a quien usa WhatsApp.
+
+Para que eso funcione, lo único que tiene que hacer el bot es lo del punto 3:
+**escribir `source = 'whatsapp'`** en cada gasto. La racha cuenta los días con al
+menos un gasto con ese `source`. Si el bot escribe otro valor, esos días no
+cuentan y la persona pierde la racha sin entender por qué.
+
+Cuenta el día en que se **registró** el gasto (`created_at`), no el día en que se
+gastó (`occurred_at`): quien hoy le dice al bot "ayer gasté 5.000" apareció hoy.
+
+Y el día es el de **Argentina**, no el de UTC: un gasto contado a las 23 hs
+cuenta para ese día, aunque en UTC ya sea el siguiente.
+
+### Si el bot quiere decir la racha
+
+```sql
+select racha_de('<user_id>');
+```
+
+Devuelve algo así:
+
+```json
+{ "dias": 5, "hoyCumplido": true, "comodinDisponible": true, "detalle": [ ... ] }
+```
+
+Sirve para contestar cosas como *"¡Anotado! Ya van 5 días seguidos."* Sólo la
+puede llamar `service_role`.
+
+Una aclaración para no romper el tono: **la racha no se reta.** Si la persona la
+perdió, el bot no dice "perdiste tu racha". Hay un comodín por semana que salva
+un día solo, así que perderla es raro — y si pasa, se arranca de nuevo sin culpa.
+
+---
+
 ## Tono: tres cosas que no se pueden romper
 
 Escribiendo respuestas automáticas se rompen fácil, y son la identidad de FINA:
@@ -321,3 +359,4 @@ $30.000 y $45.000", no "~$37.500".
 | 3 | `source`, `section_id`, `expense_type`, `payment_method` (+ las 3 de USD) | los gastos aparecen sin clasificar |
 | 4 | Ofrecer las secciones y medios que ya usa | secciones duplicadas con otro nombre |
 | 5 | Mover el saldo con `on conflict … + delta` | el disponible queda mal, con plata que no existe |
+| 6 | Escribir `source = 'whatsapp'` (ya está en el 3) | los días que la persona usa el bot no suman a su racha |

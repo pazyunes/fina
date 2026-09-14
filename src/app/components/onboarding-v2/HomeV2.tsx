@@ -3,67 +3,17 @@ import type { ComponentType } from 'react';
 import { Fini } from './Fini';
 import { MisVisualizaciones } from './MisVisualizaciones';
 import { useNavigate } from 'react-router';
-import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2Grupo, loadV2InversionesPerfil, loadV2Nombre, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva, vistaGastos, vistaInversiones, vistaObjetivos } from './shared';
+import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2Grupo, loadV2Nombre, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva, vistaGastos, vistaInversiones, vistaObjetivos } from './shared';
 import { IconChevron, IconFuego, IconGastos, IconGrupo, IconInversiones, IconObjetivos, IconPerfil, IconReserva } from './FinaIcons';
+import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
+import { pasoPorClave } from '../../api/v2/pasos';
+import { WHATSAPP_URL } from '../WhatsAppFab';
 
 
-// "Tu próximo paso" — el hilo estilo Duolingo: una sola acción, la más útil
-// según en qué punto está la persona. Da coherencia al dashboard sin
-// despojarlo: es la tarjeta que lidera, y el resto queda como estaba.
-function proximoPaso(): { titulo: string; msg: string; cta: string; to: string } {
-  const g = vistaGastos();
-  const objetivos = vistaObjetivos();
-  const invPerfil = loadV2InversionesPerfil();
-  if (g.gastos.length === 0) {
-    return { titulo: 'Registrá tu primer gasto', msg: 'Con eso ya te armamos tus secciones y tu análisis solo.', cta: 'Registrar un gasto', to: '/onboarding-v2/gastos' };
-  }
-  // montoTotal 0 = la base tiene null = todavía no hay monto con el que
-  // calcular progreso. Es exactamente el objetivo que hay que completar.
-  const objIncompleto = objetivos.find((o) => o.montoTotal <= 0);
-  if (objIncompleto) {
-    return { titulo: `Completá “${objIncompleto.nombre}”`, msg: 'Ponéle un monto para empezar a ver tu progreso.', cta: 'Completar objetivo', to: '/onboarding-v2/objetivos' };
-  }
-  const objCerca = objetivos.find((o) => {
-    const s = o.contribuciones.reduce((a, c) => a + c.monto, 0);
-    return o.montoTotal > 0 && s / o.montoTotal >= 0.7 && s < o.montoTotal;
-  });
-  if (objCerca) {
-    return { titulo: `¡Estás cerca de “${objCerca.nombre}”!`, msg: 'Sumá lo último que separaste y llegás.', cta: 'Ver mi objetivo', to: '/onboarding-v2/objetivos' };
-  }
-  if (!invPerfil) {
-    return { titulo: 'Descubrí cómo invertir tu plata', msg: 'Armá tu perfil y te decimos qué te conviene según vos.', cta: 'Armar mi perfil inversor', to: '/onboarding-v2/inversiones' };
-  }
-  return { titulo: '¡Venís al día!', msg: 'Registrá lo de hoy para no cortar la racha.', cta: 'Registrar un gasto', to: '/onboarding-v2/gastos' };
-}
-
-// Racha: días consecutivos (terminando hoy) con al menos un gasto.
-// Racha: días consecutivos (terminando hoy) con al menos un gasto. Devuelve
-// también el DETALLE de cada día, para poder contestar "¿por qué tengo 4?" —
-// un número de racha sin poder abrirlo es un puntaje, no un dato.
-type DiaRacha = { fecha: string; etiqueta: string; cuantos: number; descripciones: string[] };
-function rachaDeGastos(): { dias: number; detalle: DiaRacha[] } {
-  const g = vistaGastos();
-  if (g.gastos.length === 0) return { dias: 0, detalle: [] };
-  const porDia = new Map<string, { ts: number; descripcion?: string }[]>();
-  for (const x of g.gastos) {
-    if (!x.ts) continue;
-    const k = new Date(x.ts).toDateString();
-    porDia.set(k, [...(porDia.get(k) ?? []), { ts: x.ts, descripcion: x.descripcion }]);
-  }
-  const detalle: DiaRacha[] = [];
-  const d = new Date();
-  while (porDia.has(d.toDateString())) {
-    const items = porDia.get(d.toDateString())!;
-    detalle.push({
-      fecha: d.toDateString(),
-      etiqueta: fechaDisplay(items[0].ts),
-      cuantos: items.length,
-      descripciones: items.map((i) => i.descripcion || 'Un gasto').slice(0, 3),
-    });
-    d.setDate(d.getDate() - 1);
-  }
-  return { dias: detalle.length, detalle };
-}
+// El paso del día y la racha salen de PasoDelDiaProvider (api/v2). Antes Home
+// calculaba los dos acá: el "próximo paso" era siempre el mismo hasta hacerlo,
+// y la racha contaba días con gastos. Ahora toca un paso distinto cada día, y
+// la racha cuenta los días en que se cumplió.
 
 // ── Anillo de bienestar financiero (estilo Headspace/Apple Watch) ──────
 // Le da un lugar visual a "Cuidá tu bienestar financiero" del checklist
@@ -162,8 +112,7 @@ export function HomeV2() {
   const grupo = loadV2Grupo();
   const topGrupo = grupo ? [...grupo.miembros].sort((a, b) => b.actividad - a.actividad).slice(0, 3) : [];
   const b = datosBienestar();
-  const paso = proximoPaso();
-  const racha = rachaDeGastos();
+  const { paso, cumplido, racha } = usePasoDelDia();
   const [rachaAbierta, setRachaAbierta] = useState(false);
 
   // Reserva ("alcancía") — se movió acá desde Gastos.
@@ -297,20 +246,28 @@ export function HomeV2() {
         )}
       </header>
 
-      {/* Detalle de la racha: qué registraste cada día. Un número que no se
-          puede abrir es un puntaje; abriéndolo es un dato. */}
+      {/* Detalle de la racha: qué sumó cada día. Un número que no se puede
+          abrir es un puntaje; abriéndolo es un dato. */}
       {rachaAbierta && racha.dias > 0 && (
         <section className="flex flex-col gap-2 -mt-4">
           <TituloSeccion>Tu racha, día por día</TituloSeccion>
+          {/* El comodín se explica acá y no en un tutorial: es donde la persona
+              lo ve funcionar. */}
+          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            {racha.comodinDisponible
+              ? 'Tenés un comodín esta semana: si se te pasa un día, te lo salva solo.'
+              : 'Ya usaste el comodín de esta semana. El lunes tenés otro.'}
+          </p>
           <div className="flex flex-col">
             {racha.detalle.map((d) => (
-              <div key={d.fecha} className="flex items-baseline gap-3 py-2.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
-                <span className="w-16 shrink-0 text-[14px] font-semibold" style={{ color: COLORS.ink }}>{d.etiqueta}</span>
-                <span className="flex-1 min-w-0 text-[14px]" style={{ color: COLORS.inkSoft }}>
-                  {d.descripciones.join(', ')}{d.cuantos > 3 ? ` y ${d.cuantos - 3} más` : ''}
+              <div key={d.dia} className="flex items-baseline gap-3 py-2.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+                <span className="w-16 shrink-0 text-[14px] font-semibold" style={{ color: COLORS.ink }}>
+                  {fechaDisplay(Date.parse(`${d.dia}T12:00:00-03:00`))}
                 </span>
-                <span className="shrink-0 text-[13px] font-mono tabular-nums" style={{ color: COLORS.inkFaint }}>
-                  {d.cuantos} {d.cuantos === 1 ? 'gasto' : 'gastos'}
+                <span className="flex-1 min-w-0 text-[14px]" style={{ color: d.tipo === 'comodin' ? COLORS.inkFaint : COLORS.inkSoft }}>
+                  {d.tipo === 'paso' && (pasoPorClave(d.paso ?? '')?.titulo ?? 'Cumpliste tu paso')}
+                  {d.tipo === 'whatsapp' && 'Le contaste un gasto a FINA por WhatsApp'}
+                  {d.tipo === 'comodin' && 'El comodín te salvó el día'}
                 </span>
               </div>
             ))}
@@ -333,27 +290,71 @@ export function HomeV2() {
           del saludo. Como a este tamaño se lleva casi la mitad del ancho en un
           celular, el globo se aprieta un poco menos: gap más chico y el
           personaje sale del margen izquierdo. */}
+      {/* EL PASO DE HOY. Uno por día, distinto cada día. Se cumple solo
+          cuando los datos lo muestran: no hay botón de "listo", porque con uno
+          la racha se inflaría tocándolo. */}
       <section className="flex items-start gap-1 pt-1">
         <div className="shrink-0 -ml-4 -mt-4">
-          <Fini state="idle" size={164} />
+          {/* Fini festeja cuando está cumplido. `logro` es de una pasada: salta
+              una vez y vuelve a quedarse quieto, no queda saltando al lado de
+              algo que ya pasó. */}
+          <Fini state={cumplido ? 'logro' : paso ? 'idle' : 'pensando'} size={164} />
         </div>
         <div className="flex-1 min-w-0 flex flex-col gap-3 pt-3">
           <div
             className="relative rounded-[20px] rounded-tl-md px-4 py-3.5"
-            style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
+            style={{ background: cumplido ? COLORS.limaSoft : COLORS.surface, border: `1.5px solid ${cumplido ? COLORS.lima : COLORS.line}` }}
           >
-            <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>Tu próximo paso</p>
-            <p className="font-bold text-[19px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
-            <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>{paso.msg}</p>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: cumplido ? COLORS.limaText : COLORS.inkSoft, fontFamily: FONTS.mono }}>
+              {cumplido ? 'Paso de hoy · listo' : 'Tu paso de hoy'}
+            </p>
+            {!paso ? (
+              <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>Preparando tu paso de hoy…</p>
+            ) : cumplido ? (
+              <>
+                <p className="font-bold text-[19px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>¡Listo por hoy!</p>
+                <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>
+                  {paso.titulo}. Mañana te toca otro
+                  {racha.dias > 1 ? ` — ya van ${racha.dias} días seguidos.` : '.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-bold text-[19px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
+                <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>{paso.msg}</p>
+                {/* Un gasto por WhatsApp salva el día aunque el paso sea otro.
+                    Se dice, para que no parezca que la racha depende sólo de
+                    este paso — y sin empujar a no hacerlo. */}
+                {racha.hoyCumplido && (
+                  <p className="text-[14px] leading-snug mt-2 font-semibold" style={{ color: COLORS.limaText }}>
+                    Tu racha de hoy ya está a salvo por WhatsApp.
+                  </p>
+                )}
+              </>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => navigate(paso.to)}
-            className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold transition-transform duration-100 active:scale-[0.99]"
-            style={{ background: COLORS.lima, color: COLORS.ink }}
-          >
-            {paso.cta}
-          </button>
+          {paso && !cumplido && (
+            paso.destino === 'whatsapp' ? (
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold text-center transition-transform duration-100 active:scale-[0.99]"
+                style={{ background: COLORS.lima, color: COLORS.ink }}
+              >
+                {paso.cta}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate(paso.destino)}
+                className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold transition-transform duration-100 active:scale-[0.99]"
+                style={{ background: COLORS.lima, color: COLORS.ink }}
+              >
+                {paso.cta}
+              </button>
+            )
+          )}
         </div>
       </section>
 

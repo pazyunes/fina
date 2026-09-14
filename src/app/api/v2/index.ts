@@ -5,6 +5,7 @@ import {
   type MedioPago, type MiembroGrupo, type Moneda, type MonedaConvertible,
   type Objetivo, type Perfil,
   type PerfilInversor, type Periodo, type Seccion, type TipoGasto,
+  type PasoGuardado, type Racha, RACHA_VACIA,
 } from './tipos';
 
 export * from './tipos';
@@ -586,6 +587,58 @@ export async function borrarAporte(id: string): Promise<Resultado<null>> {
   return correr<null>('borrarAporte', () =>
     supabase.from('investment_contributions').delete().eq('id', id).then(({ error }) => ({ data: null, error })),
   );
+}
+
+// ── El paso del día y la racha ───────────────────────────────────────────
+// Ver api/v2/pasos.ts (qué paso toca y cuándo está cumplido) y la migración
+// 0028 (cómo se guarda y cómo se calcula la racha con el comodín).
+
+export async function leerPasoDelDia(dia: string): Promise<Resultado<PasoGuardado | null>> {
+  const r = await correr<{ day: string; step_key: string; completed_at: string | null } | null>('leerPasoDelDia', () =>
+    supabase.from('daily_steps').select('day, step_key, completed_at').eq('day', dia).maybeSingle(),
+  );
+  if (r.error !== null) return falla(r.error, 'leerPasoDelDia');
+  if (!r.data) return ok(null);
+  return ok({ dia: r.data.day, clave: r.data.step_key, cumplidoEn: r.data.completed_at });
+}
+
+/**
+ * Guarda el paso de un día y devuelve el que QUEDÓ guardado.
+ *
+ * Si dos dispositivos abren la app a la vez, los dos eligen y los dos intentan
+ * guardar. El `ignoreDuplicates` hace que gane el primero y el segundo no
+ * pise nada; después se relee, así los dos muestran el mismo paso en vez de
+ * cada uno el suyo.
+ */
+export async function asignarPasoDelDia(dia: string, clave: string): Promise<Resultado<PasoGuardado | null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla('sin sesión', 'asignarPasoDelDia');
+  const w = await correr<null>('asignarPasoDelDia', () =>
+    supabase.from('daily_steps')
+      .upsert({ user_id: uid, day: dia, step_key: clave }, { onConflict: 'user_id,day', ignoreDuplicates: true })
+      .then(({ error }) => ({ data: null, error })),
+  );
+  if (w.error !== null) return falla(w.error, 'asignarPasoDelDia');
+  return leerPasoDelDia(dia);
+}
+
+export async function cumplirPasoDelDia(dia: string): Promise<Resultado<null>> {
+  return correr<null>('cumplirPasoDelDia', () =>
+    supabase.from('daily_steps')
+      .update({ completed_at: new Date().toISOString() })
+      .eq('day', dia)
+      // Sólo si todavía no estaba cumplido: la fecha que queda es la primera.
+      .is('completed_at', null)
+      .then(({ error }) => ({ data: null, error })),
+  );
+}
+
+export async function leerRacha(): Promise<Resultado<Racha>> {
+  const r = await correr<Racha>('leerRacha', () =>
+    supabase.rpc('mi_racha').then(({ data, error }) => ({ data: data as Racha | null, error })),
+  );
+  if (r.error !== null) return falla(r.error, 'leerRacha');
+  return ok(r.data ?? RACHA_VACIA);
 }
 
 // ── Verificación del teléfono por WhatsApp ───────────────────────────────
