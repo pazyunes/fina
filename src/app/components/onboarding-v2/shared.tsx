@@ -70,6 +70,11 @@ export const COLORS = {
   // Colores de marca (RELLENO). Cada uno con su -Soft (superficie) y su -Text
   // (≥6:1) para cuando el color tiene que ir en tipografía o ícono fino.
   lima: '#B0E150', limaSoft: '#EAF5D0', limaText: '#41660F',        // valor / éxito / objetivo que avanza
+  // Lima para MARCAS DE DATOS (el relleno de un anillo o una barra de progreso).
+  // El lima de marca tiene 1,35:1 contra su propio riel (limaSoft): el progreso
+  // casi no se distinguía del fondo. Éste da 3,6:1, arriba del 3:1 que pide
+  // WCAG 1.4.11 para lo que no es texto. Validado con dataviz/validate.
+  limaViz: '#5C8A18',
   star: '#FFC457', starSoft: '#FFEECB', starText: '#7A4F00',        // Fini, medallitas, destacados
   naranja: '#FF7B4F', naranjaSoft: '#FFE3D6', naranjaText: '#A83208', // atención accionable
   lila: '#CB9EFF', lilaBorde: '#9A6BD1',
