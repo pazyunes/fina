@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { BottomNavV2 } from './BottomNavV2';
 import { SidebarV2 } from './SidebarV2';
@@ -103,13 +103,16 @@ function Cargando() {
 //
 // Es la variante Soft de cada color, no el pleno: arriba de la franja va el
 // título en tinta, y sobre un relleno pleno no llegaría al contraste.
+//
+// SÓLO en la pantalla principal de cada sección del menú. Perfil, Grupos, el
+// quiz de inversor y el detalle de un objetivo no la llevan: son pasos o
+// páginas de adentro, y la franja está para decir "llegaste a Gastos", no para
+// repetirse en cada pantalla que cuelga de ahí.
 const FRANJA: { ruta: string; color: string }[] = [
   { ruta: '/onboarding-v2/home', color: COLORS.brandSoft },     // violeta — la identidad
   { ruta: '/onboarding-v2/gastos', color: COLORS.tint },        // neutro cálido — un gasto no es un error
   { ruta: '/onboarding-v2/objetivos', color: COLORS.limaSoft }, // lima — valor, algo que avanza
   { ruta: '/onboarding-v2/inversiones', color: COLORS.skySoft }, // estructural — plata seria, sin ruido
-  { ruta: '/onboarding-v2/perfil', color: COLORS.starSoft },    // star — vos
-  { ruta: '/onboarding-v2/grupos', color: COLORS.starSoft },    // star — tu gente
 ];
 
 // Cuánto aire, como máximo, queda entre donde termina el título y donde termina
@@ -124,9 +127,6 @@ const DESPEGUE = 12;
 // Piso: aunque el hueco sea mínimo, la franja nunca termina pegada al título.
 const AIRE_MINIMO = 10;
 
-// Alto de arranque, antes de medir. Es el de un título de dos líneas con
-// subtítulo: si la medición todavía no corrió, la franja ya está cerca.
-const ALTO_FRANJA_INICIAL = 132;
 
 export function V2Layout() {
   const { pathname } = useLocation();
@@ -145,18 +145,23 @@ export function V2Layout() {
   // Así que se mide dónde termina el <header> de la pantalla y la franja llega
   // hasta ahí más un poco de aire.
   const contenidoRef = useRef<HTMLDivElement>(null);
-  const [altoFranja, setAltoFranja] = useState(ALTO_FRANJA_INICIAL);
+  const [altoFranja, setAltoFranja] = useState(0);
 
-  useEffect(() => {
+  // useLayoutEffect y no useEffect: mide ANTES de pintar. Con useEffect la
+  // pantalla se pintaba primero con el alto anterior y después saltaba al
+  // nuevo — en un paso sin franja se veía un destello de color.
+  useLayoutEffect(() => {
     const contenido = contenidoRef.current;
     if (!contenido) return;
 
     const medir = () => {
-      const cabecera = contenido.querySelector('header');
-      // Sin <header> se vuelve al alto inicial y NO se deja el de la pantalla
-      // anterior: heredar una medida ajena es peor que una por defecto, porque
-      // el error depende de por dónde viniste.
-      if (!cabecera) { setAltoFranja(ALTO_FRANJA_INICIAL); return; }
+      // La franja es OPT-IN: la pide la pantalla marcando su encabezado con
+      // `data-franja`. Antes se usaba el primer <header> que apareciera, y
+      // cuando no había ninguno se pintaba igual con un alto por defecto — por
+      // eso salía en los pasos del quiz de inversor, que no tienen encabezado.
+      // Sin marca, no hay franja.
+      const cabecera = contenido.querySelector('header[data-franja]');
+      if (!cabecera) { setAltoFranja(0); return; }
 
       const arriba = contenido.getBoundingClientRect().top;
       const finTitulo = cabecera.getBoundingClientRect().bottom - arriba;
