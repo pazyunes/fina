@@ -199,20 +199,19 @@ export function V2Layout() {
     //   (sin franja) dentro de la misma URL. Con sólo el de tamaño, la franja
     //   de la intro quedaba pintada arriba de la pregunta.
     //
-    // Las mediciones se juntan en un frame: una mutación de React toca decenas
-    // de nodos a la vez y no hace falta medir por cada uno.
-    let frame = 0;
-    const programar = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(medir);
-    };
-    const porTamano = new ResizeObserver(programar);
+    // Se mide DIRECTO en el callback, sin requestAnimationFrame en el medio.
+    // Con rAF la medición quedaba agendada para el próximo frame, y el
+    // navegador pausa los frames cuando la pestaña no está pintando: la
+    // mutación se detectaba pero la medición nunca corría, y la franja quedaba
+    // con el alto de la pantalla anterior. No hace falta agrupar a mano: el
+    // MutationObserver ya entrega todos los cambios de una actualización de
+    // React en UNA sola llamada.
+    const porTamano = new ResizeObserver(medir);
     porTamano.observe(contenido);
-    const porContenido = new MutationObserver(programar);
+    const porContenido = new MutationObserver(medir);
     porContenido.observe(contenido, { childList: true, subtree: true });
 
     return () => {
-      cancelAnimationFrame(frame);
       porTamano.disconnect();
       porContenido.disconnect();
     };
