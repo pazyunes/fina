@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ComponentType } from 'react';
 import { Fini } from './Fini';
 import { MisVisualizaciones } from './MisVisualizaciones';
 import { useNavigate } from 'react-router';
-import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2Grupo, loadV2Nombre, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva, vistaGastos, vistaInversiones, vistaObjetivos } from './shared';
-import { IconChevron, IconFuego, IconGastos, IconGrupo, IconInversiones, IconObjetivos, IconPerfil, IconReserva } from './FinaIcons';
+import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2Grupo, loadV2Nombre, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
+import { IconChevron, IconFuego, IconGrupo, IconPerfil, IconReserva } from './FinaIcons';
 import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
 import { pasoPorClave } from '../../api/v2/pasos';
 import { WHATSAPP_URL } from '../WhatsAppFab';
@@ -15,81 +14,6 @@ import { WHATSAPP_URL } from '../WhatsAppFab';
 // y la racha contaba días con gastos. Ahora toca un paso distinto cada día, y
 // la racha cuenta los días en que se cumplió.
 
-// ── Anillo de bienestar financiero (estilo Headspace/Apple Watch) ──────
-// Le da un lugar visual a "Cuidá tu bienestar financiero" del checklist
-// del onboarding. Cada arco solo se calcula con datos reales — si una
-// sección todavía no tiene nada que decir, ese arco directamente no se
-// dibuja (no es "0% = mal", es "todavía no hay nada que mostrar acá"), y
-// si NINGÚN arco tiene datos, el anillo entero no aparece: en una pantalla
-// de celular, no vale la pena el espacio de algo que no dice nada todavía.
-function datosBienestar() {
-  const g = vistaGastos();
-  const objetivos = vistaObjetivos();
-  const inv = vistaInversiones();
-
-  let gastosPct: number | null = null;
-  let gastosTexto = '';
-  {
-    // Un tope es POR PERÍODO: "$25.000 por mes" se compara contra lo gastado
-    // este mes, no contra todo el historial. Antes se sumaba todo, así que a
-    // los pocos meses cualquier sección quedaba excedida para siempre y el
-    // indicador se clavaba en 0%.
-    const inicioDe = (periodo: 'semana' | 'mes') => {
-      const d = new Date();
-      if (periodo === 'mes') return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-      const dia = (d.getDay() + 6) % 7; // lunes = 0
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate() - dia).getTime();
-    };
-    const conTope = g.categorias.filter((c) => g.topes[c.id]);
-    if (conTope.length > 0) {
-      const dentro = conTope.filter((c) => {
-        const tope = g.topes[c.id];
-        const desde = inicioDe(tope.periodo);
-        // En pesos: el tope está en pesos, así que un gasto en dólares tiene
-        // que compararse por su equivalente y no por el número que se tipeó.
-        const gastado = g.gastos
-          .filter((x) => x.categoriaId === c.id && (x.ts ?? 0) >= desde)
-          .reduce((s, x) => s + x.montoArs, 0);
-        return gastado <= tope.monto;
-      });
-      gastosPct = Math.round((dentro.length / conTope.length) * 100);
-      gastosTexto = `${dentro.length} de ${conTope.length} secciones dentro del tope`;
-    }
-  }
-
-  let objetivosPct: number | null = null;
-  let objetivosTexto = '';
-  const conMonto = objetivos.filter((o) => o.montoTotal > 0);
-  if (conMonto.length > 0) {
-    const suma = conMonto.reduce((s, o) => {
-      const saved = o.contribuciones.reduce((ss, c) => ss + c.monto, 0);
-      return s + Math.min(100, Math.round((saved / o.montoTotal) * 100));
-    }, 0);
-    objetivosPct = Math.round(suma / conMonto.length);
-    objetivosTexto = `${objetivosPct}% de progreso promedio en tus objetivos`;
-  }
-
-  let inversionPct: number | null = null;
-  let inversionTexto = '';
-  if (inv.aportes.length > 0) {
-    const ahora = new Date();
-    const esteMes = inv.aportes.some((a) => {
-      const d = new Date(a.ts);
-      return d.getMonth() === ahora.getMonth() && d.getFullYear() === ahora.getFullYear();
-    });
-    inversionPct = esteMes ? 100 : 35;
-    inversionTexto = esteMes ? 'Aportaste a tus inversiones este mes' : 'Hace tiempo que no le sumás a tus inversiones';
-  }
-
-  // `gastosPct` es null por DOS motivos distintos, y la etiqueta de Home los
-  // confundía: decía "Registrá el primero" a quien ya tenía cuatro gastos
-  // cargados pero ninguna sección con tope. Lo que le falta es el tope, no el
-  // gasto.
-  const gastosFalta: 'gasto' | 'tope' | null =
-    gastosPct !== null ? null : (g.gastos.length === 0 ? 'gasto' : 'tope');
-
-  return { gastosPct, gastosTexto, gastosFalta, objetivosPct, objetivosTexto, inversionPct, inversionTexto };
-}
 
 // REDISEÑO v2 — Home, según el boceto: perfil arriba + 3 acciones grandes
 // para arrancar, y — si hay un grupo armado — una vista chica de la
@@ -111,7 +35,6 @@ export function HomeV2() {
   const foto = loadV2Foto();
   const grupo = loadV2Grupo();
   const topGrupo = grupo ? [...grupo.miembros].sort((a, b) => b.actividad - a.actividad).slice(0, 3) : [];
-  const b = datosBienestar();
   const { paso, cumplido, racha } = usePasoDelDia();
   const [rachaAbierta, setRachaAbierta] = useState(false);
 
@@ -159,15 +82,6 @@ export function HomeV2() {
     setCelebrarReserva(true);
     setTimeout(() => setCelebrarReserva(false), 800);
   }
-
-  // Un solo lugar por sección: cada fila muestra su dato y lleva a su pantalla.
-  // Ya no llevan color propio — el color por sección era otra forma de decir
-  // "esto es una caja distinta", y con tintes de 1.1 de contraste no decía nada.
-  const secciones: { Icon: ComponentType<{ size?: number }>; label: string; to: string; metric: string }[] = [
-    { Icon: IconGastos, label: 'Gastos', to: '/onboarding-v2/gastos', metric: b.gastosPct !== null ? `${b.gastosPct}% en tope` : (b.gastosFalta === 'gasto' ? 'Registrá el primero' : 'Ponéle un tope') },
-    { Icon: IconObjetivos, label: 'Objetivos', to: '/onboarding-v2/objetivos', metric: b.objetivosPct !== null ? `${b.objetivosPct}% de avance` : 'Sumá uno' },
-    { Icon: IconInversiones, label: 'Inversiones', to: '/onboarding-v2/inversiones', metric: b.inversionPct !== null ? 'Al día' : 'Empezá' },
-  ];
 
   return (
     // DIRECCIÓN C — Home des-encajonado. Antes casi todo elemento vivía dentro
@@ -294,15 +208,18 @@ export function HomeV2() {
           cuando los datos lo muestran: no hay botón de "listo", porque con uno
           la racha se inflaría tocándolo. */}
       <section className="flex items-start gap-1 pt-1">
-        <div className="shrink-0 -ml-4 -mt-4">
+        {/* Fini sólo en desktop. En el celular, a 164px, se llevaba casi la
+            mitad del ancho y empujaba el texto del paso a cuatro líneas, sin
+            decir nada que el globo no dijera. */}
+        <div className="hidden lg:block shrink-0 -ml-4 -mt-4">
           {/* Fini festeja cuando está cumplido. `logro` es de una pasada: salta
               una vez y vuelve a quedarse quieto, no queda saltando al lado de
               algo que ya pasó. */}
           <Fini state={cumplido ? 'logro' : paso ? 'idle' : 'pensando'} size={164} />
         </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-3 pt-3">
+        <div className="flex-1 min-w-0 flex flex-col gap-3 lg:pt-3">
           <div
-            className="relative rounded-[20px] rounded-tl-md px-4 py-3.5"
+            className="relative rounded-[20px] lg:rounded-tl-md px-4 py-3.5"
             style={{ background: cumplido ? COLORS.limaSoft : COLORS.surface, border: `1.5px solid ${cumplido ? COLORS.lima : COLORS.line}` }}
           >
             <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: cumplido ? COLORS.limaText : COLORS.inkSoft, fontFamily: FONTS.mono }}>
@@ -358,28 +275,9 @@ export function HomeV2() {
         </div>
       </section>
 
-      {/* Las tres secciones en UNA línea. Con iconos de línea, no emojis:
-          se vuelve a la migración que ya estaba hecha (§2.1 pide iconografía
-          monolineal, y hay un commit entero que saca los emojis de la UI). */}
-      <section className="flex flex-col gap-2">
-        <TituloSeccion>Tus secciones</TituloSeccion>
-        <div className="grid grid-cols-3 gap-2">
-          {secciones.map((s) => (
-            <button
-              key={s.label}
-              type="button"
-              onClick={() => navigate(s.to)}
-              className="v2-focus flex flex-col items-center gap-1 min-h-[88px] justify-center rounded-2xl px-1.5 py-3 transition-all duration-100 active:scale-[0.97]"
-              style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
-            >
-              <span style={{ color: COLORS.brand }}><s.Icon size={24} /></span>
-              <span className="text-[14px] font-bold leading-tight text-center" style={{ color: COLORS.ink }}>{s.label}</span>
-              <span className="text-[12px] leading-tight text-center" style={{ color: COLORS.inkSoft }}>{s.metric}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
+      {/* Se fue "Tus secciones" (Gastos / Objetivos / Inversiones en tres
+          fichas): repetía el menú de abajo, que ya lleva a las mismas tres
+          pantallas y está siempre a la vista. */}
       {/* PRUEBA — gráficos armados con los datos que ya hay guardados. */}
       <MisVisualizaciones />
 
