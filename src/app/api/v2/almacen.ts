@@ -115,6 +115,30 @@ export function limpiarError() {
   if (guardado.tipo === 'error') { guardado = { tipo: 'quieto' }; avisar(); }
 }
 
+// ── Confirmaciones ───────────────────────────────────────────────────────
+// "Se registró tu gasto", "Guardamos el tope". Se avisan desde `acciones` y los
+// muestra el layout.
+//
+// Viven acá y no en `acciones` porque `acciones` es capa de datos: no puede
+// importar componentes. Esto es sólo un canal — quién avisa no sabe quién
+// muestra, y al revés.
+//
+// Se avisan cuando Supabase CONFIRMA la escritura, no cuando se toca el botón.
+// La app pinta el cambio al instante y guarda por detrás: si el cartel saliera
+// en el acto y la escritura después fallara, estaría diciendo "se guardó" sobre
+// algo que no se guardó. Que es lo contrario de lo que el cartel está para
+// generar.
+const oyentesConfirmacion = new Set<(mensaje: string) => void>();
+
+export function avisarConfirmacion(mensaje: string) {
+  oyentesConfirmacion.forEach((f) => f(mensaje));
+}
+
+export function suscribirConfirmaciones(f: (mensaje: string) => void): () => void {
+  oyentesConfirmacion.add(f);
+  return () => { oyentesConfirmacion.delete(f); };
+}
+
 /** Espera a que la cola se vacíe. Sirve al cerrar el onboarding. */
 export function esperarCola(): Promise<void> {
   return cola.then(() => undefined, () => undefined);

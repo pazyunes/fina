@@ -1,4 +1,4 @@
-import { encolar, estaHidratado, leerEstado, parchearEstado } from './almacen';
+import { avisarConfirmacion, encolar, estaHidratado, leerEstado, parchearEstado } from './almacen';
 import { cotizacionDolar } from './cotizacion';
 import * as api from './index';
 import { idUsuaria } from './cliente';
@@ -35,15 +35,33 @@ export function nuevoId(): string {
 }
 
 /** Sólo escribe si hay sesión hidratada. Ver `sincronizar` en shared.tsx. */
-function push(fn: () => Promise<{ data: unknown; error: string | null }>) {
+// Mismo formato que `fmtMoney` de shared.tsx. No se importa de ahí porque
+// shared.tsx es un archivo de componentes y ya importa este: sería un ciclo.
+const pesos = (n: number) => `$${Math.round(n).toLocaleString('es-AR')}`;
+// `montoTxt` y no `monto`: varias acciones tienen un parámetro `monto` que la taparía.
+const montoTxt = (n: number, moneda: Moneda) => (moneda === 'USD' ? `US$${n.toLocaleString('es-AR')}` : pesos(n));
+
+/**
+ * Encola una escritura. Si se pasa `confirmacion`, se muestra ese mensaje
+ * cuando la base CONFIRMA que se guardó — nunca antes. Si falla, no hay
+ * confirmación: lo cuenta el cartel de error del layout.
+ */
+function push(fn: () => Promise<{ data: unknown; error: string | null }>, confirmacion?: string) {
   if (!estaHidratado()) return;
-  void encolar(fn);
+  let salioBien = false;
+  void encolar(async () => {
+    const r = await fn();
+    salioBien = r.error === null;
+    return r;
+  }).then(() => {
+    if (salioBien && confirmacion) avisarConfirmacion(confirmacion);
+  });
 }
 
 // ── Perfil ───────────────────────────────────────────────────────────────
-export function guardarPerfil(parche: Partial<Perfil>) {
+export function guardarPerfil(parche: Partial<Perfil>, confirmacion?: string) {
   parchearEstado({ perfil: { ...leerEstado().perfil, ...parche } });
-  push(() => api.guardarPerfil(parche));
+  push(() => api.guardarPerfil(parche), confirmacion);
 }
 
 // ── Secciones ────────────────────────────────────────────────────────────
@@ -58,14 +76,14 @@ export function renombrarSeccion(id: string, nombre: string) {
   parchearEstado({
     secciones: leerEstado().secciones.map((s) => (s.id === id ? { ...s, nombre } : s)),
   });
-  push(() => api.renombrarSeccion(id, nombre));
+  push(() => api.renombrarSeccion(id, nombre), 'Cambiamos el nombre de la sección.');
 }
 
 export function guardarTope(id: string, tope: { monto: number; periodo: Periodo } | null) {
   parchearEstado({
     secciones: leerEstado().secciones.map((s) => (s.id === id ? { ...s, tope } : s)),
   });
-  push(() => api.guardarTope(id, tope));
+  push(() => api.guardarTope(id, tope), tope ? `Guardamos el tope: ${pesos(tope.monto)} por ${tope.periodo}.` : 'Sacamos el tope.');
 }
 
 export function borrarSeccion(id: string) {
@@ -77,7 +95,7 @@ export function borrarSeccion(id: string) {
     // (`on delete set null`).
     gastos: est.gastos.map((g) => (g.seccionId === id ? { ...g, seccionId: null } : g)),
   });
-  push(() => api.borrarSeccion(id));
+  push(() => api.borrarSeccion(id), 'Borramos la sección. Sus gastos siguen registrados.');
 }
 
 // ── Medios de pago ───────────────────────────────────────────────────────
@@ -91,7 +109,7 @@ export function sumarDisponible(medio: string, monto: number) {
       ? est.mediosPago.map((m) => (m.nombre === nombre ? { ...m, saldo: m.saldo + monto, usadoEn: ahora } : m))
       : [{ id: nuevoId(), nombre, saldo: monto, usadoEn: ahora }, ...est.mediosPago],
   });
-  push(() => api.sumarDisponible(nombre, monto));
+  push(() => api.sumarDisponible(nombre, monto), `Sumamos ${pesos(monto)} a ${nombre}.`);
 }
 
 // ── Conversión a pesos ───────────────────────────────────────────────────
@@ -153,7 +171,7 @@ export async function registrarGasto(g: {
   parchearEstado({ gastos: [gasto, ...est.gastos], mediosPago });
   push(() => api.registrarGasto({
     ...g, id: gasto.id, montoArs, cotizacionId: conv.cotizacionId,
-  }));
+  }), `Registramos tu gasto de ${montoTxt(g.monto, g.moneda)}.`);
 
   // Registrar es la actividad con la que se compite en el grupo: se puntúa
   // haber anotado el gasto, nunca el monto.
@@ -172,7 +190,9 @@ export function borrarGasto(id: string) {
     ? est.mediosPago.map((m) => (m.nombre === gasto.metodoPago ? { ...m, saldo: m.saldo + gasto.montoArs } : m))
     : est.mediosPago;
   parchearEstado({ gastos: est.gastos.filter((g) => g.id !== id), mediosPago });
-  push(() => api.borrarGasto(id));
+  push(() => api.borrarGasto(id), gasto?.metodoPago
+    ? `Borramos el gasto. La plata volvió a ${gasto.metodoPago}.`
+    : 'Borramos el gasto.');
 }
 
 // ── Objetivos ────────────────────────────────────────────────────────────
@@ -195,7 +215,7 @@ export function crearObjetivo(o: {
     contribuciones: [],
   };
   parchearEstado({ objetivos: [...leerEstado().objetivos, objetivo] });
-  push(() => api.crearObjetivo({ ...o, id: objetivo.id }));
+  push(() => api.crearObjetivo({ ...o, id: objetivo.id }), `Creamos tu objetivo “${objetivo.nombre}”.`);
   return objetivo;
 }
 
@@ -203,12 +223,12 @@ export function editarObjetivo(id: string, parche: Partial<Objetivo>) {
   parchearEstado({
     objetivos: leerEstado().objetivos.map((x) => (x.id === id ? { ...x, ...parche } : x)),
   });
-  push(() => api.editarObjetivo(id, parche));
+  push(() => api.editarObjetivo(id, parche), 'Guardamos los cambios del objetivo.');
 }
 
 export function borrarObjetivo(id: string) {
   parchearEstado({ objetivos: leerEstado().objetivos.filter((x) => x.id !== id) });
-  push(() => api.borrarObjetivo(id));
+  push(() => api.borrarObjetivo(id), 'Borramos el objetivo.');
 }
 
 export async function sumarContribucion(objetivoId: string, c: {
@@ -234,9 +254,12 @@ export async function sumarContribucion(objetivoId: string, c: {
       ? { ...x, contribuciones: [contrib, ...x.contribuciones] }
       : x)),
   });
+  const nombreObjetivo = leerEstado().objetivos.find((x) => x.id === objetivoId)?.nombre;
   push(() => api.sumarContribucion(objetivoId, {
     ...c, id: contrib.id, montoArs: conv.montoArs, cotizacionId: conv.cotizacionId,
-  }));
+  }), nombreObjetivo
+    ? `Sumaste ${montoTxt(c.monto, c.moneda)} a “${nombreObjetivo}”.`
+    : `Sumaste ${montoTxt(c.monto, c.moneda)} a tu objetivo.`);
   return { contribucion: contrib, error: null };
 }
 
@@ -246,7 +269,7 @@ export function borrarContribucion(objetivoId: string, id: string) {
       ? { ...x, contribuciones: x.contribuciones.filter((c) => c.id !== id) }
       : x)),
   });
-  push(() => api.borrarContribucion(id));
+  push(() => api.borrarContribucion(id), 'Borramos el registro.');
 }
 
 // ── Inversiones ──────────────────────────────────────────────────────────
@@ -273,7 +296,7 @@ export async function sumarAporte(a: {
   parchearEstado({ aportes: [aporte, ...leerEstado().aportes] });
   push(() => api.sumarAporte({
     ...a, id: aporte.id, montoArs: conv.montoArs ?? 0, cotizacionId: conv.cotizacionId,
-  }));
+  }), `Registramos tu aporte de ${montoTxt(a.monto, a.moneda)}.`);
   return { aporte, error: null };
 }
 
@@ -286,12 +309,12 @@ export function editarAporte(id: string, parche: Partial<AporteInversion>) {
     monto: parche.monto,
     moneda: parche.moneda,
     montoArs: parche.montoArs ?? undefined,
-  }));
+  }), 'Guardamos los cambios del aporte.');
 }
 
 export function borrarAporte(id: string) {
   parchearEstado({ aportes: leerEstado().aportes.filter((x) => x.id !== id) });
-  push(() => api.borrarAporte(id));
+  push(() => api.borrarAporte(id), 'Borramos el aporte.');
 }
 
 // ── Verificación del teléfono ────────────────────────────────────────────
@@ -326,6 +349,7 @@ export async function subirFoto(archivo: File): Promise<{ url: string | null; er
   const r = await api.subirFoto(archivo);
   if (r.error !== null) return { url: null, error: r.error };
   parchearEstado({ perfil: { ...leerEstado().perfil, fotoUrl: r.data } });
+  avisarConfirmacion('Actualizamos tu foto.');
   return { url: r.data, error: null };
 }
 
@@ -333,6 +357,7 @@ export async function borrarFoto(): Promise<string | null> {
   const r = await api.borrarFoto();
   if (r.error !== null) return r.error;
   parchearEstado({ perfil: { ...leerEstado().perfil, fotoUrl: null } });
+  avisarConfirmacion('Sacamos tu foto.');
   return null;
 }
 
@@ -348,6 +373,7 @@ export async function crearGrupo(nombre: string): Promise<{ grupo: Grupo | null;
   const conMiembros = await api.leerMiGrupo();
   const grupo = conMiembros.data ?? r.data;
   parchearEstado({ grupo });
+  avisarConfirmacion(`Creamos el grupo “${grupo.nombre}”. Ya podés invitar gente.`);
   return { grupo, error: null };
 }
 
@@ -356,6 +382,7 @@ export async function unirseAGrupo(codigo: string): Promise<{ grupo: Grupo | nul
   if (r.error !== null) return { grupo: null, error: r.error };
   if (r.data === null) return { grupo: null, error: 'Ese código no existe. Fijate que esté bien escrito.' };
   parchearEstado({ grupo: r.data });
+  avisarConfirmacion(`Entraste a “${r.data.nombre}”.`);
   return { grupo: r.data, error: null };
 }
 
@@ -365,5 +392,6 @@ export async function salirDelGrupo(): Promise<string | null> {
   const r = await api.salirDelGrupo(grupo.id);
   if (r.error !== null) return r.error;
   parchearEstado({ grupo: null });
+  avisarConfirmacion('Saliste del grupo.');
   return null;
 }

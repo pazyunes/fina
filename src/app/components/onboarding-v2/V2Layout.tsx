@@ -7,6 +7,7 @@ import { Fini } from './Fini';
 import { useAuth } from '../../lib/auth';
 import { AlmacenProvider, useAlmacen } from '../../api/v2/AlmacenProvider';
 import { PasoDelDiaProvider } from '../../api/v2/PasoDelDiaProvider';
+import { Confirmaciones } from './Confirmaciones';
 
 // REDISEÑO v2 — layout compartido por Home/Gastos/Objetivos/Inversiones.
 // RESPONSIVE:
@@ -271,6 +272,9 @@ export function V2Layout() {
         <BottomNavV2 />
       </div>
     </div>
+    {/* Los carteles de "se hizo". Van afuera del contenedor con scroll para
+        quedar fijos arriba sin importar dónde esté la persona en la pantalla. */}
+    <Confirmaciones />
     </PasoDelDiaProvider>
     </AlmacenProvider>
   );
