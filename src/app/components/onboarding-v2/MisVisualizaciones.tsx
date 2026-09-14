@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useReducedMotion } from 'motion/react';
 import { COLORS, FONTS, TituloSeccion, fmtMoney, fmtMontoCompacto, vistaGastos, vistaObjetivos } from './shared';
 import { diaAnterior, diaArgentina } from '../../api/v2/pasos';
 
@@ -143,6 +144,7 @@ export function MisVisualizaciones() {
 
   const filaRef = useRef<HTMLDivElement>(null);
   const [actual, setActual] = useState(0);
+  const reduce = useReducedMotion();
 
   // ── Por sección ────────────────────────────────────────────────────────
   const porSeccion = g.categorias
@@ -207,7 +209,9 @@ export function MisVisualizaciones() {
           <div className="flex flex-col gap-3">
             {/* Pequeños múltiplos: el mismo anillo, mismo tamaño y misma escala,
                 así se comparan de un vistazo. */}
-            <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+            {/* Con un solo objetivo, centrado: en dos columnas quedaba contra la
+                izquierda con la mitad derecha de la tarjeta vacía. */}
+            <div className={conMonto.length === 1 ? 'flex justify-center' : 'grid grid-cols-2 gap-x-3 gap-y-4'}>
               {conMonto.slice(0, 4).map((o) => {
                 const juntado = o.contribuciones.reduce((a, c) => a + c.monto, 0);
                 const pct = Math.min(100, Math.round((juntado / o.montoTotal) * 100));
@@ -241,6 +245,10 @@ export function MisVisualizaciones() {
   function alDeslizar() {
     const fila = filaRef.current;
     if (!fila) return;
+    // Al final de la fila, la última: la última tarjeta no puede quedar alineada
+    // al borde izquierdo (no hay nada después para empujarla), así que la cuenta
+    // por ancho la daba como la anteúltima.
+    if (fila.scrollLeft >= fila.scrollWidth - fila.clientWidth - 4) { setActual(tarjetas.length - 1); return; }
     const ancho = fila.firstElementChild?.getBoundingClientRect().width ?? fila.clientWidth;
     setActual(Math.min(tarjetas.length - 1, Math.max(0, Math.round(fila.scrollLeft / (ancho + 12)))));
   }
@@ -248,7 +256,8 @@ export function MisVisualizaciones() {
   function irA(i: number) {
     const fila = filaRef.current;
     const tarjeta = fila?.children[i] as HTMLElement | undefined;
-    if (fila && tarjeta) fila.scrollTo({ left: tarjeta.offsetLeft - fila.offsetLeft, behavior: 'smooth' });
+    // Sin animación para quien pidió reducir movimiento en su teléfono.
+    if (fila && tarjeta) fila.scrollTo({ left: tarjeta.offsetLeft - fila.offsetLeft, behavior: reduce ? 'auto' : 'smooth' });
   }
 
   return (
