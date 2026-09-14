@@ -188,12 +188,34 @@ export function V2Layout() {
     };
 
     medir();
-    // Se remide cuando el encabezado cambia de tamaño (rotar el teléfono, un
-    // nombre largo que pasa a dos líneas) y cuando la pantalla monta su
-    // contenido, que puede llegar después de este effect.
-    const observador = new ResizeObserver(medir);
-    observador.observe(contenido);
-    return () => observador.disconnect();
+
+    // Dos disparadores, porque ninguno alcanza solo:
+    //
+    // · ResizeObserver — rotar el teléfono, un nombre largo que pasa a dos
+    //   líneas, o la pantalla que termina de cargar y crece.
+    // · MutationObserver — la pantalla cambia su contenido SIN cambiar de ruta
+    //   ni necesariamente de tamaño. Es el caso del quiz de inversor: tocar
+    //   "Averiguá tu perfil" reemplaza la intro (con franja) por el primer paso
+    //   (sin franja) dentro de la misma URL. Con sólo el de tamaño, la franja
+    //   de la intro quedaba pintada arriba de la pregunta.
+    //
+    // Las mediciones se juntan en un frame: una mutación de React toca decenas
+    // de nodos a la vez y no hace falta medir por cada uno.
+    let frame = 0;
+    const programar = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(medir);
+    };
+    const porTamano = new ResizeObserver(programar);
+    porTamano.observe(contenido);
+    const porContenido = new MutationObserver(programar);
+    porContenido.observe(contenido, { childList: true, subtree: true });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      porTamano.disconnect();
+      porContenido.disconnect();
+    };
   }, [pathname]);
 
   // Al cambiar de pantalla, volver SIEMPRE al principio. El scroll vive en
