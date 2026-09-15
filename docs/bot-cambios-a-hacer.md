@@ -9,7 +9,7 @@ bot lo ve la app. Antes eso no pasaba.
 
 Este documento es autocontenido: no hace falta leer el código de la app.
 
-Son **cinco cambios**. El primero es el que rompe todo si falta.
+Son **seis cambios**. El primero es el que rompe todo si falta.
 
 ---
 
