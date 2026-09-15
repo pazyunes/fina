@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -205,15 +206,32 @@ export function InversionesV2() {
     setConfirmarBorrar(false);
     setAporteMonto('');
   }
-  function abrirAlta() {
+  function abrirAlta(directo = false) {
     setEditandoId(null);
     setConfirmarBorrar(false);
     setAporteMonto('');
     setAporteInstrId(INSTRUMENTOS[0].id);
     setAporteMoneda('ARS');
-    setAportePaso('que-es');
+    setAportePaso(directo ? 'datos' : 'que-es');
     setAporteAbierto(true);
   }
+
+  // Desde "Tu paso de hoy" en Home ("Registrar un aporte") se llega con el
+  // formulario ya abierto, en la parte de los datos: la persona tocó un botón
+  // que dice registrar, no "ver inversiones". Se limpia el `state` enseguida,
+  // así volver atrás o recargar no lo abre de nuevo.
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const abrir = (location.state as { abrir?: string } | null)?.abrir;
+    if (abrir !== 'aporte') return;
+    navigate(location.pathname, { replace: true, state: null });
+    if (paso !== 'resultado') return;
+    setTab('mias');
+    abrirAlta(true);
+    // Sólo al llegar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   function abrirEdicion(a: Aporte) {
     setEditandoId(a.id);
     setConfirmarBorrar(false);
@@ -520,6 +538,14 @@ export function InversionesV2() {
             </>
           ) : (
             <>
+              {/* Si se llegó directo a los datos (desde el paso del día), lo
+                  más importante de la explicación que se salteó va en una
+                  línea: registrar no mueve plata. */}
+              {!editandoId && (
+                <p className="text-[15px] leading-snug -mt-2" style={{ color: COLORS.inkSoft }}>
+                  Es solo anotar lo que pusiste por fuera de FINA: acá no se mueve tu plata.
+                </p>
+              )}
               <div className="flex flex-col gap-2.5">
                 <TituloSeccion>¿En qué lo pusiste?</TituloSeccion>
                 {/* El mismo componente que el onboarding: con cinco
@@ -782,7 +808,7 @@ export function InversionesV2() {
                   después pide instrumento y monto. */}
               <button
                 type="button"
-                onClick={abrirAlta}
+                onClick={() => abrirAlta()}
                 className="v2-focus w-full rounded-2xl py-4 text-[17px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
                 style={{ background: COLORS.brand, color: COLORS.surface, boxShadow: '0 10px 24px -8px rgba(118,38,179,0.45)' }}
               >

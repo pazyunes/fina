@@ -29,6 +29,11 @@ export type Paso = {
   cta: string;
   /** Ruta de la app, o 'whatsapp' para abrir el bot. */
   destino: string;
+  /**
+   * Qué abrir al llegar, para que el botón lleve directo a hacer el paso y no
+   * a la pantalla general. Viaja en el `state` de la navegación.
+   */
+  abrir?: 'aporte';
   /** Si se le puede asignar a esta persona hoy. */
   aplica: (e: EstadoV2) => boolean;
   /** Si ya está cumplido, mirando los datos. */
@@ -141,7 +146,7 @@ export const PASOS: Paso[] = [
     clave: 'aporte_inversion', vez: 'diaria',
     titulo: 'Anotá un aporte a tus inversiones',
     msg: 'Si pusiste plata en algún lado, anotala y seguí cómo evoluciona.',
-    cta: 'Registrar un aporte', destino: '/onboarding-v2/inversiones',
+    cta: 'Registrar un aporte', destino: '/onboarding-v2/inversiones', abrir: 'aporte',
     aplica: (e) => !!e.perfilInversor?.completadoEn,
     cumplido: (e, hoy) => e.aportes.some((a) => esHoy(a.ts, hoy)),
   },
