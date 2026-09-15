@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router';
-import { WHATSAPP_URL } from '../WhatsAppFab';
+import { LinkWhatsApp } from './LinkWhatsApp';
 import { COLORS } from './shared';
 import { IconChat, IconGastos, IconHome, IconInversiones, IconObjetivos } from './FinaIcons';
 
@@ -51,17 +51,14 @@ export function SidebarV2() {
         })}
       </nav>
 
-      <a
-        href={WHATSAPP_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+      <LinkWhatsApp
         aria-label="Hablar con FINA por WhatsApp"
         className="v2-focus mt-auto flex items-center gap-3 rounded-xl px-3 py-3 min-h-[44px] text-[18px] font-bold transition-transform active:scale-95"
         style={{ background: COLORS.ink, color: COLORS.onDark }}
       >
         <IconChat size={20} />
         Hablar con FINA
-      </a>
+      </LinkWhatsApp>
     </aside>
   );
 }

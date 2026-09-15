@@ -8,6 +8,7 @@ import { useAuth } from '../../lib/auth';
 import { AlmacenProvider, useAlmacen } from '../../api/v2/AlmacenProvider';
 import { PasoDelDiaProvider } from '../../api/v2/PasoDelDiaProvider';
 import { Confirmaciones } from './Confirmaciones';
+import { AvisoWhatsAppProvider } from './LinkWhatsApp';
 
 // REDISEÑO v2 — layout compartido por Home/Gastos/Objetivos/Inversiones.
 // RESPONSIVE:
@@ -231,6 +232,8 @@ export function V2Layout() {
     {/* Adentro del almacén (lee sus datos) y afuera de las pantallas: el paso
         del día se cumple en la pantalla donde se hace, no donde se muestra. */}
     <PasoDelDiaProvider>
+    {/* Todo botón de WhatsApp recuerda verificar el teléfono si falta. */}
+    <AvisoWhatsAppProvider>
     <div
       className="h-screen supports-[height:100dvh]:h-[100dvh] w-full flex flex-col lg:flex-row overflow-hidden"
       style={{ background: COLORS.paper, ...FONT_VARS, ...COLOR_VARS }}
@@ -275,6 +278,7 @@ export function V2Layout() {
     {/* Los carteles de "se hizo". Van afuera del contenedor con scroll para
         quedar fijos arriba sin importar dónde esté la persona en la pantalla. */}
     <Confirmaciones />
+    </AvisoWhatsAppProvider>
     </PasoDelDiaProvider>
     </AlmacenProvider>
   );

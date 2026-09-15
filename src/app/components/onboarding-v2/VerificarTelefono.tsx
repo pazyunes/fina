@@ -20,7 +20,8 @@ import { IconChevron } from './FinaIcons';
 
 const MARCA = 'FINA-VERIF-';
 
-export function VerificarTelefono() {
+/** `sinTitulo`: para usarlo adentro de un cartel que ya tiene su propio título. */
+export function VerificarTelefono({ sinTitulo = false }: { sinTitulo?: boolean }) {
   const { estado: db } = useAlmacen();
   const verificado = !!db.perfil.telefonoVerificadoEn;
   const telefono = db.perfil.telefono;
@@ -102,11 +103,15 @@ export function VerificarTelefono() {
 
   return (
     <div className="flex flex-col gap-3">
-      <TituloSeccion>Verificá tu teléfono</TituloSeccion>
-      <p className="text-[16px] leading-snug" style={{ color: COLORS.inkSoft }}>
-        Es para que puedas registrar gastos hablándole a FINA por WhatsApp. Le mandás
-        un código desde tu teléfono y listo — no te vamos a mandar ningún SMS.
-      </p>
+      {!sinTitulo && (
+        <>
+          <TituloSeccion>Verificá tu teléfono</TituloSeccion>
+          <p className="text-[16px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            Es para que puedas registrar gastos hablándole a FINA por WhatsApp. Le mandás
+            un código desde tu teléfono y listo — no te vamos a mandar ningún SMS.
+          </p>
+        </>
+      )}
 
       {codigo === null ? (
         <button

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { WHATSAPP_URL } from '../WhatsAppFab';
+import { LinkWhatsApp } from './LinkWhatsApp';
 import { COLORS } from './shared';
 import { IconChat, IconGastos, IconHome, IconInversiones, IconObjetivos } from './FinaIcons';
 
@@ -59,10 +59,7 @@ export function BottomNavV2() {
 
       {/* Chat — más marcado, colores invertidos (fondo tinta, ícono claro), lleva al bot real de WhatsApp */}
       <div className="flex-1 flex justify-center">
-        <a
-          href={WHATSAPP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        <LinkWhatsApp
           aria-label="Hablar con FINA por WhatsApp"
           onClick={() => { if (pulsar) { marcarFabVisto(); setPulsar(false); } }}
           className="v2-focus relative -mt-5 w-14 h-14 rounded-full flex items-center justify-center shrink-0 transition-transform duration-100 active:scale-95"
@@ -70,7 +67,7 @@ export function BottomNavV2() {
         >
           {pulsar && <span className="absolute inset-0 rounded-full animate-ping" style={{ background: COLORS.ink, opacity: 0.4 }} />}
           <span className="relative" style={{ color: COLORS.onDark }}><IconChat size={24} /></span>
-        </a>
+        </LinkWhatsApp>
       </div>
 
       {TABS.slice(2).map((tab) => {

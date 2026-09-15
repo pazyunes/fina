@@ -7,7 +7,7 @@ import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila
 import { IconChevron, IconFuego, IconGrupo, IconPerfil, IconReserva } from './FinaIcons';
 import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
 import { pasoPorClave } from '../../api/v2/pasos';
-import { WHATSAPP_URL } from '../WhatsAppFab';
+import { LinkWhatsApp } from './LinkWhatsApp';
 
 
 // El paso del día y la racha salen de PasoDelDiaProvider (api/v2). Antes Home
@@ -253,15 +253,12 @@ export function HomeV2() {
           </div>
           {paso && !cumplido && (
             paso.destino === 'whatsapp' ? (
-              <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noreferrer"
+              <LinkWhatsApp
                 className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold text-center transition-transform duration-100 active:scale-[0.99]"
                 style={{ background: COLORS.lima, color: COLORS.ink }}
               >
                 {paso.cta}
-              </a>
+              </LinkWhatsApp>
             ) : (
               <button
                 type="button"

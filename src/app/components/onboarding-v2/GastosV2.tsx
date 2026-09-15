@@ -5,7 +5,7 @@ import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
 import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
-import { WHATSAPP_URL } from '../WhatsAppFab';
+import { LinkWhatsApp } from './LinkWhatsApp';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
 // gastos con sus botones de "agregar", visualización arriba (donut +
@@ -676,16 +676,13 @@ export function GastosV2() {
                     </div>
                   ))}
                 </div>
-                <a
-                  href={WHATSAPP_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <LinkWhatsApp
                   onClick={() => setChooser(false)}
                   className="v2-focus w-full rounded-2xl py-3.5 text-center text-[18px] font-bold transition-transform active:scale-[0.99]"
                   style={{ background: COLORS.lima, color: COLORS.ink }}
                 >
                   Ir a WhatsApp
-                </a>
+                </LinkWhatsApp>
                 <button type="button" onClick={() => setWaStep(false)} className="v2-focus inline-flex items-center justify-center gap-1 text-[15px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>
                   <IconChevron size={14} style={{ transform: 'rotate(180deg)' }} /> Volver
                 </button>

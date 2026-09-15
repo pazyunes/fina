@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import { COLORS, EstadoConfianza, FONTS, TituloSeccion } from './shared';
-import { WHATSAPP_URL } from '../WhatsAppFab';
+import { LinkWhatsApp } from './LinkWhatsApp';
 import {
   PERIODOS_RECOMENDACION, leerRecomendaciones, marcarUtil, recomendacionesRecordadas,
   type DestinoRecomendacion, type PeriodoRecomendacion, type Recomendaciones as RecomendacionesT, type TarjetaRecomendacion,
@@ -145,15 +145,12 @@ function Tarjeta({ periodo, tarjeta, onMarcar }: {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
         {accion && destino && (
           destino === 'whatsapp' ? (
-            <a
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noreferrer"
+            <LinkWhatsApp
               className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[15px] font-bold"
               style={{ background: COLORS.lima, color: COLORS.ink }}
             >
               {accion.etiqueta}
-            </a>
+            </LinkWhatsApp>
           ) : (
             <button
               type="button"
