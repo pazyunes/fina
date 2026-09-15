@@ -20,6 +20,9 @@ export type ClavePaso =
   | 'primer_gasto' | 'verificar_telefono' | 'tope' | 'perfil_inversor' | 'nivel_financiero' | 'grupo'
   | 'gasto_hoy' | 'gasto_whatsapp' | 'aporte_objetivo' | 'aporte_inversion';
 
+/** Lo que la pantalla de destino abre al llegar desde "Tu paso de hoy". */
+export type AccionPaso = 'gasto' | 'tope' | 'verificar' | 'quiz' | 'nivel' | 'grupo' | 'aporte_objetivo' | 'aporte';
+
 export type Paso = {
   clave: ClavePaso;
   /** 'una' = se hace una sola vez · 'diaria' = se puede repetir */
@@ -31,9 +34,10 @@ export type Paso = {
   destino: string;
   /**
    * Qué abrir al llegar, para que el botón lleve directo a hacer el paso y no
-   * a la pantalla general. Viaja en el `state` de la navegación.
+   * a la pantalla general. Viaja en el `state` de la navegación (ver
+   * onboarding-v2/alLlegar.ts).
    */
-  abrir?: 'aporte';
+  abrir?: AccionPaso;
   /** Si se le puede asignar a esta persona hoy. */
   aplica: (e: EstadoV2) => boolean;
   /** Si ya está cumplido, mirando los datos. */
@@ -71,7 +75,7 @@ export const PASOS: Paso[] = [
     clave: 'primer_gasto', vez: 'una',
     titulo: 'Registrá tu primer gasto',
     msg: 'Con eso ya te armamos tus secciones y tu análisis solo.',
-    cta: 'Registrar un gasto', destino: '/onboarding-v2/gastos',
+    cta: 'Registrar un gasto', destino: '/onboarding-v2/gastos', abrir: 'gasto',
     aplica: (e) => e.gastos.length === 0,
     cumplido: (e) => e.gastos.length > 0,
   },
@@ -79,7 +83,7 @@ export const PASOS: Paso[] = [
     clave: 'verificar_telefono', vez: 'una',
     titulo: 'Verificá tu teléfono',
     msg: 'Así podés contarle tus gastos a FINA por WhatsApp, sin abrir la app.',
-    cta: 'Verificar ahora', destino: '/onboarding-v2/perfil',
+    cta: 'Verificar ahora', destino: '/onboarding-v2/perfil', abrir: 'verificar',
     aplica: (e) => !e.perfil.telefonoVerificadoEn,
     cumplido: (e) => !!e.perfil.telefonoVerificadoEn,
   },
@@ -87,7 +91,7 @@ export const PASOS: Paso[] = [
     clave: 'tope', vez: 'una',
     titulo: 'Ponéle un tope a una sección',
     msg: 'Elegí la que más se te va y decidí hasta cuánto. No es una prohibición: es un aviso.',
-    cta: 'Poner un tope', destino: '/onboarding-v2/gastos',
+    cta: 'Poner un tope', destino: '/onboarding-v2/gastos', abrir: 'tope',
     aplica: (e) => e.secciones.length > 0 && !e.secciones.some((s) => s.tope !== null),
     cumplido: (e) => e.secciones.some((s) => s.tope !== null),
   },
@@ -95,7 +99,7 @@ export const PASOS: Paso[] = [
     clave: 'perfil_inversor', vez: 'una',
     titulo: 'Averiguá tu perfil de inversor',
     msg: 'Son dos minutos, y las recomendaciones pasan a tener que ver con vos.',
-    cta: 'Armar mi perfil', destino: '/onboarding-v2/inversiones',
+    cta: 'Armar mi perfil', destino: '/onboarding-v2/inversiones', abrir: 'quiz',
     aplica: (e) => !e.perfilInversor?.completadoEn,
     cumplido: (e) => !!e.perfilInversor?.completadoEn,
   },
@@ -103,7 +107,7 @@ export const PASOS: Paso[] = [
     clave: 'nivel_financiero', vez: 'una',
     titulo: 'Descubrí tu nivel financiero',
     msg: 'Una pregunta, y te explicamos las cosas a tu medida.',
-    cta: 'Descubrirlo', destino: '/onboarding-v2/perfil',
+    cta: 'Descubrirlo', destino: '/onboarding-v2/perfil', abrir: 'nivel',
     aplica: (e) => !e.perfil.nivelFinanciero,
     cumplido: (e) => !!e.perfil.nivelFinanciero,
   },
@@ -111,7 +115,7 @@ export const PASOS: Paso[] = [
     clave: 'grupo', vez: 'una',
     titulo: 'Armá un grupo con amigas',
     msg: 'Compiten por quién registra más. Nadie ve cuánto gastás.',
-    cta: 'Armar un grupo', destino: '/onboarding-v2/grupos',
+    cta: 'Armar un grupo', destino: '/onboarding-v2/grupos', abrir: 'grupo',
     aplica: (e) => e.grupo === null,
     cumplido: (e) => e.grupo !== null,
   },
@@ -120,7 +124,7 @@ export const PASOS: Paso[] = [
     clave: 'gasto_hoy', vez: 'diaria',
     titulo: 'Registrá un gasto de hoy',
     msg: 'Aunque sea el café. Lo que no se anota, no se ve.',
-    cta: 'Registrar un gasto', destino: '/onboarding-v2/gastos',
+    cta: 'Registrar un gasto', destino: '/onboarding-v2/gastos', abrir: 'gasto',
     aplica: () => true,
     cumplido: (e, hoy) => e.gastos.some((g) => esHoy(g.ts, hoy)),
   },
@@ -138,7 +142,7 @@ export const PASOS: Paso[] = [
     clave: 'aporte_objetivo', vez: 'diaria',
     titulo: 'Sumale algo a tu objetivo',
     msg: 'No importa cuánto. Lo que importa es que avance.',
-    cta: 'Ir a mis objetivos', destino: '/onboarding-v2/objetivos',
+    cta: 'Sumarle a mi objetivo', destino: '/onboarding-v2/objetivos', abrir: 'aporte_objetivo',
     aplica: (e) => e.objetivos.some((o) => o.estado === 'active'),
     cumplido: (e, hoy) => e.objetivos.some((o) => o.contribuciones.some((c) => esHoy(c.ts, hoy))),
   },

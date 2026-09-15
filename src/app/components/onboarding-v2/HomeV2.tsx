@@ -262,7 +262,7 @@ export function HomeV2() {
             ) : (
               <button
                 type="button"
-                onClick={() => navigate(paso.destino, paso.abrir ? { state: { abrir: paso.abrir } } : undefined)}
+                onClick={() => navigate(paso.destino, paso.abrir ? { state: { abrir: paso.abrir, from: '/onboarding-v2/home' } } : undefined)}
                 className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold transition-transform duration-100 active:scale-[0.99]"
                 style={{ background: COLORS.lima, color: COLORS.ink }}
               >

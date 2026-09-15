@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useAlLlegar } from './alLlegar';
 import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -216,22 +216,18 @@ export function InversionesV2() {
     setAporteAbierto(true);
   }
 
-  // Desde "Tu paso de hoy" en Home ("Registrar un aporte") se llega con el
-  // formulario ya abierto, en la parte de los datos: la persona tocó un botón
-  // que dice registrar, no "ver inversiones". Se limpia el `state` enseguida,
-  // así volver atrás o recargar no lo abre de nuevo.
-  const location = useLocation();
-  const navigate = useNavigate();
-  useEffect(() => {
-    const abrir = (location.state as { abrir?: string } | null)?.abrir;
-    if (abrir !== 'aporte') return;
-    navigate(location.pathname, { replace: true, state: null });
+  // Desde "Tu paso de hoy" en Home se llega directo a hacer el paso:
+  // "Registrar un aporte" abre el formulario ya en los datos (la persona tocó
+  // un botón que dice registrar, no "ver inversiones"), y "Armar mi perfil"
+  // saltea la tarjeta de intro y arranca por la primera pregunta.
+  useAlLlegar('aporte', () => {
     if (paso !== 'resultado') return;
     setTab('mias');
     abrirAlta(true);
-    // Sólo al llegar.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
+  useAlLlegar('quiz', () => {
+    if (paso === 'intro') setPaso(pasos[0]);
+  });
   function abrirEdicion(a: Aporte) {
     setEditandoId(a.id);
     setConfirmarBorrar(false);

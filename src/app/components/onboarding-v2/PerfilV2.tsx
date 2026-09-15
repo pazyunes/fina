@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import { ArmarGrupoBtn, COLORS, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
 import { VerificarTelefono } from './VerificarTelefono';
+import { llevarA, useAlLlegar } from './alLlegar';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
@@ -44,6 +45,22 @@ export function PerfilV2() {
   const [guardado, setGuardado] = useState(false);
   const [nivel, setNivel] = useState<string | null>(() => loadV2NivelFinanciero());
   const [abriendoNivel, setAbriendoNivel] = useState(false);
+
+  // Desde "Tu paso de hoy" en Home:
+  // · "Verificar ahora" baja hasta la verificación y ya genera el código, así
+  //   lo que queda es tocar "Abrir WhatsApp y enviar".
+  // · "Descubrirlo" abre la pregunta del nivel con las opciones a la vista.
+  const verificarRef = useRef<HTMLElement>(null);
+  const nivelRef = useRef<HTMLDivElement>(null);
+  const [pedirCodigoYa, setPedirCodigoYa] = useState(false);
+  useAlLlegar('verificar', () => {
+    setPedirCodigoYa(true);
+    llevarA(() => verificarRef.current);
+  });
+  useAlLlegar('nivel', () => {
+    setAbriendoNivel(true);
+    llevarA(() => nivelRef.current, () => nivelRef.current?.querySelector<HTMLElement>('button'));
+  });
   const items = itemsPerfil();
   const faltan = items.filter((i) => !i.hecho);
   const faltaNivel = !nivel;
@@ -217,7 +234,7 @@ export function PerfilV2() {
               cajita celeste con chips adentro — otro sistema visual distinto
               para la misma interacción. */}
           {abriendoNivel && (
-            <div className="flex flex-col gap-3 pt-1">
+            <div ref={nivelRef} className="flex flex-col gap-3 pt-1">
               <TituloSeccion>¿Cómo describirías lo que sabés hoy?</TituloSeccion>
               <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
                 Así las recomendaciones te van a hablar en tu idioma, sin sonar ni muy básico ni muy técnico.
@@ -236,8 +253,8 @@ export function PerfilV2() {
           onboarding la persona todavía no tiene motivo para irse a WhatsApp, y
           cortarle el alta para mandarla a otra app es la mejor forma de que no
           termine ninguna de las dos cosas. Acá entra cuando ya está adentro. */}
-      <section>
-        <VerificarTelefono />
+      <section ref={verificarRef}>
+        <VerificarTelefono pedirYa={pedirCodigoYa} />
       </section>
 
       <ArmarGrupoBtn />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Fini } from './Fini';
+import { llevarA, useAlLlegar } from './alLlegar';
 import { ArmarGrupoBtn, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { FiniPresenta } from './FiniDice';
@@ -421,6 +422,23 @@ export function ObjetivosV2() {
   }
 
   const abierto = objetivos.find((o) => o.id === openId) || null;
+
+  // Desde "Tu paso de hoy" en Home ("Sumarle a mi objetivo"): abre el objetivo
+  // con el monto listo para escribir. Si tiene varios en curso, el último al
+  // que le sumó — es al que viene aportando —; si nunca le sumó a ninguno, el
+  // primero. El nombre del objetivo queda arriba de todo, así que si no es ese,
+  // se ve enseguida y se vuelve con la flecha.
+  useAlLlegar('aporte_objetivo', () => {
+    const enCurso = db.objetivos.filter((o) => o.estado === 'active');
+    if (enCurso.length === 0) return;
+    const ultimoAporte = (o: (typeof enCurso)[number]) => Math.max(0, ...o.contribuciones.map((c) => c.ts));
+    const elegido = [...enCurso].sort((a, b) => ultimoAporte(b) - ultimoAporte(a))[0];
+    setOpenId(elegido.id);
+    llevarA(
+      () => document.querySelector<HTMLElement>('[data-sumar-registro]'),
+      () => document.querySelector<HTMLElement>('[data-monto-registro]'),
+    );
+  });
   useEffect(() => { if (abierto) setRegMoneda(abierto.moneda); }, [abierto?.id]);
 
   async function crearObjetivo() {
@@ -733,7 +751,7 @@ export function ObjetivosV2() {
         )}
 
         {/* Registrar un pago o un ahorro */}
-        <div className="flex flex-col gap-2.5 pt-1">
+        <div data-sumar-registro className="flex flex-col gap-2.5 pt-1">
           <TituloSeccion>Sumar un registro</TituloSeccion>
           {/* PRUEBA — un aporte guardado es un logro chico: Fini salta una vez
               y se va. Se engancha al `celebrar` que ya existía, así no hay otro
@@ -770,6 +788,8 @@ export function ObjetivosV2() {
           <div className="flex gap-2">
             <input
               className={`flex-1 min-w-0 ${inputClass}`}
+              data-monto-registro
+              aria-label="Monto del registro"
               placeholder="Monto"
               inputMode="decimal"
               value={regMonto}

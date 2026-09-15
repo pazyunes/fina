@@ -5,6 +5,7 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { Fini } from './Fini';
 import { IconChevron } from './FinaIcons';
+import { useAlLlegar } from './alLlegar';
 
 // Grupos: competir con amigas por actividad (cuánto REGISTRÁS, nunca cuánto
 // gastás) y, en Objetivos, armar metas grupales.
@@ -44,6 +45,10 @@ export function GruposV2() {
   const [nombreGrupo, setNombreGrupo] = useState('');
   const [codigoTxt, setCodigoTxt] = useState('');
   const [modo, setModo] = useState<'elegir' | 'crear' | 'unirse'>('elegir');
+  // Desde "Tu paso de hoy" en Home ("Armar un grupo"): directo al nombre del
+  // grupo nuevo (el campo tiene autoFocus). Unirse a uno sigue a un toque con
+  // la flecha de volver.
+  useAlLlegar('grupo', () => { if (!grupo) setModo('crear'); });
   const [copiado, setCopiado] = useState(false);
   // Crear y unirse SÍ esperan la respuesta del servidor: el código lo genera
   // la base, y unirse puede fallar porque el código no existe. Pintar el grupo

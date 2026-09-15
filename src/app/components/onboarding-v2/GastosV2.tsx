@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { llevarA, useAlLlegar } from './alLlegar';
 import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -286,6 +287,35 @@ export function GastosV2() {
     .sort((a, b) => (orden === 'monto' ? b.montoArs - a.montoArs : b.ts - a.ts));
   const hayBusqueda = !!busqueda.trim();
 
+  // Desde "Tu paso de hoy" en Home:
+  // · "Registrar un gasto" abre el formulario de FINA con el monto listo para
+  //   escribir. No pasa por el "¿desde FINA o desde WhatsApp?": para WhatsApp
+  //   hay un paso aparte, y quien tocó "registrar" acá quiere cargarlo acá.
+  // · "Poner un tope" abre la sección donde más se gastó este mes (el paso dice
+  //   "elegí la que más se te va") con el campo del tope listo. Si todavía no
+  //   gastó en ninguna, la primera.
+  const pantallaRef = useRef<HTMLDivElement>(null);
+  useAlLlegar('gasto', () => {
+    setChooser(false);
+    setAddingGasto(true);
+    llevarA(
+      () => pantallaRef.current?.querySelector<HTMLElement>('[data-form-gasto]'),
+      () => pantallaRef.current?.querySelector<HTMLElement>('[aria-label="Monto del gasto"]'),
+    );
+  });
+  useAlLlegar('tope', () => {
+    const sinTope = categorias.filter((c) => !topes[c.id]);
+    const candidatas = sinTope.length ? sinTope : categorias;
+    const elegida = [...candidatas].sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id))[0];
+    if (!elegida) return;
+    setVentana('mes');
+    setOpenCatId(elegida.id);
+    llevarA(
+      () => pantallaRef.current?.querySelector<HTMLElement>(`[data-seccion="${elegida.id}"]`),
+      () => pantallaRef.current?.querySelector<HTMLElement>(`[data-tope-de="${elegida.id}"]`),
+    );
+  });
+
   function agregarDinero() {
     const n = parseMoneyInput(addDispVal);
     if (!n) return;
@@ -340,7 +370,7 @@ export function GastosV2() {
   }
 
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-4xl lg:mx-auto lg:pt-10">
+    <div ref={pantallaRef} className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-4xl lg:mx-auto lg:pt-10">
       {/* Banda editorial full-bleed. Sin Fini: esta pantalla está llena de
           números y el personaje no va cerca de datos (§6). */}
       <header data-franja className="pb-1 mb-2">
@@ -468,7 +498,7 @@ export function GastosV2() {
       {!addingGasto ? (
         <Cta label="+ Agregar gasto" onClick={() => { setChooser(true); setWaStep(false); }} />
       ) : (
-        <div className="py-2 flex flex-col gap-3">
+        <div data-form-gasto className="py-2 flex flex-col gap-3">
           <div className="flex gap-2">
             <div className="relative flex-1 min-w-0">
               <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{ngMoneda === 'USD' ? 'US$' : '$'}</span>
@@ -719,7 +749,7 @@ export function GastosV2() {
             // secciones eso son seis contornos apilados, que es lo que se lee
             // como "todo encuadrado": la lista ya dice que son hermanas, el
             // contorno solo lo repite. Ahora son filas de una misma lista.
-            <div key={cat.id} className="py-4 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+            <div key={cat.id} data-seccion={cat.id} className="py-4 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
               <button type="button" aria-expanded={open} className="v2-focus w-full flex items-center justify-between rounded-xl" onClick={() => setOpenCatId(open ? null : cat.id)}>
                 <div className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: colorDe(cat.id) }} />
@@ -779,6 +809,7 @@ export function GastosV2() {
                       <span className="absolute top-1/2 -translate-y-1/2 left-3.5" style={{ color: COLORS.inkSoft }}>$</span>
                       <input
                         aria-label={`Tope de ${cat.nombre}`}
+                        data-tope-de={cat.id}
                         className="v2-focus w-full rounded-xl pl-7 pr-3 py-2 text-[15px] transition-colors"
                         style={INPUT_STYLE}
                         placeholder="Monto"

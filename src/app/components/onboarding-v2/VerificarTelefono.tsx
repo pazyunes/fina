@@ -20,8 +20,12 @@ import { IconChevron } from './FinaIcons';
 
 const MARCA = 'FINA-VERIF-';
 
-/** `sinTitulo`: para usarlo adentro de un cartel que ya tiene su propio título. */
-export function VerificarTelefono({ sinTitulo = false }: { sinTitulo?: boolean }) {
+/**
+ * `sinTitulo`: para usarlo adentro de un cartel que ya tiene su propio título.
+ * `pedirYa`: genera el código apenas se pide, sin esperar al botón (se usa al
+ * llegar desde "Tu paso de hoy", donde la persona ya tocó "Verificar ahora").
+ */
+export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinTitulo?: boolean; pedirYa?: boolean }) {
   const { estado: db } = useAlmacen();
   const verificado = !!db.perfil.telefonoVerificadoEn;
   const telefono = db.perfil.telefono;
@@ -62,6 +66,18 @@ export function VerificarTelefono({ sinTitulo = false }: { sinTitulo?: boolean }
     }, 15 * 60 * 1000);
     return () => window.clearTimeout(corte);
   }, [esperando, codigo]);
+
+  // Con una marca y no con el estado `pidiendo`: si el efecto corre dos veces
+  // seguidas, el estado todavía no se actualizó y saldrían dos pedidos, y el
+  // segundo choca con el freno de 20 segundos y muestra un error.
+  const yaPedidoRef = useRef(false);
+  useEffect(() => {
+    if (!pedirYa || yaPedidoRef.current) return;
+    yaPedidoRef.current = true;
+    if (!verificado && codigo === null) void pedir();
+    // Sólo cuando se enciende `pedirYa`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedirYa]);
 
   async function pedir() {
     if (pidiendo) return;
