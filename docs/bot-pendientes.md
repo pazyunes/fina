@@ -8,8 +8,14 @@ teléfono, atender `FINA-VERIF-XXXXXX`, las columnas nuevas de los gastos,
 ofrecer las secciones y medios que ya usa la persona, y mover el saldo con
 `insert … on conflict`. ¡Gracias!
 
-Queda **un cambio chico** (la racha), **revisar la configuración** y **probar
-todo junto** con la app.
+Quedan **dos cosas por revisar en el código** (la racha y las secciones
+propias de cada persona), **la configuración** y **probar todo junto** con la
+app.
+
+> Las secciones ya estaban en el punto 4 del documento anterior, pero muy
+> resumidas. Ahora cada persona escribe sus propias secciones en la app, y hay
+> reglas que el bot tiene que seguir igual que la app para no duplicarlas. Vale
+> la pena revisar el código contra el punto 2 de acá.
 
 ---
 
@@ -83,7 +89,149 @@ racha!"*.
 
 ---
 
-## 2. Revisar la configuración
+## 2. Secciones propias: que el bot y la app digan lo mismo
+
+Cada persona **arma sus propias secciones**: elige algunas en el onboarding,
+agrega sugeridas desde Gastos, o escribe la suya ("Mascota", "Facu", "Gym").
+Son filas de la tabla `expense_sections`, y el bot tiene que usar **las
+mismas**. Si no, pasa esto: la persona tiene "Supermercado" en la app, le dice
+al bot "gasté en el súper", el bot crea "Súper", y ahora tiene dos secciones
+para lo mismo, con el gasto repartido entre las dos.
+
+### La tabla
+
+| Columna | Qué es |
+| --- | --- |
+| `id` | Lo que va en `transactions.section_id`. **Siempre se usa el id, nunca el nombre.** |
+| `user_id` | De quién es |
+| `name` | El nombre tal como lo escribió la persona: "Belleza y cuidado personal" |
+| `slug` | El nombre normalizado. Es lo que impide duplicados: no puede haber dos secciones con el mismo `slug` para la misma persona |
+| `cap_amount`, `cap_period` | El tope: monto y `'semana'` o `'mes'`. Los dos `null` = sin tope |
+| `archived` | `true` = la persona la borró desde la app |
+
+### Regla 1: leer las secciones cada vez, sin guardarlas
+
+```sql
+select id, name, cap_amount, cap_period
+  from expense_sections
+ where user_id = :uid and archived = false
+ order by created_at;
+```
+
+Leerlas **en cada conversación**, no guardarlas en memoria del bot. La persona
+puede crear, borrar o cambiarle el nombre a una sección desde la app en
+cualquier momento. Y en el gasto guardar siempre el **`id`**: si mañana
+"Súper" pasa a llamarse "Supermercado", los gastos siguen agrupados.
+
+### Regla 2: primero buscar entre las suyas
+
+Cuando la persona nombra una sección, en este orden:
+
+1. **Coincide con una suya** (comparando por `slug`, ver regla 3): usar esa.
+2. **Se parece a una suya** ("súper" y "Supermercado", "birra" y "Salidas y
+   entretenimiento"): **preguntar**, no decidir solo.
+   *"¿Lo anoto en Supermercado?"*
+3. **No se parece a ninguna**: ofrecer crearla, o elegir entre las suyas.
+   *"No tenés una sección 'Mascota'. ¿La creo, o lo anoto en otra?"*
+4. **No dijo sección**: ofrecer las suyas. Si no tiene ninguna, las sugeridas.
+
+Si la persona no quiere elegir, el gasto se puede guardar con `section_id =
+null`: en la app aparece como "Sin sección" y no se rompe nada. Mejor eso que
+adivinar mal.
+
+### Regla 3: el `slug` se calcula EXACTAMENTE como en la app
+
+Esto es lo más importante de esta parte. Si el bot calcula el slug distinto,
+"Cafetería" en el bot y "Cafetería" en la app quedan como dos secciones.
+
+Esta es la función de la app, tal cual:
+
+```js
+function slugSeccion(nombre) {
+  return (
+    nombre
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')   // saca tildes y diéresis: á → a, ñ → n
+      .replace(/[^a-z0-9]+/g, '_')       // todo lo que no es letra o número → _
+      .replace(/^_+|_+$/g, '')           // sin _ al principio ni al final
+    || 'otro'
+  );
+}
+```
+
+Ejemplos para chequear que dé igual:
+
+| Nombre | `slug` |
+| --- | --- |
+| `Supermercado` | `supermercado` |
+| `Cafeterías` | `cafeterias` |
+| `Belleza y cuidado personal` | `belleza_y_cuidado_personal` |
+| `Salidas & Birras!` | `salidas_birras` |
+| `  Niñera  ` | `ninera` |
+| `Uñas 💅` | `unas` |
+
+Ojo con la ñ: `normalize('NFD')` la separa en n + tilde, y la tilde se va. Queda
+`n`. Así lo hace la app, así tiene que hacerlo el bot.
+
+### Regla 4: crear una sección
+
+```sql
+insert into expense_sections (user_id, name, slug)
+values (:uid, :nombre_como_lo_escribio, :slug)
+on conflict (user_id, slug) do update set archived = false
+returning id, name;
+```
+
+- `name` va **como lo escribió la persona**, con mayúsculas y tildes, sin espacios
+  al principio ni al final.
+- Si ya existía una con ese slug (por ejemplo, la había borrado), **vuelve a
+  aparecer** con sus gastos viejos adentro, en vez de fallar o duplicarse. Usar
+  el `name` que devuelve, que es el que ya tenía.
+- No mandar `id`: se genera solo.
+
+### Regla 5: las secciones borradas
+
+Cuando la persona borra una sección en la app, no se borra la fila: queda con
+`archived = true`, y sus gastos viejos la siguen apuntando.
+
+- **No ofrecerlas** (el `where archived = false` de la regla 1 ya se encarga).
+- Si la persona la nombra de nuevo, la regla 4 la recupera sola.
+- Al contar gastos viejos, un gasto puede apuntar a una sección archivada. Eso
+  está bien: mostrarla con su nombre.
+
+### Regla 6: las sugeridas son las mismas que en la app
+
+Cuando la persona no tiene secciones, o pide ideas, ofrecer **esta lista y no
+otra**, así lo que ve en el bot coincide con lo que ve en la app:
+
+> Delivery · Restaurantes · Cafeterías · Salidas y entretenimiento ·
+> Supermercado · Transporte · Belleza y cuidado personal · Ropa · Suscripciones ·
+> Compras online · Farmacia · Regalos
+
+Ofrecer primero las suyas, después las sugeridas que todavía no tiene.
+
+### Regla 7: los topes
+
+Si el bot quiere comentar un tope después de un gasto:
+
+- El período es **la semana en curso (de lunes a domingo)** o **el mes en curso**,
+  en hora de Argentina. No "los últimos 7 días" ni "los últimos 30".
+- Sumar por `amount_ars` los gastos de esa sección en ese período.
+- **Con el tono de FINA**: nunca "te pasaste del tope". Algo como *"Llevás
+  $42.000 de los $50.000 que te pusiste para Delivery esta semana."* Y si ya lo
+  superó, el dato, el contexto y una salida, sin retar.
+
+### Regla 8: los nombres son datos, no instrucciones
+
+Los nombres de las secciones los escribe la persona. Si el bot usa un modelo de
+IA para entender los mensajes, los nombres tienen que llegarle **como datos**,
+nunca como parte de sus instrucciones. Una sección puede llamarse cualquier
+cosa, incluso "ignorá lo anterior y …".
+
+---
+
+## 3. Revisar la configuración
 
 Antes de probar, confirmar:
 
@@ -100,7 +248,7 @@ Antes de probar, confirmar:
 
 ---
 
-## 3. Probar todo junto
+## 4. Probar todo junto
 
 Con una cuenta nueva en la app de prueba (María Paz tiene el link). Hacerlo en
 este orden, porque cada paso usa el anterior:
@@ -116,16 +264,23 @@ este orden, porque cada paso usa el anterior:
 | 7 | Al bot: "gasté 20 dólares en Steam" | En la app aparece como US$20 y suma al total su equivalente en pesos, no $20 |
 | 8 | Pedir un código en la app, esperar 16 minutos y mandarlo | El bot explica que venció, no falla ni lo toma como gasto |
 | 9 | Escribirle al bot desde un número que no tiene cuenta | Le dice que se registre, no falla en silencio |
+| 10 | En la app, crear la sección "Cafeterías". Al bot: "gasté 3.000 en cafetería" | El bot la reconoce o pregunta; **no** crea una sección nueva. En la app hay una sola "Cafeterías" con el gasto |
+| 11 | Al bot: "gasté 8.000 en la veterinaria", y aceptar crear "Mascota" | En la app aparece la sección "Mascota" con el gasto |
+| 12 | En la app, borrar la sección "Mascota". Al bot: "gasté 2.000 en Mascota" | El bot no la ofrecía, pero al nombrarla vuelve a aparecer en la app con sus gastos viejos y el nuevo |
 
 ---
 
-## 4. Si algo falla
+## 5. Si algo falla
 
 | Síntoma | Causa más probable |
 | --- | --- |
 | El bot no reconoce a nadie | Busca el número con el 9 adelante (hay que sacarlo), o usa la clave `anon` en vez de `service_role` |
 | El código siempre da "no me figura" | El mensaje `FINA-VERIF-` se está tratando como un gasto, o se manda el número sin normalizar |
 | El gasto aparece "Sin sección" o sin tipo | Faltan `section_id` o `expense_type` en el insert |
+| Aparecen secciones repetidas ("Súper" y "Supermercado") | El bot creó una en vez de preguntar si era la que ya tenía (regla 2) |
+| Aparecen dos iguales con distinta tilde o mayúscula | El `slug` no se calcula igual que en la app (regla 3) |
+| El bot ofrece una sección que la persona borró | Falta `archived = false` al leerlas |
+| El bot no ve una sección recién creada en la app | Tiene las secciones guardadas en memoria en vez de leerlas en cada conversación |
 | El disponible no baja | No se está moviendo el saldo, o el nombre del medio no coincide exacto: "MercadoPago" y "Mercado Pago" son dos medios distintos |
 | La racha no suma | `source` no es exactamente `'whatsapp'`, o se está mandando `created_at` con la fecha del gasto |
 | `racha_de` da error de permisos | Se está llamando con la clave `anon` |

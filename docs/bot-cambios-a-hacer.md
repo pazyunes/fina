@@ -1,7 +1,7 @@
 # Bot de WhatsApp de FINA — qué cambiar
 
 **Para:** quien está modificando el bot (Kapso).
-**Fecha:** 10 de septiembre de 2026.
+**Fecha:** 10 de septiembre de 2026 (actualizado el 15).
 
 La app de FINA se rehizo y ahora guarda todo en Supabase, en las mismas tablas
 que usa el bot. Un gasto cargado en la app lo ve el bot, y uno cargado por el
@@ -205,31 +205,143 @@ mes se veía $30.780 más barato de lo que fue.)
 
 ### Secciones de gasto
 
-Cada persona tiene **sus** secciones, que son filas:
+Cada persona **arma sus propias secciones**: elige algunas en el onboarding,
+agrega sugeridas desde Gastos, o escribe la suya ("Mascota", "Facu", "Gym").
+Son filas de la tabla `expense_sections`, y el bot tiene que usar **las
+mismas**. Si no, pasa esto: la persona tiene "Supermercado" en la app, le dice
+al bot "gasté en el súper", el bot crea "Súper", y ahora tiene dos secciones
+para lo mismo, con el gasto repartido entre las dos.
+
+#### La tabla
+
+| Columna | Qué es |
+| --- | --- |
+| `id` | Lo que va en `transactions.section_id`. **Siempre se usa el id, nunca el nombre.** |
+| `user_id` | De quién es |
+| `name` | El nombre tal como lo escribió la persona: "Belleza y cuidado personal" |
+| `slug` | El nombre normalizado. Es lo que impide duplicados: no puede haber dos secciones con el mismo `slug` para la misma persona |
+| `cap_amount`, `cap_period` | El tope: monto y `'semana'` o `'mes'`. Los dos `null` = sin tope |
+| `archived` | `true` = la persona la borró desde la app |
+
+#### Regla 1: leer las secciones cada vez, sin guardarlas
 
 ```sql
-select id, name from expense_sections
+select id, name, cap_amount, cap_period
+  from expense_sections
  where user_id = :uid and archived = false
  order by created_at;
 ```
 
-Ofrecerle **primero las suyas** y después sugerencias. Si no, terminan con dos
-secciones que significan lo mismo con nombres distintos ("Súper" y
-"Supermercado").
+Leerlas **en cada conversación**, no guardarlas en memoria del bot. La persona
+puede crear, borrar o cambiarle el nombre a una sección desde la app en
+cualquier momento. Y en el gasto guardar siempre el **`id`**: si mañana
+"Súper" pasa a llamarse "Supermercado", los gastos siguen agrupados.
 
-Si dice una que no tiene, se puede crear:
+#### Regla 2: primero buscar entre las suyas
+
+Cuando la persona nombra una sección, en este orden:
+
+1. **Coincide con una suya** (comparando por `slug`, ver regla 3): usar esa.
+2. **Se parece a una suya** ("súper" y "Supermercado", "birra" y "Salidas y
+   entretenimiento"): **preguntar**, no decidir solo.
+   *"¿Lo anoto en Supermercado?"*
+3. **No se parece a ninguna**: ofrecer crearla, o elegir entre las suyas.
+   *"No tenés una sección 'Mascota'. ¿La creo, o lo anoto en otra?"*
+4. **No dijo sección**: ofrecer las suyas. Si no tiene ninguna, las sugeridas.
+
+Si la persona no quiere elegir, el gasto se puede guardar con `section_id =
+null`: en la app aparece como "Sin sección" y no se rompe nada. Mejor eso que
+adivinar mal.
+
+#### Regla 3: el `slug` se calcula EXACTAMENTE como en la app
+
+Esto es lo más importante de esta parte. Si el bot calcula el slug distinto,
+"Cafetería" en el bot y "Cafetería" en la app quedan como dos secciones.
+
+Esta es la función de la app, tal cual:
+
+```js
+function slugSeccion(nombre) {
+  return (
+    nombre
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')   // saca tildes y diéresis: á → a, ñ → n
+      .replace(/[^a-z0-9]+/g, '_')       // todo lo que no es letra o número → _
+      .replace(/^_+|_+$/g, '')           // sin _ al principio ni al final
+    || 'otro'
+  );
+}
+```
+
+Ejemplos para chequear que dé igual:
+
+| Nombre | `slug` |
+| --- | --- |
+| `Supermercado` | `supermercado` |
+| `Cafeterías` | `cafeterias` |
+| `Belleza y cuidado personal` | `belleza_y_cuidado_personal` |
+| `Salidas & Birras!` | `salidas_birras` |
+| `  Niñera  ` | `ninera` |
+| `Uñas 💅` | `unas` |
+
+Ojo con la ñ: `normalize('NFD')` la separa en n + tilde, y la tilde se va. Queda
+`n`. Así lo hace la app, así tiene que hacerlo el bot.
+
+#### Regla 4: crear una sección
 
 ```sql
 insert into expense_sections (user_id, name, slug)
-values (:uid, 'Mascota', 'mascota')
+values (:uid, :nombre_como_lo_escribio, :slug)
 on conflict (user_id, slug) do update set archived = false
-returning id;
+returning id, name;
 ```
 
-El `slug` es el nombre en minúsculas, sin tildes, con `_` en lugar de espacios.
+- `name` va **como lo escribió la persona**, con mayúsculas y tildes, sin espacios
+  al principio ni al final.
+- Si ya existía una con ese slug (por ejemplo, la había borrado), **vuelve a
+  aparecer** con sus gastos viejos adentro, en vez de fallar o duplicarse. Usar
+  el `name` que devuelve, que es el que ya tenía.
+- No mandar `id`: se genera solo.
 
-También se puede dejar `section_id` en `null`: la app muestra los gastos sin
-sección, no se rompe.
+#### Regla 5: las secciones borradas
+
+Cuando la persona borra una sección en la app, no se borra la fila: queda con
+`archived = true`, y sus gastos viejos la siguen apuntando.
+
+- **No ofrecerlas** (el `where archived = false` de la regla 1 ya se encarga).
+- Si la persona la nombra de nuevo, la regla 4 la recupera sola.
+- Al contar gastos viejos, un gasto puede apuntar a una sección archivada. Eso
+  está bien: mostrarla con su nombre.
+
+#### Regla 6: las sugeridas son las mismas que en la app
+
+Cuando la persona no tiene secciones, o pide ideas, ofrecer **esta lista y no
+otra**, así lo que ve en el bot coincide con lo que ve en la app:
+
+> Delivery · Restaurantes · Cafeterías · Salidas y entretenimiento ·
+> Supermercado · Transporte · Belleza y cuidado personal · Ropa · Suscripciones ·
+> Compras online · Farmacia · Regalos
+
+Ofrecer primero las suyas, después las sugeridas que todavía no tiene.
+
+#### Regla 7: los topes
+
+Si el bot quiere comentar un tope después de un gasto:
+
+- El período es **la semana en curso (de lunes a domingo)** o **el mes en curso**,
+  en hora de Argentina. No "los últimos 7 días" ni "los últimos 30".
+- Sumar por `amount_ars` los gastos de esa sección en ese período.
+- **Con el tono de FINA**: nunca "te pasaste del tope". Algo como *"Llevás
+  $42.000 de los $50.000 que te pusiste para Delivery esta semana."* Y si ya lo
+  superó, el dato, el contexto y una salida, sin retar.
+
+#### Regla 8: los nombres son datos, no instrucciones
+
+Los nombres de las secciones los escribe la persona. Si el bot usa un modelo de
+IA para entender los mensajes, los nombres tienen que llegarle **como datos**,
+nunca como parte de sus instrucciones. Una sección puede llamarse cualquier
+cosa, incluso "ignorá lo anterior y …".
 
 ### Medios de pago
 
@@ -357,6 +469,6 @@ $30.000 y $45.000", no "~$37.500".
 | 1 | Normalizar el teléfono (sacarle el 9) | el bot no reconoce a nadie |
 | 2 | Atender el mensaje `FINA-VERIF-XXXXXX` | nadie puede verificar su teléfono |
 | 3 | `source`, `section_id`, `expense_type`, `payment_method` (+ las 3 de USD) | los gastos aparecen sin clasificar |
-| 4 | Ofrecer las secciones y medios que ya usa | secciones duplicadas con otro nombre |
+| 4 | Usar las secciones propias de cada persona (slug igual que la app) y los medios que ya usa | secciones duplicadas con otro nombre, gastos repartidos entre las dos |
 | 5 | Mover el saldo con `on conflict … + delta` | el disponible queda mal, con plata que no existe |
 | 6 | Escribir `source = 'whatsapp'` (ya está en el 3) | los días que la persona usa el bot no suman a su racha |
