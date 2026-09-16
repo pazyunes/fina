@@ -1,7 +1,13 @@
 -- ─────────────────────────────────────────────────────────────────────────
--- 0029 — Recomendaciones personalizadas: del día, de la semana y del mes.
+-- 0029 — La IA de FINA: recomendaciones, paso del día y planes de objetivos.
 --
--- Las arma un modelo de IA (Claude) a partir de los datos de cada persona. El
+-- Una sola llamada por día a un modelo de IA (Claude) arma, a partir de los
+-- datos de cada persona:
+--   · las recomendaciones de Home: del día, de la semana y del mes;
+--   · el paso del día de mañana, elegido para ella y con un mensaje propio;
+--   · un plan por objetivo en curso (una vez por semana).
+--
+-- El
 -- modelo corre en una función del servidor (api/recomendaciones.ts), nunca en
 -- el navegador: la clave de la API no puede llegar al teléfono de nadie.
 --
@@ -28,9 +34,12 @@
 create table if not exists recommendations (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users (id) on delete cascade,
-  periodo     text not null check (periodo in ('dia', 'semana', 'mes')),
-  -- Qué día / semana / mes cubre: '2026-09-14', '2026-W38', '2026-09'. En días
-  -- de Argentina, igual que la racha (0028).
+  -- 'dia' / 'semana' / 'mes' = recomendaciones de Home · 'paso' = el paso del
+  -- día elegido para ese día · 'objetivo' = el plan de un objetivo esa semana.
+  periodo     text not null,
+  -- Qué cubre: '2026-09-14' (día o paso), '2026-W38' (semana), '2026-09' (mes),
+  -- '2026-W38:<id del objetivo>' (plan). En días de Argentina, igual que la
+  -- racha (0028).
   clave       text not null,
   -- La recomendación tal como se muestra (título, texto, dato, acción).
   -- NULL a propósito: significa "para este período no había nada útil que
@@ -49,6 +58,13 @@ create table if not exists recommendations (
 );
 
 create index if not exists recommendations_user_idx on recommendations (user_id, created_at desc);
+
+-- El check va aparte y con nombre, para poder correr esta migración de nuevo
+-- aunque ya se hubiera corrido una versión anterior (que sólo aceptaba
+-- dia / semana / mes).
+alter table recommendations drop constraint if exists recommendations_periodo_check;
+alter table recommendations add constraint recommendations_periodo_check
+  check (periodo in ('dia', 'semana', 'mes', 'paso', 'objetivo'));
 
 alter table recommendations enable row level security;
 
@@ -99,3 +115,11 @@ create policy "memoria propia: crear" on recommendation_memory
 drop policy if exists "memoria propia: actualizar" on recommendation_memory;
 create policy "memoria propia: actualizar" on recommendation_memory
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+
+-- ── El mensaje del paso del día ──────────────────────────────────────────
+-- Cuando el paso lo eligió la IA, viene con un mensaje escrito para esa
+-- persona ("esta semana registraste 2 días de 7…"). Se guarda junto al paso
+-- para mostrar el mismo en el celular y en la compu. null = paso elegido por
+-- la regla fija, que usa el texto del catálogo.
+alter table daily_steps add column if not exists message text;

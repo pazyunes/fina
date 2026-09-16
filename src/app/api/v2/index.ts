@@ -594,12 +594,20 @@ export async function borrarAporte(id: string): Promise<Resultado<null>> {
 // 0028 (cómo se guarda y cómo se calcula la racha con el comodín).
 
 export async function leerPasoDelDia(dia: string): Promise<Resultado<PasoGuardado | null>> {
-  const r = await correr<{ day: string; step_key: string; completed_at: string | null } | null>('leerPasoDelDia', () =>
-    supabase.from('daily_steps').select('day, step_key, completed_at').eq('day', dia).maybeSingle(),
+  type Fila = { day: string; step_key: string; completed_at: string | null; message?: string | null };
+  let r = await correr<Fila | null>('leerPasoDelDia', () =>
+    supabase.from('daily_steps').select('day, step_key, completed_at, message').eq('day', dia).maybeSingle(),
   );
+  // Sin la migración 0029 la columna `message` no existe: se lee sin ella, así
+  // el paso del día sigue andando antes de correrla.
+  if (r.error !== null && r.error.includes('message')) {
+    r = await correr<Fila | null>('leerPasoDelDia', () =>
+      supabase.from('daily_steps').select('day, step_key, completed_at').eq('day', dia).maybeSingle(),
+    );
+  }
   if (r.error !== null) return falla(r.error, 'leerPasoDelDia');
   if (!r.data) return ok(null);
-  return ok({ dia: r.data.day, clave: r.data.step_key, cumplidoEn: r.data.completed_at });
+  return ok({ dia: r.data.day, clave: r.data.step_key, cumplidoEn: r.data.completed_at, mensaje: r.data.message ?? null });
 }
 
 /**
@@ -610,12 +618,14 @@ export async function leerPasoDelDia(dia: string): Promise<Resultado<PasoGuardad
  * pise nada; después se relee, así los dos muestran el mismo paso en vez de
  * cada uno el suyo.
  */
-export async function asignarPasoDelDia(dia: string, clave: string): Promise<Resultado<PasoGuardado | null>> {
+export async function asignarPasoDelDia(dia: string, clave: string, mensaje: string | null = null): Promise<Resultado<PasoGuardado | null>> {
   const uid = await idUsuaria();
   if (!uid) return falla('sin sesión', 'asignarPasoDelDia');
   const w = await correr<null>('asignarPasoDelDia', () =>
     supabase.from('daily_steps')
-      .upsert({ user_id: uid, day: dia, step_key: clave }, { onConflict: 'user_id,day', ignoreDuplicates: true })
+      // `message` sólo si hay: sin la migración 0029 la columna no existe, y
+      // sin mensaje (paso de la regla) no hace falta mandarla.
+      .upsert({ user_id: uid, day: dia, step_key: clave, ...(mensaje ? { message: mensaje } : {}) }, { onConflict: 'user_id,day', ignoreDuplicates: true })
       .then(({ error }) => ({ data: null, error })),
   );
   if (w.error !== null) return falla(w.error, 'asignarPasoDelDia');

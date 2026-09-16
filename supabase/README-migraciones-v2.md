@@ -69,7 +69,7 @@ resultado antes de pasar al siguiente.
 | 7 | `0026_verificar_telefono_whatsapp.sql` | Verificar el teléfono mandándole un código al bot de WhatsApp, en vez de por SMS |
 | 8 | `0027_limites_verificacion.sql` | Corrige dónde va el freno de la verificación: el tope de la 0026 trababa a la persona honesta y no al ataque |
 | 9 | `0028_paso_del_dia_y_racha.sql` | Un paso distinto por día, y la racha que se arma cumpliéndolo — con un comodín por semana, y contando los días que se registra por WhatsApp |
-| 10 | `0029_recomendaciones.sql` | Recomendaciones personalizadas del día, la semana y el mes: dónde se guardan (una por período, así cada una se paga una sola vez) y la memoria con la que el modelo va conociendo a cada persona. Necesita `ANTHROPIC_API_KEY` en Vercel |
+| 10 | `0029_recomendaciones.sql` | La IA de FINA: recomendaciones del día, la semana y el mes, el paso del día elegido para cada persona y un plan por objetivo. Dónde se guardan (cada cosa se genera una sola vez, así se paga una vez) y la memoria con la que el modelo va conociendo a cada persona. Se puede volver a correr sin problema. Necesita `ANTHROPIC_API_KEY` en Vercel |
 
 ### Qué trae la 0024 y por qué
 

@@ -2,7 +2,8 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useAlmacen } from './AlmacenProvider';
 import { leerEstado } from './almacen';
 import * as api from './index';
-import { diaAnterior, diaArgentina, elegirPaso, pasoPorClave, type Paso } from './pasos';
+import { diaAnterior, diaArgentina, elegirPaso, pasoElegidoSirve, pasoPorClave, type Paso } from './pasos';
+import { leerPasoElegido } from './recomendaciones';
 import { RACHA_VACIA, type PasoGuardado, type Racha } from './tipos';
 
 // El paso del día y la racha, para toda la app.
@@ -15,11 +16,13 @@ import { RACHA_VACIA, type PasoGuardado, type Racha } from './tipos';
 type Valor = {
   /** null mientras se asigna. */
   paso: Paso | null;
+  /** Si el paso lo eligió la IA, lo que escribió para esta persona. */
+  mensaje: string | null;
   cumplido: boolean;
   racha: Racha;
 };
 
-const Ctx = createContext<Valor>({ paso: null, cumplido: false, racha: RACHA_VACIA });
+const Ctx = createContext<Valor>({ paso: null, mensaje: null, cumplido: false, racha: RACHA_VACIA });
 
 export function PasoDelDiaProvider({ children }: { children: React.ReactNode }) {
   const { estado, listo, recargar } = useAlmacen();
@@ -39,11 +42,15 @@ export function PasoDelDiaProvider({ children }: { children: React.ReactNode }) 
     void (async () => {
       let r = await api.leerPasoDelDia(dia);
       if (r.error === null && r.data === null) {
-        // Todavía no tiene paso hoy: se elige mirando el de ayer, para no
-        // repetirlo, y con los datos recién traídos de la base.
+        // Todavía no tiene paso hoy. Primero, el que la IA eligió ayer para
+        // hoy, si todavía se puede cumplir; si no hay o ya no sirve, la regla
+        // fija. Las dos miran el de ayer para no repetirlo.
         const ayer = await api.leerPasoDelDia(diaAnterior(dia));
-        const clave = elegirPaso(leerEstado(), dia, ayer.data?.clave ?? null);
-        r = await api.asignarPasoDelDia(dia, clave);
+        const claveDeAyer = ayer.data?.clave ?? null;
+        const elegido = await leerPasoElegido(dia);
+        r = elegido && pasoElegidoSirve(leerEstado(), elegido.clave, claveDeAyer)
+          ? await api.asignarPasoDelDia(dia, elegido.clave, elegido.mensaje)
+          : await api.asignarPasoDelDia(dia, elegirPaso(leerEstado(), dia, claveDeAyer));
       }
       if (!vivo) return;
       if (r.error === null && r.data) setGuardado(r.data);
@@ -94,7 +101,7 @@ export function PasoDelDiaProvider({ children }: { children: React.ReactNode }) 
   const paso = guardado ? pasoPorClave(guardado.clave) ?? null : null;
 
   return (
-    <Ctx.Provider value={{ paso, cumplido: !!guardado?.cumplidoEn, racha }}>
+    <Ctx.Provider value={{ paso, mensaje: guardado?.mensaje ?? null, cumplido: !!guardado?.cumplidoEn, racha }}>
       {children}
     </Ctx.Provider>
   );

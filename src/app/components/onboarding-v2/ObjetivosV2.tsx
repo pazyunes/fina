@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Fini } from './Fini';
 import { llevarA, useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
+import { ArmarGrupoBtn, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { FiniPresenta } from './FiniDice';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
+import { leerPlanesDeObjetivos, marcarUtil, type PlanObjetivo } from '../../api/v2/recomendaciones';
 import type { Moneda as MonedaV2 } from '../../api/v2/tipos';
 
 // Sugerencias para arrancar cuando todavía no hay objetivos — le dan
@@ -256,6 +257,54 @@ function consejoPara(o: Objetivo, estado: 'definido' | 'desconocido' | 'incomple
   return `Nos dijiste que querías gastar menos en ${categoria} — cada peso que ahorres ahí puede ir directo a "${o.nombre}".`;
 }
 
+// El plan que arma la IA para un objetivo: qué está pasando, una salida, y un
+// rango de cuánto separar por semana. Es una proyección, así que va como rango y
+// marcado como estimado (regla 4), nunca como un número exacto.
+function PlanDelObjetivo({ plan, moneda, onMarcar }: {
+  plan: PlanObjetivo; moneda: Moneda; onMarcar: (plan: PlanObjetivo, util: boolean | null) => void;
+}) {
+  const rango = plan.separarPorSemana;
+  return (
+    <section className="flex flex-col gap-2 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }} aria-label="Tu plan para este objetivo">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>Tu plan</p>
+      <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{plan.titulo}</p>
+      <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{plan.texto}</p>
+      {rango && (
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[15px]" style={{ color: COLORS.ink }}>
+            Separar entre <span className="font-semibold font-mono tabular-nums">{fmtMonto(Math.round(rango.min), moneda)}</span> y{' '}
+            <span className="font-semibold font-mono tabular-nums">{fmtMonto(Math.round(rango.max), moneda)}</span> por semana
+          </p>
+          <EstadoConfianza estado="estimado" />
+        </div>
+      )}
+      <div className="flex items-center gap-1" role="group" aria-label="¿Te sirvió este plan?">
+        <span className="text-[14px] mr-1" style={{ color: COLORS.inkFaint }}>¿Te sirvió?</span>
+        {([true, false] as const).map((v) => {
+          const elegido = plan.util === v;
+          return (
+            <button
+              key={String(v)}
+              type="button"
+              aria-pressed={elegido}
+              onClick={() => onMarcar(plan, elegido ? null : v)}
+              className="v2-focus min-h-[44px] min-w-[44px] px-3 rounded-full text-[14px] font-semibold"
+              style={elegido
+                ? { background: COLORS.brandSoft, color: COLORS.brandDark }
+                : { color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}
+            >
+              {v ? 'Sí' : 'No'}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
+        Hecho con IA a partir de tus datos. No es asesoramiento financiero.
+      </p>
+    </section>
+  );
+}
+
 function montoLabel(o: Objetivo): string {
   if (o.montoModo === 'rango' && o.montoMin) return `${fmtMonto(o.montoMin, o.moneda)}–${fmtMonto(o.montoTotal, o.moneda)}`;
   return fmtMonto(o.montoTotal, o.moneda);
@@ -422,6 +471,21 @@ export function ObjetivosV2() {
   }
 
   const abierto = objetivos.find((o) => o.id === openId) || null;
+
+  // El plan de cada objetivo lo arma la IA una vez por semana (ver
+  // api/recomendaciones.ts). Si todavía no hay, se muestra el consejo de siempre.
+  const [planes, setPlanes] = useState<Map<string, PlanObjetivo>>(new Map());
+  useEffect(() => {
+    let vivo = true;
+    void leerPlanesDeObjetivos().then((p) => { if (vivo) setPlanes(p); });
+    return () => { vivo = false; };
+  }, []);
+  function marcarPlan(plan: PlanObjetivo, util: boolean | null) {
+    setPlanes((m) => new Map(m).set(plan.objetivoId, { ...plan, util }));
+    void marcarUtil(plan.id, util).then((r) => {
+      if (r.error !== null) setPlanes((m) => new Map(m).set(plan.objetivoId, plan));
+    });
+  }
 
   // Desde "Tu paso de hoy" en Home ("Sumarle a mi objetivo"): abre el objetivo
   // con el monto listo para escribir. Si tiene varios en curso, el último al
@@ -744,7 +808,9 @@ export function ObjetivosV2() {
           </div>
         )}
 
-        {!done && consejoPara(abierto, estado) && (
+        {!done && planes.get(abierto.id) ? (
+          <PlanDelObjetivo plan={planes.get(abierto.id)!} moneda={abierto.moneda} onMarcar={marcarPlan} />
+        ) : !done && consejoPara(abierto, estado) && (
           <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.star }}>
             {consejoPara(abierto, estado)}
           </p>

@@ -165,6 +165,8 @@ export type PasoGuardado = {
   clave: string;
   /** Cuándo se detectó cumplido, o null si todavía no. */
   cumplidoEn: string | null;
+  /** Si el paso lo eligió la IA, el mensaje que escribió para esta persona. */
+  mensaje: string | null;
 };
 
 export type DiaDeRacha = {

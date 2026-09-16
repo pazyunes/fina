@@ -36,7 +36,7 @@ export function HomeV2() {
   const foto = loadV2Foto();
   const grupo = loadV2Grupo();
   const topGrupo = grupo ? [...grupo.miembros].sort((a, b) => b.actividad - a.actividad).slice(0, 3) : [];
-  const { paso, cumplido, racha } = usePasoDelDia();
+  const { paso, mensaje, cumplido, racha } = usePasoDelDia();
   const [rachaAbierta, setRachaAbierta] = useState(false);
 
   // Reserva ("alcancía") — se movió acá desde Gastos.
@@ -239,7 +239,9 @@ export function HomeV2() {
             ) : (
               <>
                 <p className="font-bold text-[19px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
-                <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>{paso.msg}</p>
+                {/* Si el paso lo eligió la IA, trae un mensaje escrito para esta
+                    persona; si no, el texto general del catálogo. */}
+                <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>{mensaje ?? paso.msg}</p>
                 {/* Un gasto por WhatsApp salva el día aunque el paso sea otro.
                     Se dice, para que no parezca que la racha depende sólo de
                     este paso — y sin empujar a no hacerlo. */}

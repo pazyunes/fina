@@ -52,18 +52,24 @@ export function recomendacionesRecordadas(): Recomendaciones | null {
   return ultima;
 }
 
-export function leerRecomendaciones(): Promise<Resultado<Recomendaciones>> {
+/**
+ * `pasosPosibles`: los pasos que la persona puede cumplir mañana (ver
+ * `pasosPosiblesManana`). Con eso, junto con la recomendación del día, la IA
+ * elige el paso de mañana.
+ */
+export function leerRecomendaciones(pasosPosibles: string[] = []): Promise<Resultado<Recomendaciones>> {
   if (enCurso) return enCurso;
-  enCurso = pedir().finally(() => { enCurso = null; });
+  enCurso = pedir(pasosPosibles).finally(() => { enCurso = null; });
   return enCurso;
 }
 
-async function pedir(): Promise<Resultado<Recomendaciones>> {
+async function pedir(pasosPosibles: string[]): Promise<Resultado<Recomendaciones>> {
   try {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return falla<Recomendaciones>('sin sesión', 'leerRecomendaciones');
-    const res = await fetch('/api/recomendaciones', {
+    const query = pasosPosibles.length ? `?pasos=${encodeURIComponent(pasosPosibles.join(','))}` : '';
+    const res = await fetch(`/api/recomendaciones${query}`, {
       headers: { accept: 'application/json', authorization: `Bearer ${token}` },
     });
     const cuerpo: unknown = await res.json().catch(() => null);
@@ -100,4 +106,78 @@ export async function marcarUtil(id: string, util: boolean | null): Promise<Resu
   } catch (e) {
     return falla<null>(e, 'marcarUtil');
   }
+}
+
+// ── El paso del día elegido por la IA ────────────────────────────────────
+// Se elige el día anterior (junto con la recomendación del día) y queda
+// guardado para el día en que toca. Así se muestra al instante al abrir la app,
+// sin esperar al modelo.
+
+export type PasoElegido = { clave: string; mensaje: string };
+
+/** El paso que la IA eligió para `dia`, o null si no eligió ninguno. */
+export async function leerPasoElegido(dia: string): Promise<PasoElegido | null> {
+  try {
+    const { data, error } = await supabase
+      .from('recommendations')
+      .select('contenido')
+      .eq('periodo', 'paso')
+      .eq('clave', dia)
+      .maybeSingle();
+    // Sin la migración 0029 la tabla no existe: no hay paso elegido y decide
+    // la regla, que es lo que pasaba antes.
+    if (error || !data) return null;
+    const c = (data as { contenido: { clave?: unknown; mensaje?: unknown } | null }).contenido;
+    if (!c || typeof c.clave !== 'string' || typeof c.mensaje !== 'string') return null;
+    return { clave: c.clave, mensaje: c.mensaje };
+  } catch {
+    return null;
+  }
+}
+
+// ── Los planes de los objetivos ──────────────────────────────────────────
+
+export type PlanObjetivo = {
+  /** id de la fila de la recomendación, para marcar si sirvió. */
+  id: string;
+  objetivoId: string;
+  titulo: string;
+  texto: string;
+  /** Rango en la moneda del objetivo. null = sin monto o sin datos para estimar. */
+  separarPorSemana: { min: number; max: number } | null;
+  util: boolean | null;
+};
+
+/** El plan más reciente de cada objetivo, por id de objetivo. */
+export async function leerPlanesDeObjetivos(): Promise<Map<string, PlanObjetivo>> {
+  const planes = new Map<string, PlanObjetivo>();
+  try {
+    const { data, error } = await supabase
+      .from('recommendations')
+      .select('id, clave, contenido, util, created_at')
+      .eq('periodo', 'objetivo')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error || !data) return planes;
+    for (const fila of data as { id: string; clave: string; contenido: Record<string, unknown> | null; util: boolean | null }[]) {
+      const c = fila.contenido;
+      const objetivoId = fila.clave.split(':')[1];
+      if (!c || !objetivoId || planes.has(objetivoId)) continue;
+      if (typeof c.titulo !== 'string' || typeof c.texto !== 'string') continue;
+      const rango = c.separarPorSemana as { min?: unknown; max?: unknown } | null;
+      planes.set(objetivoId, {
+        id: fila.id,
+        objetivoId,
+        titulo: c.titulo,
+        texto: c.texto,
+        separarPorSemana: rango && typeof rango.min === 'number' && typeof rango.max === 'number' && rango.max > 0
+          ? { min: Math.max(0, Math.min(rango.min, rango.max)), max: Math.max(rango.min, rango.max) }
+          : null,
+        util: fila.util,
+      });
+    }
+  } catch {
+    // Sin planes, Objetivos muestra lo de siempre.
+  }
+  return planes;
 }

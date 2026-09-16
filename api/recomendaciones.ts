@@ -1,4 +1,17 @@
-// Vercel Serverless Function: las recomendaciones del día, la semana y el mes.
+// Vercel Serverless Function: el "agente" de FINA.
+//
+// Una sola llamada al modelo, como mucho una vez por día por persona, que arma
+// todo lo que en la app necesita pensar sobre sus datos:
+//
+//   · las recomendaciones de Home: del día, de la semana y del mes;
+//   · el paso del día de MAÑANA, elegido entre los que puede cumplir y con un
+//     mensaje que le habla a ella (junto con la del día);
+//   · un plan para cada objetivo en curso: cuánto separar por semana según su
+//     ritmo real (junto con la de la semana, o sea una vez por semana).
+//
+// Todo comparte la misma memoria de la persona (`recommendation_memory`) y el
+// mismo seguimiento de qué funcionó: lo que aprende mirando sus gastos le sirve
+// para el paso, y lo que aprende de qué pasos cumple le sirve para recomendar.
 //
 // Corre en el servidor, nunca en el navegador: la clave de Anthropic no puede
 // llegar al teléfono de nadie. Por eso se lee de ANTHROPIC_API_KEY y NO de una
@@ -8,22 +21,28 @@
 // policies de siempre (cada una sólo ve y escribe lo suyo) valen también acá.
 // No usa service_role, así que un error en esta función no puede leer ni
 // escribir datos de otra cuenta.
-//
-// Costo: una generación por período como mucho (la del día, una vez por día).
-// Si ya está guardada, se devuelve sin llamar al modelo.
 
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { PASOS } from '../src/app/api/v2/pasos.js';
 import { claveMes, claveSemana, diaAR, sumarDias } from './_recomendaciones/fechas.js';
-import { SISTEMA, Respuesta, armarMensaje, normalizar, type RecomendacionModelo, type RespuestaModelo } from './_recomendaciones/prompt.js';
 import {
-  armarResumen, armarSeguimiento, suficiencia,
-  type Entrada, type FilaGasto, type FilaMedio, type FilaObjetivo, type FilaPerfil, type FilaRecomendacion, type FilaSeccion, type Observacion, type Racha,
+  SISTEMA, Respuesta, armarMensaje, normalizar,
+  type PasoMananaModelo, type PlanObjetivoModelo, type RecomendacionModelo, type RespuestaModelo,
+} from './_recomendaciones/prompt.js';
+import {
+  armarPasosRecientes, armarResumen, armarSeguimiento, suficiencia,
+  type Entrada, type FilaGasto, type FilaMedio, type FilaObjetivo, type FilaPasoDelDia, type FilaPerfil,
+  type FilaRecomendacion, type FilaSeccion, type Observacion, type Racha,
 } from './_recomendaciones/resumen.js';
-import { revisarRecomendacion, type Problema } from './_recomendaciones/tono.js';
+import { revisarRecomendacion, revisarTexto, type Problema } from './_recomendaciones/tono.js';
 
-type Req = { method?: string; headers: Record<string, string | string[] | undefined> };
+type Req = {
+  method?: string;
+  headers: Record<string, string | string[] | undefined>;
+  query?: Record<string, string | string[] | undefined>;
+};
 type Res = { status(code: number): Res; json(body: unknown): void; setHeader(nombre: string, valor: string): void };
 
 type Periodo = 'dia' | 'semana' | 'mes';
@@ -36,8 +55,16 @@ export type Tarjeta =
   | { estado: 'no_configurado' }
   | { estado: 'error'; mensaje: string };
 
-const MODELO = 'claude-opus-5';
+// Sonnet 5: muy buena calidad para interpretar datos que ya le llegan
+// calculados, a menos de la mitad del precio por palabra que Opus. Cambiar de
+// modelo es esta línea.
+const MODELO = 'claude-sonnet-5';
 const ESPERA_ENTRE_INTENTOS = 20 * 60 * 1000;
+
+// El paso de mañana nunca puede ser "registrá tu primer gasto": ese lo decide
+// la regla (va primero siempre que no haya gastos), no el modelo.
+const PASOS_ELEGIBLES = new Map(PASOS.filter((p) => p.clave !== 'primer_gasto').map((p) => [p.clave as string, p]));
+const TITULO_PASO = new Map(PASOS.map((p) => [p.clave as string, p.titulo]));
 
 export default async function handler(req: Req, res: Res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -61,7 +88,18 @@ export default async function handler(req: Req, res: Res) {
 
   const ahora = Date.now();
   const hoy = diaAR(ahora);
+  const manana = sumarDias(hoy, 1);
   const claves: Record<Periodo, string> = { dia: hoy, semana: claveSemana(hoy), mes: claveMes(hoy) };
+
+  // Los pasos que la persona puede cumplir mañana. Los calcula la app (es la
+  // que sabe mirar sus datos con el catálogo); acá sólo se aceptan claves que
+  // existen en el catálogo.
+  const pedidos = String(Array.isArray(req.query?.pasos) ? req.query?.pasos[0] : req.query?.pasos ?? '')
+    .split(',').map((c) => c.trim()).filter((c) => PASOS_ELEGIBLES.has(c));
+  const pasosPosibles = [...new Set(pedidos)].map((c) => {
+    const p = PASOS_ELEGIBLES.get(c)!;
+    return { clave: p.clave as string, titulo: p.titulo, queHay: p.msg };
+  });
 
   // ── 1. Lo que ya está generado para este día / semana / mes ────────────
   const guardadas = await leerGuardadas(supabase, claves);
@@ -112,11 +150,22 @@ export default async function handler(req: Req, res: Res) {
   );
 
   // ── 5. Generar ─────────────────────────────────────────────────────────
-  const resumen = armarResumen(entrada);
-  const seguimiento = armarSeguimiento(entrada);
-  let generada: { respuesta: RespuestaModelo; descartadas: Periodo[] };
+  // El paso de mañana va con la del día, y los planes de los objetivos con la
+  // de la semana: así salen en la misma llamada, sin costo aparte, y con la
+  // frecuencia que tiene sentido para cada uno.
+  const objetivosEnCurso = entrada.objetivos.filter((o) => o.status === 'active');
+  const pedido: Pedido = {
+    periodos: aGenerar,
+    resumen: armarResumen(entrada),
+    memoria: entrada.memoria,
+    seguimiento: armarSeguimiento(entrada),
+    pasosPosibles: aGenerar.includes('dia') && pasosPosibles.length > 0 ? pasosPosibles : null,
+    pasosRecientes: armarPasosRecientes(entrada, TITULO_PASO),
+    planesObjetivos: aGenerar.includes('semana') && objetivosEnCurso.length > 0,
+  };
+  let generada: RespuestaModelo;
   try {
-    generada = await generar(apiKey, aGenerar, resumen, entrada.memoria, seguimiento);
+    generada = await generar(apiKey, pedido);
   } catch (e) {
     const mensaje = describirError(e);
     console.error('[recomendaciones] generar:', mensaje);
@@ -126,28 +175,46 @@ export default async function handler(req: Req, res: Res) {
   }
 
   // ── 6. Guardar y devolver ──────────────────────────────────────────────
-  // Se guardan TODOS los períodos generados, incluidos los que quedaron sin
-  // recomendación (contenido null): si no, la próxima vez que se abre Home se
-  // volvería a llamar al modelo para ese período.
-  const nuevas = aGenerar.map((p) => ({ p, r: generada.respuesta[p] }));
+  // "Insertar si no existe" y nunca "insertar o actualizar": desde el
+  // navegador sólo se puede cambiar `util` (migración 0029), y la función
+  // escribe con la sesión de la persona. Si dos dispositivos generan a la vez,
+  // el segundo no pisa al primero: se queda con la que ya estaba.
+  const filas: Record<string, unknown>[] = aGenerar.map((p) => {
+    const r = generada[p];
+    // Se guardan también los períodos sin recomendación (contenido null): si
+    // no, la próxima vez que se abre Home se volvería a llamar al modelo.
+    return {
+      user_id: uid, periodo: p, clave: claves[p], contenido: r,
+      foco_tipo: r?.foco.tipo ?? null, foco_ref: r?.foco.sobre ?? null, modelo: MODELO,
+    };
+  });
 
-  if (nuevas.length > 0) {
-    // "Insertar si no existe" y nunca "insertar o actualizar": desde el
-    // navegador sólo se puede cambiar `util` (migración 0029), y la función
-    // escribe con la sesión de la persona. Si dos dispositivos generan a la
-    // vez, el segundo no pisa al primero: se queda con la que ya estaba.
-    const { error } = await supabase.from('recommendations').upsert(
-      nuevas.map(({ p, r }) => ({
-        user_id: uid, periodo: p, clave: claves[p], contenido: r,
-        foco_tipo: r?.foco.tipo ?? null, foco_ref: r?.foco.sobre ?? null, modelo: MODELO,
-      })),
-      { onConflict: 'user_id,periodo,clave', ignoreDuplicates: true },
-    );
-    if (error) console.error('[recomendaciones] guardar:', error.message);
+  // El paso de mañana, sólo si eligió uno de los que se le ofrecieron.
+  const paso = generada.pasoManana;
+  if (pedido.pasosPosibles && paso && pasosPosibles.some((p) => p.clave === paso.clave)) {
+    filas.push({
+      user_id: uid, periodo: 'paso', clave: manana, contenido: paso,
+      foco_tipo: 'paso', foco_ref: paso.clave, modelo: MODELO,
+    });
   }
 
+  // Los planes, sólo de objetivos que existen y están en curso.
+  if (pedido.planesObjetivos) {
+    for (const plan of generada.objetivos) {
+      const objetivo = objetivosEnCurso.find((o) => o.id === plan.id);
+      if (!objetivo) continue;
+      filas.push({
+        user_id: uid, periodo: 'objetivo', clave: `${claves.semana}:${plan.id}`, contenido: plan,
+        foco_tipo: 'objetivo', foco_ref: objetivo.title, modelo: MODELO,
+      });
+    }
+  }
+
+  const { error } = await supabase.from('recommendations').upsert(filas, { onConflict: 'user_id,periodo,clave', ignoreDuplicates: true });
+  if (error) console.error('[recomendaciones] guardar:', error.message);
+
   await supabase.from('recommendation_memory').upsert(
-    { user_id: uid, observaciones: generada.respuesta.observaciones.slice(0, 8), updated_at: new Date().toISOString() },
+    { user_id: uid, observaciones: generada.observaciones.slice(0, 8), updated_at: new Date().toISOString() },
     { onConflict: 'user_id' },
   );
 
@@ -164,50 +231,59 @@ export default async function handler(req: Req, res: Res) {
 
 // ── Modelo ───────────────────────────────────────────────────────────────
 
-async function generar(
-  apiKey: string, periodos: Periodo[], resumen: unknown, memoria: Observacion[], seguimiento: unknown,
-): Promise<{ respuesta: RespuestaModelo; descartadas: Periodo[] }> {
+type Pedido = {
+  periodos: Periodo[];
+  resumen: unknown;
+  memoria: Observacion[];
+  seguimiento: unknown;
+  pasosPosibles: { clave: string; titulo: string; queHay: string }[] | null;
+  pasosRecientes: unknown;
+  planesObjetivos: boolean;
+};
+
+async function generar(apiKey: string, pedido: Pedido): Promise<RespuestaModelo> {
   // Sin reintentos automáticos y con un tiempo máximo por debajo del límite de
   // la función (60 s en vercel.json): si Vercel corta la función primero, la
   // persona recibe un error genérico en vez del mensaje amable.
   const client = new Anthropic({ apiKey, timeout: 55_000, maxRetries: 0 });
 
-  let respuesta = await pedir(client, periodos, resumen, memoria, seguimiento);
-  let problemas = revisar(respuesta, periodos);
+  let respuesta = await pedir(client, pedido);
+  let problemas = revisar(respuesta, pedido);
 
   // Un reintento si algo no pasó el control de tono, diciéndole qué usó.
   if (problemas.length > 0) {
     const correcciones = [...new Set(problemas.map((x) => `"${x.problema.fragmento}" (${x.problema.porque})`))];
-    respuesta = await pedir(client, periodos, resumen, memoria, seguimiento, correcciones);
-    problemas = revisar(respuesta, periodos);
+    respuesta = await pedir(client, pedido, correcciones);
+    problemas = revisar(respuesta, pedido);
   }
 
   // Lo que sigue sin pasar, no se muestra. Mejor sin recomendación que una que
-  // reta a la persona o se parece a un consejo de inversión.
-  const descartadas = [...new Set(problemas.map((x) => x.periodo))];
-  for (const p of descartadas) {
-    console.error('[recomendaciones] descartada por tono:', p, problemas.filter((x) => x.periodo === p).map((x) => x.problema));
-    respuesta = { ...respuesta, [p]: null };
-  }
-  return { respuesta, descartadas };
+  // reta a la persona o se parece a un consejo de inversión. Se descarta sólo
+  // la parte con problemas, no toda la respuesta.
+  const malas = new Set(problemas.map((x) => x.donde));
+  if (malas.size > 0) console.error('[recomendaciones] descartado por tono:', problemas);
+  return {
+    ...respuesta,
+    dia: malas.has('dia') ? null : respuesta.dia,
+    semana: malas.has('semana') ? null : respuesta.semana,
+    mes: malas.has('mes') ? null : respuesta.mes,
+    pasoManana: malas.has('paso') ? null : respuesta.pasoManana,
+    objetivos: respuesta.objetivos.filter((o) => !malas.has(`objetivo:${o.id}`)),
+  };
 }
 
-async function pedir(
-  client: Anthropic, periodos: Periodo[], resumen: unknown, memoria: Observacion[], seguimiento: unknown, correcciones?: string[],
-): Promise<RespuestaModelo> {
+async function pedir(client: Anthropic, pedido: Pedido, correcciones?: string[]): Promise<RespuestaModelo> {
   const mensaje = await client.beta.messages.parse({
     model: MODELO,
     max_tokens: 16000,
-    // Si el modelo declina por política, el servidor reintenta en el modelo
-    // de respaldo que corresponda en vez de devolver el rechazo.
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
     thinking: { type: 'adaptive' },
-    output_config: { effort: 'high', format: betaZodOutputFormat(Respuesta) },
+    // 'medium': los números le llegan calculados, lo que hace es interpretarlos.
+    // Subirlo a 'high' piensa más y cuesta más.
+    output_config: { effort: 'medium', format: betaZodOutputFormat(Respuesta) },
     // El prompt de sistema es fijo, así que se cachea: las generaciones de
     // todas las personas comparten ese prefijo.
     system: [{ type: 'text', text: SISTEMA, cache_control: { type: 'ephemeral' } }],
-    messages: [{ role: 'user', content: armarMensaje({ periodos, resumen, memoria, seguimiento, correcciones }) }],
+    messages: [{ role: 'user', content: armarMensaje({ ...pedido, correcciones }) }],
   });
 
   if (mensaje.stop_reason === 'refusal') throw new Error('El modelo declinó la solicitud');
@@ -216,11 +292,19 @@ async function pedir(
   return normalizar(mensaje.parsed_output);
 }
 
-function revisar(r: RespuestaModelo, periodos: Periodo[]): { periodo: Periodo; problema: Problema }[] {
-  return periodos.flatMap((p) => {
+function revisar(r: RespuestaModelo, pedido: Pedido): { donde: string; problema: Problema }[] {
+  const problemas: { donde: string; problema: Problema }[] = [];
+  for (const p of pedido.periodos) {
     const rec = r[p];
-    return rec ? revisarRecomendacion(rec).map((problema) => ({ periodo: p, problema })) : [];
-  });
+    if (rec) problemas.push(...revisarRecomendacion(rec).map((problema) => ({ donde: p, problema })));
+  }
+  const paso: PasoMananaModelo | null = r.pasoManana;
+  if (paso) problemas.push(...revisarTexto('paso', paso.mensaje).map((problema) => ({ donde: 'paso', problema })));
+  for (const plan of r.objetivos as PlanObjetivoModelo[]) {
+    problemas.push(...[...revisarTexto('titulo', plan.titulo), ...revisarTexto('texto', plan.texto)]
+      .map((problema) => ({ donde: `objetivo:${plan.id}`, problema })));
+  }
+  return problemas;
 }
 
 function describirError(e: unknown): string {
@@ -246,6 +330,7 @@ async function leerGuardadas(supabase: Cliente, claves: Record<Periodo, string>)
   const { data, error } = await supabase
     .from('recommendations')
     .select('id, periodo, clave, contenido, util')
+    .in('periodo', PERIODOS)
     .in('clave', Object.values(claves));
   if (error) return { filas: [], error: error.message };
   return { filas: (data ?? []) as Guardada[], error: null };
@@ -255,8 +340,9 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
   const hoy = diaAR(ahora);
   const hace90 = `${sumarDias(hoy, -90)}T00:00:00-03:00`;
   const hace30 = `${sumarDias(hoy, -30)}T00:00:00-03:00`;
+  const hace21 = sumarDias(hoy, -21);
 
-  const [gastos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial] = await Promise.all([
+  const [gastos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA] = await Promise.all([
     supabase.from('transactions').select('amount_ars, occurred_at, created_at, section_id, expense_type, payment_method, source')
       .eq('type', 'expense').gte('occurred_at', hace90).order('occurred_at', { ascending: true }),
     supabase.from('expense_sections').select('id, name, cap_amount, cap_period').eq('archived', false),
@@ -268,10 +354,12 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
     supabase.rpc('mi_racha'),
     supabase.from('recommendation_memory').select('observaciones, ultimo_intento').maybeSingle(),
     supabase.from('recommendations').select('periodo, clave, contenido, foco_tipo, foco_ref, util, created_at')
-      .order('created_at', { ascending: false }).limit(10),
+      .in('periodo', PERIODOS).order('created_at', { ascending: false }).limit(10),
+    supabase.from('daily_steps').select('day, step_key, completed_at').gte('day', hace21).order('day', { ascending: false }),
+    supabase.from('recommendations').select('clave, foco_ref').eq('periodo', 'paso').gte('clave', hace21),
   ]);
 
-  const error = [gastos, secciones, medios, objetivos, perfil, inversor, aportes, memoria, historial].find((r) => r.error)?.error;
+  const error = [gastos, secciones, medios, objetivos, perfil, inversor, aportes, memoria, historial, pasos, pasosIA].find((r) => r.error)?.error;
   if (error) return { error: error.message };
 
   return {
@@ -288,5 +376,7 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
     memoria: ((memoria.data as { observaciones: Observacion[] } | null)?.observaciones ?? []),
     ultimoIntento: (memoria.data as { ultimo_intento: string | null } | null)?.ultimo_intento ?? null,
     historial: (historial.data ?? []) as FilaRecomendacion[],
+    pasosDelDia: (pasos.data ?? []) as FilaPasoDelDia[],
+    pasosElegidosPorIA: ((pasosIA.data ?? []) as { clave: string; foco_ref: string | null }[]).map((f) => `${f.clave}:${f.foco_ref}`),
   };
 }

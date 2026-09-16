@@ -160,6 +160,30 @@ export function pasoPorClave(clave: string): Paso | undefined {
   return PASOS.find((p) => p.clave === clave);
 }
 
+// ── El paso elegido por la IA ────────────────────────────────────────────
+/**
+ * Los pasos entre los que la IA puede elegir el de mañana: los que la persona
+ * puede cumplir, menos el de hoy (mañana tiene que ser otro) y menos "tu primer
+ * gasto", que lo decide la regla.
+ */
+export function pasosPosiblesManana(e: EstadoV2, claveDeHoy: string | null): ClavePaso[] {
+  return PASOS.filter((p) => p.clave !== 'primer_gasto' && p.clave !== claveDeHoy && p.aplica(e)).map((p) => p.clave);
+}
+
+/**
+ * Si el paso que la IA eligió ayer para hoy todavía sirve. Se eligió con los
+ * datos de ayer: desde entonces pudo haberse vuelto imposible o ya estar hecho
+ * (si le eligió "poné un tope" y anoche puso uno, hoy se cumpliría solo y la
+ * racha sumaría un día sin hacer nada). En ese caso decide la regla.
+ */
+export function pasoElegidoSirve(e: EstadoV2, clave: string, claveDeAyer: string | null): boolean {
+  const p = pasoPorClave(clave);
+  if (!p || p.clave === 'primer_gasto' || clave === claveDeAyer) return false;
+  // Sin gastos, el primero siempre es registrar uno.
+  if (pasoPorClave('primer_gasto')!.aplica(e)) return false;
+  return p.aplica(e);
+}
+
 // ── A quién le toca cuál ─────────────────────────────────────────────────
 /**
  * Elige el paso de hoy.

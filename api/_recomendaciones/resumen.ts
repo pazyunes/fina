@@ -31,6 +31,7 @@ export type FilaPerfil = { main_goal: string | null; income_stability: string | 
 export type FilaRecomendacion = { periodo: string; clave: string; contenido: { titulo?: string }; foco_tipo: string | null; foco_ref: string | null; util: boolean | null; created_at: string };
 export type Racha = { dias: number; hoyCumplido: boolean };
 export type Observacion = { texto: string; evidencia: string };
+export type FilaPasoDelDia = { day: string; step_key: string; completed_at: string | null };
 
 export type Entrada = {
   ahora: number;
@@ -44,6 +45,13 @@ export type Entrada = {
   racha: Racha | null;
   memoria: Observacion[];
   historial: FilaRecomendacion[];
+  /** Los pasos del día de las últimas semanas, para aprender cuáles cumple. */
+  pasosDelDia: FilaPasoDelDia[];
+  /**
+   * Los pasos que eligió el modelo, como 'día:clave'. Si ese día quedó otro
+   * paso (el elegido ya no se podía cumplir), lo eligió la regla fija.
+   */
+  pasosElegidosPorIA: string[];
 };
 
 const redondo = (n: number) => Math.round(n);
@@ -148,6 +156,7 @@ export function armarResumen(e: Entrada) {
     const juntado = redondo(suma(aportes.map((a) => Number(a.amount))));
     const ult30o = redondo(suma(aportes.filter((a) => diasEntre(diaAR(a.occurred_at), hoy) <= 29).map((a) => Number(a.amount))));
     return {
+      id: o.id,
       nombre: o.title, moneda: o.currency, horizonte: o.horizon_label,
       montoObjetivo: o.amount_ars === null ? null : Number(o.amount_ars),
       comoSeSabeElMonto: o.amount_mode,
@@ -240,4 +249,21 @@ export function armarSeguimiento(e: Entrada) {
       ...(queSeMidio ? { queSeMidio, semanaAnterior: antes, desdeEntonces: despues, diasTranscurridos: diasDespues } : {}),
     };
   });
+}
+
+// ── Los pasos del día de las últimas semanas ────────────────────────────
+// Para que el modelo aprenda qué pasos cumple esta persona y cuáles no, y si
+// los que eligió él funcionaron mejor que los de la regla fija. El título sale
+// del catálogo que le pasa quien llama.
+export function armarPasosRecientes(e: Entrada, titulos: Map<string, string>) {
+  const hoy = diaAR(e.ahora);
+  const elegidos = new Set(e.pasosElegidosPorIA);
+  return e.pasosDelDia
+    .filter((p) => p.day < hoy)
+    .map((p) => ({
+      dia: p.day,
+      paso: titulos.get(p.step_key) ?? p.step_key,
+      loCumplio: !!p.completed_at,
+      loElegisteVos: elegidos.has(`${p.day}:${p.step_key}`),
+    }));
 }

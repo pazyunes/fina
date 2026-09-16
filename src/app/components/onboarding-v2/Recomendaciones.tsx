@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import { COLORS, EstadoConfianza, FONTS, TituloSeccion } from './shared';
 import { LinkWhatsApp } from './LinkWhatsApp';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
+import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
+import { pasosPosiblesManana } from '../../api/v2/pasos';
 import {
   PERIODOS_RECOMENDACION, leerRecomendaciones, marcarUtil, recomendacionesRecordadas,
   type DestinoRecomendacion, type PeriodoRecomendacion, type Recomendaciones as RecomendacionesT, type TarjetaRecomendacion,
@@ -35,10 +38,14 @@ const RUTA: Record<Exclude<DestinoRecomendacion, 'whatsapp'>, string> = {
 export function Recomendaciones() {
   const [datos, setDatos] = useState<RecomendacionesT | null>(() => recomendacionesRecordadas());
   const [fallo, setFallo] = useState(false);
+  const { estado } = useAlmacen();
+  const { paso } = usePasoDelDia();
 
   useEffect(() => {
     let vivo = true;
-    void leerRecomendaciones().then((r) => {
+    // Junto con la recomendación del día, la IA elige el paso de mañana entre
+    // los que la persona puede cumplir.
+    void leerRecomendaciones(pasosPosiblesManana(estado, paso?.clave ?? null)).then((r) => {
       if (!vivo) return;
       if (r.error !== null) { if (!recomendacionesRecordadas()) setFallo(true); return; }
       setFallo(false);
