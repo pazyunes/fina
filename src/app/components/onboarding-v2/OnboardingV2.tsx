@@ -68,7 +68,7 @@ type StepKey =
   | 'intro' | 'nombre' | 'genero' | 'edad' | 'objetivo' | 'situacion' | 'zona'
   | 'ingresos' | 'estabilidadIngresos' | 'tedioso'
   | 'invReaccion' | 'invYaInvierte' | 'objetivoInversion' | 'definirObjetivo'
-  | 'intermedia' | 'comoConocio' | 'terminos' | 'login';
+  | 'intermedia' | 'comoConocio' | 'login';
 
 // Qué dice Fini en cada pantalla, y con qué cara.
 //
@@ -97,8 +97,9 @@ const FINI_DICE: Record<StepKey, { dice: string; estado: FiniState } | null> = {
   definirObjetivo: { dice: 'Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.', estado: 'progreso' },
   intermedia: null,
   comoConocio: { dice: 'Última, prometido. Nos ayuda a saber dónde contarle a más gente.', estado: 'idle' },
-  terminos: { dice: 'Tus datos son privados — solo se usan para darte recomendaciones a vos. Nunca los compartimos ni los vendemos.', estado: 'idle' },
-  login: { dice: 'Todos los meses vas a poder ver cómo venís.', estado: 'idle' },
+  // Los términos se aceptan en la misma pantalla en que se crea la cuenta, así
+  // que el mensaje de privacidad va acá.
+  login: { dice: 'Tus datos son privados: solo se usan para darte recomendaciones a vos. Nunca los compartimos ni los vendemos.', estado: 'idle' },
 };
 
 const CTA_LABELS: Record<StepKey, string> = {
@@ -118,7 +119,6 @@ const CTA_LABELS: Record<StepKey, string> = {
   definirObjetivo: 'Guardar objetivo',
   intermedia: 'Genial, sigamos',
   comoConocio: 'Continuar',
-  terminos: 'Aceptar y continuar',
   login: 'Continuar',
 };
 
@@ -143,7 +143,7 @@ const AUTO_AVANCE: StepKey[] = [
 
 // Pasos que cuentan para el contador "Pregunta N de M" — los de trámite
 // (intro, intermedia, términos, login) no son preguntas y no suman.
-const NO_ES_PREGUNTA: StepKey[] = ['intro', 'intermedia', 'terminos', 'login'];
+const NO_ES_PREGUNTA: StepKey[] = ['intro', 'intermedia', 'login'];
 
 const GENEROS: { id: GeneroId; label: string; muted?: boolean }[] = [
   { id: 'femenino', label: 'Femenino' },
@@ -408,7 +408,8 @@ export function OnboardingV2() {
     if (meta === 'invertir') f.push('invReaccion', 'invYaInvierte', 'objetivoInversion');
     else if (meta === 'objetivo') f.push('definirObjetivo');
     // 'ahorrar' y 'no_claro' siguen el flujo normal, sin pasos extra.
-    f.push('intermedia', 'comoConocio', 'terminos', 'login');
+    // Los términos ya no son un paso aparte: se aceptan al crear la cuenta.
+    f.push('intermedia', 'comoConocio', 'login');
     return f;
   }, [meta]);
   const currentKey = flow[Math.min(currentIdx, flow.length - 1)];
@@ -451,8 +452,7 @@ export function OnboardingV2() {
     if (key === 'invYaInvierte') return !!invYaInvierte;
     if (key === 'objetivoInversion') return !!invPorQue;
     if (key === 'definirObjetivo') return objNombre.trim().length > 0 && parseMoneyInput(objMonto) > 0;
-    if (key === 'terminos') return aceptoTerminos;
-    if (key === 'login') return emailOk && passwordOk && telefonoOk;
+    if (key === 'login') return emailOk && passwordOk && telefonoOk && aceptoTerminos;
     return true;
   }
 
@@ -1030,30 +1030,6 @@ export function OnboardingV2() {
                 </>
               )}
 
-              {currentKey === 'terminos' && (
-                <>
-                  <Titulo>Antes de seguir</Titulo>
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={aceptoTerminos}
-                    onClick={() => setAceptoTerminos((v) => !v)}
-                    className="v2-focus flex items-center gap-3 text-left rounded-2xl p-4 transition-all duration-100 active:scale-[0.99]"
-                    style={{ background: COLORS.surface, border: `1px solid ${COLORS.line}` }}
-                  >
-                    <span
-                      className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: aceptoTerminos ? COLORS.brand : 'transparent', border: aceptoTerminos ? 'none' : `2px solid ${COLORS.lineStrong}` }}
-                    >
-                      {aceptoTerminos && <CheckIcon />}
-                    </span>
-                    <span className="text-[15px] font-medium" style={{ color: COLORS.ink }}>
-                      Acepto los <LinkLegal url={TERMINOS_URL}>términos y condiciones</LinkLegal> y la <LinkLegal url={PRIVACIDAD_URL}>política de privacidad</LinkLegal>.
-                    </span>
-                  </button>
-                </>
-              )}
-
               {currentKey === 'login' && !finished && pasoLogin === 'datos' && (
                 <>
                   <Titulo>Guardá tu progreso</Titulo>
@@ -1081,16 +1057,44 @@ export function OnboardingV2() {
                   <p className="text-[14px]" style={{ color: COLORS.inkFaint }}>
                     Te lo pedimos para que puedas registrar gastos por WhatsApp. Todavía no lo verificamos con un SMS.
                   </p>
-                  {/* Los términos se aceptaron un paso antes, con su casilla y
-                      su fecha guardada. Acá van los LINKS, no una segunda
-                      aceptación: es el momento en que la persona crea la
-                      cuenta, y es donde va a buscarlos si los quiere leer.
-                      Pedir el consentimiento dos veces no lo hace más válido,
-                      sólo más molesto. */}
-                  <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-                    Al crear tu cuenta valen los <LinkLegal url={TERMINOS_URL}>términos y condiciones</LinkLegal>{' '}
-                    y la <LinkLegal url={PRIVACIDAD_URL}>política de privacidad</LinkLegal> que aceptaste.
-                  </p>
+                  {/* Los términos se aceptan acá, en la misma pantalla en que
+                      se crea la cuenta: es el momento en que el consentimiento
+                      tiene sentido, y un paso aparte antes era una pantalla más
+                      que no pedía nada propio. Sin aceptar no se crea la cuenta. */}
+                  <div className="flex flex-col gap-1.5">
+                    <div
+                      className="flex items-center gap-3 rounded-2xl p-4"
+                      style={{ background: COLORS.surface, border: `1px solid ${intentoLogin && !aceptoTerminos ? COLORS.naranja : COLORS.line}` }}
+                    >
+                      <button
+                        type="button"
+                        role="checkbox"
+                        aria-checked={aceptoTerminos}
+                        aria-label="Acepto los términos y condiciones y la política de privacidad"
+                        onClick={() => setAceptoTerminos((v) => !v)}
+                        className="v2-focus w-11 h-11 -m-2.5 rounded-xl flex items-center justify-center shrink-0 transition-all duration-100 active:scale-95"
+                      >
+                        <span
+                          className="w-6 h-6 rounded-lg flex items-center justify-center"
+                          style={{ background: aceptoTerminos ? COLORS.brand : 'transparent', border: aceptoTerminos ? 'none' : `2px solid ${COLORS.lineStrong}` }}
+                        >
+                          {aceptoTerminos && <CheckIcon />}
+                        </span>
+                      </button>
+                      {/* Tocar el texto también marca la casilla, salvo que se
+                          toque uno de los links para leerlos. */}
+                      <span
+                        className="text-[15px] font-medium leading-snug cursor-pointer"
+                        style={{ color: COLORS.ink }}
+                        onClick={(e) => { if (!(e.target as HTMLElement).closest('a')) setAceptoTerminos((v) => !v); }}
+                      >
+                        Acepto los <LinkLegal url={TERMINOS_URL}>términos y condiciones</LinkLegal> y la <LinkLegal url={PRIVACIDAD_URL}>política de privacidad</LinkLegal>.
+                      </span>
+                    </div>
+                    {intentoLogin && !aceptoTerminos && (
+                      <p className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>Para crear tu cuenta tenés que aceptarlos.</p>
+                    )}
+                  </div>
                   {cuentaExistente && (
                     <div role="alert" className="rounded-2xl px-4 py-3.5 flex flex-col gap-2.5" style={{ background: COLORS.brandSoft }}>
                       <p className="text-[16px] leading-snug" style={{ color: COLORS.ink }}>
