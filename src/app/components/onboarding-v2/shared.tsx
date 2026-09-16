@@ -405,7 +405,7 @@ export function subirPendientesLocales() {
 const LS_NOMBRE = 'fina_v2_nombre';
 export function saveV2Nombre(nombre: string) {
   escribirLocal(LS_NOMBRE, nombre);
-  acciones.guardarPerfil({ nombre }, 'Guardamos tu nombre.');
+  acciones.guardarPerfil({ nombre }, 'Nombre guardado con éxito.');
 }
 export function loadV2Nombre(): string {
   return leerEstado().perfil.nombre || leerLocal(LS_NOMBRE) || '';
@@ -679,7 +679,7 @@ export function loadV2TerminosAceptados(): boolean {
 const LS_NIVEL_FIN = 'fina_v2_nivel_financiero';
 export function saveV2NivelFinanciero(nivel: string) {
   escribirLocal(LS_NIVEL_FIN, nivel);
-  acciones.guardarPerfil({ nivelFinanciero: nivel }, 'Guardamos tu nivel financiero.');
+  acciones.guardarPerfil({ nivelFinanciero: nivel }, 'Nivel financiero guardado con éxito.');
 }
 export function loadV2NivelFinanciero(): string | null {
   return leerEstado().perfil.nivelFinanciero ?? leerLocal(LS_NIVEL_FIN);
@@ -1374,7 +1374,7 @@ export function vistaInversiones(): VistaInversiones {
 const LS_RESERVA = 'fina_v2_reserva';
 export function saveV2Reserva(monto: number) {
   escribirLocal(LS_RESERVA, String(monto));
-  acciones.guardarPerfil({ reserva: monto }, 'Actualizamos tu reserva.');
+  acciones.guardarPerfil({ reserva: monto }, 'Reserva actualizada con éxito.');
 }
 export function loadV2Reserva(): number {
   if (estaHidratado()) return leerEstado().perfil.reserva;

@@ -101,7 +101,7 @@ export async function marcarUtil(id: string, util: boolean | null): Promise<Resu
       }
       ultima = nueva;
     }
-    if (util !== null) avisarConfirmacion('Gracias. Lo tenemos en cuenta para las próximas.');
+    if (util !== null) avisarConfirmacion('Respuesta guardada con éxito.');
     return ok(null);
   } catch (e) {
     return falla<null>(e, 'marcarUtil');

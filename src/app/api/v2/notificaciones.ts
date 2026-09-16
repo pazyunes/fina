@@ -98,7 +98,7 @@ export async function activarNotificaciones(): Promise<{ resultado: ResultadoAct
     }, { onConflict: 'endpoint' });
     if (error) return { resultado: 'error', error: error.message };
 
-    avisarConfirmacion('Listo: te van a llegar los avisos de FINA en este dispositivo.');
+    avisarConfirmacion('Avisos activados con éxito.');
     return { resultado: 'activadas' };
   } catch (e) {
     console.error('[push] activar:', e);
@@ -113,7 +113,7 @@ export async function desactivarNotificaciones(): Promise<Resultado<null>> {
       await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
       await sub.unsubscribe();
     }
-    avisarConfirmacion('Listo: ya no te llegan avisos en este dispositivo.');
+    avisarConfirmacion('Avisos desactivados con éxito.');
     return ok(null);
   } catch (e) {
     return falla<null>(e, 'desactivarNotificaciones');
@@ -143,7 +143,7 @@ export async function guardarPreferenciasAvisos(p: PreferenciasAvisos): Promise<
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
   if (error) return falla<null>(error.message, 'guardarPreferenciasAvisos');
-  avisarConfirmacion('Guardamos qué avisos querés recibir.');
+  avisarConfirmacion('Preferencias guardadas con éxito.');
   return ok(null);
 }
 

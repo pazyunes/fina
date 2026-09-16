@@ -333,14 +333,32 @@ export async function registrarGasto(g: {
  * no de lo que crea el cliente. Si sólo se borrara el gasto, el disponible
  * quedaría descontado para siempre por algo que ya no existe.
  */
+/**
+ * Borra UNA fila por id y confirma que de verdad se borró.
+ *
+ * Supabase no da error cuando un borrado no borra nada: si la base no deja
+ * borrar esa fila (una policy, o la fila ya no existe), contesta "ok" con cero
+ * filas. Sin este chequeo la app mostraba "se borró" y al recargar el gasto
+ * volvía. Por eso se pide que devuelva lo que borró, y si no borró nada, es un
+ * error.
+ */
+async function borrarFila(tabla: string, id: string, contexto: string): Promise<Resultado<null>> {
+  const r = await correr<{ id: string }[]>(contexto, () =>
+    supabase.from(tabla).delete().eq('id', id).select('id'),
+  );
+  if (r.error !== null) {
+    return falla<null>(/foreign key/i.test(r.error) ? 'no se puede borrar porque está usado en otro lado' : r.error, contexto);
+  }
+  if (!r.data || r.data.length === 0) return falla<null>('no se pudo borrar. Volvé a cargar y probá de nuevo', contexto);
+  return ok(null);
+}
+
 export async function borrarGasto(id: string): Promise<Resultado<null>> {
   const previo = await correr<{ amount_ars: number; payment_method: string | null } | null>('borrarGasto/leer', () =>
     supabase.from('transactions').select('amount_ars, payment_method').eq('id', id).maybeSingle(),
   );
 
-  const borrado = await correr<null>('borrarGasto', () =>
-    supabase.from('transactions').delete().eq('id', id).then(({ error }) => ({ data: null, error })),
-  );
+  const borrado = await borrarFila('transactions', id, 'borrarGasto');
   if (borrado.error !== null) return borrado;
 
   const medio = previo.data?.payment_method;
@@ -451,9 +469,7 @@ export async function editarObjetivo(id: string, o: Partial<Pick<Objetivo, 'nomb
 }
 
 export async function borrarObjetivo(id: string): Promise<Resultado<null>> {
-  return correr<null>('borrarObjetivo', () =>
-    supabase.from('goals').delete().eq('id', id).then(({ error }) => ({ data: null, error })),
-  );
+  return borrarFila('goals', id, 'borrarObjetivo');
 }
 
 export async function sumarContribucion(objetivoId: string, c: {
@@ -486,9 +502,7 @@ export async function sumarContribucion(objetivoId: string, c: {
 }
 
 export async function borrarContribucion(id: string): Promise<Resultado<null>> {
-  return correr<null>('borrarContribucion', () =>
-    supabase.from('goal_contributions').delete().eq('id', id).then(({ error }) => ({ data: null, error })),
-  );
+  return borrarFila('goal_contributions', id, 'borrarContribucion');
 }
 
 // ── Inversiones ──────────────────────────────────────────────────────────
@@ -584,9 +598,7 @@ export async function editarAporte(id: string, a: { instrumento?: string; monto?
 }
 
 export async function borrarAporte(id: string): Promise<Resultado<null>> {
-  return correr<null>('borrarAporte', () =>
-    supabase.from('investment_contributions').delete().eq('id', id).then(({ error }) => ({ data: null, error })),
-  );
+  return borrarFila('investment_contributions', id, 'borrarAporte');
 }
 
 // ── El paso del día y la racha ───────────────────────────────────────────
