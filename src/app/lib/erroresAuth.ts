@@ -21,6 +21,12 @@ export function traducirErrorAuth(msg: string): string {
     return 'Ese teléfono ya está usado por otra cuenta.';
   }
   if (m.includes('invalid email')) return 'Ese mail no parece válido.';
+  if (m.includes('should be different')) {
+    return 'La contraseña nueva tiene que ser distinta de la que tenías.';
+  }
+  if (m.includes('session') && (m.includes('missing') || m.includes('expired'))) {
+    return 'El link ya no sirve. Pedí uno nuevo y probá otra vez.';
+  }
   if (m.includes('password')) return 'La contraseña no cumple los requisitos.';
   if (m.includes('rate limit') || m.includes('too many')) {
     return 'Demasiados intentos seguidos. Esperá un minuto y probá de nuevo.';

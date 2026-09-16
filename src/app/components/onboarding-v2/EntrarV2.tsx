@@ -19,14 +19,14 @@ import { IconChevron } from './FinaIcons';
 // un botón, y mandar a la persona a otra pantalla para escribir el mismo mail
 // que ya escribió es hacerle repetir el trabajo.
 
-function emailValido(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
+export function emailValido(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
 
-const inputClass = 'v2-focus rounded-2xl px-4 py-3 text-[18px] outline-none transition-colors w-full';
-function inputStyle(err = false): React.CSSProperties {
+export const inputClass = 'v2-focus rounded-2xl px-4 py-3 text-[18px] outline-none transition-colors w-full';
+export function inputStyle(err = false): React.CSSProperties {
   return { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${err ? COLORS.naranja : COLORS.line}` };
 }
 
-function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+export function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</label>
