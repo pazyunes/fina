@@ -11,7 +11,8 @@
 // NO es seguridad. Cualquiera que sepa el parámetro entra, y el código de la
 // app viaja igual al navegador. Sirve para que nadie se tope con la app por
 // accidente, no para proteger datos: eso lo hacen las policies de RLS.
-export const APP_CERRADA = true;
+// Abierta desde el 16 de septiembre de 2026, con la app nueva (v2).
+export const APP_CERRADA = false;
 
 const LLAVE = 'fina_ver_igual';
 

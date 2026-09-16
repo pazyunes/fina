@@ -1,43 +1,19 @@
 import { Navigate } from 'react-router';
 import { useAuth } from '../lib/auth';
-import { Splash } from './Splash';
-import { APP_CERRADA } from '../mantenimiento';
 
-// Entry-point en `/`. Reglas:
-//   - Sin sesión → muestra Splash (FINA + 2 CTAs).
-//   - Con sesión + informe ya generado → redirige a /result.
-//   - Con sesión sin informe → directo al primer step del onboarding
-//     (/personal-data). PR6b: ya no hay una pantalla intermedia /welcome.
-// Mientras se resuelve la sesión inicial o el hasReport (null) muestra
-// un loading silencioso para evitar el flash de Splash a usuarios logueados.
+// Entry-point en `/`: la app nueva (v2), que es la definitiva.
+//   - Sin sesión → el onboarding, que es la puerta de entrada.
+//   - Con sesión → Home. Mandar a alguien que ya tiene cuenta a rehacer el
+//     onboarding sería pedirle que conteste de nuevo todo lo que ya contestó.
+//
+// Antes `/` llevaba al flujo viejo (Splash → /result) y sólo con la app
+// cerrada redirigía al nuevo. Al abrirla, `/` tiene que seguir yendo al nuevo:
+// si no, abrir la app mostraba la versión anterior. El flujo viejo sigue
+// alcanzable escribiendo /login, /result, etc.
 export function RootRedirect() {
-  const { session, loading, hasReport } = useAuth();
-
-  // Mientras la app está CERRADA (ver mantenimiento.ts), quien entra con la
-  // llave va al flujo nuevo. Antes caía en el Splash del flujo viejo, que es
-  // lo que sigue viviendo en `/`: el rediseño todavía no reemplazó a la app
-  // real, es una ruta aparte. Sin esto, entrar por /?ver=fina mostraba la
-  // pantalla vieja y había que saberse /onboarding-v2 de memoria.
-  // El flujo viejo sigue alcanzable escribiendo /login, /result, etc.
-  //
-  // Con sesión va directo a Home: ahora las cuentas del v2 son reales, y
-  // mandar a alguien que ya tiene cuenta a rehacer el onboarding sería
-  // pedirle que conteste de nuevo todo lo que ya contestó.
-  if (APP_CERRADA) {
-    if (loading) return <CenteredLoading />;
-    return <Navigate to={session ? '/onboarding-v2/home' : '/onboarding-v2'} replace />;
-  }
-
-  // Loading inicial de la sesión.
+  const { session, loading } = useAuth();
   if (loading) return <CenteredLoading />;
-
-  // Sin sesión: pantalla de bienvenida con los dos CTAs.
-  if (!session) return <Splash />;
-
-  // Con sesión pero todavía no sabemos si tiene informe.
-  if (hasReport === null) return <CenteredLoading />;
-
-  return <Navigate to={hasReport ? '/result' : '/personal-data'} replace />;
+  return <Navigate to={session ? '/onboarding-v2/home' : '/onboarding-v2'} replace />;
 }
 
 function CenteredLoading() {
