@@ -50,7 +50,10 @@
 .fini-st-saludo .fini-torso{animation:fini_lean calc(2.6s * var(--sp)) ease-in-out var(--iter)}
 .fini-st-saludo .p-mouth{opacity:0}
 .fini-st-saludo .p-mouth-open{opacity:1}
-@keyframes fini_wave{0%,100%{rotate:0deg}10%{rotate:-64deg}22%{rotate:-34deg}34%{rotate:-64deg}46%{rotate:-34deg}58%{rotate:-64deg}74%{rotate:0deg}}
+/* El saludo sube el brazo hasta -38° y no hasta -64° como venía en el paquete:
+   a -64° la mano quedaba encima de la punta derecha de la estrella y el brazo
+   se veía despegado del cuerpo, justo en la primera pantalla de la app. */
+@keyframes fini_wave{0%,100%{rotate:0deg}12%{rotate:-38deg}24%{rotate:-18deg}36%{rotate:-38deg}48%{rotate:-18deg}60%{rotate:-38deg}76%{rotate:0deg}}
 @keyframes fini_lean{0%,100%{rotate:0deg}20%,58%{rotate:-3.5deg}}
 
 /* ---------- dato recibido ---------- */
@@ -193,7 +196,7 @@
 .fini .p-leg-r{transform-origin:28.5% 2.1%}
 .fini .p-body{left:22.40%;top:14.45%;width:56.05%;height:53.75%}
 .fini .p-mouth{left:46.20%;top:48.35%;width:6.25%;height:3.60%}
-.fini .p-mouth-open{left:46.69%;top:45.85%;width:7.92%;height:5.29%}
+.fini .p-mouth-open{left:45.37%;top:45.85%;width:7.92%;height:5.29%} /* centrada con los ojos: con 46.69% quedaba corrida a la derecha (se ve en el saludo y en el logro) */
 .fini .p-eye-l{left:43.05%;top:41.00%;width:3.45%;height:6.75%}
 .fini .p-eye-r{left:52.15%;top:41.05%;width:3.50%;height:6.70%}
 .fini .p-eye-happy-l{left:43.70%;top:40.19%;width:5.70%;height:3.80%}
