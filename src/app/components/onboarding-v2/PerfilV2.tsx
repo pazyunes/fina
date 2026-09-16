@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import { ArmarGrupoBtn, COLORS, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
 import { VerificarTelefono } from './VerificarTelefono';
+import { AvisosFina } from './AvisosFina';
 import { llevarA, useAlLlegar } from './alLlegar';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 
@@ -256,6 +257,8 @@ export function PerfilV2() {
       <section ref={verificarRef}>
         <VerificarTelefono pedirYa={pedirCodigoYa} />
       </section>
+
+      <AvisosFina />
 
       <ArmarGrupoBtn />
 
