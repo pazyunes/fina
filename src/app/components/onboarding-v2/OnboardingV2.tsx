@@ -18,7 +18,7 @@ import { useAuth } from '../../lib/auth';
 import { formatearTelefonoAr, problemaTelefonoAr, telefonoE164, telefonoValidoAr } from '../../lib/telefono';
 import { emailValido } from '../../lib/email';
 import { emailTieneCuenta, telefonoTieneCuenta } from '../../api/v2/cuenta';
-import { SugerenciaMail } from './EntrarV2';
+import { InputContrasena, SugerenciaMail } from './EntrarV2';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 import { traducirErrorAuth } from '../../lib/erroresAuth';
 import { crearObjetivo, crearSeccion, guardarPerfil, guardarPerfilInversor } from '../../api/v2';
@@ -1062,7 +1062,7 @@ export function OnboardingV2() {
                   </Campo>
                   <SugerenciaMail email={email} onUsar={(c) => { setEmail(c); setCuentaExistente(null); }} />
                   <Campo label="Contraseña" error={intentoLogin && !passwordOk ? 'Mínimo 8 caracteres, con una mayúscula, un número y un carácter especial' : undefined}>
-                    <input type="password" className={inputClass} style={inputStyle(intentoLogin && !passwordOk)} placeholder="Elegí una contraseña segura" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+                    <InputContrasena className={inputClass} style={inputStyle(intentoLogin && !passwordOk)} placeholder="Elegí una contraseña segura" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
                   </Campo>
                   <Campo label="Teléfono" error={intentoLogin && !telefonoOk ? problemaTelefonoAr(telefono) ?? undefined : undefined}>
                     <div className="flex gap-2">

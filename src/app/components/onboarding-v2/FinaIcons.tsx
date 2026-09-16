@@ -232,3 +232,25 @@ export function IconPerfil(p: IconProps) {
     </Svg>
   );
 }
+
+// Ojo — mostrar la contraseña.
+export function IconOjo(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </Svg>
+  );
+}
+
+// Ojo tachado — ocultar la contraseña.
+export function IconOjoTachado(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M10.6 5.6A9.9 9.9 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.6 3.4M6.6 6.7C4 8.3 2.5 12 2.5 12S6 18.5 12 18.5c1.7 0 3.2-.5 4.5-1.2" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="M3.5 3.5l17 17" />
+    </Svg>
+  );
+}
+

@@ -8,7 +8,7 @@ import { FiniPresenta } from './FiniDice';
 import {
   Apoyo, COLOR_VARS, COLORS, Cta, DeviceFrame, FONT_VARS, Titulo, BotonFantasma,
 } from './shared';
-import { IconChevron } from './FinaIcons';
+import { IconChevron, IconOjo, IconOjoTachado } from './FinaIcons';
 
 // Ingresar con una cuenta que ya existe, en el diseño del flujo nuevo.
 //
@@ -35,6 +35,30 @@ export function Campo({ label, error, children }: { label: string; error?: strin
       <label className="text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</label>
       {children}
       {error && <p className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Campo de contraseña con el ojito para verla. Escribir una contraseña larga,
+ * con mayúscula, número y símbolo, sin poder ver qué se tipeó es la causa más
+ * común de "no me deja entrar" — sobre todo en el celular.
+ */
+export function InputContrasena({ style, className, ...props }: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative w-full">
+      <input {...props} type={visible ? 'text' : 'password'} className={`${className ?? ''} w-full pr-14`} style={style} />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        aria-pressed={visible}
+        className="v2-focus absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center"
+        style={{ color: COLORS.inkSoft }}
+      >
+        {visible ? <IconOjoTachado size={20} /> : <IconOjo size={20} />}
+      </button>
     </div>
   );
 }
@@ -217,8 +241,7 @@ export function EntrarV2() {
                 </Campo>
                 <SugerenciaMail email={email} onUsar={(c) => { setEmail(c); setSinCuenta(false); }} />
                 <Campo label="Contraseña" error={intento && password.length === 0 ? 'Campo obligatorio' : undefined}>
-                  <input
-                    type="password"
+                  <InputContrasena
                     className={inputClass}
                     style={inputStyle(intento && password.length === 0)}
                     placeholder="Tu contraseña"

@@ -4,7 +4,7 @@ import { useAuth } from '../lib/auth';
 import { LLEGADA_DESDE_MAIL, supabase } from '../lib/supabase';
 import { traducirErrorAuth } from '../lib/erroresAuth';
 import { FiniPresenta } from './onboarding-v2/FiniDice';
-import { Campo, emailValido, inputClass, inputStyle } from './onboarding-v2/EntrarV2';
+import { Campo, emailValido, InputContrasena, inputClass, inputStyle } from './onboarding-v2/EntrarV2';
 import { IconChevron } from './onboarding-v2/FinaIcons';
 import { Apoyo, COLOR_VARS, COLORS, Cta, DeviceFrame, FONT_VARS, Titulo } from './onboarding-v2/shared';
 
@@ -133,8 +133,7 @@ export function ResetPassword() {
                   label="Contraseña nueva"
                   error={intento && !pwOk ? 'Mínimo 8 caracteres, con una mayúscula, un número y un carácter especial' : undefined}
                 >
-                  <input
-                    type="password"
+                  <InputContrasena
                     className={inputClass}
                     style={inputStyle(intento && !pwOk)}
                     placeholder="Tu contraseña nueva"
@@ -144,8 +143,7 @@ export function ResetPassword() {
                   />
                 </Campo>
                 <Campo label="Repetila" error={intento && pwOk && !coinciden ? 'Las dos contraseñas no coinciden' : undefined}>
-                  <input
-                    type="password"
+                  <InputContrasena
                     className={inputClass}
                     style={inputStyle(intento && pwOk && !coinciden)}
                     placeholder="La misma otra vez"
