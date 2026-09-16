@@ -8,6 +8,7 @@ import { useAuth } from '../../lib/auth';
 import { AlmacenProvider, useAlmacen } from '../../api/v2/AlmacenProvider';
 import { PasoDelDiaProvider } from '../../api/v2/PasoDelDiaProvider';
 import { Confirmaciones } from './Confirmaciones';
+import { CelebracionRacha } from './CelebracionRacha';
 import { AvisoWhatsAppProvider } from './LinkWhatsApp';
 
 // REDISEÑO v2 — layout compartido por Home/Gastos/Objetivos/Inversiones.
@@ -278,6 +279,8 @@ export function V2Layout() {
     {/* Los carteles de "se hizo". Van afuera del contenedor con scroll para
         quedar fijos arriba sin importar dónde esté la persona en la pantalla. */}
     <Confirmaciones />
+    {/* El festejo cuando sube la racha: aparece en el medio y vuela al contador. */}
+    <CelebracionRacha />
     </AvisoWhatsAppProvider>
     </PasoDelDiaProvider>
     </AlmacenProvider>

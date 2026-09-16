@@ -177,7 +177,12 @@ export function GastosV2() {
       monto: g.monto,
       montoArs: g.montoArs,
       moneda: g.moneda,
-      descripcion: g.descripcion,
+      // Si llegó sin descripción, o con una variable sin completar del bot
+      // ("{{vars.expense_description}}"), se muestra el nombre de la sección:
+      // un renglón vacío o con código no dice qué gasto es.
+      descripcion: !g.descripcion.trim() || /\{\{.*\}\}/.test(g.descripcion)
+        ? (db.secciones.find((s) => s.id === g.seccionId)?.nombre ?? 'Gasto sin descripción')
+        : g.descripcion,
       categoriaId: g.seccionId ?? '',
       tipo: g.tipo,
       ts: g.ts,
@@ -795,9 +800,7 @@ export function GastosV2() {
                         </span>
                         <span className="shrink-0 flex items-center gap-1">
                           <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtGasto(m)}</span>
-                          {m.origen !== 'whatsapp' && (
-                            <BotonBorrar gasto={m} abierto={borrando === m.id} onClick={() => setBorrando(borrando === m.id ? null : m.id)} />
-                          )}
+                          <BotonBorrar gasto={m} abierto={borrando === m.id} onClick={() => setBorrando(borrando === m.id ? null : m.id)} />
                         </span>
                       </div>
                       {borrando === m.id && <ConfirmarBorrado gasto={m} onCancelar={() => setBorrando(null)} />}
@@ -896,11 +899,8 @@ export function GastosV2() {
                   </p>
                 </div>
                 <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
-                {/* Sólo los cargados en FINA. Los de WhatsApp los registró el
-                    bot, y además cuentan para la racha del día en que llegaron. */}
-                {g.origen !== 'whatsapp' && (
-                  <BotonBorrar gasto={g} abierto={borrando === g.id} onClick={() => setBorrando(borrando === g.id ? null : g.id)} />
-                )}
+                {/* Todos se pueden borrar, también los que llegaron por WhatsApp. */}
+                <BotonBorrar gasto={g} abierto={borrando === g.id} onClick={() => setBorrando(borrando === g.id ? null : g.id)} />
               </div>
               {borrando === g.id && <ConfirmarBorrado gasto={g} onCancelar={() => setBorrando(null)} />}
             </div>

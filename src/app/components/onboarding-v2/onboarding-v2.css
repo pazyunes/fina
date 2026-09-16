@@ -58,3 +58,23 @@
 .v2-sin-barra::-webkit-scrollbar {
   display: none;
 }
+
+/* Festejo de la racha (CelebracionRacha.tsx). Mientras el número viaja, el
+   contador de Home se esconde y aparece recién cuando llega, con un saltito. */
+[data-racha-animando] [data-racha-destino] {
+  opacity: 0;
+}
+[data-racha-destino] {
+  transition: opacity 150ms ease;
+}
+.v2-racha-pop {
+  animation: v2-racha-pop 450ms cubic-bezier(.3,1.6,.5,1);
+}
+@keyframes v2-racha-pop {
+  0% { transform: scale(.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-racha-pop { animation: none; }
+}
+

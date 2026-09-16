@@ -145,6 +145,7 @@ export function HomeV2() {
         {racha.dias > 0 ? (
           <button
             type="button"
+            data-racha-destino
             onClick={() => setRachaAbierta((v) => !v)}
             aria-expanded={rachaAbierta}
             className="v2-focus flex flex-col items-center shrink-0 min-h-[44px] px-1 rounded-xl"
@@ -154,7 +155,7 @@ export function HomeV2() {
             <span className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>{racha.dias === 1 ? 'día' : 'días'}</span>
           </button>
         ) : (
-          <div className="flex flex-col items-center shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Todavía no arrancaste tu racha">
+          <div data-racha-destino className="flex flex-col items-center shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Todavía no arrancaste tu racha">
             <IconFuego size={16} />
             <span className="text-[12px] font-semibold leading-none mt-1">Racha</span>
           </div>
