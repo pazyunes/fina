@@ -1404,3 +1404,37 @@ export function fechaDisplay(ts: number): string {
   if (mismoDia(d, ayer)) return 'Ayer';
   return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
 }
+
+// ── Volver ───────────────────────────────────────────────────────────────
+// Toda pantalla a la que se entra desde otra (el perfil, el cuestionario de
+// inversor, un grupo) tiene una flecha para volver arriba a la izquierda. Sin
+// ella, en la app instalada en el celular no hay botón "atrás" del navegador y
+// la pantalla es un callejón sin salida.
+export function BotonVolver({ onClick, label = 'Volver' }: { onClick: () => void; label?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="v2-focus inline-flex items-center gap-1.5 self-start min-h-[44px] text-[15px] font-semibold rounded-full py-2 pr-3 pl-1 -ml-1"
+      style={{ color: COLORS.inkSoft }}
+    >
+      <IconChevron size={18} style={{ transform: 'rotate(180deg)' }} />
+      {label}
+    </button>
+  );
+}
+
+/**
+ * Vuelve a la pantalla de la que se vino. Si no hay de dónde (se abrió el link
+ * directo, o desde un aviso), va a `alternativa` en vez de sacar a la persona
+ * de la app.
+ */
+export function useVolver(alternativa = '/onboarding-v2/home') {
+  const navigate = useNavigate();
+  return () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate(alternativa, { replace: true });
+  };
+}
+

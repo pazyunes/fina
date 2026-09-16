@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
-import { ArmarGrupoBtn, COLORS, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
+import { ArmarGrupoBtn, BotonVolver, COLORS, useVolver, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
 import { VerificarTelefono } from './VerificarTelefono';
 import { AvisosFina } from './AvisosFina';
 import { llevarA, useAlLlegar } from './alLlegar';
@@ -38,6 +38,7 @@ function itemsPerfil() {
 // entrada a "Mis grupos". Se llega tocando el avatar en Home.
 export function PerfilV2() {
   const navigate = useNavigate();
+  const volver = useVolver();
   const fileRef = useRef<HTMLInputElement>(null);
   const [foto, setFoto] = useState<string | null>(() => loadV2Foto());
   const [subiendoFoto, setSubiendoFoto] = useState(false);
@@ -103,11 +104,14 @@ export function PerfilV2() {
     // ordena la pantalla solo. Los ítems del checklist eran tarjetas con
     // contorno propio: como lista con hairline se leen como lo que son, una
     // secuencia de cosas pendientes.
-    <div className="px-6 pt-8 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-10">
-      <header className="mb-2 flex items-center gap-4">
+    <div className="px-6 pt-6 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-8">
+      <header className="mb-2 flex flex-col gap-2">
+        <BotonVolver onClick={volver} />
+        <div className="flex items-center gap-4">
         <div className="flex-1 min-w-0">
           <Titulo>Tu perfil</Titulo>
           <p className="text-[16px] mt-2" style={{ color: COLORS.inkSoft }}>Tu foto, tu nombre y lo que falta para completar tu FINA.</p>
+        </div>
         </div>
       </header>
 

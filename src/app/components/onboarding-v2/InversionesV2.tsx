@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput } from './shared';
+import { ArmarGrupoBtn, BotonVolver, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
@@ -870,8 +870,15 @@ export function InversionesV2() {
   }
 
   // ── q1 / q2 / yaInvierte / enQue / bancos comparten el layout del stepper ──
+  // Volver: a la pregunta anterior; desde la primera, a donde se entró (la
+  // presentación, o el resultado si ya lo había hecho).
+  const volverDelCuestionario = () => {
+    if (stepIndex > 0) { setPaso(pasos[stepIndex - 1]); return; }
+    setPaso(perfilGuardado?.completadoEn ? 'resultado' : 'intro');
+  };
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
+    <div className="px-[22px] pt-6 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto lg:pt-8">
+      <BotonVolver onClick={volverDelCuestionario} label={stepIndex > 0 ? 'Pregunta anterior' : 'Volver'} />
       <div className="flex justify-center gap-2">
         {pasos.map((p, i) => (
           <span key={p} className="w-2.5 h-2.5 rounded-full" style={{ background: i <= stepIndex ? COLORS.brand : COLORS.lineStrong }} />
