@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { COLORS, TituloSeccion } from './shared';
 import {
   activarNotificaciones, desactivarNotificaciones, guardarPreferenciasAvisos, leerPreferenciasAvisos,
-  mandarAvisoDePrueba, notificacionesActivas, soporteNotificaciones, type PreferenciasAvisos,
+  mandarAvisoDePrueba, notificacionesActivas, soporteNotificaciones, PREFERENCIAS_POR_DEFECTO, type PreferenciasAvisos,
 } from '../../api/v2/notificaciones';
 
 // Avisos de FINA en Perfil: activarlos en este dispositivo, elegir cuáles y
@@ -12,15 +12,21 @@ import {
 // app que avisa de más termina con las notificaciones desactivadas o
 // desinstalada, y ahí se pierde el recordatorio que sí servía.
 
-const AVISOS: { clave: keyof PreferenciasAvisos; titulo: string; detalle: string }[] = [
+type Interruptor = 'paso' | 'racha' | 'separar' | 'resumen';
+
+const AVISOS: { clave: Interruptor; titulo: string; detalle: string }[] = [
   { clave: 'paso', titulo: 'Tu paso del día', detalle: 'A las 19 hs, si todavía no lo hiciste.' },
-  { clave: 'racha', titulo: 'Tu racha', detalle: 'A las 21:30, si ese día todavía no sumaste.' },
+  { clave: 'racha', titulo: 'Tu racha', detalle: 'A las 19 hs, si tenés una racha y ese día todavía no sumaste. Va en lugar del paso.' },
+  { clave: 'separar', titulo: 'Día de separar', detalle: 'A las 10 hs del día que cobrás, para separar para tus objetivos apenas entra la plata.' },
+  { clave: 'resumen', titulo: 'Resumen de la semana', detalle: 'Los lunes a las 10 hs, cómo te fue la semana anterior.' },
 ];
+
+const DIAS_DEL_MES = Array.from({ length: 31 }, (_, i) => i + 1);
 
 export function AvisosFina() {
   const soporte = soporteNotificaciones();
   const [activas, setActivas] = useState<boolean | null>(null);
-  const [prefs, setPrefs] = useState<PreferenciasAvisos>({ paso: true, racha: true });
+  const [prefs, setPrefs] = useState<PreferenciasAvisos>(PREFERENCIAS_POR_DEFECTO);
   const [trabajando, setTrabajando] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
@@ -51,13 +57,13 @@ export function AvisosFina() {
     if (r.error === null) setActivas(false);
   }
 
-  async function cambiar(clave: keyof PreferenciasAvisos) {
+  async function guardar(nuevo: PreferenciasAvisos) {
     const previo = prefs;
-    const nuevo = { ...prefs, [clave]: !prefs[clave] };
     setPrefs(nuevo);
     const r = await guardarPreferenciasAvisos(nuevo);
     if (r.error !== null) setPrefs(previo);
   }
+  const cambiar = (clave: Interruptor) => guardar({ ...prefs, [clave]: !prefs[clave] });
 
   async function probar() {
     setTrabajando(true);
@@ -77,7 +83,7 @@ export function AvisosFina() {
     <section className="flex flex-col gap-3">
       <TituloSeccion>Avisos</TituloSeccion>
       <p className="text-[16px] leading-snug" style={{ color: COLORS.inkSoft }}>
-        Te recordamos tu paso del día y tu racha. Como mucho, dos avisos por día.
+        Pocos y útiles: como mucho, dos avisos por día.
       </p>
 
       {soporte === 'iphone-sin-instalar' && (
@@ -111,6 +117,26 @@ export function AvisosFina() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[16px] font-semibold" style={{ color: COLORS.ink }}>{a.titulo}</p>
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{a.detalle}</p>
+                  {/* Sin el día de cobro no hay cuándo mandar el de separar: se
+                      pregunta acá mismo, al lado del interruptor. */}
+                  {a.clave === 'separar' && prefs.separar && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <label htmlFor="dia-cobro" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Qué día del mes cobrás?</label>
+                      <select
+                        id="dia-cobro"
+                        value={prefs.diaCobro ?? ''}
+                        onChange={(e) => void guardar({ ...prefs, diaCobro: e.target.value ? Number(e.target.value) : null })}
+                        className="v2-focus rounded-xl px-2.5 min-h-[40px] text-[16px]"
+                        style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                      >
+                        <option value="">Elegí</option>
+                        {DIAS_DEL_MES.map((d) => <option key={d} value={d}>{d === 31 ? '31 / último día' : d}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {a.clave === 'separar' && prefs.separar && !prefs.diaCobro && (
+                    <p className="text-[13px] mt-1" style={{ color: COLORS.inkFaint }}>Hasta que lo elijas, este aviso no se manda.</p>
+                  )}
                 </div>
                 <button
                   type="button"

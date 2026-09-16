@@ -7,17 +7,22 @@ import type { AccionPaso } from '../../api/v2/pasos';
 // listo para escribir, la pregunta del nivel…). La pantalla de destino recibe
 // qué abrir en el `state` de la navegación y lo abre al llegar.
 //
-// El `state` se limpia enseguida: volver atrás o recargar no tiene que abrirlo
-// otra vez.
+// También se acepta en la dirección (`?abrir=aporte_objetivo`): así llegan los
+// avisos del celular, que abren una URL y no pueden pasar `state`.
+//
+// Se limpia enseguida: volver atrás o recargar no tiene que abrirlo otra vez.
 
 export function useAlLlegar(accion: AccionPaso, hacer: () => void) {
   const location = useLocation();
   const navigate = useNavigate();
   useEffect(() => {
     const estado = location.state as ({ abrir?: string } & Record<string, unknown>) | null;
-    if (estado?.abrir !== accion) return;
-    const { abrir: _abrir, ...resto } = estado;
-    navigate(location.pathname, { replace: true, state: Object.keys(resto).length ? resto : null });
+    const query = new URLSearchParams(location.search);
+    if (estado?.abrir !== accion && query.get('abrir') !== accion) return;
+    const { abrir: _abrir, ...resto } = estado ?? {};
+    query.delete('abrir');
+    const busqueda = query.toString();
+    navigate(`${location.pathname}${busqueda ? `?${busqueda}` : ''}`, { replace: true, state: Object.keys(resto).length ? resto : null });
     hacer();
     // Sólo cuando se llega con una navegación nueva.
     // eslint-disable-next-line react-hooks/exhaustive-deps

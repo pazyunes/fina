@@ -26,12 +26,12 @@
   },
   "crons": [
     {
-      "path": "/api/notificaciones?tipo=paso",
-      "schedule": "0 22 * * *"
+      "path": "/api/notificaciones?turno=manana",
+      "schedule": "0 13 * * *"
     },
     {
-      "path": "/api/notificaciones?tipo=racha",
-      "schedule": "30 0 * * *"
+      "path": "/api/notificaciones?turno=tarde",
+      "schedule": "0 22 * * *"
     }
   ]
 }

@@ -20,7 +20,16 @@ export type SoporteNotificaciones =
   | 'no-configurado'       // falta la clave pública en el servidor
   | 'no';                  // el navegador no las soporta
 
-export type PreferenciasAvisos = { paso: boolean; racha: boolean };
+export type PreferenciasAvisos = {
+  paso: boolean;
+  racha: boolean;
+  separar: boolean;
+  resumen: boolean;
+  /** Día del mes en que cobra (1 a 31), o null si no lo dijo. */
+  diaCobro: number | null;
+};
+
+export const PREFERENCIAS_POR_DEFECTO: PreferenciasAvisos = { paso: true, racha: true, separar: true, resumen: true, diaCobro: null };
 
 export function soporteNotificaciones(): SoporteNotificaciones {
   if (typeof window === 'undefined') return 'no';
@@ -112,17 +121,27 @@ export async function desactivarNotificaciones(): Promise<Resultado<null>> {
 }
 
 export async function leerPreferenciasAvisos(): Promise<PreferenciasAvisos> {
-  const { data } = await supabase.from('notification_prefs').select('paso, racha').maybeSingle();
-  const d = data as PreferenciasAvisos | null;
-  // Sin fila = los dos activados.
-  return { paso: d?.paso ?? true, racha: d?.racha ?? true };
+  // `*` y no columnas sueltas: si todavía no se corrió la 0031, las columnas
+  // nuevas no existen y pedirlas por nombre haría fallar la lectura entera.
+  const { data } = await supabase.from('notification_prefs').select('*').maybeSingle();
+  const d = data as { paso?: boolean; racha?: boolean; separar?: boolean; resumen?: boolean; dia_cobro?: number | null } | null;
+  // Sin fila = todos activados.
+  return {
+    paso: d?.paso ?? true,
+    racha: d?.racha ?? true,
+    separar: d?.separar ?? true,
+    resumen: d?.resumen ?? true,
+    diaCobro: d?.dia_cobro ?? null,
+  };
 }
 
 export async function guardarPreferenciasAvisos(p: PreferenciasAvisos): Promise<Resultado<null>> {
   const uid = await idUsuaria();
   if (!uid) return falla<null>('sin sesión', 'guardarPreferenciasAvisos');
-  const { error } = await supabase.from('notification_prefs')
-    .upsert({ user_id: uid, ...p, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  const { error } = await supabase.from('notification_prefs').upsert({
+    user_id: uid, paso: p.paso, racha: p.racha, separar: p.separar, resumen: p.resumen, dia_cobro: p.diaCobro,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' });
   if (error) return falla<null>(error.message, 'guardarPreferenciasAvisos');
   avisarConfirmacion('Guardamos qué avisos querés recibir.');
   return ok(null);
