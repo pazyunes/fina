@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Fini, type FiniState } from './Fini';
 import { FiniDice, FiniPresenta } from './FiniDice';
 import { PantallazoFeature } from './PantallazoFeature';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   COLORS, DeviceFrame, CheckIcon, Chip, OtroChip, Nota, Cta,
@@ -15,7 +15,10 @@ import {
 } from './shared';
 import { IconChat, IconChevron, IconBasura } from './FinaIcons';
 import { useAuth } from '../../lib/auth';
-import { formatearTelefonoAr, telefonoE164, telefonoValidoAr } from '../../lib/telefono';
+import { formatearTelefonoAr, problemaTelefonoAr, telefonoE164, telefonoValidoAr } from '../../lib/telefono';
+import { emailValido } from '../../lib/email';
+import { emailTieneCuenta, telefonoTieneCuenta } from '../../api/v2/cuenta';
+import { SugerenciaMail } from './EntrarV2';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 import { traducirErrorAuth } from '../../lib/erroresAuth';
 import { crearObjetivo, crearSeccion, guardarPerfil, guardarPerfilInversor } from '../../api/v2';
@@ -303,7 +306,6 @@ function MultiOtroChips({ opciones, seleccion, toggle, otro }: { opciones: Opcio
   );
 }
 
-function emailValido(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
 function passwordValida(v: string) { return v.length >= 8 && /[A-Z]/.test(v) && /[0-9]/.test(v) && /[^A-Za-z0-9]/.test(v); }
 // El teléfono se normaliza y valida en src/app/lib/telefono.ts, que es el mismo
 // archivo que usa el login viejo. Tiene que ser UNA sola regla: es la llave con
@@ -321,6 +323,7 @@ function Campo({ label, error, children }: { label: string; error?: string; chil
 
 export function OnboardingV2() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signUp, session, loading: cargandoSesion } = useAuth();
 
   // Quien ya tiene sesión no rehace el onboarding: iría a contestar de nuevo
@@ -384,7 +387,10 @@ export function OnboardingV2() {
   const [comoConocioOtroTxt, setComoConocioOtroTxt] = useState('');
   const [aceptoTerminos, setAceptoTerminos] = useState(false);
 
-  const [email, setEmail] = useState('');
+  // Si viene de "Ya tengo cuenta" con un mail que no tenía cuenta, llega escrito.
+  const [email, setEmail] = useState(() => (location.state as { email?: string } | null)?.email ?? '');
+  // El mail o el teléfono ya tienen una cuenta: se dice cuál y se ofrece entrar.
+  const [cuentaExistente, setCuentaExistente] = useState<'email' | 'telefono' | null>(null);
   const [password, setPassword] = useState('');
   const [telefono, setTelefono] = useState('');
   const [pasoLogin, setPasoLogin] = useState<PasoLogin>('datos');
@@ -608,10 +614,20 @@ export function OnboardingV2() {
     if (creando) return;
     setCreando(true);
     setErrorAuth(null);
+    setCuentaExistente(null);
+
+    // Antes de crear nada: ¿ya hay una cuenta con este mail o este teléfono?
+    // Si la hay, se le dice y se le ofrece entrar, en vez de un error de
+    // Supabase que no explica qué hacer.
+    const [mailUsado, telefonoUsado] = await Promise.all([emailTieneCuenta(email), telefonoTieneCuenta(telefonoE164(telefono))]);
+    if (mailUsado) { setCuentaExistente('email'); setCreando(false); return; }
+    if (telefonoUsado) { setCuentaExistente('telefono'); setCreando(false); return; }
 
     const { error, needsConfirmation } = await signUp(email.trim(), password, telefonoE164(telefono));
     if (error) {
-      setErrorAuth(traducirErrorAuth(error));
+      // Por si la consulta de arriba no pudo hacerse: el mismo aviso.
+      if (/already registered|already been registered/i.test(error)) setCuentaExistente('email');
+      else setErrorAuth(traducirErrorAuth(error));
       setCreando(false);
       return;
     }
@@ -1042,12 +1058,13 @@ export function OnboardingV2() {
                 <>
                   <Titulo>Guardá tu progreso</Titulo>
                   <Campo label="Mail" error={intentoLogin && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Campo obligatorio') : undefined}>
-                    <input className={inputClass} style={inputStyle(intentoLogin && !emailOk)} placeholder="vos@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                    <input className={inputClass} style={inputStyle(intentoLogin && !emailOk)} placeholder="vos@mail.com" value={email} onChange={(e) => { setEmail(e.target.value); setCuentaExistente(null); }} autoComplete="email" />
                   </Campo>
+                  <SugerenciaMail email={email} onUsar={(c) => { setEmail(c); setCuentaExistente(null); }} />
                   <Campo label="Contraseña" error={intentoLogin && !passwordOk ? 'Mínimo 8 caracteres, con una mayúscula, un número y un carácter especial' : undefined}>
                     <input type="password" className={inputClass} style={inputStyle(intentoLogin && !passwordOk)} placeholder="Elegí una contraseña segura" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
                   </Campo>
-                  <Campo label="Teléfono" error={intentoLogin && !telefonoOk ? 'Campo obligatorio' : undefined}>
+                  <Campo label="Teléfono" error={intentoLogin && !telefonoOk ? problemaTelefonoAr(telefono) ?? undefined : undefined}>
                     <div className="flex gap-2">
                       <span className={`flex items-center gap-1.5 px-3 rounded-2xl text-[18px] font-semibold shrink-0 ${inputClass}`} style={inputStyle(false)}>+54</span>
                       <input
@@ -1056,7 +1073,7 @@ export function OnboardingV2() {
                         placeholder="11 1234-5678"
                         inputMode="numeric"
                         value={telefono}
-                        onChange={(e) => setTelefono(formatearTelefonoAr(e.target.value))}
+                        onChange={(e) => { setTelefono(formatearTelefonoAr(e.target.value)); setCuentaExistente(null); }}
                         autoComplete="tel-national"
                       />
                     </div>
@@ -1074,6 +1091,23 @@ export function OnboardingV2() {
                     Al crear tu cuenta valen los <LinkLegal url={TERMINOS_URL}>términos y condiciones</LinkLegal>{' '}
                     y la <LinkLegal url={PRIVACIDAD_URL}>política de privacidad</LinkLegal> que aceptaste.
                   </p>
+                  {cuentaExistente && (
+                    <div role="alert" className="rounded-2xl px-4 py-3.5 flex flex-col gap-2.5" style={{ background: COLORS.brandSoft }}>
+                      <p className="text-[16px] leading-snug" style={{ color: COLORS.ink }}>
+                        {cuentaExistente === 'email'
+                          ? <>Ya tenés una cuenta con <strong>{email.trim()}</strong>. Entrá con tu contraseña y seguís donde lo dejaste.</>
+                          : <>Este teléfono ya está en una cuenta de FINA. Si es tuya, entrá con el mail con el que la creaste.</>}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/onboarding-v2/entrar', { state: cuentaExistente === 'email' ? { email: email.trim() } : undefined })}
+                        className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[15px] font-bold"
+                        style={{ background: COLORS.brand, color: COLORS.surface }}
+                      >
+                        Iniciar sesión
+                      </button>
+                    </div>
+                  )}
                   {errorAuth && (
                     <p role="alert" className="text-[15px] font-semibold" style={{ color: COLORS.coralDark }}>{errorAuth}</p>
                   )}
