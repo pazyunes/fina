@@ -55,7 +55,7 @@ Y verificar de nuevo con el select de arriba.
 
 ## Las migraciones: qué son y en qué orden
 
-Doce archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
+Trece archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
 resultado antes de pasar al siguiente.
 
 | Orden | Archivo | Qué agrega |
@@ -72,6 +72,7 @@ resultado antes de pasar al siguiente.
 | 10 | `0029_recomendaciones.sql` | La IA de FINA: recomendaciones del día, la semana y el mes, el paso del día elegido para cada persona y un plan por objetivo. Dónde se guardan (cada cosa se genera una sola vez, así se paga una vez) y la memoria con la que el modelo va conociendo a cada persona. Se puede volver a correr sin problema. Necesita `ANTHROPIC_API_KEY` en Vercel |
 | 11 | `0030_notificaciones.sql` | Notificaciones de la app: en qué dispositivos las activó cada persona, qué avisos quiere (paso del día, racha) y cuáles se mandaron, para no repetir. Necesita las claves VAPID, `SUPABASE_SERVICE_ROLE_KEY` y `CRON_SECRET` en Vercel |
 | 12 | `0031_avisos_separar_y_resumen.sql` | Dos avisos nuevos: "día de separar" (el día que la persona cobra) y el resumen de la semana (los lunes). Guarda qué día cobra cada una |
+| 13 | `0032_recomendaciones_hechas.sql` | Las recomendaciones de "Para vos" se pueden tachar: guarda cuáles marcó cada persona en cada día, semana y mes, para mostrarle otra y para que la IA aprenda de lo que hace |
 
 ### Qué trae la 0024 y por qué
 

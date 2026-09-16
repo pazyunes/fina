@@ -342,7 +342,7 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
   const hace30 = `${sumarDias(hoy, -30)}T00:00:00-03:00`;
   const hace21 = sumarDias(hoy, -21);
 
-  const [gastos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA] = await Promise.all([
+  const [gastos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA, hechas] = await Promise.all([
     supabase.from('transactions').select('amount_ars, occurred_at, created_at, section_id, expense_type, payment_method, source')
       .eq('type', 'expense').gte('occurred_at', hace90).order('occurred_at', { ascending: true }),
     supabase.from('expense_sections').select('id, name, cap_amount, cap_period').eq('archived', false),
@@ -353,10 +353,12 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
     supabase.from('investment_contributions').select('id', { count: 'exact', head: true }).gte('occurred_at', hace30),
     supabase.rpc('mi_racha'),
     supabase.from('recommendation_memory').select('observaciones, ultimo_intento').maybeSingle(),
-    supabase.from('recommendations').select('periodo, clave, contenido, foco_tipo, foco_ref, util, created_at')
+    supabase.from('recommendations').select('id, periodo, clave, contenido, foco_tipo, foco_ref, util, created_at')
       .in('periodo', PERIODOS).order('created_at', { ascending: false }).limit(10),
     supabase.from('daily_steps').select('day, step_key, completed_at').gte('day', hace21).order('day', { ascending: false }),
     supabase.from('recommendations').select('clave, foco_ref').eq('periodo', 'paso').gte('clave', hace21),
+    // Sin la migración 0032 la tabla no existe: se sigue sin esa señal.
+    supabase.from('recommendation_checks').select('ref').like('ref', 'ia:%').gte('hecha_at', hace30),
   ]);
 
   const error = [gastos, secciones, medios, objetivos, perfil, inversor, aportes, memoria, historial, pasos, pasosIA].find((r) => r.error)?.error;
@@ -378,5 +380,6 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
     historial: (historial.data ?? []) as FilaRecomendacion[],
     pasosDelDia: (pasos.data ?? []) as FilaPasoDelDia[],
     pasosElegidosPorIA: ((pasosIA.data ?? []) as { clave: string; foco_ref: string | null }[]).map((f) => `${f.clave}:${f.foco_ref}`),
+    recomendacionesHechas: hechas.error ? [] : ((hechas.data ?? []) as { ref: string }[]).map((f) => f.ref.slice(3)),
   };
 }

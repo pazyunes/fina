@@ -1,5 +1,9 @@
-import { falla, ok, supabase, type Resultado } from './cliente';
+import { falla, idUsuaria, ok, supabase, type Resultado } from './cliente';
 import { avisarConfirmacion } from './almacen';
+import { diaArgentina } from './pasos';
+// Las mismas claves de semana y mes que usa el servidor: si se calcularan distinto,
+// una recomendación tachada el domingo podía aparecer sin tachar.
+import { claveMes, claveSemana } from '../../../../api/_recomendaciones/fechas';
 
 // Las recomendaciones del día, la semana y el mes.
 //
@@ -181,3 +185,46 @@ export async function leerPlanesDeObjetivos(): Promise<Map<string, PlanObjetivo>
   }
   return planes;
 }
+
+// ── Recomendaciones hechas ───────────────────────────────────────────────
+// Cada recomendación se puede tachar. Se guarda para qué período (el día, la
+// semana ISO o el mes, en días de Argentina) así al cambiar de período vuelven a
+// empezar, y cuál: 'ia:<id>' o 'general:<periodo>:<n>'. Ver migración 0032.
+
+export type ClavesPeriodo = Record<PeriodoRecomendacion, string>;
+
+export function clavesDeHoy(): ClavesPeriodo {
+  const hoy = diaArgentina();
+  return { dia: hoy, semana: claveSemana(hoy), mes: claveMes(hoy) };
+}
+
+/** Las marcadas en el período actual, como 'periodo|ref'. */
+export async function leerHechas(claves: ClavesPeriodo): Promise<Set<string>> {
+  const hechas = new Set<string>();
+  try {
+    const { data, error } = await supabase
+      .from('recommendation_checks')
+      .select('periodo, clave, ref')
+      .in('clave', Object.values(claves));
+    // Sin la migración 0032 la tabla no existe: no hay ninguna hecha.
+    if (error || !data) return hechas;
+    for (const f of data as { periodo: PeriodoRecomendacion; clave: string; ref: string }[]) {
+      if (claves[f.periodo] === f.clave) hechas.add(`${f.periodo}|${f.ref}`);
+    }
+  } catch {
+    // Igual que sin tabla.
+  }
+  return hechas;
+}
+
+export async function marcarHecha(periodo: PeriodoRecomendacion, clave: string, ref: string): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<null>('sin sesión', 'marcarHecha');
+  const { error } = await supabase
+    .from('recommendation_checks')
+    .upsert({ user_id: uid, periodo, clave, ref }, { onConflict: 'user_id,periodo,clave,ref', ignoreDuplicates: true });
+  if (error) return falla<null>(error.message, 'marcarHecha');
+  avisarConfirmacion('Recomendación cumplida con éxito.');
+  return ok(null);
+}
+

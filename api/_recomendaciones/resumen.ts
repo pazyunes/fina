@@ -28,7 +28,7 @@ export type FilaObjetivo = {
   goal_contributions: { amount: number; occurred_at: string }[] | null;
 };
 export type FilaPerfil = { main_goal: string | null; income_stability: string | null; financial_level: string | null; income_sources: string[] | null };
-export type FilaRecomendacion = { periodo: string; clave: string; contenido: { titulo?: string }; foco_tipo: string | null; foco_ref: string | null; util: boolean | null; created_at: string };
+export type FilaRecomendacion = { id: string; periodo: string; clave: string; contenido: { titulo?: string }; foco_tipo: string | null; foco_ref: string | null; util: boolean | null; created_at: string };
 export type Racha = { dias: number; hoyCumplido: boolean };
 export type Observacion = { texto: string; evidencia: string };
 export type FilaPasoDelDia = { day: string; step_key: string; completed_at: string | null };
@@ -52,6 +52,8 @@ export type Entrada = {
    * paso (el elegido ya no se podía cumplir), lo eligió la regla fija.
    */
   pasosElegidosPorIA: string[];
+  /** Ids de recomendaciones que la persona tachó como hechas (migración 0032). */
+  recomendacionesHechas: string[];
 };
 
 const redondo = (n: number) => Math.round(n);
@@ -246,6 +248,7 @@ export function armarSeguimiento(e: Entrada) {
       fecha, periodo: r.periodo, titulo: r.contenido?.titulo ?? null,
       foco: r.foco_tipo, sobre: r.foco_ref,
       leSirvio: r.util,
+      laMarcoComoHecha: e.recomendacionesHechas.includes(r.id),
       ...(queSeMidio ? { queSeMidio, semanaAnterior: antes, desdeEntonces: despues, diasTranscurridos: diasDespues } : {}),
     };
   });
