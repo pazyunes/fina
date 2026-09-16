@@ -90,7 +90,7 @@ export function ResetPassword() {
 
         <button
           type="button"
-          onClick={() => navigate('/login')}
+          onClick={() => navigate('/onboarding-v2/entrar')}
           className="w-full text-center text-sm text-gray-600 mt-6 hover:text-[#7626B3]"
         >
           ← Volver a iniciar sesión

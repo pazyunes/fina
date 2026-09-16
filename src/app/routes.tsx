@@ -1,12 +1,6 @@
-import { createBrowserRouter, Outlet } from "react-router";
-import { Main } from "./Main";
-import { Login } from "./components/Login";
+import { createBrowserRouter, Navigate } from "react-router";
 import { ResetPassword } from "./components/ResetPassword";
-import { Profile } from "./components/Profile";
-import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RootRedirect } from "./components/RootRedirect";
-import { OnboardingGate } from "./components/OnboardingGate";
-import { FeedbackController } from "./components/FeedbackModal";
 import { OnboardingV2 } from "./components/onboarding-v2/OnboardingV2";
 import { EntrarV2 } from "./components/onboarding-v2/EntrarV2";
 import { V2Layout } from "./components/onboarding-v2/V2Layout";
@@ -18,27 +12,48 @@ import { PerfilV2 } from "./components/onboarding-v2/PerfilV2";
 import { GruposV2 } from "./components/onboarding-v2/GruposV2";
 import { FiniPlayground } from "./components/onboarding-v2/FiniPlayground";
 
-// Layout que persiste entre las rutas de onboarding/informe: renderiza la
-// pantalla (Outlet) + el controlador de encuestas, que detecta cuándo salís de
-// una pantalla (Objetivos/Inversiones) y dispara el pop-up.
-function FeedbackLayout() {
-  return (
-    <>
-      <Outlet />
-      <FeedbackController />
-    </>
-  );
-}
+// Las direcciones de la app VIEJA llevan a su equivalente en la nueva. Siguen
+// existiendo porque alguien puede tenerlas guardadas (un acceso directo en el
+// celular, un link viejo): en vez de mostrarle la versión anterior o una
+// pantalla vacía, se la manda al lugar que corresponde. Las pantallas nuevas
+// piden sesión solas (V2Layout), así que no hace falta chequearla acá.
+const V2 = {
+  inicio: "/",
+  entrar: "/onboarding-v2/entrar",
+  home: "/onboarding-v2/home",
+  gastos: "/onboarding-v2/gastos",
+  objetivos: "/onboarding-v2/objetivos",
+  inversiones: "/onboarding-v2/inversiones",
+  perfil: "/onboarding-v2/perfil",
+};
+
+const REDIRECCIONES: [string, string][] = [
+  ["/login", V2.entrar],
+  ["/perfil", V2.perfil],
+  // El informe y sus pestañas.
+  ["/result", V2.home],
+  ["/loading", V2.home],
+  ["/ai-reasoning", V2.home],
+  ["/objetivos", V2.objetivos],
+  ["/inversiones", V2.inversiones],
+  // Editar datos desde el perfil viejo.
+  ["/editar/ingresos", V2.perfil],
+  ["/editar/finanzas", V2.perfil],
+  ["/editar/preferencias", V2.perfil],
+  ["/editar/gastos-fijos", V2.gastos],
+  ["/editar/gastos-variables", V2.gastos],
+  ["/editar/objetivos", V2.objetivos],
+  // Los pasos del onboarding viejo: al inicio, que decide si va al onboarding
+  // nuevo (sin sesión) o a Home (con sesión).
+  ...["/personal-data", "/context", "/activity", "/bank", "/expenses-fixed", "/expenses-services", "/habits", "/goals", "/preferencias"]
+    .map((viejo): [string, string] => [viejo, V2.inicio]),
+];
 
 export const router = createBrowserRouter([
   {
     // PR6 — `/` decide qué mostrar según sesión + hasReport.
     path: "/",
     element: <RootRedirect />,
-  },
-  {
-    path: "/login",
-    element: <Login />,
   },
   {
     // Onboarding real: es la puerta de entrada a FINA. Es público a propósito
@@ -48,9 +63,7 @@ export const router = createBrowserRouter([
     element: <OnboardingV2 />,
   },
   {
-    // Entrar con una cuenta que ya existe, en el diseño del flujo nuevo. El
-    // `/login` de abajo sigue siendo el del flujo viejo: esta ruta no lo
-    // reemplaza, es la puerta del v2.
+    // Entrar con una cuenta que ya existe. El `/login` viejo redirige acá.
     path: "/onboarding-v2/entrar",
     element: <EntrarV2 />,
   },
@@ -79,55 +92,14 @@ export const router = createBrowserRouter([
     path: "/reset-password",
     element: <ResetPassword />,
   },
+  ...REDIRECCIONES.map(([path, destino]) => ({
+    path,
+    element: <Navigate to={destino} replace />,
+  })),
   {
-    path: "/perfil",
-    element: (
-      <ProtectedRoute>
-        <Profile />
-      </ProtectedRoute>
-    ),
-  },
-  // Onboarding + informe: requieren sesión Y, además, OnboardingGate
-  // redirige a /result si ya hay informe (excepto la propia /result y
-  // /ai-reasoning, que es debug-only). El onboarding es one-shot por PR6.
-  {
-    // Layout persistente (FeedbackController vive acá y sobrevive a los cambios
-    // de ruta para detectar cuándo salís de Objetivos/Inversiones).
-    element: (
-      <ProtectedRoute>
-        <FeedbackLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      "/personal-data",
-      "/context",
-      "/activity",
-      "/bank",
-      "/expenses-fixed",
-      "/expenses-services",
-      "/habits",
-      "/goals",
-      "/preferencias",
-      "/loading",
-      "/ai-reasoning",
-      "/result",
-      // PR7 — pestañas adicionales del informe (Bottom Nav).
-      "/objetivos",
-      "/inversiones",
-      // PR8 — Edición de datos desde /perfil.
-      "/editar/ingresos",
-      "/editar/gastos-fijos",
-      "/editar/gastos-variables",
-      "/editar/objetivos",
-      "/editar/finanzas",
-      "/editar/preferencias",
-    ].map((path) => ({
-      path,
-      element: (
-        <OnboardingGate>
-          <Main />
-        </OnboardingGate>
-      ),
-    })),
+    // Cualquier otra dirección que no existe: al inicio, en vez de una
+    // pantalla de error.
+    path: "*",
+    element: <Navigate to="/" replace />,
   },
 ]);
