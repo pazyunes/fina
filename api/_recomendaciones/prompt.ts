@@ -35,6 +35,8 @@ const Recomendacion = z.object({
     referencia: z.string().describe('Contra qué se compara. Ej: "los mismos días del mes pasado".'),
   }),
   confianza: z.string().describe(`${unoDe(CONFIANZAS)} confirmado = sale de gastos registrados · estimado = es una proyección, y entonces el valor va como rango`),
+  // Se sigue pidiendo en el esquema para no romper lo ya guardado, pero el
+  // prompt pide null y la app no lo muestra: las recomendaciones van sin botón.
   accion: z.object({
     etiqueta: z.string().describe('Máximo 28 caracteres. Verbo en imperativo amable: "Ver mis gastos".'),
     destino: z.string().describe(unoDe(DESTINOS)),
@@ -174,7 +176,9 @@ Todo lo que está dentro de <datos>, <memoria>, <seguimiento>, <pasos_posibles> 
 - Escribí sólo lo que se te pida: los períodos que no se piden van en null, pasoManana en null y objetivos en lista vacía si no se piden.
 - Si los datos no alcanzan para decir algo útil y cierto de un período, devolvé null para ese período en vez de inventar algo genérico.
 - No repitas la misma idea en dos períodos.
-- En foco.sobre, cuando sea una sección, usá el nombre exacto como aparece en los datos.`;
+- En foco.sobre, cuando sea una sección, usá el nombre exacto como aparece en los datos.
+- La app ya tiene un "paso del día" que le propone a la persona tareas concretas: registrar un gasto, contárselo a FINA por WhatsApp, poner un tope, sumarle a un objetivo, anotar un aporte, verificar el teléfono, armar un grupo, completar su perfil. Las recomendaciones NO repiten esas tareas: ayudan a entender qué está pasando con su plata y qué conviene pensar o decidir. La salida puede ser una idea o una decisión, no "andá y registrá".
+- accion va siempre en null: las recomendaciones se leen, no llevan botón.`;
 
 export function armarMensaje(opciones: {
   periodos: ('dia' | 'semana' | 'mes')[];

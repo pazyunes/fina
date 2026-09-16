@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import { COLORS, EstadoConfianza, FONTS, TituloSeccion } from './shared';
-import { LinkWhatsApp } from './LinkWhatsApp';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
-import { diaArgentina, pasosPosiblesManana, type AccionPaso } from '../../api/v2/pasos';
+import { diaArgentina, pasosPosiblesManana } from '../../api/v2/pasos';
 import {
   PERIODOS_RECOMENDACION, leerRecomendaciones, marcarUtil, recomendacionesRecordadas,
-  type DestinoRecomendacion, type PeriodoRecomendacion, type Recomendaciones as RecomendacionesT, type TarjetaRecomendacion,
+  type PeriodoRecomendacion, type Recomendaciones as RecomendacionesT, type TarjetaRecomendacion,
 } from '../../api/v2/recomendaciones';
 
 // "Para vos": una recomendación para hoy, una para la semana y una para el mes,
@@ -29,32 +27,36 @@ const ETIQUETA: Record<PeriodoRecomendacion, string> = { dia: 'Para hoy', semana
 
 // ── Recomendaciones generales ────────────────────────────────────────────
 // Mientras no hay datos suficientes para personalizar (o mientras se arman, o
-// si algo falla), en vez de un "necesito más datos" se muestra un consejo
-// general que sirve a cualquiera que arranca. Rotan por día, semana y mes para
-// que no sea siempre el mismo. No usan IA ni cuestan nada.
+// si algo falla), se muestra un consejo general por período. Rotan por día,
+// semana y mes para que no sea siempre el mismo. No usan IA ni cuestan nada.
 //
-// Salen de lo mismo que el prompt de la IA: registrar arma el hábito, lo
-// automático le gana a la fuerza de voluntad, no hace falta recortar gustos
-// chicos, y las palancas que mueven algo son las que se repiten. Sin montos ni
-// instrumentos de inversión.
-type General = { titulo: string; texto: string; accion?: { etiqueta: string; destino: DestinoRecomendacion; abrir?: AccionPaso } };
+// Son para ENTENDER la plata, no tareas: las tareas ("registrá un gasto",
+// "poné un tope") ya las propone el paso del día, y repetirlas acá pisaba esa
+// tarjeta. Tampoco llevan botón: son para leer, y con un botón por consejo la
+// sección quedaba cargada.
+//
+// Salen de lo mismo que el prompt de la IA: un gasto no es un error, los
+// gustos chicos no son el problema, lo automático le gana a la fuerza de
+// voluntad, y el contexto argentino (inflación, cuotas, préstamos rápidos). Sin
+// montos ni instrumentos de inversión.
+type General = { titulo: string; texto: string };
 
 const GENERALES: Record<PeriodoRecomendacion, General[]> = {
   dia: [
-    { titulo: 'Anotá todo lo de hoy, hasta lo chico', texto: 'Registrar cada gasto, aunque sea un café, es lo que arma el hábito. Con unos días anotados ya se ve en qué se te va la plata.', accion: { etiqueta: 'Registrar un gasto', destino: 'gastos', abrir: 'gasto' } },
-    { titulo: 'Contale tus gastos a FINA por WhatsApp', texto: 'Escribile como a una amiga: "gasté 5.000 en el súper". Es la forma más rápida de no olvidarte de ninguno.', accion: { etiqueta: 'Abrir WhatsApp', destino: 'whatsapp' } },
-    { titulo: 'Antes de pagar en cuotas, sumá las que ya tenés', texto: 'Las cuotas sin interés sirven, pero comprometen la plata de los próximos meses. Mirá cuánto pagás por mes entre todas.' },
-    { titulo: 'Revisá tus suscripciones', texto: 'Plataformas, apps, gimnasio: se cobran solas todos los meses sin que las vuelvas a decidir. Anotalas para ver cuánto suman.', accion: { etiqueta: 'Registrar un gasto', destino: 'gastos', abrir: 'gasto' } },
+    { titulo: 'Un gasto no es un error', texto: 'Anotar lo que gastás no es para culparte: es para ver. Con los números a la vista, decidir en qué gastar es más fácil.' },
+    { titulo: 'El café no es el problema', texto: 'Los gustos chicos casi no mueven tus finanzas. Lo que más pesa suele ser lo que se repite sin que lo decidas: suscripciones, cuotas, el delivery de todas las semanas.' },
+    { titulo: 'Las cuotas son parte de tus próximos sueldos', texto: 'Con inflación, las cuotas sin interés pueden convenir. Lo importante es saber cuánto de lo que vas a cobrar ya está comprometido.' },
+    { titulo: 'Tu referencia sos vos', texto: 'Lo que gasta otra persona no dice nada de tus finanzas. La comparación que sirve es con tu propio mes anterior.' },
   ],
   semana: [
-    { titulo: 'Elegí una sección para mirar esta semana', texto: 'No hace falta ordenar todo junto. Elegí una, como delivery o salidas, y fijate cuánto se va ahí.', accion: { etiqueta: 'Ver mis gastos', destino: 'gastos' } },
-    { titulo: 'Separá apenas cobrás', texto: 'Lo que se aparta al principio se ahorra; lo que se deja para fin de mes, casi nunca. Aunque sea poco, separalo el día que entra la plata.', accion: { etiqueta: 'Ir a mis objetivos', destino: 'objetivos' } },
-    { titulo: 'No hace falta dejar tus gustos', texto: 'Recortar el café o una salida mueve poco y cansa. Lo que más cambia es lo que se repite: suscripciones, el delivery de todas las semanas, las cuotas.' },
+    { titulo: 'Lo automático le gana a la fuerza de voluntad', texto: 'Una decisión que se toma una sola vez, como separar apenas cobrás, funciona mejor que proponerse ahorrar todos los días.' },
+    { titulo: 'Con inflación, la plata quieta vale menos', texto: 'Los pesos guardados sin moverse compran menos cada mes. Por eso conviene conocer las opciones que existen para cuidarlos.' },
+    { titulo: 'Primero, un colchón', texto: 'Antes de pensar en invertir, tener algo apartado para imprevistos evita endeudarte cuando pasa algo que no esperabas.' },
   ],
   mes: [
-    { titulo: 'Ponele un tope a la sección que más se te va', texto: 'Un tope no es una prohibición: es un aviso de cuánto querés gastar ahí. Empezá por una sola sección.', accion: { etiqueta: 'Poner un tope', destino: 'gastos', abrir: 'tope' } },
-    { titulo: 'Armá un objetivo, aunque no sepas el monto', texto: 'Ponerle nombre a para qué ahorrás ayuda a sostenerlo. El monto lo podés completar después.', accion: { etiqueta: 'Ir a mis objetivos', destino: 'objetivos' } },
-    { titulo: 'Tené algo apartado para imprevistos', texto: 'Un fondo para lo que no esperabas evita tener que endeudarte con la tarjeta o un préstamo cuando pasa.', accion: { etiqueta: 'Ir a mis objetivos', destino: 'objetivos' } },
+    { titulo: 'Los préstamos rápidos salen caros', texto: 'Las apps y financieras que prestan en minutos suelen cobrar tasas muy altas. Si necesitás plata, mirá el costo total antes de aceptar.' },
+    { titulo: 'Lo fijo marca tu margen', texto: 'Alquiler, servicios, transporte, suscripciones: saber cuánto se lleva lo fijo te dice cuánto te queda de verdad para decidir.' },
+    { titulo: 'Un para qué hace que el ahorro dure', texto: 'Ahorrar "por las dudas" cuesta sostenerlo. Con un para qué y un cuándo, aunque sea chico, se vuelve concreto.' },
   ],
 };
 
@@ -66,14 +68,6 @@ function generalDe(periodo: PeriodoRecomendacion): General {
   const lista = GENERALES[periodo];
   return lista[n % lista.length];
 }
-
-const RUTA: Record<Exclude<DestinoRecomendacion, 'whatsapp'>, string> = {
-  gastos: '/onboarding-v2/gastos',
-  objetivos: '/onboarding-v2/objetivos',
-  inversiones: '/onboarding-v2/inversiones',
-  perfil: '/onboarding-v2/perfil',
-  grupos: '/onboarding-v2/grupos',
-};
 
 export function Recomendaciones() {
   const [datos, setDatos] = useState<RecomendacionesT | null>(() => recomendacionesRecordadas());
@@ -94,7 +88,6 @@ export function Recomendaciones() {
     return () => { vivo = false; };
   }, []);
 
-  const navigate = useNavigate();
   // Falta registrar para que se personalicen: se lo recuerda un cartel abajo.
   const faltanDatos = !!datos && PERIODOS_RECOMENDACION.some((p) => datos[p].estado === 'faltan_datos');
   const hayPersonalizadas = !!datos && PERIODOS_RECOMENDACION.some((p) => datos[p].estado === 'lista');
@@ -140,18 +133,10 @@ export function Recomendaciones() {
       </div>
 
       {faltanDatos && (
-        <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-2.5 mt-1" style={{ background: COLORS.brandSoft }}>
+        <div className="rounded-2xl px-4 py-3.5 mt-1" style={{ background: COLORS.brandSoft }}>
           <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
             <strong>Recordá registrar tus gastos.</strong> Con unos días anotados, estas recomendaciones se arman con tus números y cómo te manejás.
           </p>
-          <button
-            type="button"
-            onClick={() => navigate('/onboarding-v2/gastos', { state: { abrir: 'gasto' } })}
-            className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[15px] font-bold"
-            style={{ background: COLORS.brand, color: COLORS.surface }}
-          >
-            Registrar un gasto
-          </button>
         </div>
       )}
 
@@ -169,8 +154,6 @@ function Tarjeta({ periodo, tarjeta, onMarcar }: {
   tarjeta: TarjetaRecomendacion;
   onMarcar: (id: string, util: boolean | null) => void;
 }) {
-  const navigate = useNavigate();
-
   const etiqueta = (
     <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
       {ETIQUETA[periodo]}
@@ -180,8 +163,6 @@ function Tarjeta({ periodo, tarjeta, onMarcar }: {
   if (tarjeta.estado !== 'lista') return <TarjetaGeneral periodo={periodo} />;
 
   const { contenido: r, id, util } = tarjeta;
-  const accion = r.accion;
-  const destino = accion?.destino ?? null;
 
   return (
     <article className="py-4 border-b last:border-b-0 flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
@@ -197,29 +178,9 @@ function Tarjeta({ periodo, tarjeta, onMarcar }: {
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
-        {accion && destino && (
-          destino === 'whatsapp' ? (
-            <LinkWhatsApp
-              className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[15px] font-bold"
-              style={{ background: COLORS.lima, color: COLORS.ink }}
-            >
-              {accion.etiqueta}
-            </LinkWhatsApp>
-          ) : (
-            <button
-              type="button"
-              onClick={() => navigate(RUTA[destino])}
-              className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[15px] font-bold"
-              style={{ color: COLORS.brand, border: `1.5px solid ${COLORS.brandSoft}` }}
-            >
-              {accion.etiqueta}
-            </button>
-          )
-        )}
-
         {/* Lo que marca la persona es lo que usa el modelo la próxima vez para
             no insistir con lo que no le sirve. Tocar de nuevo saca la marca. */}
-        <div className="flex items-center gap-1 ml-auto" role="group" aria-label="¿Te sirvió esta recomendación?">
+        <div className="flex items-center gap-1" role="group" aria-label="¿Te sirvió esta recomendación?">
           <span className="text-[14px] mr-1" style={{ color: COLORS.inkFaint }}>¿Te sirvió?</span>
           {([true, false] as const).map((v) => {
             const elegido = util === v;
@@ -245,10 +206,7 @@ function Tarjeta({ periodo, tarjeta, onMarcar }: {
 }
 
 function TarjetaGeneral({ periodo }: { periodo: PeriodoRecomendacion }) {
-  const navigate = useNavigate();
   const r = generalDe(periodo);
-  const accion = r.accion;
-  const destino = accion?.destino;
   return (
     <article className="py-4 border-b last:border-b-0 flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
       <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
@@ -256,28 +214,6 @@ function TarjetaGeneral({ periodo }: { periodo: PeriodoRecomendacion }) {
       </p>
       <h3 className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{r.titulo}</h3>
       <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
-      {accion && destino && (
-        <div className="pt-1">
-          {destino === 'whatsapp' ? (
-            <LinkWhatsApp
-              className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[15px] font-bold"
-              style={{ background: COLORS.lima, color: COLORS.ink }}
-            >
-              {accion.etiqueta}
-            </LinkWhatsApp>
-          ) : (
-            <button
-              type="button"
-              onClick={() => navigate(RUTA[destino], accion.abrir ? { state: { abrir: accion.abrir } } : undefined)}
-              className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[15px] font-bold"
-              style={{ color: COLORS.brand, border: `1.5px solid ${COLORS.brandSoft}` }}
-            >
-              {accion.etiqueta}
-            </button>
-          )}
-        </div>
-      )}
     </article>
   );
 }
-
