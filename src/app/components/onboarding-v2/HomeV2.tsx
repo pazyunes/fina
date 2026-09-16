@@ -151,7 +151,7 @@ export function HomeV2() {
             className="v2-focus flex flex-col items-center shrink-0 min-h-[44px] px-1 rounded-xl"
             style={{ color: COLORS.brand }}
           >
-            <span className="flex items-center gap-1 text-[20px] font-bold leading-none"><IconFuego size={16} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
+            <span data-racha-numero className="flex items-center gap-1 text-[20px] font-bold leading-none"><IconFuego size={16} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
             <span className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>{racha.dias === 1 ? 'día' : 'días'}</span>
           </button>
         ) : (

@@ -91,7 +91,11 @@ function Animacion({ desde, hasta, reducir, onFin }: { desde: number; hasta: num
         // centro: así cae justo encima del contador de Home.
         const grupo = grupoRef.current?.getBoundingClientRect();
         const num = numeroRef.current?.getBoundingClientRect();
-        const destino = document.querySelector('[data-racha-destino]')?.getBoundingClientRect();
+        // Al contador se llega sobre su fueguito con el número ([data-racha-numero]),
+        // no sobre todo el contador (que incluye "días" abajo): si no, la escala
+        // se calcula contra un alto que no es el del número y llega grande.
+        const destino = (document.querySelector('[data-racha-destino] [data-racha-numero]')
+          ?? document.querySelector('[data-racha-destino]'))?.getBoundingClientRect();
         if (grupo && num) {
           const cx = num.left + num.width / 2;
           const cy = num.top + num.height / 2;
@@ -141,7 +145,7 @@ function Animacion({ desde, hasta, reducir, onFin }: { desde: number; hasta: num
             : `scale(${visible ? 1 : 0.6})`,
           transformOrigin: volando ? vuelo.origen : '50% 50%',
           transition: volando
-            ? 'transform 700ms cubic-bezier(.5,0,.3,1), opacity 250ms ease 550ms'
+            ? 'transform 700ms cubic-bezier(.5,0,.3,1), opacity 150ms ease 650ms'
             : 'transform 350ms cubic-bezier(.3,1.4,.5,1), opacity 250ms ease',
         }}
       >
