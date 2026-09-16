@@ -196,7 +196,11 @@
 .fini .p-leg-r{transform-origin:28.5% 2.1%}
 .fini .p-body{left:22.40%;top:14.45%;width:56.05%;height:53.75%}
 .fini .p-mouth{left:46.20%;top:48.35%;width:6.25%;height:3.60%}
-.fini .p-mouth-open{left:45.37%;top:45.85%;width:7.92%;height:5.29%} /* centrada con los ojos: con 46.69% quedaba corrida a la derecha (se ve en el saludo y en el logro) */
+/* Boca abierta: centrada con los ojos y DEBAJO de ellos. Venía en 46.69% / 45.85%,
+   corrida a la derecha y empezando a la misma altura en que terminan los ojos
+   (47.75%), así que la boca quedaba pegada a los ojos. Se ve en el saludo y en
+   el logro. */
+.fini .p-mouth-open{left:45.37%;top:48.9%;width:7.92%;height:5.29%}
 .fini .p-eye-l{left:43.05%;top:41.00%;width:3.45%;height:6.75%}
 .fini .p-eye-r{left:52.15%;top:41.05%;width:3.50%;height:6.70%}
 .fini .p-eye-happy-l{left:43.70%;top:40.19%;width:5.70%;height:3.80%}
