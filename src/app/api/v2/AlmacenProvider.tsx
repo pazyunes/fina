@@ -47,6 +47,33 @@ export function AlmacenProvider({ children }: { children: React.ReactNode }) {
     void recargar();
   }, [uid, loading, recargar]);
 
+  // Al volver a la app, se traen los datos de nuevo. Lo que carga el bot de
+  // WhatsApp llega del otro lado: sin esto, quien deja FINA abierta (la app
+  // instalada en el celular queda abierta en segundo plano), va a WhatsApp a
+  // contar un gasto y vuelve, no lo veía hasta cerrar y abrir la app.
+  //
+  // Dos frenos: no más de una vez cada 20 segundos (ir y volver seguido no
+  // tiene que pegarle a la base cada vez), y nunca con escrituras pendientes
+  // (recargar a mitad de un guardado podría hacer desaparecer por un momento
+  // lo que la persona acaba de cargar).
+  useEffect(() => {
+    if (!uid) return;
+    let ultima = Date.now();
+    const alVolver = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - ultima < 20_000) return;
+      if (leerGuardado().tipo !== 'quieto' || !estaHidratado()) return;
+      ultima = Date.now();
+      void hidratar().then((e) => { if (e === null) setError(null); });
+    };
+    document.addEventListener('visibilitychange', alVolver);
+    window.addEventListener('focus', alVolver);
+    return () => {
+      document.removeEventListener('visibilitychange', alVolver);
+      window.removeEventListener('focus', alVolver);
+    };
+  }, [uid]);
+
   return (
     <Ctx.Provider value={{ estado, guardado, listo, error, recargar }}>
       {children}

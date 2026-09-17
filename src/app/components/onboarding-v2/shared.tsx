@@ -1455,3 +1455,25 @@ export function LogoFina({ blanco = false, alto = 36, className = '' }: { blanco
   );
 }
 
+/**
+ * Al cerrar sesión: borra lo que la app dejó guardado en este navegador sobre la
+ * cuenta (nombre, respuestas del onboarding sin subir, reserva…). Si quedara, la
+ * próxima persona que entre en el mismo dispositivo podría verlo, o peor,
+ * `subirPendientesLocales` lo subiría a SU cuenta.
+ *
+ * Se conservan las marcas que no son de nadie: los carteles de "primera vez" ya
+ * vistos y la llave de acceso de la app.
+ */
+export function borrarDatosLocales() {
+  try {
+    const borrar: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('fina_v2_') && !k.startsWith('fina_v2_coach_') && k !== LS_ARRANCAS_OCULTO) borrar.push(k);
+    }
+    borrar.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // Sin acceso al storage no hay nada guardado que borrar.
+  }
+}
+

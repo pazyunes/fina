@@ -1,4 +1,7 @@
 import { supabase } from './cliente';
+import { olvidar } from './almacen';
+import { desactivarNotificaciones } from './notificaciones';
+import { olvidarRecomendaciones } from './recomendaciones';
 
 // ¿Ya hay una cuenta con este mail o este teléfono?
 //
@@ -32,3 +35,23 @@ export async function telefonoTieneCuenta(telefono: string): Promise<boolean | n
     return null;
   }
 }
+
+/**
+ * Cerrar sesión en este dispositivo.
+ *
+ * Además de cerrar la sesión de Supabase, deja el dispositivo limpio para la
+ * próxima persona que entre en él:
+ *  · se desanotan los avisos de este dispositivo (si no, le seguirían llegando
+ *    a quien use el celular los avisos de la cuenta anterior);
+ *  · se vacía la copia en memoria de los datos y de las recomendaciones.
+ * Lo que queda guardado en el navegador lo borra la pantalla (ver
+ * borrarDatosLocales en shared.tsx).
+ */
+export async function cerrarSesion(): Promise<void> {
+  // Mientras hay sesión: borrar la suscripción de la base necesita saber de quién es.
+  try { await desactivarNotificaciones(true); } catch { /* no bloquea el cierre */ }
+  await supabase.auth.signOut();
+  olvidar();
+  olvidarRecomendaciones();
+}
+

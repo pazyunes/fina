@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
-import { ArmarGrupoBtn, BotonVolver, COLORS, useVolver, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
+import { ArmarGrupoBtn, BotonVolver, COLORS, borrarDatosLocales, useVolver, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
 import { VerificarTelefono } from './VerificarTelefono';
 import { AvisosFina } from './AvisosFina';
+import { cerrarSesion } from '../../api/v2/cuenta';
 import { llevarA, useAlLlegar } from './alLlegar';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 
@@ -39,6 +40,14 @@ function itemsPerfil() {
 export function PerfilV2() {
   const navigate = useNavigate();
   const volver = useVolver();
+  const [confirmarSalida, setConfirmarSalida] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
+  async function salir() {
+    setSaliendo(true);
+    await cerrarSesion();
+    borrarDatosLocales();
+    navigate('/onboarding-v2/entrar', { replace: true });
+  }
   const fileRef = useRef<HTMLInputElement>(null);
   const [foto, setFoto] = useState<string | null>(() => loadV2Foto());
   const [subiendoFoto, setSubiendoFoto] = useState(false);
@@ -300,6 +309,48 @@ export function PerfilV2() {
           Enviar feedback
         </button>
       </div>
+
+      {/* Cerrar sesión. Con confirmación: está al final de una pantalla que se
+          scrollea, y un toque de más sacaría a la persona de su cuenta. */}
+      <section className="flex flex-col gap-2.5 pb-4">
+        {!confirmarSalida ? (
+          <button
+            type="button"
+            onClick={() => setConfirmarSalida(true)}
+            className="v2-focus self-start min-h-[48px] px-5 rounded-full text-[16px] font-bold"
+            style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+          >
+            Cerrar sesión
+          </button>
+        ) : (
+          <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar cierre de sesión">
+            <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+              ¿Cerrar sesión en este dispositivo? Tus datos quedan guardados: para volver a verlos, entrás con tu mail y contraseña.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setConfirmarSalida(false)}
+                disabled={saliendo}
+                className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold"
+                style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void salir()}
+                disabled={saliendo}
+                className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-bold v2-disabled"
+                style={{ background: COLORS.ink, color: COLORS.paper }}
+              >
+                {saliendo ? 'Cerrando…' : 'Cerrar sesión'}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

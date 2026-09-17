@@ -106,14 +106,14 @@ export async function activarNotificaciones(): Promise<{ resultado: ResultadoAct
   }
 }
 
-export async function desactivarNotificaciones(): Promise<Resultado<null>> {
+export async function desactivarNotificaciones(silencioso = false): Promise<Resultado<null>> {
   try {
     const sub = await suscripcionActual();
     if (sub) {
       await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
       await sub.unsubscribe();
     }
-    avisarConfirmacion('Avisos desactivados con éxito.');
+    if (!silencioso) avisarConfirmacion('Avisos desactivados con éxito.');
     return ok(null);
   } catch (e) {
     return falla<null>(e, 'desactivarNotificaciones');

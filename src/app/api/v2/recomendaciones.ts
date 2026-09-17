@@ -51,6 +51,11 @@ function esRecomendaciones(x: unknown): x is Recomendaciones {
 let ultima: Recomendaciones | null = null;
 let enCurso: Promise<Resultado<Recomendaciones>> | null = null;
 
+/** Al cerrar sesión: que la próxima cuenta no vea las recomendaciones de la anterior. */
+export function olvidarRecomendaciones() {
+  ultima = null;
+}
+
 /** La última respuesta que llegó en esta pestaña, para pintar sin esperar. */
 export function recomendacionesRecordadas(): Recomendaciones | null {
   return ultima;
