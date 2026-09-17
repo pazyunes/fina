@@ -8,6 +8,7 @@ import { Fini } from './Fini';
 import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
 import { IngresosVsGastos } from './IngresosVsGastos';
+import { CamposGastoFijo, ListaGastosFijos, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
 import { FUENTES_INGRESO, type FuenteIngreso } from '../../api/v2/tipos';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
@@ -237,6 +238,7 @@ export function GastosV2() {
   const [ngTipo, setNgTipo] = useState<TipoGasto>('necesario');
   const [ngMetodo, setNgMetodo] = useState<string | null>(null);
   const [ngMetodoOtro, setNgMetodoOtro] = useState('');
+  const [ngFijo, setNgFijo] = useState<OpcionFijo>(opcionFijoInicial);
   // Medio con el que se carga la plata disponible.
   const [addDispMetodo, setAddDispMetodo] = useState<string | null>(null);
   const [addDispMetodoOtro, setAddDispMetodoOtro] = useState('');
@@ -315,6 +317,10 @@ export function GastosV2() {
       () => pantallaRef.current?.querySelector<HTMLElement>('[aria-label="Monto del gasto"]'),
     );
   });
+  // Desde el aviso de vencimiento o la tarjeta de Home.
+  useAlLlegar('fijos', () => {
+    llevarA(() => pantallaRef.current?.querySelector<HTMLElement>('[data-gastos-fijos]'));
+  });
   useAlLlegar('tope', () => {
     const sinTope = categorias.filter((c) => !topes[c.id]);
     const candidatas = sinTope.length ? sinTope : categorias;
@@ -361,16 +367,26 @@ export function GastosV2() {
     // Si falla, el modal se queda abierto con lo que escribió: perder el gasto
     // que acaba de tipear sería peor que la espera.
     setErrorGasto(null);
-    const r = await acciones.registrarGasto({
+    const datos = {
       monto,
       moneda: ngMoneda,
       descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label,
       seccionId: catId,
       tipo: ngTipo,
       metodoPago: metodo,
-    });
-    if (r.error !== null) { setErrorGasto(r.error); return; }
+    };
+    // Un gasto fijo que todavía no se pagó no se registra como gasto: sólo
+    // queda anotado para avisar. Si ya se pagó, se registra y queda el próximo.
+    if (!ngFijo.activo || ngFijo.yaPagado) {
+      const r = await acciones.registrarGasto({ ...datos, confirmacion: ngFijo.activo ? 'Gasto fijo guardado con éxito.' : undefined });
+      if (r.error !== null) { setErrorGasto(r.error); return; }
+    }
+    if (ngFijo.activo) {
+      const diaAncla = ngFijo.frecuencia === 'mensual' || ngFijo.frecuencia === 'anual' ? Number(ngFijo.proximo.slice(8, 10)) : null;
+      acciones.crearGastoFijo({ ...datos, frecuencia: ngFijo.frecuencia, proximoPago: ngFijo.proximo, diaAncla }, !ngFijo.yaPagado);
+    }
 
+    setNgFijo(opcionFijoInicial());
     setNgMonto(''); setNgMoneda('ARS'); setNgDesc(''); setNgNuevaCat(''); setNgCreandoCat(false); setNgCatId(null); setNgTipo('necesario');
     setNgMetodo(null); setNgMetodoOtro('');
     setAddingGasto(false);
@@ -673,6 +689,8 @@ export function GastosV2() {
             </div>
           </fieldset>
 
+          <CamposGastoFijo valor={ngFijo} onChange={setNgFijo} />
+
           {errorGasto && (
             <p role="alert" className="text-[14px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{errorGasto}</p>
           )}
@@ -684,11 +702,11 @@ export function GastosV2() {
             <button
               type="button"
               onClick={() => void agregarGasto()}
-              disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim())}
+              disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim()) || !opcionFijoValida(ngFijo)}
               className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
-              Agregar gasto
+              {ngFijo.activo && !ngFijo.yaPagado ? 'Guardar gasto fijo' : 'Agregar gasto'}
             </button>
           </div>
         </div>
@@ -886,6 +904,8 @@ export function GastosV2() {
           );
         })}
       </div>
+
+      <ListaGastosFijos />
 
       {/* Buscador de gastos — colapsado en una lupita, no ocupa lugar hasta que se usa */}
       <div className="flex flex-col gap-2.5 lg:col-span-1">

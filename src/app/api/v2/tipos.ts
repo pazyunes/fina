@@ -41,6 +41,22 @@ export const FUENTES_INGRESO: { id: FuenteIngreso; label: string }[] = [
   { id: 'otro', label: 'Otro' },
 ];
 
+/** Un gasto que se repite (alquiler, gimnasio…). Ver migración 0034. */
+export type GastoFijo = {
+  id: string;
+  descripcion: string;
+  monto: number;
+  moneda: MonedaConvertible;
+  seccionId: string | null;
+  tipo: TipoGasto;
+  metodoPago: string | null;
+  frecuencia: 'semanal' | 'quincenal' | 'mensual' | 'anual';
+  /** Próximo pago, 'YYYY-MM-DD' en Argentina. */
+  proximoPago: string;
+  /** Día del mes en que vence (mensual y anual). */
+  diaAncla: number | null;
+};
+
 /** Plata que entró: un movimiento de `transactions` con type = 'income'. */
 export type Ingreso = {
   id: string;
@@ -220,6 +236,7 @@ export type EstadoV2 = {
   mediosPago: MedioPago[];
   gastos: Gasto[];
   ingresos: Ingreso[];
+  gastosFijos: GastoFijo[];
   objetivos: Objetivo[];
   perfilInversor: PerfilInversor | null;
   aportes: AporteInversion[];
@@ -252,6 +269,7 @@ export const ESTADO_VACIO: EstadoV2 = {
   mediosPago: [],
   gastos: [],
   ingresos: [],
+  gastosFijos: [],
   objetivos: [],
   perfilInversor: null,
   aportes: [],

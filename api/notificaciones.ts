@@ -2,7 +2,8 @@
 // y en cada turno le manda a cada persona COMO MUCHO UN aviso:
 //
 //   · ?turno=manana — 10 hs de Argentina:
-//       – "día de separar", el día del mes en que cobra (si lo cargó);
+//       – un gasto fijo que vence hoy o mañana;
+//       – si no, "día de separar", el día del mes en que cobra (si lo cargó);
 //       – si no, los lunes, el resumen de la semana anterior.
 //   · ?turno=tarde  — 19 hs de Argentina, sólo a quien hoy todavía no sumó:
 //       – si tiene una racha de 2 días o más, el de la racha;
@@ -25,12 +26,12 @@ type Req = { headers: Record<string, string | string[] | undefined>; query?: Rec
 type Res = { status(code: number): Res; json(body: unknown): void; setHeader(nombre: string, valor: string): void };
 
 type Turno = 'manana' | 'tarde';
-type Tipo = 'paso' | 'racha' | 'separar' | 'resumen';
+type Tipo = 'paso' | 'racha' | 'separar' | 'resumen' | 'vencimiento';
 type Racha = { dias: number; hoyCumplido: boolean };
 type FilaSuscripcion = Suscripcion & { id: string; user_id: string };
 // Con `select('*')`: si todavía no se corrió la 0031, las columnas nuevas no
 // vienen y valen sus valores por defecto, en vez de romper la tarea entera.
-type Prefs = { paso?: boolean; racha?: boolean; separar?: boolean; resumen?: boolean; dia_cobro?: number | null };
+type Prefs = { paso?: boolean; racha?: boolean; separar?: boolean; resumen?: boolean; vencimientos?: boolean; dia_cobro?: number | null };
 
 const TITULO_PASO = new Map(PASOS.map((p) => [p.clave as string, p.titulo]));
 
@@ -99,9 +100,14 @@ export default async function handler(req: Req, res: Res) {
   res.status(200).json(resumen);
 }
 
-// ── La mañana: separar o resumen ─────────────────────────────────────────
+// ── La mañana: vencimiento, separar o resumen ────────────────────────────
 
 async function avisoDeLaManana(supabase: SupabaseClient, uid: string, hoy: string, pref: Prefs): Promise<{ tipo: Tipo; aviso: Aviso } | null> {
+  // Un pago que vence es lo único con fecha que no se mueve: va primero.
+  if (pref.vencimientos !== false) {
+    const aviso = await armarVencimiento(supabase, uid, hoy);
+    if (aviso) return { tipo: 'vencimiento', aviso };
+  }
   // El día de cobro manda sobre el resumen: separar apenas entra la plata es lo
   // que más mueve. Si cae un lunes, ese lunes no hay resumen.
   if (pref.separar !== false && pref.dia_cobro) {
@@ -121,6 +127,35 @@ async function avisoDeLaManana(supabase: SupabaseClient, uid: string, hoy: strin
 
 const pesos = (n: number, moneda = 'ARS') =>
   `${moneda === 'USD' ? 'US$' : '$'}${Math.round(n).toLocaleString('es-AR')}`;
+
+async function armarVencimiento(supabase: SupabaseClient, uid: string, hoy: string): Promise<Aviso | null> {
+  const manana = sumarDias(hoy, 1);
+  // Sin la migración 0034 la tabla no existe: error → sin aviso, sigue lo demás.
+  const { data, error } = await supabase
+    .from('recurring_expenses')
+    .select('description, amount, currency, next_due')
+    .eq('user_id', uid).eq('active', true)
+    .in('next_due', [hoy, manana])
+    .order('next_due', { ascending: true });
+  if (error || !data || data.length === 0) return null;
+  const filas = data as { description: string; amount: number; currency: string; next_due: string }[];
+
+  // Se avisa el día anterior y el mismo día; si ya pasó, no se insiste.
+  const cuando = filas[0].next_due === hoy ? 'Hoy' : 'Mañana';
+  const delDia = filas.filter((f) => f.next_due === filas[0].next_due);
+  const titulo = delDia.length === 1
+    ? `${cuando} vence ${delDia[0].description}`
+    : `${cuando} vencen ${delDia.length} gastos fijos`;
+  const detalle = delDia.length === 1
+    ? `Son ${pesos(delDia[0].amount, delDia[0].currency)}.`
+    : `${delDia.map((f) => `${f.description} (${pesos(f.amount, f.currency)})`).join(', ')}.`;
+  return {
+    title: titulo,
+    body: `${detalle} Cuando lo pagues, marcalo en FINA y queda registrado.`.slice(0, 180),
+    url: '/onboarding-v2/gastos?abrir=fijos',
+    tag: 'fina-vencimiento',
+  };
+}
 
 async function armarSeparar(supabase: SupabaseClient, uid: string): Promise<Aviso | null> {
   const { data: objetivos } = await supabase

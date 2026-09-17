@@ -12,7 +12,7 @@ import type { AccionPaso } from '../../api/v2/pasos';
 //
 // Se limpia enseguida: volver atrás o recargar no tiene que abrirlo otra vez.
 
-export function useAlLlegar(accion: AccionPaso, hacer: () => void) {
+export function useAlLlegar(accion: AccionPaso | 'fijos', hacer: () => void) {
   const location = useLocation();
   const navigate = useNavigate();
   useEffect(() => {

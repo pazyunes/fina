@@ -55,7 +55,7 @@ Y verificar de nuevo con el select de arriba.
 
 ## Las migraciones: qué son y en qué orden
 
-Catorce archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
+Quince archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
 resultado antes de pasar al siguiente.
 
 | Orden | Archivo | Qué agrega |
@@ -74,6 +74,7 @@ resultado antes de pasar al siguiente.
 | 12 | `0031_avisos_separar_y_resumen.sql` | Dos avisos nuevos: "día de separar" (el día que la persona cobra) y el resumen de la semana (los lunes). Guarda qué día cobra cada una |
 | 13 | `0032_recomendaciones_hechas.sql` | Las recomendaciones de "Para vos" se pueden tachar: guarda cuáles marcó cada persona en cada día, semana y mes, para mostrarle otra y para que la IA aprenda de lo que hace |
 | 14 | `0033_ingresos.sql` | Ingresos: la plata que entra se guarda en `transactions` como `income`, desde la app y desde el bot, y agrega de dónde vino (sueldo, freelance, venta, regalo, reintegro, otro) |
+| 15 | `0034_gastos_fijos.sql` | Gastos fijos (alquiler, gimnasio, suscripciones) con frecuencia y próximo pago, y el aviso de vencimiento. No se registran solos: se confirman con "Ya lo pagué" |
 
 ### Qué trae la 0024 y por qué
 

@@ -23,6 +23,7 @@ import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 import { traducirErrorAuth } from '../../lib/erroresAuth';
 import { crearObjetivo, crearSeccion, guardarPerfil, guardarPerfilInversor } from '../../api/v2';
 import { esperarCola } from '../../api/v2/almacen';
+import { InvitacionAvisos } from './InvitacionAvisos';
 
 // Onboarding v2 — el flujo de entrada real.
 //
@@ -1137,6 +1138,7 @@ export function OnboardingV2() {
                   <div className="py-2"><Fini state="logro" size={150} /></div>
                   <Titulo className="text-center">¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</Titulo>
                   <p className="text-[16px]" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
+                  <InvitacionAvisos momento="onboarding" />
                 </div>
               )}
             </motion.div>

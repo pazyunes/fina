@@ -25,11 +25,12 @@ export type PreferenciasAvisos = {
   racha: boolean;
   separar: boolean;
   resumen: boolean;
+  vencimientos: boolean;
   /** Día del mes en que cobra (1 a 31), o null si no lo dijo. */
   diaCobro: number | null;
 };
 
-export const PREFERENCIAS_POR_DEFECTO: PreferenciasAvisos = { paso: true, racha: true, separar: true, resumen: true, diaCobro: null };
+export const PREFERENCIAS_POR_DEFECTO: PreferenciasAvisos = { paso: true, racha: true, separar: true, resumen: true, vencimientos: true, diaCobro: null };
 
 export function soporteNotificaciones(): SoporteNotificaciones {
   if (typeof window === 'undefined') return 'no';
@@ -124,13 +125,14 @@ export async function leerPreferenciasAvisos(): Promise<PreferenciasAvisos> {
   // `*` y no columnas sueltas: si todavía no se corrió la 0031, las columnas
   // nuevas no existen y pedirlas por nombre haría fallar la lectura entera.
   const { data } = await supabase.from('notification_prefs').select('*').maybeSingle();
-  const d = data as { paso?: boolean; racha?: boolean; separar?: boolean; resumen?: boolean; dia_cobro?: number | null } | null;
+  const d = data as { paso?: boolean; racha?: boolean; separar?: boolean; resumen?: boolean; vencimientos?: boolean; dia_cobro?: number | null } | null;
   // Sin fila = todos activados.
   return {
     paso: d?.paso ?? true,
     racha: d?.racha ?? true,
     separar: d?.separar ?? true,
     resumen: d?.resumen ?? true,
+    vencimientos: d?.vencimientos ?? true,
     diaCobro: d?.dia_cobro ?? null,
   };
 }
@@ -138,10 +140,15 @@ export async function leerPreferenciasAvisos(): Promise<PreferenciasAvisos> {
 export async function guardarPreferenciasAvisos(p: PreferenciasAvisos): Promise<Resultado<null>> {
   const uid = await idUsuaria();
   if (!uid) return falla<null>('sin sesión', 'guardarPreferenciasAvisos');
-  const { error } = await supabase.from('notification_prefs').upsert({
+  const fila = {
     user_id: uid, paso: p.paso, racha: p.racha, separar: p.separar, resumen: p.resumen, dia_cobro: p.diaCobro,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id' });
+  };
+  let { error } = await supabase.from('notification_prefs').upsert({ ...fila, vencimientos: p.vencimientos }, { onConflict: 'user_id' });
+  // Sin la migración 0034 no existe la columna `vencimientos`: se guarda lo demás.
+  if (error && error.message.includes('vencimientos')) {
+    ({ error } = await supabase.from('notification_prefs').upsert(fila, { onConflict: 'user_id' }));
+  }
   if (error) return falla<null>(error.message, 'guardarPreferenciasAvisos');
   avisarConfirmacion('Preferencias guardadas con éxito.');
   return ok(null);

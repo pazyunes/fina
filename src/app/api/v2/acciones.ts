@@ -3,10 +3,11 @@ import { cotizacionDolar } from './cotizacion';
 import * as api from './index';
 import { idUsuaria } from './cliente';
 import type {
-  AporteInversion, Contribucion, FuenteIngreso, Gasto, Grupo, Ingreso, Moneda, MonedaConvertible,
+  AporteInversion, Contribucion, FuenteIngreso, Gasto, GastoFijo, Grupo, Ingreso, Moneda, MonedaConvertible,
   Objetivo, Perfil, PerfilInversor, Periodo, Seccion, TipoGasto,
 } from './tipos';
 import { esConvertible } from './tipos';
+import { siguienteVencimiento } from './fechasFijos';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Acciones: lo que las pantallas llaman cuando la persona hace algo.
@@ -115,6 +116,50 @@ export function sumarDisponible(medio: string, monto: number) {
   push(() => api.sumarDisponible(nombre, monto), 'Dinero agregado con éxito.');
 }
 
+// ── Gastos fijos ─────────────────────────────────────────────────────────
+export function crearGastoFijo(g: Omit<GastoFijo, 'id'>, avisar = true): GastoFijo {
+  const fijo: GastoFijo = { ...g, id: nuevoId() };
+  const est = leerEstado();
+  parchearEstado({ gastosFijos: [...est.gastosFijos, fijo].sort((a, b) => a.proximoPago.localeCompare(b.proximoPago)) });
+  push(() => api.crearGastoFijo(fijo), avisar ? 'Gasto fijo guardado con éxito.' : undefined, () => parchearEstado({ gastosFijos: leerEstado().gastosFijos.filter((x) => x.id !== fijo.id) }));
+  return fijo;
+}
+
+/**
+ * "Ya lo pagué": se registra como un gasto más (con la cotización de hoy, si es
+ * en dólares) y el gasto fijo pasa a su próximo vencimiento.
+ */
+export async function pagarGastoFijo(id: string): Promise<string | null> {
+  const est = leerEstado();
+  const fijo = est.gastosFijos.find((x) => x.id === id);
+  if (!fijo) return null;
+  const r = await registrarGasto({
+    monto: fijo.monto, moneda: fijo.moneda, descripcion: fijo.descripcion,
+    seccionId: fijo.seccionId, tipo: fijo.tipo, metodoPago: fijo.metodoPago,
+    confirmacion: 'Pago registrado con éxito.',
+  });
+  if (r.error !== null) return r.error;
+  const proximo = siguienteVencimiento(fijo.proximoPago, fijo.frecuencia, fijo.diaAncla);
+  parchearEstado({
+    gastosFijos: leerEstado().gastosFijos
+      .map((x) => (x.id === id ? { ...x, proximoPago: proximo } : x))
+      .sort((a, b) => a.proximoPago.localeCompare(b.proximoPago)),
+  });
+  push(() => api.avanzarGastoFijo(id, proximo), undefined, () => parchearEstado({
+    gastosFijos: leerEstado().gastosFijos.map((x) => (x.id === id ? { ...x, proximoPago: fijo.proximoPago } : x)),
+  }));
+  return null;
+}
+
+export function borrarGastoFijo(id: string) {
+  const est = leerEstado();
+  const fijo = est.gastosFijos.find((x) => x.id === id);
+  parchearEstado({ gastosFijos: est.gastosFijos.filter((x) => x.id !== id) });
+  push(() => api.borrarGastoFijo(id), 'Gasto fijo borrado con éxito.', () => {
+    if (fijo && !leerEstado().gastosFijos.some((x) => x.id === id)) parchearEstado({ gastosFijos: [...leerEstado().gastosFijos, fijo] });
+  });
+}
+
 /**
  * Registrar plata que entró: queda como ingreso (para ver cuánto entra contra
  * cuánto sale) Y suma al dinero disponible de ese medio. Es la diferencia con
@@ -191,6 +236,8 @@ export async function registrarGasto(g: {
   monto: number; moneda: MonedaConvertible; descripcion: string;
   seccionId: string | null; tipo: TipoGasto; metodoPago: string | null;
   grupoId?: string | null; ts?: number;
+  /** Otro cartel de confirmación (por ejemplo, al pagar un gasto fijo). */
+  confirmacion?: string;
 }): Promise<{ gasto: Gasto | null; error: string | null }> {
   const conv = await aPesos(g.monto, g.moneda);
   if (conv.error !== null) return { gasto: null, error: conv.error };
@@ -220,9 +267,10 @@ export async function registrarGasto(g: {
     : est.mediosPago;
 
   parchearEstado({ gastos: [gasto, ...est.gastos], mediosPago });
+  const { confirmacion, ...datos } = g;
   push(() => api.registrarGasto({
-    ...g, id: gasto.id, montoArs, cotizacionId: conv.cotizacionId,
-  }), 'Gasto registrado con éxito.');
+    ...datos, id: gasto.id, montoArs, cotizacionId: conv.cotizacionId,
+  }), confirmacion ?? 'Gasto registrado con éxito.');
 
   // Registrar es la actividad con la que se compite en el grupo: se puntúa
   // haber anotado el gasto, nunca el monto.

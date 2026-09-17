@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { COLORS, TituloSeccion } from './shared';
+import { TutorialAgregarAInicio } from './InvitacionAvisos';
 import {
   activarNotificaciones, desactivarNotificaciones, guardarPreferenciasAvisos, leerPreferenciasAvisos,
   mandarAvisoDePrueba, notificacionesActivas, soporteNotificaciones, PREFERENCIAS_POR_DEFECTO, type PreferenciasAvisos,
@@ -12,9 +13,10 @@ import {
 // app que avisa de más termina con las notificaciones desactivadas o
 // desinstalada, y ahí se pierde el recordatorio que sí servía.
 
-type Interruptor = 'paso' | 'racha' | 'separar' | 'resumen';
+type Interruptor = 'paso' | 'racha' | 'separar' | 'resumen' | 'vencimientos';
 
 const AVISOS: { clave: Interruptor; titulo: string; detalle: string }[] = [
+  { clave: 'vencimientos', titulo: 'Gastos fijos', detalle: 'A las 10 hs, el día antes y el día que vence un gasto fijo.' },
   { clave: 'paso', titulo: 'Tu paso del día', detalle: 'A las 19 hs, si todavía no lo hiciste.' },
   { clave: 'racha', titulo: 'Tu racha', detalle: 'A las 19 hs, si tenés una racha y ese día todavía no sumaste. Va en lugar del paso.' },
   { clave: 'separar', titulo: 'Día de separar', detalle: 'A las 10 hs del día que cobrás, para separar para tus objetivos apenas entra la plata.' },
@@ -29,6 +31,7 @@ export function AvisosFina() {
   const [prefs, setPrefs] = useState<PreferenciasAvisos>(PREFERENCIAS_POR_DEFECTO);
   const [trabajando, setTrabajando] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
+  const [tutorial, setTutorial] = useState(false);
 
   useEffect(() => {
     let vivo = true;
@@ -87,9 +90,20 @@ export function AvisosFina() {
       </p>
 
       {soporte === 'iphone-sin-instalar' && (
-        <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.ink, borderColor: COLORS.brandSoft }}>
-          En iPhone, los avisos funcionan con FINA en tu pantalla de inicio: en Safari tocá <strong>Compartir</strong> → <strong>Agregar a inicio</strong>, abrí FINA desde ese ícono y activalos acá.
-        </p>
+        <>
+          <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.ink, borderColor: COLORS.brandSoft }}>
+            En iPhone, los avisos funcionan con FINA en tu pantalla de inicio: en Safari tocá <strong>Compartir</strong> → <strong>Agregar a inicio</strong>, abrí FINA desde ese ícono y activalos acá.
+          </p>
+          <button
+            type="button"
+            onClick={() => setTutorial(true)}
+            className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[15px] font-bold"
+            style={{ color: COLORS.brand, border: `1.5px solid ${COLORS.brandSoft}` }}
+          >
+            Ver cómo se hace
+          </button>
+          {tutorial && <TutorialAgregarAInicio onCerrar={() => setTutorial(false)} />}
+        </>
       )}
       {soporte === 'no' && (
         <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>

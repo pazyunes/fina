@@ -1,7 +1,7 @@
 import { correr, falla, idUsuaria, ok, slugify, supabase, type Resultado } from './cliente';
 import {
   ESTADO_VACIO, PERFIL_VACIO,
-  type AporteInversion, type Contribucion, type EstadoV2, type FuenteIngreso, type Gasto, type Grupo, type Ingreso,
+  type AporteInversion, type Contribucion, type EstadoV2, type FuenteIngreso, type Gasto, type GastoFijo, type Grupo, type Ingreso,
   type MedioPago, type MiembroGrupo, type Moneda, type MonedaConvertible,
   type Objetivo, type Perfil,
   type PerfilInversor, type Periodo, type Seccion, type TipoGasto,
@@ -29,12 +29,13 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
   if (!uid) return falla<EstadoV2>('sin sesión', 'cargarTodo');
 
   try {
-    const [perfil, secciones, medios, gastos, ingresos, objetivos, perfInv, aportes, grupo] = await Promise.all([
+    const [perfil, secciones, medios, gastos, ingresos, fijos, objetivos, perfInv, aportes, grupo] = await Promise.all([
       leerPerfil(uid),
       listarSecciones(),
       listarMediosPago(),
       listarGastos(),
       listarIngresos(),
+      listarGastosFijos(),
       listarObjetivos(),
       leerPerfilInversor(),
       listarAportes(),
@@ -53,6 +54,8 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
       // Si la lectura de ingresos falla (por ejemplo, sin la migración 0033),
       // la app carga igual: sólo no se ven los ingresos.
       ingresos: ingresos.data ?? [],
+      // Igual: sin la migración 0034, la app carga sin gastos fijos.
+      gastosFijos: fijos.data ?? [],
       objetivos: objetivos.data ?? [],
       perfilInversor: perfInv.data ?? null,
       aportes: aportes.data ?? [],
@@ -328,6 +331,66 @@ export async function registrarGasto(g: {
     if (saldo.error !== null) return falla<Gasto>(saldo.error, 'registrarGasto/saldo');
   }
   return ok(aGasto(r.data[0]));
+}
+
+// ── Gastos fijos ─────────────────────────────────────────────────────────
+type FilaGastoFijo = {
+  id: string; description: string; amount: number; currency: string; section_id: string | null;
+  expense_type: string | null; payment_method: string | null; frequency: string; next_due: string; anchor_day: number | null;
+};
+
+const FRECUENCIAS_FIJO = ['semanal', 'quincenal', 'mensual', 'anual'] as const;
+const TIPOS_GASTO: TipoGasto[] = ['necesario', 'urgente', 'impulsivo', 'otro'];
+
+function aGastoFijo(f: FilaGastoFijo): GastoFijo {
+  return {
+    id: f.id,
+    descripcion: f.description,
+    monto: Number(f.amount),
+    moneda: f.currency === 'USD' ? 'USD' : 'ARS',
+    seccionId: f.section_id,
+    tipo: TIPOS_GASTO.find((t) => t === f.expense_type) ?? 'otro',
+    metodoPago: f.payment_method,
+    frecuencia: FRECUENCIAS_FIJO.find((x) => x === f.frequency) ?? 'mensual',
+    proximoPago: f.next_due,
+    diaAncla: f.anchor_day,
+  };
+}
+
+export async function listarGastosFijos(): Promise<Resultado<GastoFijo[]>> {
+  const r = await correr<FilaGastoFijo[]>('listarGastosFijos', () =>
+    supabase.from('recurring_expenses')
+      .select('id, description, amount, currency, section_id, expense_type, payment_method, frequency, next_due, anchor_day')
+      .eq('active', true).order('next_due', { ascending: true }),
+  );
+  if (r.error !== null) return falla<GastoFijo[]>(r.error, 'listarGastosFijos');
+  return ok((r.data ?? []).map(aGastoFijo));
+}
+
+export async function crearGastoFijo(g: GastoFijo): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<null>('sin sesión', 'crearGastoFijo');
+  return correr<null>('crearGastoFijo', () =>
+    supabase.from('recurring_expenses').insert({
+      id: g.id, user_id: uid, description: g.descripcion, amount: g.monto, currency: g.moneda,
+      section_id: g.seccionId, expense_type: g.tipo, payment_method: g.metodoPago,
+      frequency: g.frecuencia, next_due: g.proximoPago, anchor_day: g.diaAncla,
+    }).then(({ error }) => ({ data: null, error })),
+  );
+}
+
+/** Pasa el gasto fijo a su próximo vencimiento (después de "Ya lo pagué"). */
+export async function avanzarGastoFijo(id: string, proximoPago: string): Promise<Resultado<null>> {
+  return correr<null>('avanzarGastoFijo', () =>
+    supabase.from('recurring_expenses')
+      .update({ next_due: proximoPago, last_paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', id).select('id')
+      .then(({ data, error }) => ({ data: null, error: error ?? (data && data.length === 0 ? { message: 'no se pudo actualizar' } : null) })),
+  );
+}
+
+export async function borrarGastoFijo(id: string): Promise<Resultado<null>> {
+  return borrarFila('recurring_expenses', id, 'borrarGastoFijo');
 }
 
 // ── Ingresos ─────────────────────────────────────────────────────────────

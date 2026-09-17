@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Fini } from './Fini';
 import { MisVisualizaciones } from './MisVisualizaciones';
 import { Recomendaciones } from './Recomendaciones';
+import { AvisoVencimientoHome } from './GastosFijos';
+import { InvitacionAvisos } from './InvitacionAvisos';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { useNavigate } from 'react-router';
 import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2Grupo, loadV2Nombre, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
 import { IconChevron, IconFuego, IconGrupo, IconPerfil, IconReserva } from './FinaIcons';
@@ -32,6 +35,7 @@ import { LinkWhatsApp } from './LinkWhatsApp';
 // use la app.
 export function HomeV2() {
   const navigate = useNavigate();
+  const gastosRegistrados = useAlmacen().estado.gastos.length;
   const nombre = loadV2Nombre();
   const foto = loadV2Foto();
   const grupo = loadV2Grupo();
@@ -281,6 +285,10 @@ export function HomeV2() {
           pantallas y está siempre a la vista. */}
       {/* Recomendaciones del día, la semana y el mes. Van antes de los gráficos:
           dicen qué hacer con lo que los gráficos muestran. */}
+      {/* Un gasto fijo que vence en estos días: con fecha, va antes que los consejos. */}
+      <AvisoVencimientoHome />
+      <InvitacionAvisos momento="home" gastosRegistrados={gastosRegistrados} />
+
       <Recomendaciones />
 
       {/* PRUEBA — gráficos armados con los datos que ya hay guardados. */}
