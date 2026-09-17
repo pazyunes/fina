@@ -33,7 +33,7 @@ import {
 } from './_recomendaciones/prompt.js';
 import {
   armarPasosRecientes, armarResumen, armarSeguimiento, suficiencia,
-  type Entrada, type FilaGasto, type FilaMedio, type FilaObjetivo, type FilaPasoDelDia, type FilaPerfil,
+  type Entrada, type FilaGasto, type FilaIngreso, type FilaMedio, type FilaObjetivo, type FilaPasoDelDia, type FilaPerfil,
   type FilaRecomendacion, type FilaSeccion, type Observacion, type Racha,
 } from './_recomendaciones/resumen.js';
 import { revisarRecomendacion, revisarTexto, type Problema } from './_recomendaciones/tono.js';
@@ -342,9 +342,11 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
   const hace30 = `${sumarDias(hoy, -30)}T00:00:00-03:00`;
   const hace21 = sumarDias(hoy, -21);
 
-  const [gastos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA, hechas] = await Promise.all([
+  const [gastos, ingresos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA, hechas] = await Promise.all([
     supabase.from('transactions').select('amount_ars, occurred_at, created_at, section_id, expense_type, payment_method, source')
       .eq('type', 'expense').gte('occurred_at', hace90).order('occurred_at', { ascending: true }),
+    // `*`: sin la migración 0033 no existe income_source.
+    supabase.from('transactions').select('*').eq('type', 'income').gte('occurred_at', hace90),
     supabase.from('expense_sections').select('id, name, cap_amount, cap_period').eq('archived', false),
     supabase.from('payment_methods').select('name, balance_ars'),
     supabase.from('goals').select('id, title, amount_ars, currency, amount_mode, horizon_label, status, goal_contributions(amount, occurred_at)'),
@@ -367,6 +369,8 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
   return {
     ahora,
     gastos: (gastos.data ?? []) as FilaGasto[],
+    // Los ingresos no son imprescindibles: si fallan, se recomienda sin ellos.
+    ingresos: ingresos.error ? [] : (ingresos.data ?? []) as FilaIngreso[],
     secciones: (secciones.data ?? []) as FilaSeccion[],
     medios: (medios.data ?? []) as FilaMedio[],
     objetivos: (objetivos.data ?? []) as FilaObjetivo[],

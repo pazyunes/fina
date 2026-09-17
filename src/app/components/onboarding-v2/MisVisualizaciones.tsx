@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { COLORS, FONTS, TituloSeccion, fmtMoney, fmtMontoCompacto, vistaGastos, vistaObjetivos } from './shared';
 import { diaAnterior, diaArgentina } from '../../api/v2/pasos';
+import { IngresosVsGastos } from './IngresosVsGastos';
 
 // "Mis visualizaciones" en Home: todos los gráficos a la vez, en una fila que se
 // desliza de costado. Antes había que elegir cuál ver con unos chips, y lo que
@@ -181,6 +182,10 @@ export function MisVisualizaciones() {
   const sinMonto = objetivos.length - conMonto.length;
 
   const tarjetas = [
+    {
+      titulo: 'Entra y sale', subtitulo: 'Lo que te entró contra lo que gastaste',
+      contenido: <IngresosVsGastos />,
+    },
     {
       titulo: 'Por sección', subtitulo: 'En qué se te va la plata',
       contenido: gastos.length === 0

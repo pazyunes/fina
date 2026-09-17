@@ -3,7 +3,7 @@ import { cotizacionDolar } from './cotizacion';
 import * as api from './index';
 import { idUsuaria } from './cliente';
 import type {
-  AporteInversion, Contribucion, Gasto, Grupo, Moneda, MonedaConvertible,
+  AporteInversion, Contribucion, FuenteIngreso, Gasto, Grupo, Ingreso, Moneda, MonedaConvertible,
   Objetivo, Perfil, PerfilInversor, Periodo, Seccion, TipoGasto,
 } from './tipos';
 import { esConvertible } from './tipos';
@@ -113,6 +113,54 @@ export function sumarDisponible(medio: string, monto: number) {
       : [{ id: nuevoId(), nombre, saldo: monto, usadoEn: ahora }, ...est.mediosPago],
   });
   push(() => api.sumarDisponible(nombre, monto), 'Dinero agregado con éxito.');
+}
+
+/**
+ * Registrar plata que entró: queda como ingreso (para ver cuánto entra contra
+ * cuánto sale) Y suma al dinero disponible de ese medio. Es la diferencia con
+ * `sumarDisponible`, que es para cargar plata que ya se tenía: esa no es un
+ * ingreso, y si contara como tal el primer mes parecería que se ganó todo lo
+ * ahorrado.
+ */
+export async function registrarIngreso(i: {
+  monto: number; moneda: MonedaConvertible; fuente: FuenteIngreso | null; descripcion?: string; medio: string; ts?: number;
+}): Promise<{ ingreso: Ingreso | null; error: string | null }> {
+  const conv = await aPesos(i.monto, i.moneda);
+  if (conv.error !== null) return { ingreso: null, error: conv.error };
+  const montoArs = conv.montoArs ?? 0;
+  const medio = i.medio.trim() || 'Efectivo';
+  const ingreso: Ingreso = {
+    id: nuevoId(), monto: i.monto, moneda: i.moneda, montoArs, fuente: i.fuente,
+    descripcion: i.descripcion?.trim() ?? '', medio, ts: i.ts ?? Date.now(), origen: 'web',
+  };
+  const est = leerEstado();
+  const ahora = new Date().toISOString();
+  const existe = est.mediosPago.find((m) => m.nombre === medio);
+  parchearEstado({
+    ingresos: [ingreso, ...est.ingresos],
+    mediosPago: existe
+      ? est.mediosPago.map((m) => (m.nombre === medio ? { ...m, saldo: m.saldo + montoArs, usadoEn: ahora } : m))
+      : [{ id: nuevoId(), nombre: medio, saldo: montoArs, usadoEn: ahora }, ...est.mediosPago],
+  });
+  push(() => api.registrarIngreso({
+    id: ingreso.id, monto: i.monto, moneda: i.moneda, montoArs, cotizacionId: conv.cotizacionId,
+    fuente: i.fuente, descripcion: ingreso.descripcion, medio, ts: ingreso.ts,
+  }), 'Ingreso registrado con éxito.', () => parchearEstado({ ingresos: est.ingresos, mediosPago: est.mediosPago }));
+  return { ingreso, error: null };
+}
+
+export function borrarIngreso(id: string) {
+  const est = leerEstado();
+  const ingreso = est.ingresos.find((x) => x.id === id);
+  const mediosPago = ingreso?.medio
+    ? est.mediosPago.map((m) => (m.nombre === ingreso.medio ? { ...m, saldo: m.saldo - ingreso.montoArs } : m))
+    : est.mediosPago;
+  parchearEstado({ ingresos: est.ingresos.filter((x) => x.id !== id), mediosPago });
+  push(() => api.borrarIngreso(id), 'Ingreso borrado con éxito.', () => {
+    const actual = leerEstado();
+    if (!ingreso || actual.ingresos.some((x) => x.id === id)) return;
+    parchearEstado({ ingresos: [...actual.ingresos, ingreso].sort((a, b) => b.ts - a.ts), mediosPago: est.mediosPago });
+  });
 }
 
 // ── Conversión a pesos ───────────────────────────────────────────────────

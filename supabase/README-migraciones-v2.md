@@ -55,7 +55,7 @@ Y verificar de nuevo con el select de arriba.
 
 ## Las migraciones: qué son y en qué orden
 
-Trece archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
+Catorce archivos nuevos. **Correlos en orden**, uno por uno, leyendo el
 resultado antes de pasar al siguiente.
 
 | Orden | Archivo | Qué agrega |
@@ -73,6 +73,7 @@ resultado antes de pasar al siguiente.
 | 11 | `0030_notificaciones.sql` | Notificaciones de la app: en qué dispositivos las activó cada persona, qué avisos quiere (paso del día, racha) y cuáles se mandaron, para no repetir. Necesita las claves VAPID, `SUPABASE_SERVICE_ROLE_KEY` y `CRON_SECRET` en Vercel |
 | 12 | `0031_avisos_separar_y_resumen.sql` | Dos avisos nuevos: "día de separar" (el día que la persona cobra) y el resumen de la semana (los lunes). Guarda qué día cobra cada una |
 | 13 | `0032_recomendaciones_hechas.sql` | Las recomendaciones de "Para vos" se pueden tachar: guarda cuáles marcó cada persona en cada día, semana y mes, para mostrarle otra y para que la IA aprenda de lo que hace |
+| 14 | `0033_ingresos.sql` | Ingresos: la plata que entra se guarda en `transactions` como `income`, desde la app y desde el bot, y agrega de dónde vino (sueldo, freelance, venta, regalo, reintegro, otro) |
 
 ### Qué trae la 0024 y por qué
 

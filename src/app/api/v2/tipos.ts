@@ -30,6 +30,32 @@ export type MedioPago = {
   usadoEn: string | null;
 };
 
+/** De dónde vino la plata. Las mismas palabras que usa el bot (migración 0033). */
+export type FuenteIngreso = 'sueldo' | 'freelance' | 'venta' | 'regalo' | 'reintegro' | 'otro';
+export const FUENTES_INGRESO: { id: FuenteIngreso; label: string }[] = [
+  { id: 'sueldo', label: 'Sueldo' },
+  { id: 'freelance', label: 'Freelance / changas' },
+  { id: 'venta', label: 'Una venta' },
+  { id: 'regalo', label: 'Un regalo' },
+  { id: 'reintegro', label: 'Reintegro' },
+  { id: 'otro', label: 'Otro' },
+];
+
+/** Plata que entró: un movimiento de `transactions` con type = 'income'. */
+export type Ingreso = {
+  id: string;
+  monto: number;
+  moneda: MonedaConvertible;
+  /** En pesos, congelado a la cotización de ese día. Todo lo que suma usa esto. */
+  montoArs: number;
+  fuente: FuenteIngreso | null;
+  descripcion: string;
+  /** En qué medio entró. Su saldo en payment_methods sube por este monto. */
+  medio: string | null;
+  ts: number;
+  origen: 'web' | 'whatsapp' | 'manual';
+};
+
 export type Gasto = {
   id: string;
   monto: number;
@@ -193,6 +219,7 @@ export type EstadoV2 = {
   secciones: Seccion[];
   mediosPago: MedioPago[];
   gastos: Gasto[];
+  ingresos: Ingreso[];
   objetivos: Objetivo[];
   perfilInversor: PerfilInversor | null;
   aportes: AporteInversion[];
@@ -224,6 +251,7 @@ export const ESTADO_VACIO: EstadoV2 = {
   secciones: [],
   mediosPago: [],
   gastos: [],
+  ingresos: [],
   objetivos: [],
   perfilInversor: null,
   aportes: [],

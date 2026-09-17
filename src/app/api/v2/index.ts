@@ -1,7 +1,7 @@
 import { correr, falla, idUsuaria, ok, slugify, supabase, type Resultado } from './cliente';
 import {
   ESTADO_VACIO, PERFIL_VACIO,
-  type AporteInversion, type Contribucion, type EstadoV2, type Gasto, type Grupo,
+  type AporteInversion, type Contribucion, type EstadoV2, type FuenteIngreso, type Gasto, type Grupo, type Ingreso,
   type MedioPago, type MiembroGrupo, type Moneda, type MonedaConvertible,
   type Objetivo, type Perfil,
   type PerfilInversor, type Periodo, type Seccion, type TipoGasto,
@@ -29,11 +29,12 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
   if (!uid) return falla<EstadoV2>('sin sesión', 'cargarTodo');
 
   try {
-    const [perfil, secciones, medios, gastos, objetivos, perfInv, aportes, grupo] = await Promise.all([
+    const [perfil, secciones, medios, gastos, ingresos, objetivos, perfInv, aportes, grupo] = await Promise.all([
       leerPerfil(uid),
       listarSecciones(),
       listarMediosPago(),
       listarGastos(),
+      listarIngresos(),
       listarObjetivos(),
       leerPerfilInversor(),
       listarAportes(),
@@ -49,6 +50,9 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
       secciones: secciones.data ?? [],
       mediosPago: medios.data ?? [],
       gastos: gastos.data ?? [],
+      // Si la lectura de ingresos falla (por ejemplo, sin la migración 0033),
+      // la app carga igual: sólo no se ven los ingresos.
+      ingresos: ingresos.data ?? [],
       objetivos: objetivos.data ?? [],
       perfilInversor: perfInv.data ?? null,
       aportes: aportes.data ?? [],
@@ -324,6 +328,87 @@ export async function registrarGasto(g: {
     if (saldo.error !== null) return falla<Gasto>(saldo.error, 'registrarGasto/saldo');
   }
   return ok(aGasto(r.data[0]));
+}
+
+// ── Ingresos ─────────────────────────────────────────────────────────────
+// Plata que entra: `transactions` con type = 'income'. El mismo formato que usa
+// el bot (docs/bot-ingresos.md), así un ingreso contado por WhatsApp y uno
+// cargado en la app son exactamente lo mismo.
+type FilaIngreso = {
+  id: string; amount_ars: number; currency: string; original_amount: number | null;
+  description: string | null; payment_method: string | null; occurred_at: string; source: string;
+  income_source?: string | null;
+};
+
+const FUENTES: FuenteIngreso[] = ['sueldo', 'freelance', 'venta', 'regalo', 'reintegro', 'otro'];
+
+function aIngreso(f: FilaIngreso): Ingreso {
+  const moneda: MonedaConvertible = f.currency === 'USD' ? 'USD' : 'ARS';
+  const fuente = FUENTES.find((x) => x === f.income_source) ?? null;
+  return {
+    id: f.id,
+    monto: moneda === 'USD' && f.original_amount ? Number(f.original_amount) : Number(f.amount_ars),
+    moneda,
+    montoArs: Number(f.amount_ars),
+    fuente,
+    descripcion: f.description ?? '',
+    medio: f.payment_method,
+    ts: new Date(f.occurred_at).getTime(),
+    origen: f.source === 'whatsapp' ? 'whatsapp' : f.source === 'manual' ? 'manual' : 'web',
+  };
+}
+
+export async function listarIngresos(): Promise<Resultado<Ingreso[]>> {
+  // `*` y no columnas sueltas: sin la migración 0033 no existe income_source, y
+  // pedirla por nombre haría fallar la lectura entera.
+  const r = await correr<FilaIngreso[]>('listarIngresos', () =>
+    supabase.from('transactions').select('*').eq('type', 'income')
+      .order('occurred_at', { ascending: false }).limit(500),
+  );
+  if (r.error !== null) return falla<Ingreso[]>(r.error, 'listarIngresos');
+  return ok((r.data ?? []).map(aIngreso));
+}
+
+export async function registrarIngreso(i: {
+  id?: string; monto: number; moneda: MonedaConvertible; montoArs: number; cotizacionId?: string | null;
+  fuente: FuenteIngreso | null; descripcion: string; medio: string; ts?: number;
+}): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<null>('sin sesión', 'registrarIngreso');
+  const w = await correr<null>('registrarIngreso', () =>
+    supabase.from('transactions').insert({
+      ...(i.id ? { id: i.id } : {}),
+      user_id: uid,
+      occurred_at: new Date(i.ts ?? Date.now()).toISOString(),
+      type: 'income',
+      amount_ars: i.montoArs,
+      currency: i.moneda,
+      original_amount: i.moneda === 'USD' ? i.monto : null,
+      exchange_rate_id: i.cotizacionId ?? null,
+      description: i.descripcion || null,
+      payment_method: i.medio,
+      ...(i.fuente ? { income_source: i.fuente } : {}),
+      source: 'web',
+    }).then(({ error }) => ({ data: null, error })),
+  );
+  if (w.error !== null) return w;
+  // Entró plata en ese medio: su saldo sube. Mismo `mover_saldo` que los gastos.
+  return moverSaldo(i.medio, i.montoArs);
+}
+
+/** Borra un ingreso y le saca esa plata al medio en el que había entrado. */
+export async function borrarIngreso(id: string): Promise<Resultado<null>> {
+  const previo = await correr<{ amount_ars: number; payment_method: string | null } | null>('borrarIngreso/leer', () =>
+    supabase.from('transactions').select('amount_ars, payment_method').eq('id', id).maybeSingle(),
+  );
+  const borrado = await borrarFila('transactions', id, 'borrarIngreso');
+  if (borrado.error !== null) return borrado;
+  const medio = previo.data?.payment_method;
+  if (medio) {
+    const saldo = await moverSaldo(medio, -Number(previo.data?.amount_ars ?? 0));
+    if (saldo.error !== null) return falla<null>(saldo.error, 'borrarIngreso/saldo');
+  }
+  return ok(null);
 }
 
 /**

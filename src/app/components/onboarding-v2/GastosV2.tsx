@@ -7,6 +7,8 @@ import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
 import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
+import { IngresosVsGastos } from './IngresosVsGastos';
+import { FUENTES_INGRESO, type FuenteIngreso } from '../../api/v2/tipos';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
 // gastos con sus botones de "agregar", visualización arriba (donut +
@@ -238,6 +240,11 @@ export function GastosV2() {
   // Medio con el que se carga la plata disponible.
   const [addDispMetodo, setAddDispMetodo] = useState<string | null>(null);
   const [addDispMetodoOtro, setAddDispMetodoOtro] = useState('');
+  // ¿Es plata que ENTRÓ (un ingreso: cuenta para "cuánto entra contra cuánto
+  // sale") o plata que ya tenía (sólo se carga el saldo)? Por defecto, que entró:
+  // es lo más común una vez que la persona ya cargó lo que tenía.
+  const [addDispEsIngreso, setAddDispEsIngreso] = useState(true);
+  const [addDispFuente, setAddDispFuente] = useState<FuenteIngreso | ''>('');
   // Ventana del donut: "este mes" o "esta semana".
   const [ventana, setVentana] = useState<Periodo>('mes');
 
@@ -327,10 +334,13 @@ export function GastosV2() {
     const metodo = (addDispMetodo === 'otro' ? addDispMetodoOtro.trim() : addDispMetodo) || '';
     // El medio usado sube al principio de la lista (queda con `usadoEn` de
     // ahora): al registrar un gasto se ofrecen los más recientes primero.
-    acciones.sumarDisponible(metodo, n);
+    if (addDispEsIngreso) void acciones.registrarIngreso({ monto: n, moneda: 'ARS', fuente: addDispFuente || null, medio: metodo });
+    else acciones.sumarDisponible(metodo, n);
     setAddDispVal('');
     setAddDispMetodo(null);
     setAddDispMetodoOtro('');
+    setAddDispFuente('');
+    setAddDispEsIngreso(true);
     setAddingDisponible(false);
   }
 
@@ -411,10 +421,21 @@ export function GastosV2() {
           </div>
           {!addingDisponible ? (
             <button type="button" onClick={() => setAddingDisponible(true)} className="v2-focus self-start text-[14px] font-semibold underline" style={{ color: COLORS.brand }}>
-              + Agregar dinero disponible
+              + Agregar plata
             </button>
           ) : (
             <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+              <SegmentedTab
+                options={[{ id: 'ingreso' as const, label: 'Me entró' }, { id: 'tenia' as const, label: 'Ya la tenía' }]}
+                value={addDispEsIngreso ? 'ingreso' : 'tenia'}
+                onChange={(v) => setAddDispEsIngreso(v === 'ingreso')}
+                trackColor={COLORS.tint}
+              />
+              <p className="text-[12px] leading-snug" style={{ color: COLORS.inkFaint }}>
+                {addDispEsIngreso
+                  ? 'Cuenta como ingreso: se suma a lo que entró este mes.'
+                  : 'Sólo suma a tu dinero disponible, sin contar como ingreso.'}
+              </p>
               <input
                 autoFocus
                 aria-label="Monto a agregar a tu dinero disponible"
@@ -425,9 +446,21 @@ export function GastosV2() {
                 value={addDispVal}
                 onChange={(e) => setAddDispVal(formatThousands(e.target.value))}
               />
+              {addDispEsIngreso && (
+                <select
+                  aria-label="De dónde vino la plata"
+                  value={addDispFuente}
+                  onChange={(e) => setAddDispFuente(e.target.value as FuenteIngreso | '')}
+                  className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[15px]"
+                  style={{ ...INPUT_STYLE, color: addDispFuente ? COLORS.ink : COLORS.inkFaint }}
+                >
+                  <option value="" style={{ color: COLORS.ink }}>¿De dónde vino? (opcional)</option>
+                  {FUENTES_INGRESO.map((f) => <option key={f.id} value={f.id} style={{ color: COLORS.ink }}>{f.label}</option>)}
+                </select>
+              )}
               {/* Se pregunta el medio acá para que después, al registrar un
                   gasto, se puedan ofrecer los que de verdad tenés. */}
-              <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿En qué lo tenés?</p>
+              <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{addDispEsIngreso ? '¿Dónde entró?' : '¿En qué lo tenés?'}</p>
               <div className="flex flex-wrap gap-1.5">
                 {metodosOfrecidos.map((m) => (
                   <button
@@ -476,6 +509,13 @@ export function GastosV2() {
           {(disponible > 0 || totalGastado > 0) && <EstadoConfianza estado="declarado" />}
         </div>
       </div>
+
+      {/* Lo que entra contra lo que sale. Arriba, junto al disponible: es la
+          pregunta que sigue a "cuánto tengo" — "¿me alcanza lo que entra?". */}
+      <section className="flex flex-col gap-3 lg:col-span-3">
+        <TituloSeccion>Lo que entra y lo que sale</TituloSeccion>
+        <IngresosVsGastos conLista />
+      </section>
 
       {/* Distribución por tipo — bloque tintado (§3.5): cuánto es impulso vs necesidad */}
       {porTipo.length > 0 && (

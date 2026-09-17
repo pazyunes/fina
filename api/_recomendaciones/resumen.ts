@@ -20,6 +20,7 @@ export type FilaGasto = {
   amount_ars: number; occurred_at: string; created_at: string;
   section_id: string | null; expense_type: string | null; payment_method: string | null; source: string;
 };
+export type FilaIngreso = { amount_ars: number; occurred_at: string; income_source?: string | null };
 export type FilaSeccion = { id: string; name: string; cap_amount: number | null; cap_period: string | null };
 export type FilaMedio = { name: string; balance_ars: number };
 export type FilaObjetivo = {
@@ -36,6 +37,8 @@ export type FilaPasoDelDia = { day: string; step_key: string; completed_at: stri
 export type Entrada = {
   ahora: number;
   gastos: FilaGasto[];
+  /** Plata que entró (transactions con type = 'income'), últimos 90 días. */
+  ingresos: FilaIngreso[];
   secciones: FilaSeccion[];
   medios: FilaMedio[];
   objetivos: FilaObjetivo[];
@@ -203,6 +206,16 @@ export function armarResumen(e: Entrada) {
     dineroDisponiblePorMedio: e.medios.map((m) => ({ medio: m.name, saldo: redondo(Number(m.balance_ars)) })),
     objetivos,
     inversiones: { perfilCompleto: e.perfilInversorCompleto, aportesUltimos30Dias: e.aportesUltimos30 },
+    // Lo que registró que le entró. Es lo REGISTRADO: si en un período hay
+    // gastos y no ingresos, lo más probable es que no los haya cargado, no que
+    // no haya cobrado.
+    ingresos: {
+      esteMesHastaHoy: redondo(suma(e.ingresos.filter((i) => diaAR(i.occurred_at) >= inicioMes).map((i) => Number(i.amount_ars)))),
+      mismosDiasDelMesPasado: redondo(suma(e.ingresos.filter((i) => { const d = diaAR(i.occurred_at); return d >= inicioMesPasado && d <= hastaMesPasado; }).map((i) => Number(i.amount_ars)))),
+      porFuenteUltimos90: [...e.ingresos.reduce((m, i) => m.set(i.income_source ?? 'sin decir', (m.get(i.income_source ?? 'sin decir') ?? 0) + Number(i.amount_ars)), new Map<string, number>()).entries()]
+        .map(([fuente, monto]) => ({ fuente, monto: redondo(monto) })),
+      registroIngresos: e.ingresos.length > 0,
+    },
   };
 }
 
