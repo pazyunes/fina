@@ -144,15 +144,16 @@ export function TutorialAgregarAInicio({ onCerrar }: { onCerrar: () => void }) {
   const videoRef = useRef<VideoConPip>(null);
   const [hayVideo, setHayVideo] = useState(true);
   const [pipPosible, setPipPosible] = useState(false);
+  const [fallo, setFallo] = useState(false);
   const [enMiniatura, setEnMiniatura] = useState(false);
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    setPipPosible(
-      (typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && document.pictureInPictureEnabled)
-      || !!v.webkitSupportsPresentationMode?.('picture-in-picture'),
-    );
+    // Se ofrece si el navegador tiene alguna de las dos formas. No se mira
+    // `pictureInPictureEnabled` ni `webkitSupportsPresentationMode`: en iPhone
+    // pueden decir que no antes de que cargue el video, y el botón no aparecía.
+    setPipPosible(typeof v.webkitSetPresentationMode === 'function' || typeof v.requestPictureInPicture === 'function');
     const entra = () => setEnMiniatura(true);
     const sale = () => setEnMiniatura(false);
     // En iPhone la miniatura avisa con su propio evento.
@@ -173,16 +174,29 @@ export function TutorialAgregarAInicio({ onCerrar }: { onCerrar: () => void }) {
     return () => window.removeEventListener('keydown', alTeclear);
   }, [onCerrar]);
 
-  async function verEnMiniatura() {
+  // Todo pasa en el mismo toque, sin esperar nada antes: Safari sólo deja abrir
+  // la miniatura como respuesta directa a un toque, y un `await` previo (como
+  // esperar a que arranque el video) le hace perder ese permiso.
+  //
+  // En iPhone se usa primero la forma propia de Safari
+  // (webkitSetPresentationMode), que es la que funciona ahí; la estándar
+  // (requestPictureInPicture) queda para los demás navegadores.
+  function verEnMiniatura() {
     const v = videoRef.current;
     if (!v) return;
+    setFallo(false);
+    if (v.paused) void v.play().catch(() => { /* ya está en loop con autoplay */ });
     try {
-      await v.play();
-      if (v.requestPictureInPicture) await v.requestPictureInPicture();
-      else v.webkitSetPresentationMode?.('picture-in-picture');
+      if (typeof v.webkitSetPresentationMode === 'function') {
+        v.webkitSetPresentationMode('picture-in-picture');
+      } else if (v.requestPictureInPicture) {
+        v.requestPictureInPicture().catch((e: unknown) => { console.error('[tutorial] miniatura:', e); setFallo(true); });
+      } else {
+        setFallo(true);
+      }
     } catch (e) {
       console.error('[tutorial] miniatura:', e);
-      setPipPosible(false);
+      setFallo(true);
     }
   }
 
@@ -214,6 +228,7 @@ export function TutorialAgregarAInicio({ onCerrar }: { onCerrar: () => void }) {
               src={VIDEO_TUTORIAL}
               muted
               playsInline
+              controls
               autoPlay
               loop
               preload="auto"
@@ -225,16 +240,21 @@ export function TutorialAgregarAInicio({ onCerrar }: { onCerrar: () => void }) {
             {pipPosible && (
               <button
                 type="button"
-                onClick={() => void verEnMiniatura()}
+                onClick={verEnMiniatura}
                 className="v2-focus min-h-[48px] rounded-xl text-[16px] font-bold transition-transform active:scale-[0.98]"
                 style={{ background: COLORS.brand, color: COLORS.surface }}
               >
                 {enMiniatura ? 'Ya está en miniatura' : 'Verlo en miniatura mientras lo hacés'}
               </button>
             )}
-            {pipPosible && (
+            {pipPosible && !fallo && (
               <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
                 El video queda chiquito en una esquina y podés seguir los pasos en Safari al mismo tiempo.
+              </p>
+            )}
+            {fallo && (
+              <p role="status" className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                Este celular no dejó achicarlo. Miralo acá y después seguí los pasos de abajo.
               </p>
             )}
           </div>
