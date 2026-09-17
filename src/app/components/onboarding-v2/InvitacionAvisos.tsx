@@ -134,9 +134,9 @@ type VideoConPip = HTMLVideoElement & {
 };
 
 const PASOS_IPHONE: { texto: React.ReactNode }[] = [
-  { texto: <>Tocá <strong>Compartir</strong> en Safari: el cuadradito con una flecha para arriba, abajo en la pantalla.</> },
-  { texto: <>Bajá y tocá <strong>Agregar a inicio</strong>.</> },
-  { texto: <>Tocá <strong>Agregar</strong>, arriba a la derecha.</> },
+  { texto: <>En Safari, tocá los tres puntitos <strong>(•••)</strong> abajo a la derecha y después <strong>Compartir</strong>. En iPhones más viejos, el botón Compartir está directo abajo.</> },
+  { texto: <>Tocá <strong>Ver más</strong> y después <strong>Agregar a pantalla de inicio</strong>.</> },
+  { texto: <>Dejá prendido <strong>Abrir como app web</strong> y tocá <strong>Agregar</strong>.</> },
   { texto: <>Abrí FINA desde el ícono nuevo y activá los avisos.</> },
 ];
 

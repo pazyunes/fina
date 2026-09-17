@@ -92,7 +92,7 @@ export function AvisosFina() {
       {soporte === 'iphone-sin-instalar' && (
         <>
           <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.ink, borderColor: COLORS.brandSoft }}>
-            En iPhone, los avisos funcionan con FINA en tu pantalla de inicio: en Safari tocá <strong>Compartir</strong> → <strong>Agregar a inicio</strong>, abrí FINA desde ese ícono y activalos acá.
+            En iPhone, los avisos funcionan con FINA en tu pantalla de inicio: en Safari tocá <strong>•••</strong> → <strong>Compartir</strong> → <strong>Agregar a pantalla de inicio</strong>, abrí FINA desde ese ícono y activalos acá.
           </p>
           <button
             type="button"
