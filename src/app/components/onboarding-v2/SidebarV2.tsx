@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router';
 import { LinkWhatsApp } from './LinkWhatsApp';
-import { COLORS } from './shared';
+import { COLORS, LogoFina } from './shared';
 import { IconChat, IconGastos, IconHome, IconInversiones, IconObjetivos } from './FinaIcons';
 
 // REDISEÑO v2 — menú LATERAL para desktop (lg+). En mobile no se muestra
@@ -23,9 +23,7 @@ export function SidebarV2() {
       style={{ background: COLORS.surface, borderColor: COLORS.line }}
     >
       <div className="px-2 mb-8">
-        <span className="text-2xl font-bold" style={{ color: COLORS.brand, fontFamily: 'var(--font-serif)' }}>
-          FINA
-        </span>
+        <LogoFina alto={36} />
       </div>
 
       <nav className="flex flex-col gap-1">

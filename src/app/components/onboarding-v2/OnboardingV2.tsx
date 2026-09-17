@@ -5,7 +5,7 @@ import { PantallazoFeature } from './PantallazoFeature';
 import { useLocation, useNavigate } from 'react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import {
-  COLORS, DeviceFrame, CheckIcon, Chip, OtroChip, Nota, Cta,
+  COLORS, DeviceFrame, CheckIcon, LogoFina, Chip, OtroChip, Nota, Cta,
   Titulo, Apoyo, Contador, OpcionesGrid, OpcionesLista, OpcionesMulti, BotonFantasma, LinkLegal,
   TituloSeccion,
   formatThousands, parseMoneyInput,
@@ -767,6 +767,8 @@ export function OnboardingV2() {
             >
               {currentKey === 'intro' && (
                 <>
+                  {/* El logo, sólo en el celular: en desktop ya está en el panel violeta. */}
+                  <LogoFina alto={34} className="self-center lg:hidden" />
                   <FiniPresenta dice="¡Hola! Soy Fini y te voy a acompañar." state="saludo" size={132} />
                   <Titulo>
                     Llegó tu momento de cambiar la historia de tus finanzas

@@ -1165,7 +1165,7 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
         className="hidden lg:flex lg:flex-col lg:justify-between lg:w-[40%] lg:max-w-[520px] shrink-0 px-12 py-14"
         style={{ background: COLORS.brand, color: '#fff' }}
       >
-        <div className="text-[30px] font-bold tracking-tight">FINA</div>
+        <LogoFina blanco alto={48} className="self-start" />
         <div className="flex flex-col gap-7">
           <p className="text-[34px] font-bold leading-[1.15]">Ordená tu plata,<br />a tu ritmo.</p>
           <ul className="flex flex-col gap-4">
@@ -1436,5 +1436,22 @@ export function useVolver(alternativa = '/onboarding-v2/home') {
     if (idx > 0) navigate(-1);
     else navigate(alternativa, { replace: true });
   };
+}
+
+// ── Logo ─────────────────────────────────────────────────────────────────
+// El logo de FINA: la palabra con la estrella de Fini como punto de la "i".
+// `blanco` para fondos de color (el panel violeta en desktop): el ciruela del
+// logo casi no se lee sobre violeta. Los PNG salen de los SVG originales de
+// docs/marca, recortados y con fondo transparente.
+export function LogoFina({ blanco = false, alto = 36, className = '' }: { blanco?: boolean; alto?: number; className?: string }) {
+  return (
+    <img
+      src={blanco ? '/marca/fina-logo-blanco.png' : '/marca/fina-logo.png'}
+      alt="FINA"
+      height={alto}
+      style={{ height: alto, width: 'auto' }}
+      className={className}
+    />
+  );
 }
 

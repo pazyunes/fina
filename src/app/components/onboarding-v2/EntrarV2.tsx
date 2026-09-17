@@ -6,7 +6,7 @@ import { emailValido, sugerenciaEmail } from '../../lib/email';
 import { emailTieneCuenta } from '../../api/v2/cuenta';
 import { FiniPresenta } from './FiniDice';
 import {
-  Apoyo, COLOR_VARS, COLORS, Cta, DeviceFrame, FONT_VARS, Titulo, BotonFantasma,
+  Apoyo, COLOR_VARS, COLORS, Cta, DeviceFrame, FONT_VARS, LogoFina, Titulo, BotonFantasma,
 } from './shared';
 import { IconChevron, IconOjo, IconOjoTachado } from './FinaIcons';
 
@@ -179,6 +179,9 @@ export function EntrarV2() {
           >
             <IconChevron size={22} style={{ transform: 'rotate(180deg)' }} />
           </button>
+          <div className="flex-1 flex justify-center lg:hidden"><LogoFina alto={28} /></div>
+          {/* Del mismo ancho que la flecha, para que el logo quede centrado. */}
+          <span className="w-11 shrink-0 lg:hidden" aria-hidden />
         </header>
 
         <div className="flex-1 min-h-0 flex flex-col px-6 pt-2 pb-4 overflow-y-auto v2-sin-barra w-full lg:max-w-xl lg:mx-auto">

@@ -6,7 +6,7 @@ import { traducirErrorAuth } from '../lib/erroresAuth';
 import { FiniPresenta } from './onboarding-v2/FiniDice';
 import { Campo, emailValido, InputContrasena, inputClass, inputStyle } from './onboarding-v2/EntrarV2';
 import { IconChevron } from './onboarding-v2/FinaIcons';
-import { Apoyo, COLOR_VARS, COLORS, Cta, DeviceFrame, FONT_VARS, Titulo } from './onboarding-v2/shared';
+import { Apoyo, COLOR_VARS, COLORS, Cta, DeviceFrame, FONT_VARS, LogoFina, Titulo } from './onboarding-v2/shared';
 
 // Poner una contraseña nueva: la pantalla a la que lleva el link del mail de
 // "¿Olvidaste tu contraseña?". Con el diseño de la app nueva.
@@ -114,6 +114,9 @@ export function ResetPassword() {
               <IconChevron size={22} style={{ transform: 'rotate(180deg)' }} />
             </button>
           )}
+          {estado === 'listo' && <span className="w-11 shrink-0 lg:hidden" aria-hidden />}
+          <div className="flex-1 flex justify-center lg:hidden"><LogoFina alto={28} /></div>
+          <span className="w-11 shrink-0 lg:hidden" aria-hidden />
         </header>
 
         <div className="flex-1 min-h-0 flex flex-col px-6 pt-2 pb-4 overflow-y-auto v2-sin-barra w-full lg:max-w-xl lg:mx-auto">
