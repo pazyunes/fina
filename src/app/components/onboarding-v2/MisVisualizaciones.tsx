@@ -3,6 +3,7 @@ import { useReducedMotion } from 'motion/react';
 import { COLORS, FONTS, TituloSeccion, fmtMoney, fmtMontoCompacto, vistaGastos, vistaObjetivos } from './shared';
 import { diaAnterior, diaArgentina } from '../../api/v2/pasos';
 import { IngresosVsGastos } from './IngresosVsGastos';
+import { IconChevron } from './FinaIcons';
 
 // "Mis visualizaciones" en Home: todos los gráficos a la vez, en una fila que se
 // desliza de costado. Antes había que elegir cuál ver con unos chips, y lo que
@@ -120,13 +121,17 @@ function Anillo({ pct }: { pct: number }) {
 }
 
 // ── Una tarjeta del carrusel ─────────────────────────────────────────────
-function Tarjeta({ titulo, subtitulo, children }: { titulo: string; subtitulo: string; children: React.ReactNode }) {
+function Tarjeta({ titulo, subtitulo, ultima, children }: { titulo: string; subtitulo: string; ultima: boolean; children: React.ReactNode }) {
   return (
     <article
-      // En el celular cada tarjeta ocupa 85% del ancho: se ve asomar la
-      // siguiente, que es lo que avisa que la fila se desliza sin tener que
-      // decirlo. En desktop se ven en grilla y no hace falta deslizar.
-      className="snap-start shrink-0 w-[85%] lg:w-auto rounded-2xl p-4 flex flex-col gap-3"
+      // Un slider en todos los tamaños. En el celular cada tarjeta ocupa 85% del
+      // ancho: se ve asomar la siguiente, que es lo que avisa que la fila se
+      // desliza sin tener que decirlo. En pantallas grandes, ancho fijo, y
+      // también asoma la que sigue.
+      // La última se engancha por el borde derecho: en pantallas anchas no se
+      // puede alinear a la izquierda (no hay nada después), y el enganche la
+      // devolvía a la anterior.
+      className={`${ultima ? 'snap-end' : 'snap-start'} shrink-0 w-[85%] sm:w-[360px] lg:w-[400px] rounded-2xl p-4 flex flex-col gap-3`}
       style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
     >
       <header className="flex flex-col gap-0.5">
@@ -262,29 +267,62 @@ export function MisVisualizaciones() {
     const fila = filaRef.current;
     const tarjeta = fila?.children[i] as HTMLElement | undefined;
     // Sin animación para quien pidió reducir movimiento en su teléfono.
-    if (fila && tarjeta) fila.scrollTo({ left: tarjeta.offsetLeft - fila.offsetLeft, behavior: reduce ? 'auto' : 'smooth' });
+    if (!fila || !tarjeta) return;
+    // Hasta donde se puede deslizar: las últimas tarjetas no llegan a alinearse
+    // a la izquierda, y ahí se muestra el final de la fila.
+    const tope = fila.scrollWidth - fila.clientWidth;
+    const destino = Math.min(tarjeta.offsetLeft - fila.offsetLeft, tope);
+    fila.scrollTo({ left: destino, behavior: reduce ? 'auto' : 'smooth' });
+    // Se marca ya, sin esperar a que termine de deslizarse: si no, dos toques
+    // seguidos a la flecha llevaban las dos veces a la misma tarjeta.
+    setActual(destino >= tope - 4 ? tarjetas.length - 1 : i);
   }
+
+  // Función y no componente: definida adentro, como componente se volvía a
+  // montar en cada render y el botón perdía el foco al tocarlo.
+  const flecha = (hacia: 'atras' | 'adelante') => {
+    const destino = hacia === 'atras' ? actual - 1 : actual + 1;
+    const desactivada = destino < 0 || destino > tarjetas.length - 1;
+    return (
+      <button
+        type="button"
+        onClick={() => irA(destino)}
+        disabled={desactivada}
+        aria-label={hacia === 'atras' ? 'Gráfico anterior' : 'Gráfico siguiente'}
+        className="v2-focus w-11 h-11 rounded-full flex items-center justify-center v2-disabled transition-transform active:scale-90"
+        style={{ background: COLORS.tint, color: COLORS.brand }}
+      >
+        <IconChevron size={18} style={hacia === 'atras' ? { transform: 'rotate(180deg)' } : undefined} />
+      </button>
+    );
+  };
 
   return (
     <section className="flex flex-col gap-3" aria-label="Mis visualizaciones">
-      <TituloSeccion>Mis visualizaciones</TituloSeccion>
+      <div className="flex items-center justify-between gap-2">
+        <TituloSeccion>Mis visualizaciones</TituloSeccion>
+        {/* Flechas sólo con mouse: en el celular se desliza con el dedo. */}
+        <div className="hidden lg:flex gap-2">
+          {flecha('atras')}
+          {flecha('adelante')}
+        </div>
+      </div>
       <div
         ref={filaRef}
         onScroll={alDeslizar}
         // tabIndex para que se pueda recorrer con el teclado: una fila con
         // scroll horizontal que no toma foco es inaccesible sin mouse.
         tabIndex={0}
-        className="v2-focus flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-[22px] px-[22px] pb-1 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-2 lg:overflow-visible"
-        style={{ scrollbarWidth: 'none', scrollPaddingLeft: 22 }}
+        className="v2-focus flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-[22px] px-[22px] scroll-pl-[22px] pb-1 lg:mx-0 lg:px-0 lg:scroll-pl-0"
+        style={{ scrollbarWidth: 'none' }}
       >
-        {tarjetas.map((t) => (
-          <Tarjeta key={t.titulo} titulo={t.titulo} subtitulo={t.subtitulo}>{t.contenido}</Tarjeta>
+        {tarjetas.map((t, i) => (
+          <Tarjeta key={t.titulo} titulo={t.titulo} subtitulo={t.subtitulo} ultima={i === tarjetas.length - 1}>{t.contenido}</Tarjeta>
         ))}
       </div>
 
-      {/* Puntitos: dicen cuántos gráficos hay y en cuál estás. Sólo en el
-          celular; en desktop están todos a la vista. */}
-      <div className="flex justify-center gap-1 lg:hidden">
+      {/* Puntitos: dicen cuántos gráficos hay y en cuál estás. */}
+      <div className="flex justify-center gap-1">
         {tarjetas.map((t, i) => (
           <button
             key={t.titulo}
