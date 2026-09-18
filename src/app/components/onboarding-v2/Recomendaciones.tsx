@@ -93,6 +93,24 @@ function colaDe(periodo: PeriodoRecomendacion, datos: RecomendacionesT | null): 
   return cola;
 }
 
+/**
+ * Sin nada a la vista: sólo hace la llamada diaria a la IA.
+ *
+ * "Para vos" se sacó de Home, pero esa misma llamada es la que elige el paso
+ * del día de mañana (con su mensaje) y arma el plan semanal de cada objetivo.
+ * Sin ella, el paso volvería a elegirse por rotación fija.
+ */
+export function PrepararManana() {
+  const { estado } = useAlmacen();
+  const { paso } = usePasoDelDia();
+  useEffect(() => {
+    void leerRecomendaciones(pasosPosiblesManana(estado, paso?.clave ?? null));
+    // Una vez por visita a Home; la API guarda lo del día y no repite la llamada.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 export function Recomendaciones() {
   const [datos, setDatos] = useState<RecomendacionesT | null>(() => recomendacionesRecordadas());
   const [fallo, setFallo] = useState(false);

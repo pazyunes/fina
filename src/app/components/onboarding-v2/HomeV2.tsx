@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Fini } from './Fini';
 import { MisVisualizaciones } from './MisVisualizaciones';
-import { Recomendaciones } from './Recomendaciones';
+import { PrepararManana } from './Recomendaciones';
 import { AvisoVencimientoHome } from './GastosFijos';
 import { InvitacionAvisos } from './InvitacionAvisos';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
@@ -283,13 +283,13 @@ export function HomeV2() {
       {/* Se fue "Tus secciones" (Gastos / Objetivos / Inversiones en tres
           fichas): repetía el menú de abajo, que ya lleva a las mismas tres
           pantallas y está siempre a la vista. */}
-      {/* Recomendaciones del día, la semana y el mes. Van antes de los gráficos:
-          dicen qué hacer con lo que los gráficos muestran. */}
-      {/* Un gasto fijo que vence en estos días: con fecha, va antes que los consejos. */}
+      {/* Un gasto fijo que vence en estos días. */}
       <AvisoVencimientoHome />
       <InvitacionAvisos momento="home" gastosRegistrados={gastosRegistrados} />
 
-      <Recomendaciones />
+      {/* "Para vos" (las tres recomendaciones) se sacó de Home. Queda la llamada
+          diaria a la IA, que elige el paso de mañana y los planes de objetivos. */}
+      <PrepararManana />
 
       {/* PRUEBA — gráficos armados con los datos que ya hay guardados. */}
       <MisVisualizaciones />
