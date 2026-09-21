@@ -1,4 +1,5 @@
 import { correr, falla, idUsuaria, ok, slugify, supabase, type Resultado } from './cliente';
+import { cotizacionDolar } from './cotizacion';
 import {
   ESTADO_VACIO, PERFIL_VACIO,
   type AporteInversion, type Contribucion, type EstadoV2, type FuenteIngreso, type Gasto, type GastoFijo, type Grupo, type Ingreso,
@@ -29,7 +30,7 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
   if (!uid) return falla<EstadoV2>('sin sesión', 'cargarTodo');
 
   try {
-    const [perfil, secciones, medios, gastos, ingresos, fijos, objetivos, perfInv, aportes, grupo] = await Promise.all([
+    const [perfil, secciones, medios, gastos, ingresos, fijos, objetivos, perfInv, aportes, grupo, dolar] = await Promise.all([
       leerPerfil(uid),
       listarSecciones(),
       listarMediosPago(),
@@ -40,6 +41,8 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
       leerPerfilInversor(),
       listarAportes(),
       leerMiGrupo(),
+      // Para pasar un registro en pesos a un objetivo en dólares (y al revés).
+      cotizacionDolar(),
     ]);
 
     // Si el perfil falla, no hay nada que mostrar: es la fila raíz.
@@ -54,6 +57,9 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
       // Si la lectura de ingresos falla (por ejemplo, sin la migración 0033),
       // la app carga igual: sólo no se ven los ingresos.
       ingresos: ingresos.data ?? [],
+      // Sin cotización queda en null: los montos siguen en su moneda y no se
+      // inventa una conversión.
+      dolar: dolar?.valor ?? null,
       // Igual: sin la migración 0034, la app carga sin gastos fijos.
       gastosFijos: fijos.data ?? [],
       objetivos: objetivos.data ?? [],

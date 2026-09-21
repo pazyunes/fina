@@ -6,6 +6,7 @@ import './onboarding-v2.css';
 import { estaHidratado, leerEstado } from '../../api/v2/almacen';
 import * as acciones from '../../api/v2/acciones';
 import type { Grupo as GrupoV2, Moneda as MonedaV2 } from '../../api/v2/tipos';
+import { sumarEn } from '../../api/v2/conversion';
 
 // REDISEÑO v2 — piezas compartidas entre el onboarding y las pantallas
 // post-onboarding.
@@ -1339,15 +1340,21 @@ export type VistaObjetivo = {
   moneda: MonedaV2;
   /** 0 = no hay monto con el que calcular progreso (null en la base). */
   montoTotal: number;
+  /** Lo juntado YA CONVERTIDO a la moneda del objetivo. */
+  juntado: number;
   contribuciones: { monto: number; ts: number }[];
 };
 
 export function vistaObjetivos(): VistaObjetivo[] {
-  return leerEstado().objetivos.map((o) => ({
+  const estado = leerEstado();
+  return estado.objetivos.map((o) => ({
     id: o.id,
     nombre: o.nombre,
     moneda: o.moneda,
     montoTotal: o.montoTotal ?? 0,
+    // Un objetivo en dólares puede tener registros en pesos: se convierten
+    // antes de sumar (ver api/v2/conversion.ts).
+    juntado: sumarEn(o.contribuciones, o.moneda, estado.dolar).total,
     contribuciones: o.contribuciones.map((c) => ({ monto: c.monto, ts: c.ts })),
   }));
 }

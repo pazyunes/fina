@@ -6,6 +6,7 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { FiniPresenta } from './FiniDice';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
+import { sumarEn } from '../../api/v2/conversion';
 import { leerPlanesDeObjetivos, marcarUtil, type PlanObjetivo } from '../../api/v2/recomendaciones';
 import type { Moneda as MonedaV2 } from '../../api/v2/tipos';
 
@@ -108,9 +109,9 @@ const V2_STYLES = (
 // Aporte real de los últimos 7 días — sale de los registros que cargó la
 // persona (dato DECLARADO), es el "delta" de la semana que pide la guía (§5.3)
 // para que el avance chico igual se lea como avance.
-function aporteUltimaSemana(o: Objetivo): number {
+function aporteUltimaSemana(o: Objetivo, dolar: number | null): number {
   const desde = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  return o.contribuciones.filter((c) => c.ts >= desde).reduce((s, c) => s + c.monto, 0);
+  return sumarEn(o.contribuciones.filter((c) => c.ts >= desde), o.moneda, dolar).total;
 }
 
 // Dropdown de moneda — cada opción se identifica por su código (ARS/USD…),
@@ -154,7 +155,7 @@ function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Mone
     </div>
   );
 }
-type Contribucion = { id: string; monto: number; moneda: Moneda; kind: Kind; label: string; ts: number; de: string };
+type Contribucion = { id: string; monto: number; moneda: Moneda; montoArs: number | null; kind: Kind; label: string; ts: number; de: string };
 type Objetivo = {
   id: string;
   nombre: string;
@@ -409,6 +410,7 @@ export function ObjetivosV2() {
       id: c.id,
       monto: c.monto,
       moneda: c.moneda,
+      montoArs: c.montoArs,
       kind: c.kind,
       label: c.label ?? '',
       ts: c.ts,
@@ -614,7 +616,12 @@ export function ObjetivosV2() {
     setMontoTotalEdit(''); setMontoMinEdit(''); setMontoModoEdit('exacto');
   }
 
-  const saved = (o: Objetivo) => o.contribuciones.reduce((s, c) => s + c.monto, 0);
+  // Lo juntado, en la moneda del objetivo: un registro en pesos de un objetivo
+  // en dólares se convierte antes de sumar. Sin esto, separar $80.000 para un
+  // viaje de USD 1.500 lo daba por cumplido.
+  const dolar = db.dolar;
+  const totalDe = (o: Objetivo) => sumarEn(o.contribuciones, o.moneda, dolar);
+  const saved = (o: Objetivo) => totalDe(o).total;
   const pct = (o: Objetivo) => (o.montoTotal > 0 ? Math.min(Math.round((saved(o) / o.montoTotal) * 100), 100) : 0);
 
   // Diálogo de confirmación de borrado — se muestra tanto en la lista como
@@ -664,7 +671,7 @@ export function ObjetivosV2() {
     const porcentaje = pct(abierto);
     const done = estado === 'definido' && acumulado >= total;
     // Aporte real de la última semana (dato declarado) → el "delta" de §5.3.
-    const aporteSemana = aporteUltimaSemana(abierto);
+    const aporteSemana = aporteUltimaSemana(abierto, dolar);
     // Cuándo llegás: lo CALCULAMOS nosotras a partir del ritmo reciente, así
     // que es un ESTIMADO (§5.1) y se muestra como rango de semanas con su
     // marca, nunca como un número exacto (§5.2).
@@ -753,8 +760,20 @@ export function ObjetivosV2() {
                 <p className="text-[15px] mt-1.5" style={{ color: COLORS.ink }}>
                   Llevás <MontoObj monto={Math.round(animAcum)} moneda={abierto.moneda} className="font-semibold" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(abierto)}</span>
                 </p>
-                {/* El total es lo que la persona nos declaró (§5.1). */}
-                <EstadoConfianza estado="declarado" className="mt-0.5" />
+                {/* El total es lo que la persona nos declaró (§5.1); si además
+                    hubo que pasar registros de una moneda a otra, es estimado:
+                    el dólar de hoy no es el de cuando los cargó. */}
+                <EstadoConfianza estado={totalDe(abierto).convertidos > 0 ? 'estimado' : 'declarado'} className="mt-0.5" />
+                {totalDe(abierto).convertidos > 0 && (
+                  <p className="text-[13px] mt-0.5" style={{ color: COLORS.inkFaint }}>
+                    Los registros que cargaste en otra moneda los pasamos a {abierto.moneda} con el dólar de hoy.
+                  </p>
+                )}
+                {totalDe(abierto).sinConvertir > 0 && (
+                  <p className="text-[13px] mt-0.5" style={{ color: COLORS.inkFaint }}>
+                    {totalDe(abierto).sinConvertir === 1 ? 'Hay un registro' : `Hay ${totalDe(abierto).sinConvertir} registros`} en otra moneda que no podemos convertir, así que no suman al total.
+                  </p>
+                )}
                 {!done && <p className="text-[14px] mt-1" style={{ color: COLORS.inkSoft }}>Te falta <MontoObj monto={restante} moneda={abierto.moneda} /></p>}
                 {/* Delta de la semana en LIMA: el avance chico igual se lee
                     como avance (§5.3), y el lima es el color del avance. */}

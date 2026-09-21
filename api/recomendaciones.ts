@@ -342,14 +342,14 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
   const hace30 = `${sumarDias(hoy, -30)}T00:00:00-03:00`;
   const hace21 = sumarDias(hoy, -21);
 
-  const [gastos, ingresos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA, hechas] = await Promise.all([
+  const [gastos, ingresos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA, hechas, dolar] = await Promise.all([
     supabase.from('transactions').select('amount_ars, occurred_at, created_at, section_id, expense_type, payment_method, source')
       .eq('type', 'expense').gte('occurred_at', hace90).order('occurred_at', { ascending: true }),
     // `*`: sin la migración 0033 no existe income_source.
     supabase.from('transactions').select('*').eq('type', 'income').gte('occurred_at', hace90),
     supabase.from('expense_sections').select('id, name, cap_amount, cap_period').eq('archived', false),
     supabase.from('payment_methods').select('name, balance_ars'),
-    supabase.from('goals').select('id, title, amount_ars, currency, amount_mode, horizon_label, status, goal_contributions(amount, occurred_at)'),
+    supabase.from('goals').select('id, title, amount_ars, currency, amount_mode, horizon_label, status, goal_contributions(amount, currency, amount_ars, occurred_at)'),
     supabase.from('user_profiles').select('main_goal, income_stability, financial_level, income_sources').eq('id', uid).maybeSingle(),
     supabase.from('investment_profiles').select('completed_at').maybeSingle(),
     supabase.from('investment_contributions').select('id', { count: 'exact', head: true }).gte('occurred_at', hace30),
@@ -361,6 +361,8 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
     supabase.from('recommendations').select('clave, foco_ref').eq('periodo', 'paso').gte('clave', hace21),
     // Sin la migración 0032 la tabla no existe: se sigue sin esa señal.
     supabase.from('recommendation_checks').select('ref').like('ref', 'ia:%').gte('hecha_at', hace30),
+    // El dólar, para pasar a dólares lo que se separó en pesos.
+    supabase.from('exchange_rates').select('rate').eq('currency', 'USD_BLUE').order('created_at', { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const error = [gastos, secciones, medios, objetivos, perfil, inversor, aportes, memoria, historial, pasos, pasosIA].find((r) => r.error)?.error;
@@ -368,6 +370,7 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
 
   return {
     ahora,
+    dolar: dolar.error ? null : Number((dolar.data as { rate: number } | null)?.rate) || null,
     gastos: (gastos.data ?? []) as FilaGasto[],
     // Los ingresos no son imprescindibles: si fallan, se recomienda sin ellos.
     ingresos: ingresos.error ? [] : (ingresos.data ?? []) as FilaIngreso[],

@@ -26,7 +26,7 @@ export type FilaMedio = { name: string; balance_ars: number };
 export type FilaObjetivo = {
   id: string; title: string; amount_ars: number | null; currency: string; amount_mode: string | null;
   horizon_label: string | null; status: string;
-  goal_contributions: { amount: number; occurred_at: string }[] | null;
+  goal_contributions: { amount: number; currency?: string | null; amount_ars?: number | null; occurred_at: string }[] | null;
 };
 export type FilaPerfil = { main_goal: string | null; income_stability: string | null; financial_level: string | null; income_sources: string[] | null };
 export type FilaRecomendacion = { id: string; periodo: string; clave: string; contenido: { titulo?: string }; foco_tipo: string | null; foco_ref: string | null; util: boolean | null; created_at: string };
@@ -36,6 +36,8 @@ export type FilaPasoDelDia = { day: string; step_key: string; completed_at: stri
 
 export type Entrada = {
   ahora: number;
+  /** Pesos por dólar, para pasar un registro en pesos a un objetivo en USD. */
+  dolar: number | null;
   gastos: FilaGasto[];
   /** Plata que entró (transactions con type = 'income'), últimos 90 días. */
   ingresos: FilaIngreso[];
@@ -157,9 +159,21 @@ export function armarResumen(e: Entrada) {
 
   // ── Objetivos ──────────────────────────────────────────────────────────
   const objetivos = e.objetivos.filter((o) => o.status === 'active').map((o) => {
+    // Los registros pueden estar en otra moneda que el objetivo (separar pesos
+    // para un viaje en dólares): se convierten antes de sumar, si no el
+    // objetivo aparece cumplido sin estarlo.
     const aportes = o.goal_contributions ?? [];
-    const juntado = redondo(suma(aportes.map((a) => Number(a.amount))));
-    const ult30o = redondo(suma(aportes.filter((a) => diasEntre(diaAR(a.occurred_at), hoy) <= 29).map((a) => Number(a.amount))));
+    const enMonedaDelObjetivo = (a: (typeof aportes)[number]): number | null => {
+      const moneda = a.currency === 'USD' ? 'USD' : 'ARS';
+      const destino = o.currency === 'USD' ? 'USD' : 'ARS';
+      if (moneda === destino) return Number(a.amount);
+      if (destino === 'ARS') return a.amount_ars == null ? null : Number(a.amount_ars);
+      const enPesos = moneda === 'ARS' ? Number(a.amount) : (a.amount_ars == null ? null : Number(a.amount_ars));
+      return enPesos !== null && e.dolar ? enPesos / e.dolar : null;
+    };
+    const convertidos = aportes.map((a) => ({ a, v: enMonedaDelObjetivo(a) })).filter((x) => x.v !== null) as { a: (typeof aportes)[number]; v: number }[];
+    const juntado = redondo(suma(convertidos.map((x) => x.v)));
+    const ult30o = redondo(suma(convertidos.filter((x) => diasEntre(diaAR(x.a.occurred_at), hoy) <= 29).map((x) => x.v)));
     return {
       id: o.id,
       nombre: o.title, moneda: o.currency, horizonte: o.horizon_label,

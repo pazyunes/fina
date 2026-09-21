@@ -223,7 +223,7 @@ export function MisVisualizaciones() {
                 izquierda con la mitad derecha de la tarjeta vacía. */}
             <div className={conMonto.length === 1 ? 'flex justify-center' : 'grid grid-cols-2 gap-x-3 gap-y-4'}>
               {conMonto.slice(0, 4).map((o) => {
-                const juntado = o.contribuciones.reduce((a, c) => a + c.monto, 0);
+                const juntado = o.juntado;
                 const pct = Math.min(100, Math.round((juntado / o.montoTotal) * 100));
                 return (
                   <div key={o.id} className="flex flex-col items-center gap-1.5 text-center min-w-0">

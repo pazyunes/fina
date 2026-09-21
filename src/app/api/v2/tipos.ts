@@ -237,6 +237,8 @@ export type EstadoV2 = {
   gastos: Gasto[];
   ingresos: Ingreso[];
   gastosFijos: GastoFijo[];
+  /** Pesos por dólar, para pasar registros de una moneda a otra. */
+  dolar: number | null;
   objetivos: Objetivo[];
   perfilInversor: PerfilInversor | null;
   aportes: AporteInversion[];
@@ -270,6 +272,7 @@ export const ESTADO_VACIO: EstadoV2 = {
   gastos: [],
   ingresos: [],
   gastosFijos: [],
+  dolar: null,
   objetivos: [],
   perfilInversor: null,
   aportes: [],
