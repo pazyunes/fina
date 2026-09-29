@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { llevarA, useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput, slug } from './shared';
+import { ArmarGrupoBtn, COLORS, Cta, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
@@ -282,6 +282,9 @@ export function GastosV2() {
   const [addDispFuente, setAddDispFuente] = useState<FuenteIngreso | ''>('');
   // Ventana del donut: "este mes" o "esta semana".
   const [ventana, setVentana] = useState<Periodo>('mes');
+  // Sólo aplica con ventana === 'mes': 0 es el mes en curso, 1 el anterior, etc.
+  // "Esta semana" no navega — no lo pidieron y complica menos que sumarle offset.
+  const [mesOffset, setMesOffset] = useState(0);
 
   // Buscador por nombre + orden. Los filtros por sección y por tipo se sacaron:
   // las secciones ya están separadas arriba, así que filtrar la lista por
@@ -290,6 +293,11 @@ export function GastosV2() {
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [orden, setOrden] = useState<'recientes' | 'monto'>('recientes');
+  const [filtroDesde, setFiltroDesde] = useState('');
+  const [filtroHasta, setFiltroHasta] = useState('');
+  // Con esto en true, "Tus gastos" deja de truncar en 6. Buscar por nombre o
+  // filtrar por fecha ya implica querer ver la lista completa que matchea.
+  const [verTodos, setVerTodos] = useState(false);
 
   // El total y el donut miran una VENTANA, no todo el historial: "gastado"
   // sin período no se puede comparar con nada, y un tope es por semana o por
@@ -297,12 +305,27 @@ export function GastosV2() {
   // que la persona tiene en la cabeza cuando piensa "cuánto gasté este mes".
   const desdeVentana = (() => {
     const d = new Date();
-    if (ventana === 'mes') return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    if (ventana === 'mes') return new Date(d.getFullYear(), d.getMonth() - mesOffset, 1).getTime();
     const dia = (d.getDay() + 6) % 7; // lunes = 0
     const lunes = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dia);
     return lunes.getTime();
   })();
-  const gastosVentana = gastos.filter((g) => g.ts >= desdeVentana);
+  // Un mes pasado necesita también un límite de arriba: si no, "julio" incluye
+  // agosto, septiembre... hasta hoy. El mes en curso y la semana no lo necesitan,
+  // porque ya terminan hoy.
+  const hastaVentana = ventana === 'mes' && mesOffset > 0
+    ? (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() - mesOffset + 1, 1).getTime(); })()
+    : Infinity;
+  const gastosVentana = gastos.filter((g) => g.ts >= desdeVentana && g.ts < hastaVentana);
+  // Nombre del mes elegido, para el centro del donut y el selector de arriba.
+  const nombreMesOffset = (offset: number) => {
+    if (offset === 0) return 'Este mes';
+    const hoy = new Date();
+    const objetivo = new Date(hoy.getFullYear(), hoy.getMonth() - offset, 1);
+    const nombre = objetivo.toLocaleDateString('es-AR', { month: 'long' });
+    const conAño = objetivo.getFullYear() !== hoy.getFullYear() ? `${nombre} ${objetivo.getFullYear()}` : nombre;
+    return conAño.charAt(0).toUpperCase() + conAño.slice(1);
+  };
 
   const totalGastado = gastosVentana.reduce((s, g) => s + g.montoArs, 0);
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
@@ -329,10 +352,16 @@ export function GastosV2() {
 
   const gastosFiltrados = gastos
     .filter((g) => !busqueda.trim() || g.descripcion.toLowerCase().includes(busqueda.trim().toLowerCase()))
+    .filter((g) => !filtroDesde || g.ts >= new Date(`${filtroDesde}T00:00:00`).getTime())
+    .filter((g) => !filtroHasta || g.ts <= new Date(`${filtroHasta}T23:59:59`).getTime())
     // "Mayor monto" compara en pesos: ordenar por `monto` pondría US$20 abajo
     // de un gasto de $5.000, que es al revés.
     .sort((a, b) => (orden === 'monto' ? b.montoArs - a.montoArs : b.ts - a.ts));
   const hayBusqueda = !!busqueda.trim();
+  const hayFiltroFecha = !!(filtroDesde || filtroHasta);
+  // Mostrar todos si están buscando o filtrando (recortar lo que ya filtraron
+  // sería raro), o si tocaron "Ver todos" a mano.
+  const mostrarTodos = hayBusqueda || hayFiltroFecha || verTodos;
 
   // Desde "Tu paso de hoy" en Home:
   // · "Registrar un gasto" abre el formulario de FINA con el monto listo para
@@ -495,9 +524,37 @@ export function GastosV2() {
       <SegmentedTab
         options={[{ id: 'mes' as Periodo, label: 'Este mes' }, { id: 'semana' as Periodo, label: 'Esta semana' }]}
         value={ventana}
-        onChange={setVentana}
+        onChange={(v) => { setVentana(v); setMesOffset(0); }}
         trackColor={COLORS.tint}
       />
+
+      {/* Navegar meses anteriores — sólo tiene sentido con la ventana en "mes". */}
+      {ventana === 'mes' && (
+        <div className="flex items-center justify-center gap-3 -mt-1">
+          <button
+            type="button"
+            onClick={() => setMesOffset((o) => o + 1)}
+            aria-label="Ver mes anterior"
+            className="v2-focus w-9 h-9 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+            style={{ color: COLORS.inkSoft }}
+          >
+            <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} />
+          </button>
+          <span className="text-[14px] font-semibold min-w-[110px] text-center" style={{ color: COLORS.ink, fontFamily: FONTS.mono }}>
+            {nombreMesOffset(mesOffset)}
+          </span>
+          <button
+            type="button"
+            onClick={() => setMesOffset((o) => Math.max(0, o - 1))}
+            disabled={mesOffset === 0}
+            aria-label="Ver mes siguiente"
+            className="v2-focus w-9 h-9 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+            style={{ color: COLORS.inkSoft, opacity: mesOffset === 0 ? 0.3 : 1, cursor: mesOffset === 0 ? 'default' : 'pointer' }}
+          >
+            <IconChevron size={15} />
+          </button>
+        </div>
+      )}
 
       {/* En desktop, todo lo de abajo se acomoda en grilla; en mobile sigue
           siendo una sola columna apilada (idéntico a antes). */}
@@ -506,7 +563,7 @@ export function GastosV2() {
       <div className={`rounded-2xl p-4 flex gap-4 items-center lg:h-full ${porTipo.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`} style={CARD_ELEVADA}>
         <Donut
           segments={donutCategorias}
-          centerLabel={ventana === 'mes' ? 'Este mes' : 'Esta semana'}
+          centerLabel={ventana === 'mes' ? nombreMesOffset(mesOffset) : 'Esta semana'}
           centerValue={fmtMontoCompacto(totalGastado)}
         />
         <div className="flex-1 min-w-0 flex flex-col gap-3">
@@ -600,8 +657,6 @@ export function GastosV2() {
               </div>
             </div>
           )}
-          {/* Total y disponible los cargó la persona → declarado (§5.1). */}
-          {(disponible > 0 || totalGastado > 0) && <EstadoConfianza estado="declarado" />}
         </div>
       </div>
 
@@ -899,7 +954,10 @@ export function GastosV2() {
             <EstadoConfianza estado="por-descubrir" />
           </div>
         )}
-        {categorias.map((cat) => {
+        {/* De la que más plata se llevó a la que menos — el color de cada una
+            no se mueve (sigue atado al orden en que se crearon, vía `colorDe`),
+            sólo el orden en que aparecen en la lista. */}
+        {[...categorias].sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id)).map((cat) => {
           const open = openCatId === cat.id;
           const gastado = gastadoEn(cat.id);
           const tope = topes[cat.id];
@@ -1021,15 +1079,56 @@ export function GastosV2() {
           </button>
         </div>
         {busquedaAbierta && (
-          <input
-            autoFocus
-            aria-label="Buscar gastos por nombre"
-            className="v2-focus rounded-2xl px-4 py-2.5 text-[16px] transition-colors"
-            style={INPUT_STYLE}
-            placeholder="Buscar por nombre (ej: Rappi)"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
+          <div className="flex flex-col gap-2">
+            <input
+              autoFocus
+              aria-label="Buscar gastos por nombre"
+              className="v2-focus rounded-2xl px-4 py-2.5 text-[16px] transition-colors"
+              style={INPUT_STYLE}
+              placeholder="Buscar por nombre (ej: Rappi)"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <div className="flex-1 flex flex-col gap-1">
+                <label htmlFor="filtro-desde" className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>Desde</label>
+                <input
+                  id="filtro-desde"
+                  type="date"
+                  aria-label="Filtrar gastos desde esta fecha"
+                  className="v2-focus w-full rounded-xl px-3 py-2 text-[15px] transition-colors"
+                  style={INPUT_STYLE}
+                  value={filtroDesde}
+                  max={filtroHasta || undefined}
+                  onChange={(e) => setFiltroDesde(e.target.value)}
+                />
+              </div>
+              <div className="flex-1 flex flex-col gap-1">
+                <label htmlFor="filtro-hasta" className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>Hasta</label>
+                <input
+                  id="filtro-hasta"
+                  type="date"
+                  aria-label="Filtrar gastos hasta esta fecha"
+                  className="v2-focus w-full rounded-xl px-3 py-2 text-[15px] transition-colors"
+                  style={INPUT_STYLE}
+                  value={filtroHasta}
+                  min={filtroDesde || undefined}
+                  onChange={(e) => setFiltroHasta(e.target.value)}
+                />
+              </div>
+              {hayFiltroFecha && (
+                <button
+                  type="button"
+                  onClick={() => { setFiltroDesde(''); setFiltroHasta(''); }}
+                  aria-label="Sacar el filtro de fecha"
+                  className="v2-focus self-end mb-0.5 text-[13px] font-semibold underline"
+                  style={{ color: COLORS.inkSoft }}
+                >
+                  Sacar
+                </button>
+              )}
+            </div>
+          </div>
         )}
         <SegmentedTab
           options={[{ id: 'recientes' as const, label: 'Más recientes' }, { id: 'monto' as const, label: 'Mayor monto' }]}
@@ -1040,9 +1139,13 @@ export function GastosV2() {
 
         {gastos.length === 0 && <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
         {gastos.length > 0 && gastosFiltrados.length === 0 && (
-          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>No encontramos gastos con ese nombre.</p>
+          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>
+            {hayFiltroFecha && hayBusqueda ? 'No encontramos gastos con ese nombre en ese rango de fechas.'
+              : hayFiltroFecha ? 'No encontramos gastos en ese rango de fechas.'
+              : 'No encontramos gastos con ese nombre.'}
+          </p>
         )}
-        {gastosFiltrados.slice(0, hayBusqueda ? 50 : 6).map((g) => {
+        {gastosFiltrados.slice(0, mostrarTodos ? undefined : 6).map((g) => {
           const cat = categorias.find((c) => c.id === g.categoriaId);
           return (
             // Idem: un movimiento no es una tarjeta, es un renglón.
@@ -1065,6 +1168,16 @@ export function GastosV2() {
             </div>
           );
         })}
+        {!hayBusqueda && !hayFiltroFecha && gastosFiltrados.length > 6 && (
+          <button
+            type="button"
+            onClick={() => setVerTodos((v) => !v)}
+            className="v2-focus self-center text-[14px] font-semibold underline mt-1"
+            style={{ color: COLORS.brand }}
+          >
+            {verTodos ? 'Ver menos' : `Ver todos (${gastosFiltrados.length})`}
+          </button>
+        )}
       </div>
 
       <div className="lg:col-span-3">

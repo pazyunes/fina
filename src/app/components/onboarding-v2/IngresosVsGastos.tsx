@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { COLORS, EstadoConfianza, FONTS, fmtMoney, fmtMontoCompacto } from './shared';
+import { COLORS, FONTS, fmtMoney, fmtMontoCompacto } from './shared';
 import { IconBasura } from './FinaIcons';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -85,7 +85,7 @@ export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
         </div>
         {actual.entro === 0 && actual.salio > 0 && (
           <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            {esEsteMes ? 'Este mes' : 'Ese mes'} no registraste ingresos. Si los cargás, se ve cuánto te queda.
+            {esEsteMes ? 'Registraste gastos este mes, pero' : 'Registraste gastos ese mes, pero'} no ingresos. Cargalos para ver cuánto te quedó.
           </p>
         )}
       </div>
@@ -130,7 +130,6 @@ export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
         <Leyenda color={GASTO} texto="Salió" />
         <span className="text-[13px]" style={{ color: COLORS.inkFaint }}>Según lo que registraste</span>
       </div>
-      <EstadoConfianza estado="declarado" />
 
       {conLista && (
         <div className="flex flex-col pt-1">
