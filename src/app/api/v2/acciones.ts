@@ -280,6 +280,72 @@ export async function registrarGasto(g: {
   return { gasto, error: null };
 }
 
+// Igual que borrar + registrar de nuevo, pero en un solo movimiento: se
+// devuelve el efecto en el medio de pago viejo y se aplica el nuevo, y sólo
+// se recalcula la cotización si de verdad cambió el monto o la moneda (así
+// no se le pide de nuevo el dólar por editar solo la descripción).
+export async function editarGasto(id: string, cambios: {
+  monto?: number; moneda?: MonedaConvertible; descripcion?: string;
+  seccionId?: string | null; tipo?: TipoGasto; metodoPago?: string | null; ts?: number;
+}): Promise<{ error: string | null }> {
+  const est = leerEstado();
+  const actual = est.gastos.find((g) => g.id === id);
+  if (!actual) return { error: 'No encontramos ese gasto.' };
+
+  const nuevaMoneda = cambios.moneda ?? actual.moneda;
+  const nuevoMontoOriginal = cambios.monto ?? actual.monto;
+  const cambioMontoOMoneda = cambios.monto !== undefined || cambios.moneda !== undefined;
+
+  let montoArs = actual.montoArs;
+  let cotizacionId: string | null = null;
+  if (cambioMontoOMoneda) {
+    const conv = await aPesos(nuevoMontoOriginal, nuevaMoneda);
+    if (conv.error !== null) return { error: conv.error };
+    montoArs = conv.montoArs ?? 0;
+    cotizacionId = conv.cotizacionId;
+  }
+
+  const nuevoMetodo = cambios.metodoPago !== undefined ? cambios.metodoPago : actual.metodoPago;
+  let mediosPago = est.mediosPago;
+  if (actual.metodoPago) {
+    mediosPago = mediosPago.map((m) => (m.nombre === actual.metodoPago ? { ...m, saldo: m.saldo + actual.montoArs } : m));
+  }
+  if (nuevoMetodo) {
+    mediosPago = mediosPago.map((m) => (m.nombre === nuevoMetodo ? { ...m, saldo: m.saldo - montoArs } : m));
+  }
+
+  const gasto: Gasto = {
+    ...actual,
+    monto: nuevoMontoOriginal,
+    moneda: nuevaMoneda,
+    montoArs,
+    descripcion: cambios.descripcion !== undefined ? cambios.descripcion : actual.descripcion,
+    seccionId: cambios.seccionId !== undefined ? cambios.seccionId : actual.seccionId,
+    tipo: cambios.tipo ?? actual.tipo,
+    metodoPago: nuevoMetodo,
+    ts: cambios.ts ?? actual.ts,
+  };
+
+  parchearEstado({
+    gastos: est.gastos.map((g) => (g.id === id ? gasto : g)).sort((a, b) => b.ts - a.ts),
+    mediosPago,
+  });
+
+  push(() => api.editarGasto(id, {
+    monto: cambioMontoOMoneda ? nuevoMontoOriginal : undefined,
+    moneda: cambios.moneda,
+    montoArs: cambioMontoOMoneda ? montoArs : undefined,
+    cotizacionId: cambioMontoOMoneda ? cotizacionId : undefined,
+    descripcion: cambios.descripcion,
+    seccionId: cambios.seccionId,
+    tipo: cambios.tipo,
+    metodoPago: cambios.metodoPago,
+    ts: cambios.ts,
+  }), 'Gasto editado con éxito.');
+
+  return { error: null };
+}
+
 export function borrarGasto(id: string) {
   const est = leerEstado();
   const gasto = est.gastos.find((g) => g.id === id);

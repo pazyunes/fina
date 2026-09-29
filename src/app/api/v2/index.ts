@@ -339,6 +339,27 @@ export async function registrarGasto(g: {
   return ok(aGasto(r.data[0]));
 }
 
+export async function editarGasto(id: string, g: {
+  monto?: number; moneda?: MonedaConvertible; montoArs?: number; cotizacionId?: string | null;
+  descripcion?: string; seccionId?: string | null; tipo?: TipoGasto;
+  metodoPago?: string | null; ts?: number;
+}): Promise<Resultado<null>> {
+  const fila: Record<string, unknown> = {};
+  if (g.montoArs !== undefined) fila.amount_ars = g.montoArs;
+  if (g.moneda !== undefined) fila.currency = g.moneda;
+  if (g.monto !== undefined && g.moneda !== undefined) fila.original_amount = g.moneda === 'USD' ? g.monto : null;
+  if (g.cotizacionId !== undefined) fila.exchange_rate_id = g.cotizacionId;
+  if (g.descripcion !== undefined) fila.description = g.descripcion;
+  if (g.seccionId !== undefined) fila.section_id = g.seccionId;
+  if (g.tipo !== undefined) fila.expense_type = g.tipo;
+  if (g.metodoPago !== undefined) fila.payment_method = g.metodoPago;
+  if (g.ts !== undefined) fila.occurred_at = new Date(g.ts).toISOString();
+  if (Object.keys(fila).length === 0) return ok(null);
+  return correr<null>('editarGasto', () =>
+    supabase.from('transactions').update(fila).eq('id', id).then(({ error }) => ({ data: null, error })),
+  );
+}
+
 // ── Gastos fijos ─────────────────────────────────────────────────────────
 type FilaGastoFijo = {
   id: string; description: string; amount: number; currency: string; section_id: string | null;

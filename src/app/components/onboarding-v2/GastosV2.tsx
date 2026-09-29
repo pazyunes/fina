@@ -49,6 +49,19 @@ type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; desc
 function fmtGasto(g: { monto: number; moneda: Moneda }): string {
   return g.moneda === 'USD' ? `US$${g.monto.toLocaleString('es-AR')}` : fmtMoney(g.monto);
 }
+// Fecha y hora del gasto — se puede elegir cuando no es "ahora" (ej: cargás a
+// la noche un gasto de la mañana). `datetime-local` no lleva zona horaria: se
+// interpreta en la del dispositivo, que es la que la persona tiene en la
+// cabeza al elegirla.
+function aInputFechaHora(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function deInputFechaHora(v: string): number {
+  const t = new Date(v).getTime();
+  return Number.isNaN(t) ? Date.now() : t;
+}
 // `metodosPago` son los medios con los que fuiste cargando plata disponible,
 // del más reciente al más viejo. Al registrar un gasto se ofrecen esos, que es
 // la lista corta y real de "de dónde puede haber salido".
@@ -81,7 +94,10 @@ const METODOS_SUGERIDOS = ['Efectivo', 'Débito', 'Crédito', 'Mercado Pago', 'T
 
 // Hues categóricos por sección — identidad para el donut y los puntitos. Los
 // montos nunca toman estos colores: siempre tinta neutral.
-const CAT_COLORS = [COLORS.brand, COLORS.coral, COLORS.gold, COLORS.sky, COLORS.green, COLORS.lila];
+// Seis colores bien distintos entre sí: antes `sky` y `lila` eran las dos
+// variantes de violeta de la guía y quedaban muy cerca de `brand` (también
+// violeta) — con seis secciones, la mitad de la rueda terminaba emparentada.
+const CAT_COLORS = [COLORS.brand, COLORS.naranja, COLORS.star, COLORS.lima, COLORS.azul, COLORS.magenta];
 
 // Tratamiento de contenedores (§3.5): variedad, no card-grid spam. Una sola
 // sombra suave basada en tinta; hairline para listas; tint para bloques
@@ -133,6 +149,20 @@ function BotonBorrar({ gasto, abierto, onClick }: { gasto: Gasto; abierto: boole
       style={{ color: abierto ? COLORS.ink : COLORS.inkFaint }}
     >
       <IconBasura size={18} />
+    </button>
+  );
+}
+
+function BotonEditar({ gasto, onClick }: { gasto: Gasto; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Editar ${gasto.descripcion}`}
+      className="v2-focus w-11 h-11 -my-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+      style={{ color: COLORS.inkFaint }}
+    >
+      <IconEditar size={18} />
     </button>
   );
 }
@@ -227,7 +257,10 @@ export function GastosV2() {
   const [waStep, setWaStep] = useState(false);
   const [ngMonto, setNgMonto] = useState('');
   const [ngMoneda, setNgMoneda] = useState<Moneda>('ARS');
+  const [ngFechaHora, setNgFechaHora] = useState(() => aInputFechaHora(Date.now()));
   const [ngDesc, setNgDesc] = useState('');
+  // Gasto que se está editando (null = el formulario abierto es para uno nuevo).
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   // Sin sección elegida de entrada: con la primera ya marcada, era fácil
   // registrar un gasto en la sección equivocada sin darse cuenta.
   const [ngCatId, setNgCatId] = useState<string | null>(null);
@@ -374,6 +407,7 @@ export function GastosV2() {
       seccionId: catId,
       tipo: ngTipo,
       metodoPago: metodo,
+      ts: deInputFechaHora(ngFechaHora),
     };
     // Un gasto fijo que todavía no se pagó no se registra como gasto: sólo
     // queda anotado para avisar. Si ya se pagó, se registra y queda el próximo.
@@ -386,11 +420,56 @@ export function GastosV2() {
       acciones.crearGastoFijo({ ...datos, frecuencia: ngFijo.frecuencia, proximoPago: ngFijo.proximo, diaAncla }, !ngFijo.yaPagado);
     }
 
-    setNgFijo(opcionFijoInicial());
-    setNgMonto(''); setNgMoneda('ARS'); setNgDesc(''); setNgNuevaCat(''); setNgCreandoCat(false); setNgCatId(null); setNgTipo('necesario');
-    setNgMetodo(null); setNgMetodoOtro('');
-    setAddingGasto(false);
+    cancelarForm();
     setOpenCatId(catId);
+  }
+
+  // Precarga el formulario con lo que ya tiene el gasto y lo abre en modo
+  // edición — mismo formulario que "agregar", pero sin la parte de gasto
+  // fijo (eso es para crear uno nuevo, no para editar un movimiento pasado).
+  function empezarEdicion(g: Gasto) {
+    setEditandoId(g.id);
+    setNgMonto(String(g.monto));
+    setNgMoneda(g.moneda);
+    setNgFechaHora(aInputFechaHora(g.ts));
+    setNgDesc(g.descripcion);
+    setNgCatId(g.categoriaId || null);
+    setNgNuevaCat(''); setNgCreandoCat(false);
+    setNgTipo(g.tipo);
+    setNgMetodo(g.metodoPago ?? null);
+    setNgMetodoOtro('');
+    setErrorGasto(null);
+    setChooser(false);
+    setAddingGasto(true);
+  }
+
+  function cancelarForm() {
+    setAddingGasto(false);
+    setEditandoId(null);
+    setNgFijo(opcionFijoInicial());
+    setNgMonto(''); setNgMoneda('ARS'); setNgFechaHora(aInputFechaHora(Date.now()));
+    setNgDesc(''); setNgNuevaCat(''); setNgCreandoCat(false); setNgCatId(null); setNgTipo('necesario');
+    setNgMetodo(null); setNgMetodoOtro('');
+  }
+
+  async function guardarEdicion() {
+    if (!editandoId) return;
+    const monto = parseMoneyInput(ngMonto);
+    if (monto <= 0) return;
+    const catId = ngNuevaCat.trim() ? crearCategoria(ngNuevaCat.trim()) : ngCatId;
+    const metodo = (ngMetodo === 'otro' ? ngMetodoOtro.trim() : ngMetodo) || null;
+    setErrorGasto(null);
+    const r = await acciones.editarGasto(editandoId, {
+      monto,
+      moneda: ngMoneda,
+      descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label,
+      seccionId: catId,
+      tipo: ngTipo,
+      metodoPago: metodo,
+      ts: deInputFechaHora(ngFechaHora),
+    });
+    if (r.error !== null) { setErrorGasto(r.error); return; }
+    cancelarForm();
   }
 
   function guardarTope(catId: string) {
@@ -560,6 +639,7 @@ export function GastosV2() {
         <Cta label="+ Agregar gasto" onClick={() => { setChooser(true); setWaStep(false); }} />
       ) : (
         <div data-form-gasto className="py-2 flex flex-col gap-3">
+          {editandoId && <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Editar gasto</p>}
           <div className="flex gap-2">
             <div className="relative flex-1 min-w-0">
               <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{ngMoneda === 'USD' ? 'US$' : '$'}</span>
@@ -596,6 +676,21 @@ export function GastosV2() {
             value={ngDesc}
             onChange={(e) => setNgDesc(e.target.value)}
           />
+          {/* Por defecto queda en "ahora" — sólo hace falta tocarlo para
+              cargar un gasto de otro momento (ej: a la noche, uno de la
+              mañana). */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="ng-fecha-hora" className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha y hora</label>
+            <input
+              id="ng-fecha-hora"
+              type="datetime-local"
+              className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
+              style={INPUT_STYLE}
+              value={ngFechaHora}
+              max={aInputFechaHora(Date.now())}
+              onChange={(e) => setNgFechaHora(e.target.value)}
+            />
+          </div>
 
           {/* Sección, tipo y medio. Antes eran tres grupos de botones con TODAS
               las opciones a la vista (tus secciones, las sugeridas, cuatro
@@ -689,24 +784,26 @@ export function GastosV2() {
             </div>
           </fieldset>
 
-          <CamposGastoFijo valor={ngFijo} onChange={setNgFijo} />
+          {/* Un gasto que ya pasó no se puede volver "gasto fijo" desde acá:
+              esto es para crear uno nuevo, no para editar un movimiento. */}
+          {!editandoId && <CamposGastoFijo valor={ngFijo} onChange={setNgFijo} />}
 
           {errorGasto && (
             <p role="alert" className="text-[14px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{errorGasto}</p>
           )}
 
           <div className="flex gap-2 mt-1">
-            <button type="button" onClick={() => setAddingGasto(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+            <button type="button" onClick={cancelarForm} className="v2-focus flex-1 rounded-xl py-2.5 text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
               Cancelar
             </button>
             <button
               type="button"
-              onClick={() => void agregarGasto()}
-              disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim()) || !opcionFijoValida(ngFijo)}
+              onClick={() => void (editandoId ? guardarEdicion() : agregarGasto())}
+              disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim()) || (!editandoId && !opcionFijoValida(ngFijo))}
               className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
-              {ngFijo.activo && !ngFijo.yaPagado ? 'Guardar gasto fijo' : 'Agregar gasto'}
+              {editandoId ? 'Guardar cambios' : ngFijo.activo && !ngFijo.yaPagado ? 'Guardar gasto fijo' : 'Agregar gasto'}
             </button>
           </div>
         </div>
@@ -858,6 +955,7 @@ export function GastosV2() {
                         </span>
                         <span className="shrink-0 flex items-center gap-1">
                           <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtGasto(m)}</span>
+                          <BotonEditar gasto={m} onClick={() => empezarEdicion(m)} />
                           <BotonBorrar gasto={m} abierto={borrando === m.id} onClick={() => setBorrando(borrando === m.id ? null : m.id)} />
                         </span>
                       </div>
@@ -959,7 +1057,8 @@ export function GastosV2() {
                   </p>
                 </div>
                 <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
-                {/* Todos se pueden borrar, también los que llegaron por WhatsApp. */}
+                {/* Todos se pueden editar y borrar, también los que llegaron por WhatsApp. */}
+                <BotonEditar gasto={g} onClick={() => empezarEdicion(g)} />
                 <BotonBorrar gasto={g} abierto={borrando === g.id} onClick={() => setBorrando(borrando === g.id ? null : g.id)} />
               </div>
               {borrando === g.id && <ConfirmarBorrado gasto={g} onCancelar={() => setBorrando(null)} />}

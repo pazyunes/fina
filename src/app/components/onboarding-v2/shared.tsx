@@ -79,6 +79,13 @@ export const COLORS = {
   star: '#FFC457', starSoft: '#FFEECB', starText: '#7A4F00',        // Fini, medallitas, destacados
   naranja: '#FF7B4F', naranjaSoft: '#FFE3D6', naranjaText: '#A83208', // atención accionable
   lila: '#CB9EFF', lilaBorde: '#9A6BD1',
+  // Dos hues nuevos, sacados de tokens.css (--fina-inversiones / --fina-fideo)
+  // que hoy no se usaban acá. Hacían falta para que las secciones de Gastos
+  // (hasta 6) no repitan violeta: `sky` y `lila` son las dos variantes de
+  // violeta que ya usa CAT_COLORS, y con seis secciones tres quedaban
+  // emparentadas entre sí.
+  azul: '#3D6FF5', azulSoft: '#E2EAFF',
+  magenta: '#C23FA8', magentaSoft: '#F9E1F2',
 
   // ── Aliases de compatibilidad: keys viejas → paleta de la guía ──
   green: '#B0E150', greenSoft: '#EAF5D0',                  // éxito/valor → lima

@@ -65,7 +65,7 @@ export function BottomNavV2() {
           className="v2-focus relative -mt-5 w-14 h-14 rounded-full flex items-center justify-center shrink-0 transition-transform duration-100 active:scale-95"
           style={{ background: COLORS.ink, boxShadow: '0 8px 20px -4px rgba(43,33,24,0.45)' }}
         >
-          {pulsar && <span className="absolute inset-0 rounded-full animate-ping" style={{ background: COLORS.ink, opacity: 0.4 }} />}
+          {pulsar && <span className="absolute inset-0 rounded-full v2-fab-pulso" style={{ background: COLORS.ink }} />}
           <span className="relative" style={{ color: COLORS.onDark }}><IconChat size={24} /></span>
         </LinkWhatsApp>
       </div>

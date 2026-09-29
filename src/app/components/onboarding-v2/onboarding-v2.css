@@ -78,3 +78,19 @@
   .v2-racha-pop { animation: none; }
 }
 
+/* Pulso del botón del bot (BottomNavV2) — antes usaba `animate-ping` de
+   Tailwind, que repite cada 1s sin pausa: titilaba todo el tiempo. Este
+   pulsa una vez y después descansa un buen rato, y llega a mucha menos
+   opacidad — llama la atención sin molestar visualmente. */
+.v2-fab-pulso {
+  animation: v2_fab_pulso 3.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes v2_fab_pulso {
+  0%   { transform: scale(1);    opacity: 0.28; }
+  22%  { transform: scale(1.75); opacity: 0; }
+  100% { transform: scale(1.75); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-fab-pulso { animation: none; opacity: 0; }
+}
+
