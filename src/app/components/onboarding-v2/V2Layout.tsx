@@ -2,8 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { BottomNavV2 } from './BottomNavV2';
 import { SidebarV2 } from './SidebarV2';
-import { COLOR_VARS, COLORS, FONT_VARS, Cta, Titulo, Apoyo, subirPendientesLocales } from './shared';
+import { COLOR_VARS, COLORS, FONT_VARS, Cta, Titulo, Apoyo, bloqueoAppActivo, subirPendientesLocales } from './shared';
 import { Fini } from './Fini';
+import { BloqueoApp } from './BloqueoApp';
 import { useAuth } from '../../lib/auth';
 import { AlmacenProvider, useAlmacen } from '../../api/v2/AlmacenProvider';
 import { PasoDelDiaProvider } from '../../api/v2/PasoDelDiaProvider';
@@ -27,6 +28,10 @@ import { AvisoWhatsAppProvider } from './LinkWhatsApp';
 function Puerta({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
   const { listo, error, recargar } = useAlmacen();
+  // PIN/Face ID: una traba EN ESTE DISPOSITIVO, aparte de la sesión. Se
+  // guarda en estado (no se vuelve a leer en cada render) para que
+  // desbloquear adentro de `BloqueoApp` muestre `children` sin recargar nada.
+  const [bloqueado, setBloqueado] = useState(() => bloqueoAppActivo());
 
   // Si el onboarding terminó sin sesión (Supabase pidió confirmar el mail),
   // las respuestas quedaron en la copia local. Se suben la primera vez que
@@ -37,6 +42,7 @@ function Puerta({ children }: { children: React.ReactNode }) {
   // recargar la página con sesión válida te echaría al onboarding.
   if (loading) return <Cargando />;
   if (!session) return <Navigate to="/onboarding-v2" replace />;
+  if (bloqueado) return <BloqueoApp onDesbloqueado={() => setBloqueado(false)} />;
 
   if (error !== null) {
     return (

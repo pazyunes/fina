@@ -1421,6 +1421,111 @@ export function loadV2Reserva(): number {
   return Number(leerLocal(LS_RESERVA)) || 0;
 }
 
+// ── Bloqueo de la app: PIN y Face ID / Touch ID ──────────────────────────
+// Esto NO es la cuenta — la cuenta ya la autenticó Supabase. Es una traba en
+// ESTE dispositivo: que alguien que agarra el celular desbloqueado no vea la
+// plata de otra persona sin volver a pedir algo. Por eso vive 100% acá
+// (localStorage + WebAuthn local, nunca contra un servidor) y no hay forma de
+// "recuperar el PIN": si se olvida, se cierra sesión y se vuelve a entrar con
+// mail y contraseña — ese es el único "reseteo" honesto posible sin backend.
+//
+// El PIN se guarda hasheado (SHA-256), nunca en texto plano. Face ID / Touch
+// ID se ofrece como atajo ENCIMA del PIN (igual que en cualquier app: el
+// sensor biométrico siempre necesita un código de respaldo) usando una
+// credencial WebAuthn de plataforma — la ceremonia es local, no hay servidor
+// que verifique la firma: lo único que importa es si el sensor del equipo
+// aceptó a la persona.
+const LS_BLOQUEO_PIN = 'fina_v2_bloqueo_pin';
+const LS_BLOQUEO_BIO = 'fina_v2_bloqueo_biometria';
+const SS_DESBLOQUEADO = 'fina_v2_sesion_desbloqueada';
+
+async function hashPin(pin: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function tieneBloqueoPin(): boolean {
+  return !!leerLocal(LS_BLOQUEO_PIN);
+}
+export async function guardarBloqueoPin(pin: string): Promise<void> {
+  escribirLocal(LS_BLOQUEO_PIN, await hashPin(pin));
+  marcarSesionDesbloqueada();
+}
+export async function verificarBloqueoPin(pin: string): Promise<boolean> {
+  const guardado = leerLocal(LS_BLOQUEO_PIN);
+  if (!guardado) return false;
+  return (await hashPin(pin)) === guardado;
+}
+// Saca el PIN y, con él, Face ID (no tiene sentido un atajo sin el código de
+// respaldo que lo respalda).
+export function quitarBloqueoApp() {
+  escribirLocal(LS_BLOQUEO_PIN, null);
+  escribirLocal(LS_BLOQUEO_BIO, null);
+}
+
+export function tieneBloqueoBiometria(): boolean {
+  return !!leerLocal(LS_BLOQUEO_BIO);
+}
+export function quitarBloqueoBiometria() {
+  escribirLocal(LS_BLOQUEO_BIO, null);
+}
+export async function biometriaDisponible(): Promise<boolean> {
+  try {
+    if (typeof PublicKeyCredential === 'undefined') return false;
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch { return false; }
+}
+function base64urlABytes(b64url: string): Uint8Array {
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(b64url.length / 4) * 4, '=');
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+export async function registrarBiometria(nombre: string): Promise<boolean> {
+  try {
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rp: { name: 'FINA' },
+        user: { id: crypto.getRandomValues(new Uint8Array(16)), name: nombre || 'fina', displayName: nombre || 'FINA' },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 60000,
+      },
+    }) as PublicKeyCredential | null;
+    if (!cred) return false;
+    escribirLocal(LS_BLOQUEO_BIO, cred.id);
+    return true;
+  } catch { return false; }
+}
+export async function verificarBiometria(): Promise<boolean> {
+  const id = leerLocal(LS_BLOQUEO_BIO);
+  if (!id) return false;
+  try {
+    const cred = await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{ id: base64urlABytes(id), type: 'public-key' }],
+        userVerification: 'required',
+        timeout: 60000,
+      },
+    });
+    if (cred) marcarSesionDesbloqueada();
+    return !!cred;
+  } catch { return false; }
+}
+
+// Dura lo que dura la pestaña: se vuelve a pedir PIN/Face ID recién cuando se
+// abre la app de nuevo (no en cada cambio de pantalla adentro de la misma
+// sesión, que sería molesto sin sumar nada).
+export function sesionDesbloqueada(): boolean {
+  try { return sessionStorage.getItem(SS_DESBLOQUEADO) === '1'; } catch { return true; }
+}
+export function marcarSesionDesbloqueada() {
+  try { sessionStorage.setItem(SS_DESBLOQUEADO, '1'); } catch { /* no crítico */ }
+}
+export function bloqueoAppActivo(): boolean {
+  return tieneBloqueoPin() && !sesionDesbloqueada();
+}
+
 // Cartel "Así arrancás en FINA" de Home — se puede cerrar con la X y no
 // vuelve a aparecer en este navegador.
 const LS_ARRANCAS_OCULTO = 'fina_v2_arrancas_oculto';

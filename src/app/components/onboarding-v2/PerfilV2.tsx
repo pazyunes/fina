@@ -1,7 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
-import { ArmarGrupoBtn, BotonVolver, COLORS, borrarDatosLocales, useVolver, FONTS, OpcionesLista, Titulo, TituloSeccion, loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos } from './shared';
+import {
+  ArmarGrupoBtn, BotonVolver, COLORS, borrarDatosLocales, useVolver, FONTS, OpcionesLista, Titulo, TituloSeccion,
+  loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos,
+  biometriaDisponible, guardarBloqueoPin, quitarBloqueoApp, quitarBloqueoBiometria, registrarBiometria, tieneBloqueoBiometria, tieneBloqueoPin,
+} from './shared';
 import { VerificarTelefono } from './VerificarTelefono';
 import { AvisosFina } from './AvisosFina';
 import { cerrarSesion } from '../../api/v2/cuenta';
@@ -56,6 +60,49 @@ export function PerfilV2() {
   const [guardado, setGuardado] = useState(false);
   const [nivel, setNivel] = useState<string | null>(() => loadV2NivelFinanciero());
   const [abriendoNivel, setAbriendoNivel] = useState(false);
+
+  // PIN / Face ID — traba del dispositivo, aparte de la cuenta (ver shared.tsx).
+  const [tienePin, setTienePin] = useState(() => tieneBloqueoPin());
+  const [tieneBio, setTieneBio] = useState(() => tieneBloqueoBiometria());
+  const [bioDisponible, setBioDisponible] = useState(false);
+  useEffect(() => { void biometriaDisponible().then(setBioDisponible); }, []);
+  const [configurandoPin, setConfigurandoPin] = useState(false);
+  const [pinNuevo, setPinNuevo] = useState('');
+  const [pinConfirmar, setPinConfirmar] = useState('');
+  const [errorPin, setErrorPin] = useState<string | null>(null);
+  const [guardandoBio, setGuardandoBio] = useState(false);
+  const [errorBio, setErrorBio] = useState<string | null>(null);
+  const [confirmarQuitarPin, setConfirmarQuitarPin] = useState(false);
+
+  function abrirConfigPin() {
+    setPinNuevo(''); setPinConfirmar(''); setErrorPin(null);
+    setConfigurandoPin(true);
+  }
+  async function guardarPin() {
+    if (pinNuevo.length < 4) { setErrorPin('El PIN tiene que tener al menos 4 números.'); return; }
+    if (pinNuevo !== pinConfirmar) { setErrorPin('Los dos PIN no coinciden.'); return; }
+    await guardarBloqueoPin(pinNuevo);
+    setTienePin(true);
+    setConfigurandoPin(false);
+  }
+  function quitarPin() {
+    quitarBloqueoApp();
+    setTienePin(false);
+    setTieneBio(false);
+    setConfirmarQuitarPin(false);
+  }
+  async function activarBiometria() {
+    setGuardandoBio(true);
+    setErrorBio(null);
+    const ok = await registrarBiometria(nombre);
+    setGuardandoBio(false);
+    if (!ok) { setErrorBio('No pudimos activarlo en este dispositivo. Probá de nuevo.'); return; }
+    setTieneBio(true);
+  }
+  function desactivarBiometria() {
+    quitarBloqueoBiometria();
+    setTieneBio(false);
+  }
 
   // Desde "Tu paso de hoy" en Home:
   // · "Verificar ahora" baja hasta la verificación y ya genera el código, así
@@ -272,6 +319,134 @@ export function PerfilV2() {
       </section>
 
       <AvisosFina />
+
+      {/* PIN / Face ID — pensado para que se sienta más seguro al entrar, no
+          para reemplazar la cuenta: la sesión sigue siendo la de Supabase,
+          esto solo tapa la plata en ESTE celular hasta que se vuelve a probar
+          quién sos. Por eso vive en Perfil y no en el onboarding — cualquiera
+          que ya tenga cuenta lo puede activar cuando quiera. */}
+      <section className="flex flex-col gap-3">
+        <TituloSeccion>PIN y Face ID</TituloSeccion>
+        {!tienePin && !configurandoPin && (
+          <>
+            <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              Pedí un PIN para entrar a FINA en este celular, así nadie más ve tu plata si te lo agarran desbloqueado.
+            </p>
+            <button
+              type="button"
+              onClick={abrirConfigPin}
+              className="v2-focus self-start min-h-[48px] px-5 rounded-full text-[16px] font-bold"
+              style={{ background: COLORS.brand, color: COLORS.surface }}
+            >
+              Activar PIN
+            </button>
+          </>
+        )}
+
+        {configurandoPin && (
+          <div className="flex flex-col gap-2.5">
+            <input
+              autoFocus
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              aria-label="PIN nuevo"
+              placeholder="PIN nuevo (4 a 6 números)"
+              className="v2-focus w-full rounded-2xl px-4 py-3 text-[18px] tracking-[0.3em] transition-colors"
+              style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
+              value={pinNuevo}
+              onChange={(e) => setPinNuevo(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            />
+            <input
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              aria-label="Repetir PIN"
+              placeholder="Repetí el PIN"
+              className="v2-focus w-full rounded-2xl px-4 py-3 text-[18px] tracking-[0.3em] transition-colors"
+              style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
+              value={pinConfirmar}
+              onChange={(e) => setPinConfirmar(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onKeyDown={(e) => { if (e.key === 'Enter') void guardarPin(); }}
+            />
+            {errorPin && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorPin}</p>}
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setConfigurandoPin(false)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+                Cancelar
+              </button>
+              <button type="button" onClick={() => void guardarPin()} className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[14px] font-bold" style={{ background: COLORS.brand, color: COLORS.surface }}>
+                Guardar PIN
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tienePin && !configurandoPin && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2.5 min-h-[44px]">
+              <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
+                <Check size={13} />
+              </span>
+              <span className="flex-1 text-[15px] font-medium" style={{ color: COLORS.ink }}>PIN activado</span>
+              <button type="button" onClick={abrirConfigPin} className="v2-focus text-[14px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
+                Cambiar
+              </button>
+            </div>
+
+            {/* Face ID / Touch ID: sólo tiene sentido con un PIN ya activado
+                (es el respaldo si el sensor falla), y sólo si este equipo
+                tiene el sensor — si no, directamente no se ofrece. */}
+            {bioDisponible && (
+              tieneBio ? (
+                <div className="flex items-center gap-2.5 min-h-[44px]">
+                  <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
+                    <Check size={13} />
+                  </span>
+                  <span className="flex-1 text-[15px] font-medium" style={{ color: COLORS.ink }}>Face ID / Touch ID activado</span>
+                  <button type="button" onClick={desactivarBiometria} className="v2-focus text-[14px] font-semibold underline shrink-0" style={{ color: COLORS.inkSoft }}>
+                    Desactivar
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => void activarBiometria()}
+                    disabled={guardandoBio}
+                    className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[15px] font-bold v2-disabled"
+                    style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
+                  >
+                    {guardandoBio ? 'Esperando al sensor…' : 'Activar Face ID / Touch ID'}
+                  </button>
+                  {errorBio && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorBio}</p>}
+                </div>
+              )
+            )}
+
+            {!confirmarQuitarPin ? (
+              <button type="button" onClick={() => setConfirmarQuitarPin(true)} className="v2-focus self-start text-[14px] font-semibold underline mt-1" style={{ color: COLORS.inkSoft }}>
+                Desactivar PIN
+              </button>
+            ) : (
+              <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-3 mt-1" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar que se desactiva el PIN">
+                <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+                  ¿Desactivar el PIN{tieneBio ? ' y Face ID / Touch ID' : ''}? Vas a poder entrar a FINA en este celular sin pedir nada extra.
+                </p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setConfirmarQuitarPin(false)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={quitarPin} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
+                    Desactivar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <ArmarGrupoBtn />
 
