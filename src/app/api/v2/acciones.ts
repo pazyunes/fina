@@ -102,6 +102,18 @@ export function borrarSeccion(id: string) {
   push(() => api.borrarSeccion(id), 'Sección borrada con éxito.');
 }
 
+// Una sección que VOS vaciaste (le quedaba un solo gasto y lo borraste, o lo
+// moviste a otra sección) desaparece sola — ya no tiene sentido una sección
+// fantasma con un tope puesto y nada adentro. Las que arma el onboarding y
+// todavía nadie tocó NO entran acá: nunca pasan de 1 gasto a 0, porque nunca
+// llegaron a tener ninguno, así que se quedan esperando el primero.
+function borrarSeccionSiQuedoVacia(seccionId: string | null, gastosAntes: Gasto[], gastosDespues: Gasto[]) {
+  if (!seccionId) return;
+  const habiaUno = gastosAntes.filter((g) => g.seccionId === seccionId).length === 1;
+  const quedaCero = !gastosDespues.some((g) => g.seccionId === seccionId);
+  if (habiaUno && quedaCero) borrarSeccion(seccionId);
+}
+
 // ── Medios de pago ───────────────────────────────────────────────────────
 export function sumarDisponible(medio: string, monto: number) {
   const nombre = medio.trim() || 'Efectivo';
@@ -326,10 +338,16 @@ export async function editarGasto(id: string, cambios: {
     ts: cambios.ts ?? actual.ts,
   };
 
+  const gastosDespues = est.gastos.map((g) => (g.id === id ? gasto : g)).sort((a, b) => b.ts - a.ts);
   parchearEstado({
-    gastos: est.gastos.map((g) => (g.id === id ? gasto : g)).sort((a, b) => b.ts - a.ts),
+    gastos: gastosDespues,
     mediosPago,
   });
+  // Si el cambio movió el gasto a otra sección (o se lo sacó), la sección de
+  // origen puede haber quedado vacía.
+  if (cambios.seccionId !== undefined && cambios.seccionId !== actual.seccionId) {
+    borrarSeccionSiQuedoVacia(actual.seccionId, est.gastos, gastosDespues);
+  }
 
   push(() => api.editarGasto(id, {
     monto: cambioMontoOMoneda ? nuevoMontoOriginal : undefined,
@@ -354,7 +372,9 @@ export function borrarGasto(id: string) {
   const mediosPago = gasto?.metodoPago
     ? est.mediosPago.map((m) => (m.nombre === gasto.metodoPago ? { ...m, saldo: m.saldo + gasto.montoArs } : m))
     : est.mediosPago;
-  parchearEstado({ gastos: est.gastos.filter((g) => g.id !== id), mediosPago });
+  const gastosDespues = est.gastos.filter((g) => g.id !== id);
+  parchearEstado({ gastos: gastosDespues, mediosPago });
+  if (gasto) borrarSeccionSiQuedoVacia(gasto.seccionId, est.gastos, gastosDespues);
   // Si la base no lo borró, vuelve a aparecer con su saldo: mostrar borrado un
   // gasto que sigue existiendo es justo lo que no puede pasar.
   push(() => api.borrarGasto(id), 'Gasto borrado con éxito.', () => {
