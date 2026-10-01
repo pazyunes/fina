@@ -138,7 +138,7 @@ function Tarjeta({ titulo, subtitulo, ultima, children }: { titulo: string; subt
         <h3 className="text-[17px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
         <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{subtitulo}</p>
       </header>
-      <div className="flex-1">{children}</div>
+      {children}
     </article>
   );
 }
@@ -193,10 +193,13 @@ export function MisVisualizaciones() {
     },
     {
       titulo: 'Por sección', subtitulo: 'En qué se te va la plata',
+      // Puede haber muchas secciones — se deja scrollear ADENTRO de su propio
+      // alto en vez de estirar la tarjeta (y con ella, todas las demás de la
+      // fila: antes todas tomaban el alto de la más larga).
       contenido: gastos.length === 0
         ? <SinDatos>Cuando registres tu primer gasto, acá vas a ver en qué se te va.</SinDatos>
         : porSeccion.length === 0 ? <SinDatos>Todavía no hay gastos con sección.</SinDatos>
-        : <Barras filas={porSeccion} />,
+        : <div className="max-h-[280px] overflow-y-auto v2-sin-barra pr-0.5"><Barras filas={porSeccion} /></div>,
     },
     {
       titulo: 'Por día', subtitulo: 'Cuánto gastaste cada día de esta semana',
@@ -313,7 +316,7 @@ export function MisVisualizaciones() {
         // tabIndex para que se pueda recorrer con el teclado: una fila con
         // scroll horizontal que no toma foco es inaccesible sin mouse.
         tabIndex={0}
-        className="v2-focus flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-[22px] px-[22px] scroll-pl-[22px] pb-1 lg:mx-0 lg:px-0 lg:scroll-pl-0"
+        className="v2-focus flex items-start gap-3 overflow-x-auto snap-x snap-mandatory -mx-[22px] px-[22px] scroll-pl-[22px] pb-1 lg:mx-0 lg:px-0 lg:scroll-pl-0"
         style={{ scrollbarWidth: 'none' }}
       >
         {tarjetas.map((t, i) => (

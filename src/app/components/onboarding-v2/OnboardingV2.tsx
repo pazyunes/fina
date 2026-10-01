@@ -790,17 +790,6 @@ export function OnboardingV2() {
                     ))}
                   </ul>
                   <p className="text-[18px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
-                  {/* Quien ya tiene cuenta necesita una puerta. Sin esto, en un
-                      teléfono nuevo la única salida era el onboarding entero, y
-                      al final Supabase le iba a decir que el mail ya existe. */}
-                  <button
-                    type="button"
-                    onClick={() => navigate('/onboarding-v2/entrar')}
-                    className="v2-focus self-start text-[16px] font-semibold underline rounded-full py-2"
-                    style={{ color: COLORS.brand }}
-                  >
-                    Ya tengo cuenta
-                  </button>
                 </>
               )}
 
@@ -1151,6 +1140,21 @@ export function OnboardingV2() {
           <div className="px-6 pt-3 pb-6 flex flex-col gap-2.5 w-full lg:max-w-xl lg:mx-auto lg:pb-10">
             {pideCta && (
               <Cta label={ctaLabel} disabled={creando || (!finished && currentKey !== 'login' && !stepValid(currentKey))} onClick={onNext} />
+            )}
+            {/* Quien ya tiene cuenta necesita una puerta. Sin esto, en un
+                teléfono nuevo la única salida era el onboarding entero, y al
+                final Supabase le iba a decir que el mail ya existe. Misma
+                forma que "Empezar", colores invertidos: misma jerarquía, dos
+                caminos distintos — no uno principal y un link perdido arriba. */}
+            {currentKey === 'intro' && (
+              <button
+                type="button"
+                onClick={() => navigate('/onboarding-v2/entrar')}
+                className="v2-focus w-full rounded-2xl py-4 text-[18px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
+                style={{ background: COLORS.surface, color: COLORS.brand, border: `1.5px solid ${COLORS.brand}` }}
+              >
+                Ya tengo cuenta
+              </button>
             )}
             {!finished && SKIPPABLE.includes(currentKey) && (
               <BotonFantasma label="Saltar por ahora" onClick={onSkip} />

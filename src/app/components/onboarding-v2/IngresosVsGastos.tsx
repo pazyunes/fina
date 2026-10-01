@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { COLORS, FONTS, fmtMoney, fmtMontoCompacto } from './shared';
+import { COLORS, FONTS, fmtMoney } from './shared';
 import { IconBasura } from './FinaIcons';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -79,7 +79,7 @@ export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
           {actual.entro > 0 && (
             <div className="flex flex-col gap-0.5">
               <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? 'Te quedó' : 'Salió de más'}</span>
-              <span className="text-[17px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMontoCompacto(Math.abs(quedo))}</span>
+              <span className="text-[17px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
             </div>
           )}
         </div>
@@ -155,7 +155,7 @@ function Cifra({ color, etiqueta, valor }: { color: string; etiqueta: string; va
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} aria-hidden />
         {etiqueta}
       </span>
-      <span className="text-[17px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMontoCompacto(valor)}</span>
+      <span className="text-[17px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(valor)}</span>
     </div>
   );
 }

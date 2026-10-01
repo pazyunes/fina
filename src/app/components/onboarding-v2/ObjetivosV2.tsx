@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Fini } from './Fini';
 import { llevarA, useAlLlegar } from './alLlegar';
-import { COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
+import { COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { FiniPresenta } from './FiniDice';
 import * as acciones from '../../api/v2/acciones';
@@ -554,8 +554,8 @@ export function ObjetivosV2() {
     setEditHorizonteFecha('');
     // Precargamos el monto tal como estaba, para poder editarlo.
     setEditMontoModo(obj.montoModo ?? 'exacto');
-    setEditMontoTotal(obj.montoTotal > 0 ? formatThousands(String(obj.montoTotal)) : '');
-    setEditMontoMin(obj.montoMin ? formatThousands(String(obj.montoMin)) : '');
+    setEditMontoTotal(obj.montoTotal > 0 ? formatMontoInicial(obj.montoTotal) : '');
+    setEditMontoMin(obj.montoMin ? formatMontoInicial(obj.montoMin) : '');
     setOpenId(obj.id);
     setEditando(true);
   }

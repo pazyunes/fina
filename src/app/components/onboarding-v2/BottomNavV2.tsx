@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { LinkWhatsApp } from './LinkWhatsApp';
 import { COLORS } from './shared';
-import { IconChat, IconGastos, IconHome, IconInversiones, IconObjetivos } from './FinaIcons';
+import { IconChat, IconClose, IconGastos, IconHome, IconInversiones, IconObjetivos } from './FinaIcons';
 
 // REDISEÑO v2 — menú de abajo pedido explícitamente: Home, Gastos, Chat
 // (resaltado con colores invertidos, no es una pantalla — abre el bot de
@@ -57,8 +57,38 @@ export function BottomNavV2() {
         );
       })}
 
-      {/* Chat — más marcado, colores invertidos (fondo tinta, ícono claro), lleva al bot real de WhatsApp */}
-      <div className="flex-1 flex justify-center">
+      {/* Chat — más marcado, colores invertidos (fondo tinta, ícono claro), lleva al bot real de WhatsApp.
+          Ni bien arranca la app, un cartelito corto le dice a la persona qué es
+          este botón: antes el pulso llamaba la atención pero no explicaba nada,
+          así que quien no lo tocaba por las dudas nunca se enteraba de que ahí
+          se le puede mandar un gasto, un ingreso o pedirle un resumen. Se cierra
+          solo (tocando la X) o al tocar el botón — lo que pase primero. */}
+      <div className="flex-1 flex justify-center relative">
+        {pulsar && (
+          <div
+            role="status"
+            className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-[210px] max-w-[78vw] rounded-2xl p-3 flex items-start gap-2"
+            style={{ background: COLORS.brandSoft, boxShadow: '0 8px 20px -6px rgba(43,33,24,0.25)' }}
+          >
+            <p className="flex-1 text-[13.5px] font-medium leading-snug" style={{ color: COLORS.brandDark }}>
+              Hablá con FINA acá: contale un gasto, un ingreso, o pedile un resumen.
+            </p>
+            <button
+              type="button"
+              aria-label="Cerrar"
+              onClick={() => { marcarFabVisto(); setPulsar(false); }}
+              className="v2-focus shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-transform duration-100 active:scale-90"
+              style={{ background: COLORS.lila, color: COLORS.brandDark }}
+            >
+              <IconClose size={12} />
+            </button>
+            <span
+              className="absolute left-1/2 -translate-x-1/2 top-full"
+              style={{ width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: `7px solid ${COLORS.brandSoft}` }}
+              aria-hidden
+            />
+          </div>
+        )}
         <LinkWhatsApp
           aria-label="Hablar con FINA por WhatsApp"
           onClick={() => { if (pulsar) { marcarFabVisto(); setPulsar(false); } }}

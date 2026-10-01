@@ -156,12 +156,38 @@ export function fmtMontoCompacto(n: number): string {
   return fmtMoney(n);
 }
 
+// Convención argentina: '.' separa miles, ',' separa los centavos. Antes
+// `\D` borraba la coma igual que cualquier otro no-dígito, así que tipear
+// "13,12" quedaba en "1312" — la coma desaparecía en vez de marcar los
+// centavos. Ahora todo lo antes de la primera coma es la parte entera
+// (se le siguen sacando los no-dígitos y se agrupa de a miles) y lo que
+// sigue son los centavos, cortado a 2 dígitos.
 export function parseMoneyInput(v: string): number {
-  return parseInt(v.replace(/\D/g, '')) || 0;
+  const i = v.indexOf(',');
+  const entero = (i === -1 ? v : v.slice(0, i)).replace(/\D/g, '');
+  const dec = i === -1 ? '' : v.slice(i + 1).replace(/\D/g, '').slice(0, 2);
+  const n = Number(`${entero || '0'}${dec ? `.${dec}` : ''}`);
+  return Number.isFinite(n) ? n : 0;
 }
 export function formatThousands(v: string): string {
-  const digits = v.replace(/\D/g, '').replace(/^0+/, '');
-  return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+  const i = v.indexOf(',');
+  const enteroRaw = i === -1 ? v : v.slice(0, i);
+  const entero = enteroRaw.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  const enteroFmt = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  if (i === -1) return enteroFmt;
+  const dec = v.slice(i + 1).replace(/\D/g, '').slice(0, 2);
+  return `${enteroFmt || '0'},${dec}`;
+}
+// Para precargar un input de monto con un número que YA existe (por ej. al
+// editar), no con lo que la persona está tipeando: acá sí puede venir con
+// centavos reales, así que se arma directo con toFixed, sin pasar por
+// `formatThousands` (esa es para formatear tecla a tecla, no para convertir
+// un number).
+export function formatMontoInicial(n: number): string {
+  if (!n) return '';
+  const [entero, dec] = n.toFixed(2).replace(/\.00$/, '').split('.');
+  const enteroFmt = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return dec ? `${enteroFmt},${dec}` : enteroFmt;
 }
 
 // ── Sistema propietario de confianza del dato (guía frontend.md §5) ─────

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, BotonVolver, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput } from './shared';
+import { ArmarGrupoBtn, BotonVolver, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
@@ -233,7 +233,7 @@ export function InversionesV2() {
     setConfirmarBorrar(false);
     setAporteInstrId(a.instrumentoId);
     setAporteMoneda(monedaDe(a));
-    setAporteMonto(formatThousands(String(a.monto)));
+    setAporteMonto(formatMontoInicial(a.monto));
     setAportePaso('datos');
     setAporteAbierto(true);
   }
