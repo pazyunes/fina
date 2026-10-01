@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { llevarA, useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatThousands, parseMoneyInput, slug } from './shared';
+import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
@@ -9,7 +9,8 @@ import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaI
 import { LinkWhatsApp } from './LinkWhatsApp';
 import { IngresosVsGastos } from './IngresosVsGastos';
 import { CamposGastoFijo, ListaGastosFijos, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
-import { FUENTES_INGRESO, type FuenteIngreso } from '../../api/v2/tipos';
+import { FUENTES_INGRESO, type FuenteIngreso, type PagoMixto } from '../../api/v2/tipos';
+import { IconClose } from './FinaIcons';
 
 // REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
 // gastos con sus botones de "agregar", visualización arriba (donut +
@@ -37,7 +38,7 @@ type Periodo = 'semana' | 'mes';
 type Moneda = 'ARS' | 'USD';
 type Tope = { monto: number; periodo: Periodo };
 type Categoria = { id: string; nombre: string };
-type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number; metodoPago?: string; origen: 'web' | 'whatsapp' | 'manual' };
+type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number; metodoPago?: string; pagos?: PagoMixto[]; origen: 'web' | 'whatsapp' | 'manual' };
 // Cada gasto guarda DOS montos: `monto` es lo que la persona tipeó, en su
 // moneda, y `montoArs` su equivalente en pesos congelado a la cotización de
 // ese día.
@@ -48,6 +49,9 @@ type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; desc
 // fue. Ahora entra como $30.800.
 function fmtGasto(g: { monto: number; moneda: Moneda }): string {
   return g.moneda === 'USD' ? `US$${g.monto.toLocaleString('es-AR')}` : fmtMoney(g.monto);
+}
+function fmtPagos(pagos: PagoMixto[]): string {
+  return pagos.map((p) => `${p.medio} (${fmtMoney(p.monto)})`).join(' + ');
 }
 // Fecha y hora del gasto — se puede elegir cuando no es "ahora" (ej: cargás a
 // la noche un gasto de la mañana). `datetime-local` no lleva zona horaria: se
@@ -61,6 +65,15 @@ function aInputFechaHora(ts: number): string {
 function deInputFechaHora(v: string): number {
   const t = new Date(v).getTime();
   return Number.isNaN(t) ? Date.now() : t;
+}
+// Una fila del editor de "pagado con varios medios". `medio === 'otro'` usa
+// `otro` en vez del nombre — mismo patrón que el desplegable de medio único.
+type FilaPago = { medio: string; otro: string; monto: string };
+function filaPagoVacia(): FilaPago {
+  return { medio: '', otro: '', monto: '' };
+}
+function medioDeFila(f: FilaPago): string {
+  return (f.medio === 'otro' ? f.otro : f.medio).trim();
 }
 // `metodosPago` son los medios con los que fuiste cargando plata disponible,
 // del más reciente al más viejo. Al registrar un gasto se ofrecen esos, que es
@@ -172,7 +185,7 @@ function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () 
     <div className="mt-2 mb-1 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
       <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
         ¿Borrar “{gasto.descripcion}” de <span className="font-mono tabular-nums">{fmtGasto(gasto)}</span>?
-        {gasto.metodoPago ? ` La plata vuelve a ${gasto.metodoPago}.` : ''}
+        {gasto.pagos?.length ? ` La plata vuelve a ${fmtPagos(gasto.pagos)}.` : gasto.metodoPago ? ` La plata vuelve a ${gasto.metodoPago}.` : ''}
       </p>
       <div className="flex gap-2">
         <button
@@ -220,6 +233,7 @@ export function GastosV2() {
       tipo: g.tipo,
       ts: g.ts,
       metodoPago: g.metodoPago ?? undefined,
+      pagos: g.pagos,
       origen: g.origen,
     })),
     // Se muestra en cero y no en negativo: un disponible negativo es un dato
@@ -271,6 +285,10 @@ export function GastosV2() {
   const [ngTipo, setNgTipo] = useState<TipoGasto>('necesario');
   const [ngMetodo, setNgMetodo] = useState<string | null>(null);
   const [ngMetodoOtro, setNgMetodoOtro] = useState('');
+  // Pagado con más de un medio: cada fila es un medio + su parte del total.
+  // La suma de las filas tiene que dar el monto del gasto.
+  const [ngDividido, setNgDividido] = useState(false);
+  const [ngPagos, setNgPagos] = useState<FilaPago[]>([filaPagoVacia(), filaPagoVacia()]);
   const [ngFijo, setNgFijo] = useState<OpcionFijo>(opcionFijoInicial);
   // Medio con el que se carga la plata disponible.
   const [addDispMetodo, setAddDispMetodo] = useState<string | null>(null);
@@ -350,6 +368,15 @@ export function GastosV2() {
   // hay ninguno, los sugeridos.
   const metodosOfrecidos = (estado.metodosPago?.length ? estado.metodosPago : METODOS_SUGERIDOS);
 
+  // Validación del pago dividido: cada fila necesita medio y monto, y entre
+  // todas tienen que sumar exactamente el total del gasto (si no, ¿de dónde
+  // sale la diferencia?).
+  const sumaPagos = ngPagos.reduce((s, f) => s + parseMoneyInput(f.monto), 0);
+  const pagosValidos = !ngDividido || (
+    ngPagos.every((f) => medioDeFila(f) && parseMoneyInput(f.monto) > 0)
+    && Math.abs(sumaPagos - parseMoneyInput(ngMonto)) < 0.01
+  );
+
   const gastosFiltrados = gastos
     .filter((g) => !busqueda.trim() || g.descripcion.toLowerCase().includes(busqueda.trim().toLowerCase()))
     .filter((g) => !filtroDesde || g.ts >= new Date(`${filtroDesde}T00:00:00`).getTime())
@@ -424,6 +451,7 @@ export function GastosV2() {
     const catId = ngNuevaCat.trim() ? crearCategoria(ngNuevaCat.trim()) : ngCatId;
     if (!catId) return;
     const metodo = (ngMetodo === 'otro' ? ngMetodoOtro.trim() : ngMetodo) || null;
+    const pagos = ngDividido ? ngPagos.map((f) => ({ medio: medioDeFila(f), monto: parseMoneyInput(f.monto) })) : undefined;
 
     // En dólares hay que congelar la cotización, y eso puede fallar sin red.
     // Si falla, el modal se queda abierto con lo que escribió: perder el gasto
@@ -440,8 +468,10 @@ export function GastosV2() {
     };
     // Un gasto fijo que todavía no se pagó no se registra como gasto: sólo
     // queda anotado para avisar. Si ya se pagó, se registra y queda el próximo.
+    // (La división entre medios es sólo para el gasto de una vez — un gasto
+    // fijo guarda un único medio, como siempre.)
     if (!ngFijo.activo || ngFijo.yaPagado) {
-      const r = await acciones.registrarGasto({ ...datos, confirmacion: ngFijo.activo ? 'Gasto fijo guardado con éxito.' : undefined });
+      const r = await acciones.registrarGasto({ ...datos, pagos, confirmacion: ngFijo.activo ? 'Gasto fijo guardado con éxito.' : undefined });
       if (r.error !== null) { setErrorGasto(r.error); return; }
     }
     if (ngFijo.activo) {
@@ -458,14 +488,22 @@ export function GastosV2() {
   // fijo (eso es para crear uno nuevo, no para editar un movimiento pasado).
   function empezarEdicion(g: Gasto) {
     setEditandoId(g.id);
-    setNgMonto(String(g.monto));
+    setNgMonto(formatMontoInicial(g.monto));
     setNgMoneda(g.moneda);
     setNgFechaHora(aInputFechaHora(g.ts));
     setNgDesc(g.descripcion);
     setNgCatId(g.categoriaId || null);
     setNgNuevaCat(''); setNgCreandoCat(false);
     setNgTipo(g.tipo);
-    setNgMetodo(g.metodoPago ?? null);
+    if (g.pagos?.length) {
+      setNgDividido(true);
+      setNgPagos(g.pagos.map((p) => ({ medio: p.medio, otro: '', monto: formatMontoInicial(p.monto) })));
+      setNgMetodo(null);
+    } else {
+      setNgDividido(false);
+      setNgPagos([filaPagoVacia(), filaPagoVacia()]);
+      setNgMetodo(g.metodoPago ?? null);
+    }
     setNgMetodoOtro('');
     setErrorGasto(null);
     setChooser(false);
@@ -479,6 +517,7 @@ export function GastosV2() {
     setNgMonto(''); setNgMoneda('ARS'); setNgFechaHora(aInputFechaHora(Date.now()));
     setNgDesc(''); setNgNuevaCat(''); setNgCreandoCat(false); setNgCatId(null); setNgTipo('necesario');
     setNgMetodo(null); setNgMetodoOtro('');
+    setNgDividido(false); setNgPagos([filaPagoVacia(), filaPagoVacia()]);
   }
 
   async function guardarEdicion() {
@@ -487,6 +526,7 @@ export function GastosV2() {
     if (monto <= 0) return;
     const catId = ngNuevaCat.trim() ? crearCategoria(ngNuevaCat.trim()) : ngCatId;
     const metodo = (ngMetodo === 'otro' ? ngMetodoOtro.trim() : ngMetodo) || null;
+    const pagos = ngDividido ? ngPagos.map((f) => ({ medio: medioDeFila(f), monto: parseMoneyInput(f.monto) })) : null;
     setErrorGasto(null);
     const r = await acciones.editarGasto(editandoId, {
       monto,
@@ -494,7 +534,8 @@ export function GastosV2() {
       descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label,
       seccionId: catId,
       tipo: ngTipo,
-      metodoPago: metodo,
+      metodoPago: ngDividido ? null : metodo,
+      pagos,
       ts: deInputFechaHora(ngFechaHora),
     });
     if (r.error !== null) { setErrorGasto(r.error); return; }
@@ -786,29 +827,116 @@ export function GastosV2() {
               {/* Con qué lo pagaste. Primero los medios con los que ya cargaste
                   plata disponible; si no hay ninguno, los sugeridos. */}
               <div className="flex flex-col gap-2">
-                <Desplegable
-                  id="ng-medio"
-                  label="¿Con qué lo pagaste?"
-                  value={ngMetodo ?? ''}
-                  onChange={(v) => { setNgMetodo(v || null); if (v !== 'otro') setNgMetodoOtro(''); }}
-                >
-                  <option value="" style={OPCION}>Elegí un medio (opcional)</option>
-                  {metodosOfrecidos.map((m) => <option key={m} value={m} style={OPCION}>{m}</option>)}
-                  <option value="otro" style={OPCION}>+ Otro medio</option>
-                </Desplegable>
-                {ngMetodo === 'otro' && (
-                  <input
-                    autoFocus
-                    aria-label="Con qué lo pagaste"
-                    className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
-                    style={INPUT_STYLE}
-                    placeholder="Ej: Ualá"
-                    value={ngMetodoOtro}
-                    onChange={(e) => setNgMetodoOtro(e.target.value)}
-                  />
+                {!ngDividido ? (
+                  <>
+                    <Desplegable
+                      id="ng-medio"
+                      label="¿Con qué lo pagaste?"
+                      value={ngMetodo ?? ''}
+                      onChange={(v) => { setNgMetodo(v || null); if (v !== 'otro') setNgMetodoOtro(''); }}
+                    >
+                      <option value="" style={OPCION}>Elegí un medio (opcional)</option>
+                      {metodosOfrecidos.map((m) => <option key={m} value={m} style={OPCION}>{m}</option>)}
+                      <option value="otro" style={OPCION}>+ Otro medio</option>
+                    </Desplegable>
+                    {ngMetodo === 'otro' && (
+                      <input
+                        autoFocus
+                        aria-label="Con qué lo pagaste"
+                        className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
+                        style={INPUT_STYLE}
+                        placeholder="Ej: Ualá"
+                        value={ngMetodoOtro}
+                        onChange={(e) => setNgMetodoOtro(e.target.value)}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setNgDividido(true); setNgPagos([filaPagoVacia(), filaPagoVacia()]); }}
+                      className="v2-focus self-start text-[13px] font-semibold underline"
+                      style={{ color: COLORS.brand }}
+                    >
+                      Pagado con más de un medio
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setNgDividido(false); setNgPagos([filaPagoVacia(), filaPagoVacia()]); }}
+                    className="v2-focus self-start text-[13px] font-semibold underline"
+                    style={{ color: COLORS.inkSoft }}
+                  >
+                    Pagar con un solo medio
+                  </button>
                 )}
               </div>
             </div>
+
+            {/* Dividido entre varios medios: una fila por medio, cada una con
+                su monto — la suma tiene que dar el total de arriba. Full-width
+                (no adentro de la grilla de 2 columnas) porque cada fila ya
+                tiene tres campos. */}
+            {ngDividido && (
+              <div className="flex flex-col gap-2">
+                <p className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>¿Con qué lo pagaste?</p>
+                {ngPagos.map((f, i) => (
+                  <div key={i} className="flex gap-1.5 items-start">
+                    <select
+                      aria-label={`Medio ${i + 1}`}
+                      value={f.medio}
+                      onChange={(e) => setNgPagos((v) => v.map((x, idx) => (idx === i ? { ...x, medio: e.target.value } : x)))}
+                      className="v2-focus flex-1 min-w-0 rounded-xl pl-3 pr-2 min-h-[48px] text-[15px] transition-colors"
+                      style={{ ...INPUT_STYLE, color: f.medio ? COLORS.ink : COLORS.inkFaint }}
+                    >
+                      <option value="" style={OPCION}>Medio</option>
+                      {metodosOfrecidos.map((m) => <option key={m} value={m} style={OPCION}>{m}</option>)}
+                      <option value="otro" style={OPCION}>+ Otro</option>
+                    </select>
+                    {f.medio === 'otro' && (
+                      <input
+                        aria-label={`Medio ${i + 1}, cuál`}
+                        placeholder="Ej: Ualá"
+                        value={f.otro}
+                        onChange={(e) => setNgPagos((v) => v.map((x, idx) => (idx === i ? { ...x, otro: e.target.value } : x)))}
+                        className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[48px] text-[15px] transition-colors"
+                        style={INPUT_STYLE}
+                      />
+                    )}
+                    <input
+                      aria-label={`Monto pagado con el medio ${i + 1}`}
+                      placeholder="Monto"
+                      inputMode="decimal"
+                      value={f.monto}
+                      onChange={(e) => setNgPagos((v) => v.map((x, idx) => (idx === i ? { ...x, monto: formatThousands(e.target.value) } : x)))}
+                      className="v2-focus w-[104px] shrink-0 rounded-xl px-2.5 min-h-[48px] text-[15px] transition-colors"
+                      style={INPUT_STYLE}
+                    />
+                    {ngPagos.length > 2 && (
+                      <button
+                        type="button"
+                        aria-label={`Sacar el medio ${i + 1}`}
+                        onClick={() => setNgPagos((v) => v.filter((_, idx) => idx !== i))}
+                        className="v2-focus w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+                        style={{ color: COLORS.inkFaint }}
+                      >
+                        <IconClose size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setNgPagos((v) => [...v, filaPagoVacia()])}
+                  className="v2-focus self-start text-[13px] font-semibold underline"
+                  style={{ color: COLORS.brand }}
+                >
+                  + Agregar otro medio
+                </button>
+                <p className="text-[13px]" style={{ color: pagosValidos ? COLORS.inkSoft : COLORS.coralDark }}>
+                  Sumado: {fmtMoney(sumaPagos)} de {fmtMoney(parseMoneyInput(ngMonto))}
+                </p>
+              </div>
+            )}
 
             <fieldset className="flex flex-col gap-1.5">
               <legend className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</legend>
@@ -846,7 +974,7 @@ export function GastosV2() {
               <button
                 type="button"
                 onClick={() => void (editandoId ? guardarEdicion() : agregarGasto())}
-                disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim()) || (!editandoId && !opcionFijoValida(ngFijo))}
+                disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim()) || (!editandoId && !opcionFijoValida(ngFijo)) || !pagosValidos}
                 className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95"
                 style={{ background: COLORS.brand, color: COLORS.surface }}
               >

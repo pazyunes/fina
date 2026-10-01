@@ -4,7 +4,7 @@ import {
   ESTADO_VACIO, PERFIL_VACIO,
   type AporteInversion, type Contribucion, type EstadoV2, type FuenteIngreso, type Gasto, type GastoFijo, type Grupo, type Ingreso,
   type MedioPago, type MiembroGrupo, type Moneda, type MonedaConvertible,
-  type Objetivo, type Perfil,
+  type Objetivo, type PagoMixto, type Perfil,
   type PerfilInversor, type Periodo, type Seccion, type TipoGasto,
   type PasoGuardado, type Racha, RACHA_VACIA,
 } from './tipos';
@@ -264,8 +264,10 @@ export function sumarDisponible(medio: string, monto: number): Promise<Resultado
 type FilaGasto = {
   id: string; amount_ars: number; currency: string; original_amount: number | null;
   description: string | null; section_id: string | null; expense_type: string | null;
-  payment_method: string | null; group_id: string | null; occurred_at: string; source: string;
+  payment_method: string | null; payment_methods: PagoMixto[] | null; group_id: string | null; occurred_at: string; source: string;
 };
+
+const SELECT_GASTO = 'id, amount_ars, currency, original_amount, description, section_id, expense_type, payment_method, payment_methods, group_id, occurred_at, source';
 
 function aGasto(f: FilaGasto): Gasto {
   const moneda: MonedaConvertible = f.currency === 'USD' ? 'USD' : 'ARS';
@@ -280,6 +282,7 @@ function aGasto(f: FilaGasto): Gasto {
     seccionId: f.section_id,
     tipo: (f.expense_type ?? 'otro') as TipoGasto,
     metodoPago: f.payment_method,
+    pagos: f.payment_methods?.length ? f.payment_methods : undefined,
     grupoId: f.group_id,
     ts: new Date(f.occurred_at).getTime(),
     origen: (f.source === 'whatsapp' ? 'whatsapp' : f.source === 'manual' ? 'manual' : 'web'),
@@ -289,7 +292,7 @@ function aGasto(f: FilaGasto): Gasto {
 export async function listarGastos(): Promise<Resultado<Gasto[]>> {
   const r = await correr<FilaGasto[]>('listarGastos', () =>
     supabase.from('transactions')
-      .select('id, amount_ars, currency, original_amount, description, section_id, expense_type, payment_method, group_id, occurred_at, source')
+      .select(SELECT_GASTO)
       .eq('type', 'expense')
       .order('occurred_at', { ascending: false })
       .limit(500),
@@ -302,10 +305,14 @@ export async function registrarGasto(g: {
   id?: string;
   monto: number; moneda: MonedaConvertible; montoArs: number; cotizacionId?: string | null;
   descripcion: string; seccionId: string | null; tipo: TipoGasto;
-  metodoPago: string | null; grupoId?: string | null; ts?: number;
+  metodoPago: string | null; pagos?: PagoMixto[] | null; grupoId?: string | null; ts?: number;
 }): Promise<Resultado<Gasto>> {
   const uid = await idUsuaria();
   if (!uid) return falla<Gasto>('sin sesión', 'registrarGasto');
+
+  // Pagado con varios medios: `payment_method` (singular) queda en null y el
+  // detalle vive en `payment_methods`. Con uno solo, al revés — como siempre.
+  const dividido = !!g.pagos?.length;
 
   const r = await correr<FilaGasto[]>('registrarGasto', () =>
     supabase.from('transactions').insert({
@@ -320,19 +327,25 @@ export async function registrarGasto(g: {
       description: g.descripcion,
       section_id: g.seccionId,
       expense_type: g.tipo,
-      payment_method: g.metodoPago,
+      payment_method: dividido ? null : g.metodoPago,
+      payment_methods: dividido ? g.pagos : null,
       group_id: g.grupoId ?? null,
       // 'web' = lo cargó la persona en la app. El bot escribe 'whatsapp'.
       source: 'web',
-    }).select('id, amount_ars, currency, original_amount, description, section_id, expense_type, payment_method, group_id, occurred_at, source'),
+    }).select(SELECT_GASTO),
   );
   if (r.error !== null || !r.data?.[0]) return falla<Gasto>(r.error ?? 'sin fila', 'registrarGasto');
 
-  // El gasto descuenta del medio con el que se pagó, y de paso ese medio queda
-  // como el más reciente (lo hace `mover_saldo`), así la próxima vez se ofrece
-  // primero. Si el medio no existía, lo crea con saldo negativo — que es la
-  // verdad: gastaste con algo que nunca cargaste.
-  if (g.metodoPago) {
+  // El gasto descuenta del medio (o los medios) con que se pagó, y de paso
+  // cada uno queda como el más reciente (lo hace `mover_saldo`), así la
+  // próxima vez se ofrece primero. Si un medio no existía, lo crea con saldo
+  // negativo — que es la verdad: gastaste con algo que nunca cargaste.
+  if (dividido) {
+    for (const p of g.pagos!) {
+      const saldo = await moverSaldo(p.medio, -p.monto);
+      if (saldo.error !== null) return falla<Gasto>(saldo.error, 'registrarGasto/saldo');
+    }
+  } else if (g.metodoPago) {
     const saldo = await moverSaldo(g.metodoPago, -g.montoArs);
     if (saldo.error !== null) return falla<Gasto>(saldo.error, 'registrarGasto/saldo');
   }
@@ -342,7 +355,12 @@ export async function registrarGasto(g: {
 export async function editarGasto(id: string, g: {
   monto?: number; moneda?: MonedaConvertible; montoArs?: number; cotizacionId?: string | null;
   descripcion?: string; seccionId?: string | null; tipo?: TipoGasto;
-  metodoPago?: string | null; ts?: number;
+  metodoPago?: string | null; pagos?: PagoMixto[] | null; ts?: number;
+  // Cuánto sumar/restar del saldo de cada medio — lo calcula `acciones.ts`
+  // (compara el medio/monto viejo contra el nuevo) porque acá no se lee el
+  // estado anterior. Positivo = se le devuelve plata (se le sacó el gasto o
+  // bajó); negativo = se le descuenta más.
+  ajustesSaldo?: { medio: string; delta: number }[];
 }): Promise<Resultado<null>> {
   const fila: Record<string, unknown> = {};
   if (g.montoArs !== undefined) fila.amount_ars = g.montoArs;
@@ -353,11 +371,27 @@ export async function editarGasto(id: string, g: {
   if (g.seccionId !== undefined) fila.section_id = g.seccionId;
   if (g.tipo !== undefined) fila.expense_type = g.tipo;
   if (g.metodoPago !== undefined) fila.payment_method = g.metodoPago;
+  if (g.pagos !== undefined) fila.payment_methods = g.pagos?.length ? g.pagos : null;
   if (g.ts !== undefined) fila.occurred_at = new Date(g.ts).toISOString();
-  if (Object.keys(fila).length === 0) return ok(null);
-  return correr<null>('editarGasto', () =>
-    supabase.from('transactions').update(fila).eq('id', id).then(({ error }) => ({ data: null, error })),
-  );
+
+  if (Object.keys(fila).length > 0) {
+    const r = await correr<null>('editarGasto', () =>
+      supabase.from('transactions').update(fila).eq('id', id).then(({ error }) => ({ data: null, error })),
+    );
+    if (r.error !== null) return r;
+  }
+
+  // Antes esto faltaba: el monto o el medio cambiaban en pantalla pero el
+  // saldo real en la base quedaba igual (mismo bug que describe 0025, acá
+  // vía "editar" en vez de "crear"). Se arregla igual: un `mover_saldo`
+  // atómico por cada medio afectado, nunca un update directo del saldo.
+  if (g.ajustesSaldo?.length) {
+    for (const { medio, delta } of g.ajustesSaldo) {
+      const saldo = await moverSaldo(medio, delta);
+      if (saldo.error !== null) return falla<null>(saldo.error, 'editarGasto/saldo');
+    }
+  }
+  return ok(null);
 }
 
 // ── Gastos fijos ─────────────────────────────────────────────────────────
@@ -529,17 +563,25 @@ async function borrarFila(tabla: string, id: string, contexto: string): Promise<
 }
 
 export async function borrarGasto(id: string): Promise<Resultado<null>> {
-  const previo = await correr<{ amount_ars: number; payment_method: string | null } | null>('borrarGasto/leer', () =>
-    supabase.from('transactions').select('amount_ars, payment_method').eq('id', id).maybeSingle(),
+  const previo = await correr<{ amount_ars: number; payment_method: string | null; payment_methods: PagoMixto[] | null } | null>('borrarGasto/leer', () =>
+    supabase.from('transactions').select('amount_ars, payment_method, payment_methods').eq('id', id).maybeSingle(),
   );
 
   const borrado = await borrarFila('transactions', id, 'borrarGasto');
   if (borrado.error !== null) return borrado;
 
-  const medio = previo.data?.payment_method;
-  if (medio) {
-    const saldo = await moverSaldo(medio, Number(previo.data?.amount_ars ?? 0));
-    if (saldo.error !== null) return falla<null>(saldo.error, 'borrarGasto/saldo');
+  const pagos = previo.data?.payment_methods;
+  if (pagos?.length) {
+    for (const p of pagos) {
+      const saldo = await moverSaldo(p.medio, p.monto);
+      if (saldo.error !== null) return falla<null>(saldo.error, 'borrarGasto/saldo');
+    }
+  } else {
+    const medio = previo.data?.payment_method;
+    if (medio) {
+      const saldo = await moverSaldo(medio, Number(previo.data?.amount_ars ?? 0));
+      if (saldo.error !== null) return falla<null>(saldo.error, 'borrarGasto/saldo');
+    }
   }
   return ok(null);
 }

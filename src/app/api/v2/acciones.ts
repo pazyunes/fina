@@ -4,7 +4,7 @@ import * as api from './index';
 import { idUsuaria } from './cliente';
 import type {
   AporteInversion, Contribucion, FuenteIngreso, Gasto, GastoFijo, Grupo, Ingreso, Moneda, MonedaConvertible,
-  Objetivo, Perfil, PerfilInversor, Periodo, Seccion, TipoGasto,
+  Objetivo, PagoMixto, Perfil, PerfilInversor, Periodo, Seccion, TipoGasto,
 } from './tipos';
 import { esConvertible } from './tipos';
 import { siguienteVencimiento } from './fechasFijos';
@@ -247,6 +247,8 @@ async function aPesos(monto: number, moneda: Moneda): Promise<{ montoArs: number
 export async function registrarGasto(g: {
   monto: number; moneda: MonedaConvertible; descripcion: string;
   seccionId: string | null; tipo: TipoGasto; metodoPago: string | null;
+  /** Pagado con más de un medio: cada uno con su parte, suma = montoArs. */
+  pagos?: PagoMixto[];
   grupoId?: string | null; ts?: number;
   /** Otro cartel de confirmación (por ejemplo, al pagar un gasto fijo). */
   confirmacion?: string;
@@ -254,6 +256,7 @@ export async function registrarGasto(g: {
   const conv = await aPesos(g.monto, g.moneda);
   if (conv.error !== null) return { gasto: null, error: conv.error };
   const montoArs = conv.montoArs ?? 0; // ARS/USD siempre convierten
+  const dividido = !!g.pagos?.length;
 
   const gasto: Gasto = {
     id: nuevoId(),
@@ -263,20 +266,25 @@ export async function registrarGasto(g: {
     descripcion: g.descripcion,
     seccionId: g.seccionId,
     tipo: g.tipo,
-    metodoPago: g.metodoPago,
+    metodoPago: dividido ? null : g.metodoPago,
+    pagos: dividido ? g.pagos : undefined,
     grupoId: g.grupoId ?? null,
     ts: g.ts ?? Date.now(),
     origen: 'web',
   };
 
   const est = leerEstado();
-  // El gasto descuenta del medio con el que se pagó. Es lo que hace que
-  // "¿de dónde salió?" tenga respuesta.
-  const mediosPago = g.metodoPago
-    ? est.mediosPago.map((m) => (m.nombre === g.metodoPago
-      ? { ...m, saldo: m.saldo - montoArs, usadoEn: new Date().toISOString() }
-      : m))
-    : est.mediosPago;
+  // El gasto descuenta del medio (o los medios) con que se pagó. Es lo que
+  // hace que "¿de dónde salió?" tenga respuesta.
+  let mediosPago = est.mediosPago;
+  const ahora = new Date().toISOString();
+  if (dividido) {
+    for (const p of g.pagos!) {
+      mediosPago = mediosPago.map((m) => (m.nombre === p.medio ? { ...m, saldo: m.saldo - p.monto, usadoEn: ahora } : m));
+    }
+  } else if (g.metodoPago) {
+    mediosPago = mediosPago.map((m) => (m.nombre === g.metodoPago ? { ...m, saldo: m.saldo - montoArs, usadoEn: ahora } : m));
+  }
 
   parchearEstado({ gastos: [gasto, ...est.gastos], mediosPago });
   const { confirmacion, ...datos } = g;
@@ -298,7 +306,9 @@ export async function registrarGasto(g: {
 // no se le pide de nuevo el dólar por editar solo la descripción).
 export async function editarGasto(id: string, cambios: {
   monto?: number; moneda?: MonedaConvertible; descripcion?: string;
-  seccionId?: string | null; tipo?: TipoGasto; metodoPago?: string | null; ts?: number;
+  seccionId?: string | null; tipo?: TipoGasto; metodoPago?: string | null;
+  /** Pagado con más de un medio — reemplaza la lista entera, no se mergea. */
+  pagos?: PagoMixto[] | null; ts?: number;
 }): Promise<{ error: string | null }> {
   const est = leerEstado();
   const actual = est.gastos.find((g) => g.id === id);
@@ -317,14 +327,31 @@ export async function editarGasto(id: string, cambios: {
     cotizacionId = conv.cotizacionId;
   }
 
-  const nuevoMetodo = cambios.metodoPago !== undefined ? cambios.metodoPago : actual.metodoPago;
+  // El pago se toca como UN bloque — nunca se "mergea" un medio simple con
+  // uno dividido, son dos formas excluyentes de contar lo mismo. El form de
+  // Gastos siempre manda los dos campos juntos y consistentes con el monto
+  // (si está dividido, la suma de `pagos` YA es el monto nuevo).
+  const pagoTocado = cambios.metodoPago !== undefined || cambios.pagos !== undefined;
+  const pagosViejos: PagoMixto[] = actual.pagos?.length
+    ? actual.pagos
+    : actual.metodoPago ? [{ medio: actual.metodoPago, monto: actual.montoArs }] : [];
+  const pagosNuevos: PagoMixto[] = pagoTocado
+    ? (cambios.pagos?.length ? cambios.pagos : cambios.metodoPago ? [{ medio: cambios.metodoPago, monto: montoArs }] : [])
+    // No se tocó el pago: sigue siendo el mismo medio (o los mismos), sólo se
+    // actualiza el monto si cambió y era un medio único.
+    : pagosViejos.length === 1 ? [{ ...pagosViejos[0], monto: montoArs }] : pagosViejos;
+
+  // Devolver lo viejo, descontar lo nuevo — un ajuste por medio.
   let mediosPago = est.mediosPago;
-  if (actual.metodoPago) {
-    mediosPago = mediosPago.map((m) => (m.nombre === actual.metodoPago ? { ...m, saldo: m.saldo + actual.montoArs } : m));
+  for (const p of pagosViejos) {
+    mediosPago = mediosPago.map((m) => (m.nombre === p.medio ? { ...m, saldo: m.saldo + p.monto } : m));
   }
-  if (nuevoMetodo) {
-    mediosPago = mediosPago.map((m) => (m.nombre === nuevoMetodo ? { ...m, saldo: m.saldo - montoArs } : m));
+  for (const p of pagosNuevos) {
+    mediosPago = mediosPago.map((m) => (m.nombre === p.medio ? { ...m, saldo: m.saldo - p.monto } : m));
   }
+
+  const metodoPagoFinal = pagosNuevos.length === 1 ? pagosNuevos[0].medio : null;
+  const pagosFinal = pagosNuevos.length > 1 ? pagosNuevos : undefined;
 
   const gasto: Gasto = {
     ...actual,
@@ -334,7 +361,8 @@ export async function editarGasto(id: string, cambios: {
     descripcion: cambios.descripcion !== undefined ? cambios.descripcion : actual.descripcion,
     seccionId: cambios.seccionId !== undefined ? cambios.seccionId : actual.seccionId,
     tipo: cambios.tipo ?? actual.tipo,
-    metodoPago: nuevoMetodo,
+    metodoPago: metodoPagoFinal,
+    pagos: pagosFinal,
     ts: cambios.ts ?? actual.ts,
   };
 
@@ -349,6 +377,16 @@ export async function editarGasto(id: string, cambios: {
     borrarSeccionSiQuedoVacia(actual.seccionId, est.gastos, gastosDespues);
   }
 
+  // Un `mover_saldo` atómico por medio afectado — ver el comentario en
+  // `index.ts`: esto es lo que faltaba para que editar (no sólo crear o
+  // borrar) de verdad mueva el saldo en la base, no sólo en la pantalla.
+  const ajustesSaldo = (pagoTocado || cambioMontoOMoneda)
+    ? [
+      ...pagosViejos.map((p) => ({ medio: p.medio, delta: p.monto })),
+      ...pagosNuevos.map((p) => ({ medio: p.medio, delta: -p.monto })),
+    ]
+    : undefined;
+
   push(() => api.editarGasto(id, {
     monto: cambioMontoOMoneda ? nuevoMontoOriginal : undefined,
     moneda: cambios.moneda,
@@ -357,8 +395,10 @@ export async function editarGasto(id: string, cambios: {
     descripcion: cambios.descripcion,
     seccionId: cambios.seccionId,
     tipo: cambios.tipo,
-    metodoPago: cambios.metodoPago,
+    metodoPago: pagoTocado ? metodoPagoFinal : undefined,
+    pagos: pagoTocado ? (pagosFinal ?? null) : undefined,
     ts: cambios.ts,
+    ajustesSaldo,
   }), 'Gasto editado con éxito.');
 
   return { error: null };
@@ -367,11 +407,17 @@ export async function editarGasto(id: string, cambios: {
 export function borrarGasto(id: string) {
   const est = leerEstado();
   const gasto = est.gastos.find((g) => g.id === id);
-  // La plata vuelve al medio con el que se pagó: si sólo desapareciera el
-  // gasto, el disponible quedaría descontado por algo que ya no existe.
-  const mediosPago = gasto?.metodoPago
-    ? est.mediosPago.map((m) => (m.nombre === gasto.metodoPago ? { ...m, saldo: m.saldo + gasto.montoArs } : m))
-    : est.mediosPago;
+  // La plata vuelve al medio (o a cada medio, si se dividió) con el que se
+  // pagó: si sólo desapareciera el gasto, el disponible quedaría descontado
+  // por algo que ya no existe.
+  let mediosPago = est.mediosPago;
+  if (gasto?.pagos?.length) {
+    for (const p of gasto.pagos) {
+      mediosPago = mediosPago.map((m) => (m.nombre === p.medio ? { ...m, saldo: m.saldo + p.monto } : m));
+    }
+  } else if (gasto?.metodoPago) {
+    mediosPago = mediosPago.map((m) => (m.nombre === gasto.metodoPago ? { ...m, saldo: m.saldo + gasto.montoArs } : m));
+  }
   const gastosDespues = est.gastos.filter((g) => g.id !== id);
   parchearEstado({ gastos: gastosDespues, mediosPago });
   if (gasto) borrarSeccionSiQuedoVacia(gasto.seccionId, est.gastos, gastosDespues);

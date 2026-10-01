@@ -91,7 +91,15 @@ export type Gasto = {
   ts: number;
   /** 'web' = cargado en la app · 'whatsapp' = cargado por el bot */
   origen: 'web' | 'whatsapp' | 'manual';
+  /**
+   * Cuando el gasto se pagó con más de un medio: el detalle de cuánto salió
+   * de cada uno (suma = `montoArs`). `undefined`/vacío = se pagó con un solo
+   * medio, el de `metodoPago` de toda la vida.
+   */
+  pagos?: PagoMixto[];
 };
+
+export type PagoMixto = { medio: string; monto: number };
 
 export type Contribucion = {
   id: string;
