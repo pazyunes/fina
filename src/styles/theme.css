@@ -48,7 +48,7 @@
   --fina-green: var(--fina-objetivos);
   --fina-neutral: var(--fina-tinte);
 
-  /* Tipografía editorial FINA: Fraunces (display) + Figtree (UI) + IBM Plex Mono (montos) */
+  /* Tipografía FINA: todo en Poppins (ver tokens.css) */
   --font-serif: var(--fina-display);
   --font-sans: var(--fina-sans);
   --font-mono: var(--fina-mono);

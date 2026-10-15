@@ -160,27 +160,32 @@ Sobre relleno de color, el texto va siempre en `--fina-tinta`, nunca en blanco.
 
 ### 3.4 Tipografía
 
-| Rol | Familia | Detalle |
+**Una sola familia: `Poppins`**, para títulos, texto, botones y montos (decisión de diseño,
+octubre 2026; reemplaza a Baloo 2 + Figtree + IBM Plex Mono). La jerarquía sale del tamaño
+y del peso, no de cambiar de familia.
+
+| Rol | Peso | Detalle |
 | --- | --- | --- |
-| Títulos y momentos de marca | `Outfit` | pesos 500/600, `letter-spacing: -0.01em` en tamaños grandes |
-| Cuerpo y UI | `Figtree` | 400/500/600 |
-| Montos y datos | `IBM Plex Mono` | **siempre** con `font-variant-numeric: tabular-nums` |
+| Títulos y momentos de marca | 600/700 | `letter-spacing: -0.01em` en tamaños grandes |
+| Cuerpo y UI | 400/500 | |
+| Montos y datos | 500/600 | **siempre** con `font-variant-numeric: tabular-nums` |
 
 Reglas duras:
 
 - **Todo número que el usuario pueda comparar va en cifras tabulares.** Columnas de montos,
-  totales, progreso. Es la razón principal por la que existe la tercera familia: sin ancho
-  fijo de dígito, las columnas de pesos bailan.
+  totales, progreso. Sin ancho fijo de dígito, las columnas de pesos bailan. Poppins tiene
+  cifras tabulares; se activan con `tabular-nums` (la clase `font-mono` de Tailwind hoy
+  también resuelve a Poppins).
+- No se suma otra familia. Si algo necesita destacarse, se usa tamaño o peso.
 - **La tipografía se evalúa primero en la pantalla de números, no en el logo.**
 - Sentence case en todo. Nada de labels en MAYÚSCULAS.
 - Largo de línea < 70 caracteres en bloques de lectura.
 
-> ⚠️ **Decisión abierta (§12.1).** Outfit es una geométrica redondeada, o sea prima
-> hermana de Poppins — que el brief descarta justamente por no aportar distintividad. Y
-> Outfit + Figtree son dos sans parecidas, así que el "par con contraste real" que pide el
-> brief no está resuelto. Se implementa así porque hay que arrancar, pero está marcado como
-> pendiente de revisión con diseño. **Por eso todo va por tokens: cambiarlo tiene que ser
-> una línea.**
+> **Decisión tomada (§12.1).** El brief pedía un par con contraste y descartaba Poppins
+> por ubicua; se probaron Outfit y después Baloo 2 + Figtree + IBM Plex Mono. Diseño
+> eligió volver a Poppins como familia única, porque tres familias se leían como tres
+> apps distintas. Todo sigue yendo por tokens (`--fina-font` en `tokens.css` y `FONTS` en
+> `onboarding-v2/shared.tsx`): cambiarla sigue siendo una línea.
 
 ### 3.5 Forma, espacio y variedad de contenedores
 
@@ -202,10 +207,10 @@ Fuente de verdad de color, tipografía, espacio y forma. **Ningún componente es
 
 ```css
 :root {
-  /* ---------- Tipografías ---------- */
-  --font-heading: 'Outfit', system-ui, sans-serif;
-  --font-body:    'Figtree', system-ui, sans-serif;
-  --font-mono:    'IBM Plex Mono', ui-monospace, monospace;
+  /* ---------- Tipografía: una sola familia ---------- */
+  --font-heading: 'Poppins', system-ui, sans-serif;
+  --font-body:    'Poppins', system-ui, sans-serif;
+  --font-mono:    'Poppins', system-ui, sans-serif;  /* montos: con tabular-nums */
 
   /* ---------- Superficies ---------- */
   --fina-papel:       #FFF4E4;  /* fondo general */
@@ -505,9 +510,8 @@ Mobile-first, siempre. La app se usa parada en el colectivo.
 No son deuda escondida: son cosas decididas provisoriamente para poder avanzar. Revisar con
 diseño antes de que se vuelvan caras de cambiar.
 
-1. **Par tipográfico.** Outfit + Figtree no da el contraste real que pide el brief, y Outfit
-   arrastra el mismo problema de ubicuidad que Poppins. Evaluar alternativas **sobre la
-   pantalla de montos**, no sobre el logo.
+1. **Tipografía.** Resuelto: Poppins como familia única (§3.4). Si se revisa, evaluar
+   **sobre la pantalla de montos**, no sobre el logo.
 2. **Peso del púrpura.** Hoy es estructural (§3.3). Si en la exploración de identidad
    aparece un acento propio que lo reemplace, es un cambio de tokens.
 3. **Fini vs. símbolo de marca.** Falta definir si el isotipo del test de 40px es una
