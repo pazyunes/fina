@@ -337,8 +337,8 @@ export function GastosV2() {
   // Con esto en true, "Tus gastos" deja de truncar en 6. Buscar por nombre o
   // filtrar por fecha ya implica querer ver la lista completa que matchea.
   const [verTodos, setVerTodos] = useState(false);
-  // "Cuánto te queda" por sección: se muestran las que más se acercan al tope y el resto se despliega.
-  const [verTodasDisponibles, setVerTodasDisponibles] = useState(false);
+  // "Cuánto tenés" por medio de pago: se ven los primeros y el resto se despliega.
+  const [verTodosMedios, setVerTodosMedios] = useState(false);
 
   // El total y el donut miran una VENTANA, no todo el historial: "gastado"
   // sin período no se puede comparar con nada, y un tope es por semana o por
@@ -369,25 +369,12 @@ export function GastosV2() {
   };
 
   const totalGastado = gastosVentana.reduce((s, g) => s + g.montoArs, 0);
-  // Cuánto queda de cada tope. Se mide en el período DEL TOPE (semana o mes en
-  // curso), no en la ventana que se está mirando arriba: un tope "por semana"
-  // no se puede leer contra un mes entero. Va de la que menos le queda a la
-  // que más, que es la que conviene mirar primero.
-  const inicioPeriodo = (p: Periodo) => {
-    const d = new Date();
-    if (p === 'mes') return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime();
-  };
-  const disponiblePorSeccion = categorias
-    .filter((c) => topes[c.id])
-    .map((c) => {
-      const tope = topes[c.id];
-      const desde = inicioPeriodo(tope.periodo);
-      const gastado = gastos.filter((g) => g.categoriaId === c.id && g.ts >= desde).reduce((s, g) => s + g.montoArs, 0);
-      const quedan = tope.monto - gastado;
-      return { id: c.id, nombre: c.nombre, tope, quedan, pct: Math.max(0, Math.min(1, quedan / tope.monto)) };
-    })
-    .sort((a, b) => a.pct - b.pct);
+  // Cuánto hay disponible en cada medio de pago (su saldo). Las barras se
+  // comparan contra el medio que más tiene; un saldo en cero o negativo
+  // queda con la barra vacía y se dice con el número, sin alerta (regla 3:
+  // gastar más de lo que cargaste en un medio es un dato, no un error).
+  const mediosConSaldo = db.mediosPago;
+  const maxSaldo = Math.max(...mediosConSaldo.map((m) => m.saldo), 0);
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
 
@@ -671,41 +658,40 @@ export function GastosV2() {
             <Monto value={disponible} size={19} className="font-bold" />
           </div>
 
-          {/* Cuánto queda en cada sección con tope. Barras que se vacían a
-              medida que se gasta; el número va en tinta y nunca en alerta — un
-              tope pasado no es un error (regla 3). */}
-          {disponiblePorSeccion.length === 0 ? (
+          {/* Cuánto hay en cada medio de pago, en barritas. El número va en
+              tinta; el color de la barra es el del dato (limaViz). */}
+          {mediosConSaldo.length === 0 ? (
             <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              Ponele un tope a una sección y acá ves cuánto te queda en cada una.
+              Cargá plata con "Agregar plata" y acá ves cuánto tenés en cada medio.
             </p>
           ) : (
-            <div className="flex flex-col gap-2" aria-label="Cuánto te queda en cada sección">
-              {(verTodasDisponibles ? disponiblePorSeccion : disponiblePorSeccion.slice(0, 3)).map((d) => (
-                <div key={d.id} className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2" aria-label="Cuánto tenés disponible en cada medio de pago">
+              {(verTodosMedios ? mediosConSaldo : mediosConSaldo.slice(0, 4)).map((m) => (
+                <div key={m.id} className="flex flex-col gap-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[13px] truncate" style={{ color: COLORS.ink }}>{d.nombre}</span>
-                    <span className="text-[12px] shrink-0 font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>
-                      {d.quedan >= 0 ? `Quedan ${fmtMoney(d.quedan)}` : `Pasaste ${fmtMoney(-d.quedan)}`}
+                    <span className="text-[13px] truncate" style={{ color: COLORS.ink }}>{m.nombre}</span>
+                    <span className="text-[13px] shrink-0 font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>
+                      {m.saldo < 0 ? `-${fmtMoney(-m.saldo)}` : fmtMoney(m.saldo)}
                     </span>
                   </div>
                   <div
                     className="h-2 rounded-full overflow-hidden"
                     style={{ background: COLORS.tint }}
                     role="img"
-                    aria-label={`${d.nombre}: ${d.quedan >= 0 ? `quedan ${fmtMoney(d.quedan)}` : `pasaste el tope por ${fmtMoney(-d.quedan)}`} de ${fmtMoney(d.tope.monto)} por ${d.tope.periodo === 'semana' ? 'semana' : 'mes'}`}
+                    aria-label={`${m.nombre}: ${m.saldo < 0 ? `-${fmtMoney(-m.saldo)}` : fmtMoney(m.saldo)} disponibles`}
                   >
-                    <div className="h-full rounded-full" style={{ width: `${d.pct * 100}%`, background: colorDe(d.id) }} />
+                    <div className="h-full rounded-full" style={{ width: `${maxSaldo > 0 ? (Math.max(m.saldo, 0) / maxSaldo) * 100 : 0}%`, background: COLORS.limaViz }} />
                   </div>
                 </div>
               ))}
-              {disponiblePorSeccion.length > 3 && (
+              {mediosConSaldo.length > 4 && (
                 <button
                   type="button"
-                  onClick={() => setVerTodasDisponibles((v) => !v)}
+                  onClick={() => setVerTodosMedios((v) => !v)}
                   className="v2-focus self-start text-[13px] font-semibold underline"
                   style={{ color: COLORS.brand }}
                 >
-                  {verTodasDisponibles ? 'Ver menos' : `Ver las ${disponiblePorSeccion.length}`}
+                  {verTodosMedios ? 'Ver menos' : `Ver los ${mediosConSaldo.length}`}
                 </button>
               )}
             </div>

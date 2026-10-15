@@ -39,13 +39,22 @@ function ultimosMeses(n: number): string[] {
 const nombreMes = (clave: string, largo = false) =>
   new Date(`${clave}-15T12:00:00Z`).toLocaleDateString('es-AR', { month: largo ? 'long' : 'short', timeZone: 'UTC' }).replace('.', '');
 
-export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
+// Dos formas, según dónde se use:
+//
+// · Fijo (por defecto, la pantalla de Gastos): siempre parado en el mes actual,
+//   sólo para mirar y sólo "Entró" y "Salió". Ahí cada mes tocado sin querer te
+//   movía a otro mes con los números de arriba cambiados, sin que se notara que
+//   ya no era "este mes".
+// · `explorar` (Home): cada mes se puede tocar para ver sus números, y se dice
+//   cuánto te quedó o por cuánto te pasaste. Es un gráfico para recorrer, no
+//   donde estás parada.
+export function IngresosVsGastos({ conLista = false, explorar = false }: { conLista?: boolean; explorar?: boolean }) {
   const { estado } = useAlmacen();
   const meses = ultimosMeses(6);
-  // El gráfico es sólo para mirar: siempre está parado en el mes actual. Antes
-  // cada mes era un botón, y un toque sin querer te movía a otro mes con los
-  // números de arriba cambiados, sin que se notara que ya no era "este mes".
-  const elegido = meses[meses.length - 1];
+  const mesActual = meses[meses.length - 1];
+  const [tocado, setTocado] = useState(mesActual);
+  const elegido = explorar ? tocado : mesActual;
+  const esEsteMes = elegido === mesActual;
   const [borrando, setBorrando] = useState<string | null>(null);
 
   const porMes = meses.map((mes) => ({
@@ -56,13 +65,14 @@ export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
   const actual = porMes.find((p) => p.mes === elegido) ?? porMes[porMes.length - 1];
   const tope = Math.max(1, ...porMes.map((p) => Math.max(p.entro, p.salio)));
   const nadaRegistrado = porMes.every((p) => p.entro === 0 && p.salio === 0);
+  const quedo = actual.entro - actual.salio;
 
   const ingresosDelMes = estado.ingresos.filter((i) => mesDe(i.ts) === elegido);
 
   if (nadaRegistrado) {
     return (
       <p className="text-[15px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-        Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto entra y cuánto sale cada mes.
+        Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto entra y cuánto sale cada mes{explorar ? ', y cuánto te queda' : ''}.
       </p>
     );
   }
@@ -72,35 +82,63 @@ export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
       {/* El mes elegido, en números. */}
       <div className="flex flex-col gap-2">
         <p className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
-          Este mes
+          {esEsteMes ? 'Este mes' : nombreMes(elegido, true)}
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className={`grid gap-2 ${explorar ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <Cifra color={INGRESO} etiqueta="Entró" valor={actual.entro} />
           <Cifra color={GASTO} etiqueta="Salió" valor={actual.salio} />
+          {/* Sólo cuando hay ingresos cargados: sin ellos "te quedó" sería
+              "menos lo que gastaste", que no es verdad. En tinta, nunca en
+              alerta: pasarse no es un error (regla 3). */}
+          {explorar && actual.entro > 0 && (
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? 'Te quedó' : 'Te pasaste por'}</span>
+              <span className="text-[17px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
+            </div>
+          )}
         </div>
         {actual.entro === 0 && actual.salio > 0 && (
           <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            Registraste gastos este mes, pero no ingresos. Si los cargás, se ve cuánto entró.
+            {esEsteMes ? 'Registraste gastos este mes' : 'Registraste gastos ese mes'}, pero no ingresos.{' '}
+            {explorar ? 'Si los cargás, se ve cuánto te queda.' : 'Si los cargás, se ve cuánto entró.'}
           </p>
         )}
       </div>
 
-      {/* Los últimos 6 meses, sólo para mirar. El actual va más marcado y el
-          resto atenuado. */}
+      {/* Los últimos 6 meses. En Gastos, sólo para mirar (el actual marcado, el
+          resto atenuado); en Home, cada mes es un botón para elegirlo. */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-end gap-1" style={{ height: 124 }} role="group" aria-label="Ingresos y gastos de los últimos 6 meses">
           {porMes.map((p) => {
             const sel = p.mes === elegido;
-            return (
+            const nombre = `${p.mes === mesActual ? 'Este mes' : nombreMes(p.mes, true)}: entró ${fmtMoney(p.entro)}, salió ${fmtMoney(p.salio)}`;
+            const barras = (
+              <>
+                <Barra valor={p.entro} tope={tope} color={INGRESO} />
+                <Barra valor={p.salio} tope={tope} color={GASTO} />
+              </>
+            );
+            return explorar ? (
+              <button
+                key={p.mes}
+                type="button"
+                onClick={() => setTocado(p.mes)}
+                aria-pressed={sel}
+                aria-label={nombre}
+                className="v2-focus flex-1 min-w-[44px] h-full flex items-end justify-center gap-[2px] rounded-lg transition-opacity"
+                style={{ opacity: sel ? 1 : 0.45 }}
+              >
+                {barras}
+              </button>
+            ) : (
               <div
                 key={p.mes}
                 role="img"
-                aria-label={`${sel ? 'Este mes' : nombreMes(p.mes, true)}: entró ${fmtMoney(p.entro)}, salió ${fmtMoney(p.salio)}`}
+                aria-label={nombre}
                 className="flex-1 min-w-[44px] h-full flex items-end justify-center gap-[2px] rounded-lg"
                 style={{ opacity: sel ? 1 : 0.4, background: sel ? COLORS.tint : 'transparent' }}
               >
-                <Barra valor={p.entro} tope={tope} color={INGRESO} />
-                <Barra valor={p.salio} tope={tope} color={GASTO} />
+                {barras}
               </div>
             );
           })}
@@ -128,7 +166,7 @@ export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
       {conLista && (
         <div className="flex flex-col pt-1">
           <p className="text-[15px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
-            Ingresos de este mes
+            Ingresos de {esEsteMes ? 'este mes' : nombreMes(elegido, true)}
           </p>
           {ingresosDelMes.length === 0 && (
             <p className="text-[14px] py-2" style={{ color: COLORS.inkSoft }}>No hay ingresos registrados.</p>

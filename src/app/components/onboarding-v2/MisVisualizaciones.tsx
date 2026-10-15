@@ -189,7 +189,7 @@ export function MisVisualizaciones() {
   const tarjetas = [
     {
       titulo: 'Entra y sale', subtitulo: 'Lo que te entró contra lo que gastaste',
-      contenido: <IngresosVsGastos />,
+      contenido: <IngresosVsGastos explorar />,
     },
     {
       titulo: 'Por sección', subtitulo: 'En qué se te va la plata',
