@@ -99,7 +99,7 @@ export function HomeV2() {
         </div>
       )}
 
-      {/* Saludo. El nombre pasa a ser el título de la pantalla, en Baloo 2:
+      {/* Saludo. El nombre pasa a ser el título de la pantalla, en Poppins:
           antes decía "Tu FINA" en 19px y el nombre iba arriba en gris chico,
           o sea que lo genérico pesaba más que lo personal. */}
       <header data-franja className="mb-2 flex items-center gap-3.5">

@@ -42,6 +42,7 @@ Jerarquía, cantidad de texto y detalles visuales.
 | --- | --- | --- | --- |
 | G1 | alta | Más jerarquía visual: que cada pantalla lleve la vista a un lugar puntual. Menos letra chica. | a definir |
 | G2 | alta | Quitar los subtítulos que explican lo que el título debería decir. Inicio y la cabecera de Perfil ya están; faltan Gastos, Objetivos, Inversiones y el resto de Perfil. | en curso |
+| G3 | media | Etiquetas en MAYÚSCULAS con letras separadas (eyebrows tipo "ESTE MES", "RECOMENDACIÓN") en 9 archivos de la v2. Las prohíbe la guía (§2.1) y con Poppins se notan más. Inicio ya no tiene; pasarlas a texto normal en el resto. | pendiente |
 | GA1 | media | Gastos: mucha letra chica. Mostrar menos y usar Ver todos al estilo Mercado Pago (las secciones expandidas no tienen límite). | a definir |
 | L3 | media | Tres paletas que no coinciden: `frontend.md`, `tokens.css` y `COLORS` en `onboarding-v2/shared.tsx`. Decidir una con diseño. | a definir |
 | IN1 | baja | Inversiones: tiene potencial. Bajar la letra chica. | a definir |
@@ -78,3 +79,4 @@ No cambian lo que ve la persona, pero bajan el riesgo de romper algo al tocar el
 | I11 | Diseño | Inicio: Sumá FINA a tu pantalla de inicio (y el aviso de vencimientos) sin bajada. En el onboarding la explicación queda. | Inicio: más limpio |
 | D1 | Funcionalidad | Guardados a medias. En la base: si se guarda un gasto o ingreso pero falla el saldo, se borra la fila y se devuelven los saldos ya movidos; si falla el saldo de una edición de gasto, la fila vuelve a como estaba. En pantalla: registrar y editar gasto, crear objetivo, sumar un registro a un objetivo y sumar o editar un aporte vuelven atrás si la base no lo guardó. Lo que falta está en D3. | D1 y P1 |
 | P1 | Diseño | Perfil: el nombre se ve como texto con un botón Editar; el campo aparece al tocarlo, con Guardar y Cancelar (también Enter y Esc). Sin nombre guardado arranca editando. Sale el subtítulo de la cabecera. | D1 y P1 |
+| T1 | Diseño | Una sola familia tipográfica: Poppins en toda la app (antes Baloo 2 en títulos, Figtree en texto e IBM Plex Mono en montos). Los montos siguen con cifras tabulares. Guía actualizada (§3.4 y §12.1). | Tipografía única |
