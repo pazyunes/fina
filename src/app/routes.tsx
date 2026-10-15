@@ -11,6 +11,7 @@ import { InversionesV2 } from "./components/onboarding-v2/InversionesV2";
 import { PerfilV2 } from "./components/onboarding-v2/PerfilV2";
 import { GruposV2 } from "./components/onboarding-v2/GruposV2";
 import { FiniPlayground } from "./components/onboarding-v2/FiniPlayground";
+import { TerminosPantalla } from "./components/onboarding-v2/TerminosPantalla";
 
 // Las direcciones de la app VIEJA llevan a su equivalente en la nueva. Siguen
 // existiendo porque alguien puede tenerlas guardadas (un acceso directo en el
@@ -61,6 +62,11 @@ export const router = createBrowserRouter([
     // paso. Todo lo que se contesta acá se guarda en Supabase.
     path: "/onboarding-v2",
     element: <OnboardingV2 />,
+  },
+  {
+    // Términos y política de privacidad. Pública: se leen antes de tener cuenta.
+    path: "/onboarding-v2/terminos",
+    element: <TerminosPantalla />,
   },
   {
     // Entrar con una cuenta que ya existe. El `/login` viejo redirige acá.

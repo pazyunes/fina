@@ -180,14 +180,15 @@ export function borrarGastoFijo(id: string) {
  * ahorrado.
  */
 export async function registrarIngreso(i: {
-  monto: number; moneda: MonedaConvertible; fuente: FuenteIngreso | null; descripcion?: string; medio: string; ts?: number;
+  monto: number; moneda: MonedaConvertible; fuente: FuenteIngreso | null; fuenteOtra?: string; descripcion?: string; medio: string; ts?: number;
 }): Promise<{ ingreso: Ingreso | null; error: string | null }> {
   const conv = await aPesos(i.monto, i.moneda);
   if (conv.error !== null) return { ingreso: null, error: conv.error };
   const montoArs = conv.montoArs ?? 0;
   const medio = i.medio.trim() || 'Efectivo';
+  const fuenteOtra = i.fuente === 'otro' ? i.fuenteOtra?.trim().slice(0, 40) || undefined : undefined;
   const ingreso: Ingreso = {
-    id: nuevoId(), monto: i.monto, moneda: i.moneda, montoArs, fuente: i.fuente,
+    id: nuevoId(), monto: i.monto, moneda: i.moneda, montoArs, fuente: i.fuente, ...(fuenteOtra ? { fuenteOtra } : {}),
     descripcion: i.descripcion?.trim() ?? '', medio, ts: i.ts ?? Date.now(), origen: 'web',
   };
   const est = leerEstado();
@@ -201,7 +202,7 @@ export async function registrarIngreso(i: {
   });
   push(() => api.registrarIngreso({
     id: ingreso.id, monto: i.monto, moneda: i.moneda, montoArs, cotizacionId: conv.cotizacionId,
-    fuente: i.fuente, descripcion: ingreso.descripcion, medio, ts: ingreso.ts,
+    fuente: i.fuente, fuenteOtra, descripcion: ingreso.descripcion, medio, ts: ingreso.ts,
   }), 'Ingreso registrado con éxito.', () => parchearEstado({ ingresos: est.ingresos, mediosPago: est.mediosPago }));
   return { ingreso, error: null };
 }
@@ -247,6 +248,8 @@ async function aPesos(monto: number, moneda: Moneda): Promise<{ montoArs: number
 export async function registrarGasto(g: {
   monto: number; moneda: MonedaConvertible; descripcion: string;
   seccionId: string | null; tipo: TipoGasto; metodoPago: string | null;
+  /** Lo que se escribió cuando el tipo es "otro". */
+  tipoOtro?: string;
   /** Pagado con más de un medio: cada uno con su parte, suma = montoArs. */
   pagos?: PagoMixto[];
   grupoId?: string | null; ts?: number;
@@ -257,6 +260,7 @@ export async function registrarGasto(g: {
   if (conv.error !== null) return { gasto: null, error: conv.error };
   const montoArs = conv.montoArs ?? 0; // ARS/USD siempre convierten
   const dividido = !!g.pagos?.length;
+  const tipoOtro = g.tipo === 'otro' ? g.tipoOtro?.trim().slice(0, 40) || undefined : undefined;
 
   const gasto: Gasto = {
     id: nuevoId(),
@@ -266,6 +270,7 @@ export async function registrarGasto(g: {
     descripcion: g.descripcion,
     seccionId: g.seccionId,
     tipo: g.tipo,
+    ...(tipoOtro ? { tipoOtro } : {}),
     metodoPago: dividido ? null : g.metodoPago,
     pagos: dividido ? g.pagos : undefined,
     grupoId: g.grupoId ?? null,
@@ -289,7 +294,7 @@ export async function registrarGasto(g: {
   parchearEstado({ gastos: [gasto, ...est.gastos], mediosPago });
   const { confirmacion, ...datos } = g;
   push(() => api.registrarGasto({
-    ...datos, id: gasto.id, montoArs, cotizacionId: conv.cotizacionId,
+    ...datos, tipoOtro, id: gasto.id, montoArs, cotizacionId: conv.cotizacionId,
   }), confirmacion ?? 'Gasto registrado con éxito.');
 
   // Registrar es la actividad con la que se compite en el grupo: se puntúa
@@ -307,6 +312,8 @@ export async function registrarGasto(g: {
 export async function editarGasto(id: string, cambios: {
   monto?: number; moneda?: MonedaConvertible; descripcion?: string;
   seccionId?: string | null; tipo?: TipoGasto; metodoPago?: string | null;
+  /** Lo escrito cuando el tipo es "otro". `null`/vacío = sin texto. */
+  tipoOtro?: string | null;
   /** Pagado con más de un medio — reemplaza la lista entera, no se mergea. */
   pagos?: PagoMixto[] | null; ts?: number;
 }): Promise<{ error: string | null }> {
@@ -350,6 +357,10 @@ export async function editarGasto(id: string, cambios: {
     mediosPago = mediosPago.map((m) => (m.nombre === p.medio ? { ...m, saldo: m.saldo - p.monto } : m));
   }
 
+  const tipoFinal = cambios.tipo ?? actual.tipo;
+  const tipoOtroFinal = tipoFinal === 'otro'
+    ? (cambios.tipoOtro !== undefined ? cambios.tipoOtro?.trim().slice(0, 40) || undefined : actual.tipoOtro)
+    : undefined;
   const metodoPagoFinal = pagosNuevos.length === 1 ? pagosNuevos[0].medio : null;
   const pagosFinal = pagosNuevos.length > 1 ? pagosNuevos : undefined;
 
@@ -360,7 +371,8 @@ export async function editarGasto(id: string, cambios: {
     montoArs,
     descripcion: cambios.descripcion !== undefined ? cambios.descripcion : actual.descripcion,
     seccionId: cambios.seccionId !== undefined ? cambios.seccionId : actual.seccionId,
-    tipo: cambios.tipo ?? actual.tipo,
+    tipo: tipoFinal,
+    tipoOtro: tipoOtroFinal,
     metodoPago: metodoPagoFinal,
     pagos: pagosFinal,
     ts: cambios.ts ?? actual.ts,
@@ -395,8 +407,11 @@ export async function editarGasto(id: string, cambios: {
     descripcion: cambios.descripcion,
     seccionId: cambios.seccionId,
     tipo: cambios.tipo,
+    // Sólo se toca la columna nueva si hay algo que guardar o algo viejo que
+    // borrar: un edit común no depende de que la migración 0036 esté aplicada.
+    tipoOtro: (tipoOtroFinal || actual.tipoOtro) ? (tipoOtroFinal ?? null) : undefined,
     metodoPago: pagoTocado ? metodoPagoFinal : undefined,
-    pagos: pagoTocado ? (pagosFinal ?? null) : undefined,
+    pagos: pagoTocado && (pagosFinal || actual.pagos?.length) ? (pagosFinal ?? null) : undefined,
     ts: cambios.ts,
     ajustesSaldo,
   }), 'Gasto editado con éxito.');

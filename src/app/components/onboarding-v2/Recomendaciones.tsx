@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { Fini } from './Fini';
-import { CheckIcon, COLORS, EstadoConfianza, FONTS, TituloSeccion } from './shared';
+import { CheckIcon, COLORS, EstadoConfianza, FONTS, TituloSeccion, fmtMoney } from './shared';
+import { IconChevron } from './FinaIcons';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
 import { diaArgentina, pasosPosiblesManana } from '../../api/v2/pasos';
+import type { EstadoV2 } from '../../api/v2/tipos';
 import {
   PERIODOS_RECOMENDACION, clavesDeHoy, leerHechas, leerRecomendaciones, marcarHecha, marcarUtil, recomendacionesRecordadas,
   type PeriodoRecomendacion, type Recomendacion, type Recomendaciones as RecomendacionesT,
@@ -78,12 +80,55 @@ function inicioDe(periodo: PeriodoRecomendacion): number {
 
 type Item =
   | { tipo: 'ia'; ref: string; id: string; contenido: Recomendacion; util: boolean | null }
+  | { tipo: 'calculada'; ref: string; contenido: Recomendacion }
   | { tipo: 'general'; ref: string; contenido: General };
 
-function colaDe(periodo: PeriodoRecomendacion, datos: RecomendacionesT | null): Item[] {
+// ── Un tope sugerido con lo que la persona suele gastar ──────────────────
+// Se calcula acá, sin IA ni costo, con sus propios gastos de los últimos 30
+// días: la sección donde más gastó y todavía no tiene tope. Es una ESTIMACIÓN
+// y por eso se da como rango, nunca como un número exacto (regla 4), y sin
+// tono de reto (regla 3): es una opción, no una orden.
+function redondear(n: number): number {
+  const paso = n >= 10_000 ? 1_000 : 100;
+  return Math.max(paso, Math.round(n / paso) * paso);
+}
+function topeSugerido(estado: EstadoV2, periodo: 'semana' | 'mes'): Recomendacion | null {
+  const desde = Date.now() - 30 * 86_400_000;
+  const recientes = estado.gastos.filter((g) => g.ts >= desde && g.seccionId);
+  let mejor: { nombre: string; total: number; cant: number } | null = null;
+  for (const sec of estado.secciones) {
+    if (sec.tope) continue;
+    const dela = recientes.filter((g) => g.seccionId === sec.id);
+    const total = dela.reduce((a, g) => a + g.montoArs, 0);
+    if (dela.length >= 3 && total > 0 && (!mejor || total > mejor.total)) mejor = { nombre: sec.nombre, total, cant: dela.length };
+  }
+  if (!mejor) return null;
+  const base = periodo === 'mes' ? mejor.total : (mejor.total / 30) * 7;
+  const bajo = redondear(base * 0.85);
+  const alto = redondear(base);
+  return {
+    titulo: `Probá un tope para ${mejor.nombre}`,
+    texto: periodo === 'mes'
+      ? 'Es la sección donde más se te fue y todavía no tiene tope. Un tope parecido a lo que ya gastás te avisa cuánto te queda sin pedirte que cambies nada; si querés recortar un poco, apuntá a la parte de abajo del rango.'
+      : 'Por semana se ve más rápido cuánto te queda. Un tope parecido a lo que ya gastás no te pide cambiar nada; si querés recortar un poco, apuntá a la parte de abajo del rango.',
+    dato: {
+      valor: `Entre ${fmtMoney(bajo)} y ${fmtMoney(alto)} por ${periodo === 'mes' ? 'mes' : 'semana'}`,
+      referencia: `Gastaste ${fmtMoney(mejor.total)} en ${mejor.nombre} los últimos 30 días (${mejor.cant} gastos)`,
+    },
+    confianza: 'estimado',
+    accion: null,
+  };
+}
+
+function colaDe(periodo: PeriodoRecomendacion, datos: RecomendacionesT | null, estado: EstadoV2): Item[] {
   const cola: Item[] = [];
   const t = datos?.[periodo];
   if (t && t.estado === 'lista') cola.push({ tipo: 'ia', ref: `ia:${t.id}`, id: t.id, contenido: t.contenido, util: t.util });
+  // Los topes sugeridos se miran una vez por semana y por mes; ver `topeSugerido`.
+  if (periodo !== 'dia') {
+    const calc = topeSugerido(estado, periodo);
+    if (calc) cola.push({ tipo: 'calculada', ref: `calculada:tope:${periodo}:${calc.titulo}`, contenido: calc });
+  }
   const lista = GENERALES[periodo];
   const inicio = inicioDe(periodo);
   for (let i = 0; i < lista.length; i++) {
@@ -91,24 +136,6 @@ function colaDe(periodo: PeriodoRecomendacion, datos: RecomendacionesT | null): 
     cola.push({ tipo: 'general', ref: `general:${periodo}:${n}`, contenido: lista[n] });
   }
   return cola;
-}
-
-/**
- * Sin nada a la vista: sólo hace la llamada diaria a la IA.
- *
- * "Para vos" se sacó de Home, pero esa misma llamada es la que elige el paso
- * del día de mañana (con su mensaje) y arma el plan semanal de cada objetivo.
- * Sin ella, el paso volvería a elegirse por rotación fija.
- */
-export function PrepararManana() {
-  const { estado } = useAlmacen();
-  const { paso } = usePasoDelDia();
-  useEffect(() => {
-    void leerRecomendaciones(pasosPosiblesManana(estado, paso?.clave ?? null));
-    // Una vez por visita a Home; la API guarda lo del día y no repite la llamada.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return null;
 }
 
 export function Recomendaciones() {
@@ -162,6 +189,8 @@ export function Recomendaciones() {
   }
 
   return (
+    <div className="flex flex-col gap-8">
+    <TuAvance hechas={hechas} />
     <section className="flex flex-col gap-2" aria-busy={!datos && !fallo}>
       <TituloSeccion>Para vos</TituloSeccion>
 
@@ -178,7 +207,7 @@ export function Recomendaciones() {
 
       <div className="flex flex-col">
         {PERIODOS_RECOMENDACION.map((p) => {
-          const actual = colaDe(p, datos).find((it) => !hechas.has(`${p}|${it.ref}`)) ?? null;
+          const actual = colaDe(p, datos, estado).find((it) => !hechas.has(`${p}|${it.ref}`)) ?? null;
           return (
             <Tarjeta
               // La key cambia con la recomendación: al tachar, la nueva entra
@@ -207,6 +236,134 @@ export function Recomendaciones() {
           : 'Recomendaciones generales. No son asesoramiento financiero.'}
       </p>
     </section>
+    </div>
+  );
+}
+
+// ── Tu avance: "ya cumpliste X de Y" ─────────────────────────────────────
+// Para que se note que el proceso avanza. Cada fila (hoy, esta semana, este
+// mes) cuenta cosas concretas que la persona ya hizo, sacadas de sus propios
+// datos — nada inventado y nada que dependa de cuánto gasta: se cuenta haber
+// registrado, marcado, aportado; nunca el monto (regla 3, un gasto no es un
+// error). Si todavía no hay nada hecho no se muestra un cero con cara de
+// reproche: se invita a hacer una sola cosa.
+type PasoAvance = { label: string; hecho: boolean };
+type FilaAvance = { clave: 'dia' | 'semana' | 'mes'; titulo: string; pasos: PasoAvance[]; completo: string };
+
+function TuAvance({ hechas }: { hechas: Set<string> }) {
+  const { estado } = useAlmacen();
+  const { cumplido, racha } = usePasoDelDia();
+  const [abierta, setAbierta] = useState<'dia' | 'semana' | 'mes' | null>('semana');
+
+  const hoy = diaArgentina();
+  const lunes = (() => {
+    const d = new Date(`${hoy}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+  })();
+  const mes = hoy.slice(0, 7);
+  const enSemana = (ts: number) => diaArgentina(ts) >= lunes;
+  const enMes = (ts: number) => diaArgentina(ts).startsWith(mes);
+  const marco = (periodo: PeriodoRecomendacion) => [...hechas].some((k) => k.startsWith(`${periodo}|`));
+
+  const objetivosActivos = estado.objetivos.filter((o) => o.estado === 'active');
+  const aportoSemana = objetivosActivos.some((o) => o.contribuciones.some((c) => enSemana(c.ts)));
+  const aportoMes = objetivosActivos.some((o) => o.contribuciones.some((c) => enMes(c.ts)));
+
+  const filas: FilaAvance[] = [
+    {
+      clave: 'dia', titulo: 'Hoy', completo: '¡Hoy ya está!',
+      pasos: [
+        { label: 'Cumpliste el paso del día', hecho: cumplido },
+        { label: 'Marcaste la recomendación de hoy', hecho: marco('dia') },
+      ],
+    },
+    {
+      clave: 'semana', titulo: 'Esta semana', completo: '¡Completaste la semana!',
+      pasos: [
+        { label: 'Registraste tus gastos', hecho: estado.gastos.some((g) => enSemana(g.ts)) },
+        { label: 'Cumpliste algún paso del día', hecho: cumplido || racha.detalle.some((d) => d.tipo === 'paso' && d.dia >= lunes) },
+        { label: 'Marcaste la recomendación de la semana', hecho: marco('semana') },
+        ...(objetivosActivos.length > 0 ? [{ label: 'Le sumaste a un objetivo', hecho: aportoSemana }] : []),
+      ],
+    },
+    {
+      clave: 'mes', titulo: 'Este mes', completo: '¡Completaste el mes!',
+      pasos: [
+        { label: 'Registraste lo que te entró', hecho: estado.ingresos.some((i) => enMes(i.ts)) },
+        { label: 'Tenés un tope en alguna sección', hecho: estado.secciones.some((s) => s.tope) },
+        { label: 'Marcaste la recomendación del mes', hecho: marco('mes') },
+        ...(objetivosActivos.length > 0 ? [{ label: 'Le sumaste a un objetivo', hecho: aportoMes }] : []),
+      ],
+    },
+  ];
+
+  return (
+    <section className="flex flex-col gap-2" aria-label="Tu avance">
+      <TituloSeccion>Tu avance</TituloSeccion>
+      <div className="flex flex-col">
+        {filas.map((f) => {
+          const hechos = f.pasos.filter((p) => p.hecho).length;
+          const total = f.pasos.length;
+          const completo = hechos === total;
+          const abiertaEsta = abierta === f.clave;
+          return (
+            <div key={f.clave} className="py-3 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+              <button
+                type="button"
+                aria-expanded={abiertaEsta}
+                onClick={() => setAbierta(abiertaEsta ? null : f.clave)}
+                className="v2-focus w-full flex flex-col gap-2 text-left rounded-xl"
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-[16px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{f.titulo}</span>
+                  <span className="flex items-center gap-2 shrink-0">
+                    <span className="text-[14px] font-semibold font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>
+                      {hechos} de {total}
+                    </span>
+                    <span style={{ color: COLORS.inkFaint }}>
+                      <IconChevron size={14} style={{ transform: abiertaEsta ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 120ms' }} />
+                    </span>
+                  </span>
+                </span>
+                <span
+                  className="h-2.5 rounded-full overflow-hidden block"
+                  style={{ background: COLORS.line }}
+                  role="progressbar"
+                  aria-label={`${f.titulo}: ${hechos} de ${total}`}
+                  aria-valuemin={0}
+                  aria-valuemax={total}
+                  aria-valuenow={hechos}
+                >
+                  <span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${(hechos / total) * 100}%`, background: completo ? COLORS.limaViz : COLORS.brand }} />
+                </span>
+                <span className="text-[14px]" style={{ color: completo ? COLORS.limaText : COLORS.inkSoft }}>
+                  {completo ? f.completo : hechos === 0 ? 'Con una sola cosa ya arrancás.' : `Vas bien: ${hechos} de ${total}.`}
+                </span>
+              </button>
+
+              {abiertaEsta && (
+                <ul className="flex flex-col gap-2 pt-3 pl-1">
+                  {f.pasos.map((p) => (
+                    <li key={p.label} className="flex items-center gap-2.5 text-[15px]" style={{ color: p.hecho ? COLORS.ink : COLORS.inkSoft }}>
+                      <span
+                        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                        style={p.hecho ? { background: COLORS.brand } : { border: `2px solid ${COLORS.lineStrong}` }}
+                        aria-hidden
+                      >
+                        {p.hecho && <CheckIcon />}
+                      </span>
+                      <span>{p.label}</span>
+                      <span className="sr-only">{p.hecho ? '(hecho)' : '(pendiente)'}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -225,6 +382,11 @@ function Tarjeta({ periodo, item, onTachar, onUtil }: {
   const etiqueta = (
     <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
       {ETIQUETA[periodo]}
+      {item && (
+        <span style={{ color: item.tipo === 'general' ? COLORS.inkFaint : COLORS.brandDark }}>
+          {' · '}{item.tipo === 'general' ? 'general' : 'con tus datos'}
+        </span>
+      )}
     </p>
   );
 
@@ -282,7 +444,7 @@ function Tarjeta({ periodo, item, onTachar, onUtil }: {
         </h3>
         <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
 
-        {item.tipo === 'ia' && (
+        {(item.tipo === 'ia' || item.tipo === 'calculada') && (
           <>
             {/* El dato en el que se apoya, con contra qué se compara. */}
             <div className="flex flex-col gap-0.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.brandSoft }}>
@@ -293,6 +455,7 @@ function Tarjeta({ periodo, item, onTachar, onUtil }: {
 
             {/* Lo que marca la persona es lo que usa el modelo la próxima vez
                 para no insistir con lo que no le sirve. Tocar de nuevo saca la marca. */}
+            {item.tipo === 'ia' && (
             <div className="flex items-center gap-1 pt-1" role="group" aria-label="¿Te sirvió esta recomendación?">
               <span className="text-[14px] mr-1" style={{ color: COLORS.inkFaint }}>¿Te sirvió?</span>
               {([true, false] as const).map((v) => {
@@ -313,6 +476,7 @@ function Tarjeta({ periodo, item, onTachar, onUtil }: {
                 );
               })}
             </div>
+            )}
           </>
         )}
 

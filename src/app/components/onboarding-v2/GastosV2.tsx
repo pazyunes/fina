@@ -38,7 +38,7 @@ type Periodo = 'semana' | 'mes';
 type Moneda = 'ARS' | 'USD';
 type Tope = { monto: number; periodo: Periodo };
 type Categoria = { id: string; nombre: string };
-type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; ts: number; metodoPago?: string; pagos?: PagoMixto[]; origen: 'web' | 'whatsapp' | 'manual' };
+type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; tipoOtro?: string; ts: number; metodoPago?: string; pagos?: PagoMixto[]; origen: 'web' | 'whatsapp' | 'manual' };
 // Cada gasto guarda DOS montos: `monto` es lo que la persona tipeó, en su
 // moneda, y `montoArs` su equivalente en pesos congelado a la cotización de
 // ese día.
@@ -72,6 +72,22 @@ type FilaPago = { medio: string; otro: string; monto: string };
 function filaPagoVacia(): FilaPago {
   return { medio: '', otro: '', monto: '' };
 }
+// Lo que la persona escribió antes en un "otro", sin repetir (ignora
+// mayúsculas), del más reciente al más viejo. Sale de los propios movimientos:
+// no hay tabla aparte. Los movimientos ya vienen ordenados del más nuevo al más
+// viejo, así que alcanza con quedarse con la primera aparición de cada texto.
+function recientes(valores: (string | undefined)[], max = 6): string[] {
+  const vistos = new Set<string>();
+  const salida: string[] = [];
+  for (const v of valores) {
+    const t = v?.trim();
+    if (!t || vistos.has(t.toLowerCase())) continue;
+    vistos.add(t.toLowerCase());
+    salida.push(t);
+    if (salida.length >= max) break;
+  }
+  return salida;
+}
 function medioDeFila(f: FilaPago): string {
   return (f.medio === 'otro' ? f.otro : f.medio).trim();
 }
@@ -99,7 +115,7 @@ const TIPOS: TipoGasto[] = ['necesario', 'urgente', 'impulsivo', 'otro'];
 const SECCIONES_SUGERIDAS = [
   'Delivery', 'Restaurantes', 'Cafeterías', 'Salidas y entretenimiento',
   'Supermercado', 'Transporte', 'Belleza y cuidado personal', 'Ropa',
-  'Suscripciones', 'Compras online', 'Farmacia', 'Regalos',
+  'Suscripciones', 'Compras online', 'Farmacia', 'Regalos', 'Deporte',
 ];
 
 // Medios de pago sugeridos, para la primera vez que no hay ninguno cargado.
@@ -231,6 +247,7 @@ export function GastosV2() {
         : g.descripcion,
       categoriaId: g.seccionId ?? '',
       tipo: g.tipo,
+      tipoOtro: g.tipoOtro,
       ts: g.ts,
       metodoPago: g.metodoPago ?? undefined,
       pagos: g.pagos,
@@ -283,6 +300,8 @@ export function GastosV2() {
   // El gasto que se está por borrar (uno a la vez).
   const [borrando, setBorrando] = useState<string | null>(null);
   const [ngTipo, setNgTipo] = useState<TipoGasto>('necesario');
+  // Lo que se escribe cuando el tipo es "otro".
+  const [ngTipoOtro, setNgTipoOtro] = useState('');
   const [ngMetodo, setNgMetodo] = useState<string | null>(null);
   const [ngMetodoOtro, setNgMetodoOtro] = useState('');
   // Pagado con más de un medio: cada fila es un medio + su parte del total.
@@ -298,6 +317,8 @@ export function GastosV2() {
   // es lo más común una vez que la persona ya cargó lo que tenía.
   const [addDispEsIngreso, setAddDispEsIngreso] = useState(true);
   const [addDispFuente, setAddDispFuente] = useState<FuenteIngreso | ''>('');
+  // Lo que se escribe cuando la fuente es "otro".
+  const [addDispFuenteOtra, setAddDispFuenteOtra] = useState('');
   // Ventana del donut: "este mes" o "esta semana".
   const [ventana, setVentana] = useState<Periodo>('mes');
   // Sólo aplica con ventana === 'mes': 0 es el mes en curso, 1 el anterior, etc.
@@ -316,6 +337,8 @@ export function GastosV2() {
   // Con esto en true, "Tus gastos" deja de truncar en 6. Buscar por nombre o
   // filtrar por fecha ya implica querer ver la lista completa que matchea.
   const [verTodos, setVerTodos] = useState(false);
+  // "Cuánto te queda" por sección: se muestran las que más se acercan al tope y el resto se despliega.
+  const [verTodasDisponibles, setVerTodasDisponibles] = useState(false);
 
   // El total y el donut miran una VENTANA, no todo el historial: "gastado"
   // sin período no se puede comparar con nada, y un tope es por semana o por
@@ -346,6 +369,25 @@ export function GastosV2() {
   };
 
   const totalGastado = gastosVentana.reduce((s, g) => s + g.montoArs, 0);
+  // Cuánto queda de cada tope. Se mide en el período DEL TOPE (semana o mes en
+  // curso), no en la ventana que se está mirando arriba: un tope "por semana"
+  // no se puede leer contra un mes entero. Va de la que menos le queda a la
+  // que más, que es la que conviene mirar primero.
+  const inicioPeriodo = (p: Periodo) => {
+    const d = new Date();
+    if (p === 'mes') return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime();
+  };
+  const disponiblePorSeccion = categorias
+    .filter((c) => topes[c.id])
+    .map((c) => {
+      const tope = topes[c.id];
+      const desde = inicioPeriodo(tope.periodo);
+      const gastado = gastos.filter((g) => g.categoriaId === c.id && g.ts >= desde).reduce((s, g) => s + g.montoArs, 0);
+      const quedan = tope.monto - gastado;
+      return { id: c.id, nombre: c.nombre, tope, quedan, pct: Math.max(0, Math.min(1, quedan / tope.monto)) };
+    })
+    .sort((a, b) => a.pct - b.pct);
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
 
@@ -353,10 +395,21 @@ export function GastosV2() {
     .map((c) => ({ color: colorDe(c.id), pct: totalGastado > 0 ? (gastadoEn(c.id) / totalGastado) * 100 : 0 }))
     .filter((s) => s.pct > 0);
 
-  const porTipo = TIPOS.map((t) => ({
-    tipo: t,
-    monto: gastosVentana.filter((g) => g.tipo === t).reduce((s, g) => s + g.montoArs, 0),
-  })).filter((t) => t.monto > 0);
+  // El "otro" se abre por lo que la persona escribió (Salud, Mascota…): cada
+  // texto es su propia fila, con el color de "otro". Los "otro" sin texto
+  // siguen juntos bajo "Otro".
+  type FilaTipo = { clave: string; tipo: TipoGasto; label: string; monto: number };
+  const porTipo: FilaTipo[] = TIPOS.flatMap((t): FilaTipo[] => {
+    const deEsteTipo = gastosVentana.filter((g) => g.tipo === t);
+    if (t !== 'otro') return [{ clave: t, tipo: t, label: TIPO_INFO[t].label, monto: deEsteTipo.reduce((s, g) => s + g.montoArs, 0) }];
+    const grupos = new Map<string, { label: string; monto: number }>();
+    for (const g of deEsteTipo) {
+      const label = g.tipoOtro?.trim() || TIPO_INFO.otro.label;
+      const k = label.toLowerCase();
+      grupos.set(k, { label: grupos.get(k)?.label ?? label, monto: (grupos.get(k)?.monto ?? 0) + g.montoArs });
+    }
+    return [...grupos.entries()].map(([k, v]) => ({ clave: `otro:${k}`, tipo: t, label: v.label, monto: v.monto }));
+  }).filter((t) => t.monto > 0);
 
   // Sugeridas que todavía no son secciones propias.
   // Se compara por slug del NOMBRE: el id ahora es el uuid de la fila, así que
@@ -367,6 +420,8 @@ export function GastosV2() {
   // Medios ofrecidos al registrar un gasto: los que ya usaste primero; si no
   // hay ninguno, los sugeridos.
   const metodosOfrecidos = (estado.metodosPago?.length ? estado.metodosPago : METODOS_SUGERIDOS);
+  const tiposOtroRecientes = recientes(gastos.map((g) => g.tipoOtro));
+  const fuentesOtraRecientes = recientes(db.ingresos.map((i) => i.fuenteOtra));
 
   // Validación del pago dividido: cada fila necesita medio y monto, y entre
   // todas tienen que sumar exactamente el total del gasto (si no, ¿de dónde
@@ -429,12 +484,13 @@ export function GastosV2() {
     const metodo = (addDispMetodo === 'otro' ? addDispMetodoOtro.trim() : addDispMetodo) || '';
     // El medio usado sube al principio de la lista (queda con `usadoEn` de
     // ahora): al registrar un gasto se ofrecen los más recientes primero.
-    if (addDispEsIngreso) void acciones.registrarIngreso({ monto: n, moneda: 'ARS', fuente: addDispFuente || null, medio: metodo });
+    if (addDispEsIngreso) void acciones.registrarIngreso({ monto: n, moneda: 'ARS', fuente: addDispFuente || null, fuenteOtra: addDispFuenteOtra, medio: metodo });
     else acciones.sumarDisponible(metodo, n);
     setAddDispVal('');
     setAddDispMetodo(null);
     setAddDispMetodoOtro('');
     setAddDispFuente('');
+    setAddDispFuenteOtra('');
     setAddDispEsIngreso(true);
     setAddingDisponible(false);
   }
@@ -471,7 +527,7 @@ export function GastosV2() {
     // (La división entre medios es sólo para el gasto de una vez — un gasto
     // fijo guarda un único medio, como siempre.)
     if (!ngFijo.activo || ngFijo.yaPagado) {
-      const r = await acciones.registrarGasto({ ...datos, pagos, confirmacion: ngFijo.activo ? 'Gasto fijo guardado con éxito.' : undefined });
+      const r = await acciones.registrarGasto({ ...datos, tipoOtro: ngTipoOtro, pagos, confirmacion: ngFijo.activo ? 'Gasto fijo guardado con éxito.' : undefined });
       if (r.error !== null) { setErrorGasto(r.error); return; }
     }
     if (ngFijo.activo) {
@@ -495,6 +551,7 @@ export function GastosV2() {
     setNgCatId(g.categoriaId || null);
     setNgNuevaCat(''); setNgCreandoCat(false);
     setNgTipo(g.tipo);
+    setNgTipoOtro(g.tipoOtro ?? '');
     if (g.pagos?.length) {
       setNgDividido(true);
       setNgPagos(g.pagos.map((p) => ({ medio: p.medio, otro: '', monto: formatMontoInicial(p.monto) })));
@@ -515,7 +572,7 @@ export function GastosV2() {
     setEditandoId(null);
     setNgFijo(opcionFijoInicial());
     setNgMonto(''); setNgMoneda('ARS'); setNgFechaHora(aInputFechaHora(Date.now()));
-    setNgDesc(''); setNgNuevaCat(''); setNgCreandoCat(false); setNgCatId(null); setNgTipo('necesario');
+    setNgDesc(''); setNgNuevaCat(''); setNgCreandoCat(false); setNgCatId(null); setNgTipo('necesario'); setNgTipoOtro('');
     setNgMetodo(null); setNgMetodoOtro('');
     setNgDividido(false); setNgPagos([filaPagoVacia(), filaPagoVacia()]);
   }
@@ -534,6 +591,7 @@ export function GastosV2() {
       descripcion: ngDesc.trim() || TIPO_INFO[ngTipo].label,
       seccionId: catId,
       tipo: ngTipo,
+      tipoOtro: ngTipoOtro,
       metodoPago: ngDividido ? null : metodo,
       pagos,
       ts: deInputFechaHora(ngFechaHora),
@@ -612,6 +670,46 @@ export function GastosV2() {
             <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Dinero disponible</p>
             <Monto value={disponible} size={19} className="font-bold" />
           </div>
+
+          {/* Cuánto queda en cada sección con tope. Barras que se vacían a
+              medida que se gasta; el número va en tinta y nunca en alerta — un
+              tope pasado no es un error (regla 3). */}
+          {disponiblePorSeccion.length === 0 ? (
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              Ponele un tope a una sección y acá ves cuánto te queda en cada una.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2" aria-label="Cuánto te queda en cada sección">
+              {(verTodasDisponibles ? disponiblePorSeccion : disponiblePorSeccion.slice(0, 3)).map((d) => (
+                <div key={d.id} className="flex flex-col gap-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[13px] truncate" style={{ color: COLORS.ink }}>{d.nombre}</span>
+                    <span className="text-[12px] shrink-0 font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>
+                      {d.quedan >= 0 ? `Quedan ${fmtMoney(d.quedan)}` : `Pasaste ${fmtMoney(-d.quedan)}`}
+                    </span>
+                  </div>
+                  <div
+                    className="h-2 rounded-full overflow-hidden"
+                    style={{ background: COLORS.tint }}
+                    role="img"
+                    aria-label={`${d.nombre}: ${d.quedan >= 0 ? `quedan ${fmtMoney(d.quedan)}` : `pasaste el tope por ${fmtMoney(-d.quedan)}`} de ${fmtMoney(d.tope.monto)} por ${d.tope.periodo === 'semana' ? 'semana' : 'mes'}`}
+                  >
+                    <div className="h-full rounded-full" style={{ width: `${d.pct * 100}%`, background: colorDe(d.id) }} />
+                  </div>
+                </div>
+              ))}
+              {disponiblePorSeccion.length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => setVerTodasDisponibles((v) => !v)}
+                  className="v2-focus self-start text-[13px] font-semibold underline"
+                  style={{ color: COLORS.brand }}
+                >
+                  {verTodasDisponibles ? 'Ver menos' : `Ver las ${disponiblePorSeccion.length}`}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -676,6 +774,38 @@ export function GastosV2() {
                 <option value="" style={{ color: COLORS.ink }}>¿De dónde vino? (opcional)</option>
                 {FUENTES_INGRESO.map((f) => <option key={f.id} value={f.id} style={{ color: COLORS.ink }}>{f.label}</option>)}
               </select>
+            )}
+            {addDispEsIngreso && addDispFuente === 'otro' && (
+              <div className="flex flex-col gap-2">
+                <input
+                  autoFocus
+                  aria-label="De dónde vino la plata, cuál"
+                  maxLength={40}
+                  className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[15px] transition-colors"
+                  style={INPUT_STYLE}
+                  placeholder="Escribí de dónde (ej: Beca, Alquiler)"
+                  value={addDispFuenteOtra}
+                  onChange={(e) => setAddDispFuenteOtra(e.target.value)}
+                />
+                {fuentesOtraRecientes.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Los que escribiste antes">
+                    {fuentesOtraRecientes.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={addDispFuenteOtra.trim().toLowerCase() === t.toLowerCase()}
+                        onClick={() => setAddDispFuenteOtra(t)}
+                        className="v2-focus rounded-lg px-2.5 py-1 text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                        style={addDispFuenteOtra.trim().toLowerCase() === t.toLowerCase()
+                          ? { background: COLORS.brandSoft, color: COLORS.brandDark }
+                          : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
             {/* Se pregunta el medio acá para que después, al registrar un
                 gasto, se puedan ofrecer los que de verdad tenés. */}
@@ -957,6 +1087,40 @@ export function GastosV2() {
                   );
                 })}
               </div>
+              {/* "Otro" se puede escribir: queda con el nombre que le pongas
+                  y se ofrece de nuevo la próxima vez, como las secciones. */}
+              {ngTipo === 'otro' && (
+                <div className="flex flex-col gap-2 mt-1.5">
+                  <input
+                    autoFocus
+                    aria-label="Qué tipo de gasto fue"
+                    maxLength={40}
+                    className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
+                    style={INPUT_STYLE}
+                    placeholder="Escribí cuál (ej: Salud, Mascota)"
+                    value={ngTipoOtro}
+                    onChange={(e) => setNgTipoOtro(e.target.value)}
+                  />
+                  {tiposOtroRecientes.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Los que escribiste antes">
+                      {tiposOtroRecientes.map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          aria-pressed={ngTipoOtro.trim().toLowerCase() === t.toLowerCase()}
+                          onClick={() => setNgTipoOtro(t)}
+                          className="v2-focus rounded-lg px-2.5 py-1 text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                          style={ngTipoOtro.trim().toLowerCase() === t.toLowerCase()
+                            ? { background: COLORS.brandSoft, color: COLORS.brandDark }
+                            : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </fieldset>
 
             {/* Un gasto que ya pasó no se puede volver "gasto fijo" desde acá:
@@ -998,14 +1162,14 @@ export function GastosV2() {
           <TituloSeccion>¿En qué tipo de gasto se te va?</TituloSeccion>
           <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: COLORS.surface }}>
             {porTipo.map((t) => (
-              <div key={t.tipo} style={{ width: `${(t.monto / totalGastado) * 100}%`, background: TIPO_INFO[t.tipo].color }} />
+              <div key={t.clave} style={{ width: `${(t.monto / totalGastado) * 100}%`, background: TIPO_INFO[t.tipo].color }} />
             ))}
           </div>
           <div className="flex flex-wrap gap-x-3.5 gap-y-1">
             {porTipo.map((t) => (
-              <span key={t.tipo} className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}>
+              <span key={t.clave} className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}>
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: TIPO_INFO[t.tipo].color }} />
-                <span>{TIPO_INFO[t.tipo].label}</span>
+                <span>{t.label}</span>
                 <Monto value={t.monto} className="text-[14px] font-semibold" />
               </span>
             ))}
@@ -1304,6 +1468,7 @@ export function GastosV2() {
                   <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
                   <p className="text-[14px] flex items-center gap-1.5" style={{ color: COLORS.inkSoft }}>
                     <span className="truncate">{cat?.nombre ?? 'Sin sección'}</span>
+                    {g.tipoOtro && <span className="truncate">· {g.tipoOtro}</span>}
                     <span className="shrink-0">{fechaDisplay(g.ts)}</span>
                   </p>
                 </div>

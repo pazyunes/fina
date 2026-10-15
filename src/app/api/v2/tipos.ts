@@ -65,6 +65,8 @@ export type Ingreso = {
   /** En pesos, congelado a la cotización de ese día. Todo lo que suma usa esto. */
   montoArs: number;
   fuente: FuenteIngreso | null;
+  /** Lo que la persona escribió cuando eligió la fuente "otro" (migración 0036). */
+  fuenteOtra?: string;
   descripcion: string;
   /** En qué medio entró. Su saldo en payment_methods sube por este monto. */
   medio: string | null;
@@ -86,6 +88,8 @@ export type Gasto = {
   descripcion: string;
   seccionId: string | null;
   tipo: TipoGasto;
+  /** Lo que la persona escribió cuando eligió el tipo "otro" (migración 0036). */
+  tipoOtro?: string;
   metodoPago: string | null;
   grupoId: string | null;
   ts: number;

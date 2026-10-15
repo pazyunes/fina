@@ -265,14 +265,13 @@ type FilaGasto = {
   id: string; amount_ars: number; currency: string; original_amount: number | null;
   description: string | null; section_id: string | null; expense_type: string | null;
   payment_method: string | null; group_id: string | null; occurred_at: string; source: string;
+  // Opcionales a propósito: vienen de las migraciones 0035 y 0036. Por eso las
+  // consultas de gastos usan `*` y no una lista de columnas — pedir una
+  // columna que todavía no existe tira error en TODAS las lecturas, no sólo en
+  // las que la usan (así se rompió "ver mis gastos" cuando faltaba la 0035).
+  payment_methods?: PagoMixto[] | null;
+  expense_type_other?: string | null;
 };
-
-// TEMPORAL: `payment_methods` (pago dividido) se saca del select hasta que la
-// migración 0035 esté aplicada contra la base — pedirle a Postgres una
-// columna que todavía no existe tira error en TODAS las consultas de gastos,
-// no sólo en las divididas (así se rompió momentáneamente "ver mis gastos").
-// Volver a sumarla acá en cuanto la migración esté corrida.
-const SELECT_GASTO = 'id, amount_ars, currency, original_amount, description, section_id, expense_type, payment_method, group_id, occurred_at, source';
 
 function aGasto(f: FilaGasto): Gasto {
   const moneda: MonedaConvertible = f.currency === 'USD' ? 'USD' : 'ARS';
@@ -287,9 +286,8 @@ function aGasto(f: FilaGasto): Gasto {
     seccionId: f.section_id,
     tipo: (f.expense_type ?? 'otro') as TipoGasto,
     metodoPago: f.payment_method,
-    // TEMPORAL: ver nota en SELECT_GASTO — sin la columna en la base no hay
-    // de dónde leer esto todavía.
-    pagos: undefined,
+    ...(f.expense_type_other ? { tipoOtro: f.expense_type_other } : {}),
+    pagos: f.payment_methods?.length ? f.payment_methods : undefined,
     grupoId: f.group_id,
     ts: new Date(f.occurred_at).getTime(),
     origen: (f.source === 'whatsapp' ? 'whatsapp' : f.source === 'manual' ? 'manual' : 'web'),
@@ -299,7 +297,7 @@ function aGasto(f: FilaGasto): Gasto {
 export async function listarGastos(): Promise<Resultado<Gasto[]>> {
   const r = await correr<FilaGasto[]>('listarGastos', () =>
     supabase.from('transactions')
-      .select(SELECT_GASTO)
+      .select('*')
       .eq('type', 'expense')
       .order('occurred_at', { ascending: false })
       .limit(500),
@@ -311,7 +309,7 @@ export async function listarGastos(): Promise<Resultado<Gasto[]>> {
 export async function registrarGasto(g: {
   id?: string;
   monto: number; moneda: MonedaConvertible; montoArs: number; cotizacionId?: string | null;
-  descripcion: string; seccionId: string | null; tipo: TipoGasto;
+  descripcion: string; seccionId: string | null; tipo: TipoGasto; tipoOtro?: string;
   metodoPago: string | null; pagos?: PagoMixto[] | null; grupoId?: string | null; ts?: number;
 }): Promise<Resultado<Gasto>> {
   const uid = await idUsuaria();
@@ -334,15 +332,16 @@ export async function registrarGasto(g: {
       description: g.descripcion,
       section_id: g.seccionId,
       expense_type: g.tipo,
-      // TEMPORAL: ver nota en SELECT_GASTO — todavía no se manda
-      // `payment_methods` al insert (la columna no existe en la base), así
-      // que por ahora un gasto dividido guarda igual el primer medio en
-      // `payment_method` para no perder del todo el dato.
-      payment_method: dividido ? g.pagos![0].medio : g.metodoPago,
+      // Las columnas de las migraciones 0035/0036 sólo se mandan cuando hay
+      // algo para guardar en ellas: así un gasto común no depende de que
+      // estén aplicadas.
+      ...(g.tipo === 'otro' && g.tipoOtro ? { expense_type_other: g.tipoOtro } : {}),
+      payment_method: dividido ? null : g.metodoPago,
+      ...(dividido ? { payment_methods: g.pagos } : {}),
       group_id: g.grupoId ?? null,
       // 'web' = lo cargó la persona en la app. El bot escribe 'whatsapp'.
       source: 'web',
-    }).select(SELECT_GASTO),
+    }).select('*'),
   );
   if (r.error !== null || !r.data?.[0]) return falla<Gasto>(r.error ?? 'sin fila', 'registrarGasto');
 
@@ -365,6 +364,8 @@ export async function registrarGasto(g: {
 export async function editarGasto(id: string, g: {
   monto?: number; moneda?: MonedaConvertible; montoArs?: number; cotizacionId?: string | null;
   descripcion?: string; seccionId?: string | null; tipo?: TipoGasto;
+  // `null` = borrar lo escrito antes; `undefined` = no tocar la columna.
+  tipoOtro?: string | null;
   metodoPago?: string | null; pagos?: PagoMixto[] | null; ts?: number;
   // Cuánto sumar/restar del saldo de cada medio — lo calcula `acciones.ts`
   // (compara el medio/monto viejo contra el nuevo) porque acá no se lee el
@@ -380,10 +381,9 @@ export async function editarGasto(id: string, g: {
   if (g.descripcion !== undefined) fila.description = g.descripcion;
   if (g.seccionId !== undefined) fila.section_id = g.seccionId;
   if (g.tipo !== undefined) fila.expense_type = g.tipo;
-  // TEMPORAL (ver nota en SELECT_GASTO): sin `payment_methods` en la base
-  // todavía, un pago dividido guarda el primer medio en `payment_method` para
-  // no perder el dato por completo hasta que la migración esté aplicada.
-  if (g.metodoPago !== undefined) fila.payment_method = g.metodoPago ?? (g.pagos?.length ? g.pagos[0].medio : null);
+  if (g.tipoOtro !== undefined) fila.expense_type_other = g.tipoOtro;
+  if (g.metodoPago !== undefined) fila.payment_method = g.metodoPago;
+  if (g.pagos !== undefined) fila.payment_methods = g.pagos?.length ? g.pagos : null;
   if (g.ts !== undefined) fila.occurred_at = new Date(g.ts).toISOString();
 
   if (Object.keys(fila).length > 0) {
@@ -474,6 +474,7 @@ type FilaIngreso = {
   id: string; amount_ars: number; currency: string; original_amount: number | null;
   description: string | null; payment_method: string | null; occurred_at: string; source: string;
   income_source?: string | null;
+  income_source_other?: string | null;
 };
 
 const FUENTES: FuenteIngreso[] = ['sueldo', 'freelance', 'venta', 'regalo', 'reintegro', 'otro'];
@@ -487,6 +488,7 @@ function aIngreso(f: FilaIngreso): Ingreso {
     moneda,
     montoArs: Number(f.amount_ars),
     fuente,
+    ...(fuente === 'otro' && f.income_source_other ? { fuenteOtra: f.income_source_other } : {}),
     descripcion: f.description ?? '',
     medio: f.payment_method,
     ts: new Date(f.occurred_at).getTime(),
@@ -507,7 +509,7 @@ export async function listarIngresos(): Promise<Resultado<Ingreso[]>> {
 
 export async function registrarIngreso(i: {
   id?: string; monto: number; moneda: MonedaConvertible; montoArs: number; cotizacionId?: string | null;
-  fuente: FuenteIngreso | null; descripcion: string; medio: string; ts?: number;
+  fuente: FuenteIngreso | null; fuenteOtra?: string; descripcion: string; medio: string; ts?: number;
 }): Promise<Resultado<null>> {
   const uid = await idUsuaria();
   if (!uid) return falla<null>('sin sesión', 'registrarIngreso');
@@ -524,6 +526,7 @@ export async function registrarIngreso(i: {
       description: i.descripcion || null,
       payment_method: i.medio,
       ...(i.fuente ? { income_source: i.fuente } : {}),
+      ...(i.fuente === 'otro' && i.fuenteOtra ? { income_source_other: i.fuenteOtra } : {}),
       source: 'web',
     }).then(({ error }) => ({ data: null, error })),
   );
@@ -575,21 +578,27 @@ async function borrarFila(tabla: string, id: string, contexto: string): Promise<
 }
 
 export async function borrarGasto(id: string): Promise<Resultado<null>> {
-  // TEMPORAL (ver nota en SELECT_GASTO): todavía no se lee `payment_methods`
-  // acá — un gasto dividido por ahora sólo devuelve el monto entero al primer
-  // medio (el que quedó guardado en `payment_method`, ver nota en
-  // registrarGasto/editarGasto), hasta que la migración 0035 esté aplicada.
-  const previo = await correr<{ amount_ars: number; payment_method: string | null } | null>('borrarGasto/leer', () =>
-    supabase.from('transactions').select('amount_ars, payment_method').eq('id', id).maybeSingle(),
+  // `*` y no columnas sueltas: `payment_methods` (0035) puede no existir aún.
+  const previo = await correr<{ amount_ars: number; payment_method: string | null; payment_methods?: PagoMixto[] | null } | null>('borrarGasto/leer', () =>
+    supabase.from('transactions').select('*').eq('id', id).maybeSingle(),
   );
 
   const borrado = await borrarFila('transactions', id, 'borrarGasto');
   if (borrado.error !== null) return borrado;
 
-  const medio = previo.data?.payment_method;
-  if (medio) {
-    const saldo = await moverSaldo(medio, Number(previo.data?.amount_ars ?? 0));
-    if (saldo.error !== null) return falla<null>(saldo.error, 'borrarGasto/saldo');
+  // Un gasto dividido le devuelve a cada medio lo suyo; uno común, el total.
+  const pagos = previo.data?.payment_methods;
+  if (pagos?.length) {
+    for (const p of pagos) {
+      const saldo = await moverSaldo(p.medio, p.monto);
+      if (saldo.error !== null) return falla<null>(saldo.error, 'borrarGasto/saldo');
+    }
+  } else {
+    const medio = previo.data?.payment_method;
+    if (medio) {
+      const saldo = await moverSaldo(medio, Number(previo.data?.amount_ars ?? 0));
+      if (saldo.error !== null) return falla<null>(saldo.error, 'borrarGasto/saldo');
+    }
   }
   return ok(null);
 }

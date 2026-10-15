@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Fini } from './Fini';
 import { MisVisualizaciones } from './MisVisualizaciones';
-import { PrepararManana } from './Recomendaciones';
+import { Recomendaciones } from './Recomendaciones';
 import { AvisoVencimientoHome } from './GastosFijos';
 import { InvitacionAvisos } from './InvitacionAvisos';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
@@ -287,9 +287,13 @@ export function HomeV2() {
       <AvisoVencimientoHome />
       <InvitacionAvisos momento="home" gastosRegistrados={gastosRegistrados} />
 
-      {/* "Para vos" (las tres recomendaciones) se sacó de Home. Queda la llamada
-          diaria a la IA, que elige el paso de mañana y los planes de objetivos. */}
-      <PrepararManana />
+      {/* Tu avance + Para vos. "Para vos" se había sacado de Home porque las
+          recomendaciones se sentían genéricas: ahora cada una dice si es "con tus
+          datos" o "general", las de tus datos van primero (incluido un tope
+          sugerido según lo que solés gastar), y "Tu avance" muestra lo que ya
+          cumpliste. Este componente también hace la llamada diaria a la IA que
+          elige el paso de mañana y arma los planes de objetivos. */}
+      <Recomendaciones />
 
       {/* PRUEBA — gráficos armados con los datos que ya hay guardados. */}
       <MisVisualizaciones />

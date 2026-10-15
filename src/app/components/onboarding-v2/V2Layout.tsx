@@ -2,9 +2,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { BottomNavV2 } from './BottomNavV2';
 import { SidebarV2 } from './SidebarV2';
-import { COLOR_VARS, COLORS, FONT_VARS, Cta, Titulo, Apoyo, bloqueoAppActivo, subirPendientesLocales } from './shared';
+import { COLOR_VARS, COLORS, FONT_VARS, Cta, Titulo, Apoyo, bloqueoAppActivo, loadV2TerminosAceptados, subirPendientesLocales } from './shared';
 import { Fini } from './Fini';
 import { BloqueoApp } from './BloqueoApp';
+import { TerminosGate } from './TerminosGate';
+import { terminosAlDia } from '../../lib/legales';
 import { useAuth } from '../../lib/auth';
 import { AlmacenProvider, useAlmacen } from '../../api/v2/AlmacenProvider';
 import { PasoDelDiaProvider } from '../../api/v2/PasoDelDiaProvider';
@@ -27,7 +29,7 @@ import { AvisoWhatsAppProvider } from './LinkWhatsApp';
 // mandar a hacer el onboarding.
 function Puerta({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
-  const { listo, error, recargar } = useAlmacen();
+  const { listo, error, recargar, estado } = useAlmacen();
   // PIN/Face ID: una traba EN ESTE DISPOSITIVO, aparte de la sesión. Se
   // guarda en estado (no se vuelve a leer en cada render) para que
   // desbloquear adentro de `BloqueoApp` muestre `children` sin recargar nada.
@@ -58,6 +60,13 @@ function Puerta({ children }: { children: React.ReactNode }) {
   }
 
   if (!listo) return <Cargando />;
+  // Sin aceptar la versión vigente de los términos y la política no se entra.
+  // Si la base todavía no tiene la fecha pero la persona los aceptó en el
+  // onboarding (pasa cuando Supabase pidió confirmar el mail: la aceptación
+  // espera en este dispositivo hasta que `subirPendientesLocales` la sube), no
+  // se le vuelve a pedir.
+  const aceptadosEn = estado.perfil.terminosAceptadosEn;
+  if (aceptadosEn ? !terminosAlDia(aceptadosEn) : !loadV2TerminosAceptados()) return <TerminosGate />;
   return <>{children}</>;
 }
 

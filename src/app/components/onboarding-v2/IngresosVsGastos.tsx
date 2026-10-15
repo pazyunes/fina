@@ -42,7 +42,10 @@ const nombreMes = (clave: string, largo = false) =>
 export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
   const { estado } = useAlmacen();
   const meses = ultimosMeses(6);
-  const [elegido, setElegido] = useState(meses[meses.length - 1]);
+  // El gráfico es sólo para mirar: siempre está parado en el mes actual. Antes
+  // cada mes era un botón, y un toque sin querer te movía a otro mes con los
+  // números de arriba cambiados, sin que se notara que ya no era "este mes".
+  const elegido = meses[meses.length - 1];
   const [borrando, setBorrando] = useState<string | null>(null);
 
   const porMes = meses.map((mes) => ({
@@ -53,15 +56,13 @@ export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
   const actual = porMes.find((p) => p.mes === elegido) ?? porMes[porMes.length - 1];
   const tope = Math.max(1, ...porMes.map((p) => Math.max(p.entro, p.salio)));
   const nadaRegistrado = porMes.every((p) => p.entro === 0 && p.salio === 0);
-  const quedo = actual.entro - actual.salio;
-  const esEsteMes = elegido === meses[meses.length - 1];
 
   const ingresosDelMes = estado.ingresos.filter((i) => mesDe(i.ts) === elegido);
 
   if (nadaRegistrado) {
     return (
       <p className="text-[15px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-        Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto te queda cada mes.
+        Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto entra y cuánto sale cada mes.
       </p>
     );
   }
@@ -71,43 +72,36 @@ export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
       {/* El mes elegido, en números. */}
       <div className="flex flex-col gap-2">
         <p className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
-          {esEsteMes ? 'Este mes' : nombreMes(elegido, true)}
+          Este mes
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Cifra color={INGRESO} etiqueta="Entró" valor={actual.entro} />
           <Cifra color={GASTO} etiqueta="Salió" valor={actual.salio} />
-          {actual.entro > 0 && (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? 'Te quedó' : 'Salió de más'}</span>
-              <span className="text-[17px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
-            </div>
-          )}
         </div>
         {actual.entro === 0 && actual.salio > 0 && (
           <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            {esEsteMes ? 'Registraste gastos este mes, pero' : 'Registraste gastos ese mes, pero'} no ingresos. Cargalos para ver cuánto te quedó.
+            Registraste gastos este mes, pero no ingresos. Si los cargás, se ve cuánto entró.
           </p>
         )}
       </div>
 
-      {/* Los últimos 6 meses. Cada mes es un botón para elegirlo. */}
+      {/* Los últimos 6 meses, sólo para mirar. El actual va más marcado y el
+          resto atenuado. */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-end gap-1" style={{ height: 124 }} role="group" aria-label="Ingresos y gastos de los últimos 6 meses">
           {porMes.map((p) => {
             const sel = p.mes === elegido;
             return (
-              <button
+              <div
                 key={p.mes}
-                type="button"
-                onClick={() => setElegido(p.mes)}
-                aria-pressed={sel}
-                aria-label={`${nombreMes(p.mes, true)}: entró ${fmtMoney(p.entro)}, salió ${fmtMoney(p.salio)}`}
-                className="v2-focus flex-1 min-w-[44px] h-full flex items-end justify-center gap-[2px] rounded-lg transition-opacity"
-                style={{ opacity: sel ? 1 : 0.45 }}
+                role="img"
+                aria-label={`${sel ? 'Este mes' : nombreMes(p.mes, true)}: entró ${fmtMoney(p.entro)}, salió ${fmtMoney(p.salio)}`}
+                className="flex-1 min-w-[44px] h-full flex items-end justify-center gap-[2px] rounded-lg"
+                style={{ opacity: sel ? 1 : 0.4, background: sel ? COLORS.tint : 'transparent' }}
               >
                 <Barra valor={p.entro} tope={tope} color={INGRESO} />
                 <Barra valor={p.salio} tope={tope} color={GASTO} />
-              </button>
+              </div>
             );
           })}
         </div>
@@ -134,7 +128,7 @@ export function IngresosVsGastos({ conLista = false }: { conLista?: boolean }) {
       {conLista && (
         <div className="flex flex-col pt-1">
           <p className="text-[15px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
-            Ingresos de {esEsteMes ? 'este mes' : nombreMes(elegido, true)}
+            Ingresos de este mes
           </p>
           {ingresosDelMes.length === 0 && (
             <p className="text-[14px] py-2" style={{ color: COLORS.inkSoft }}>No hay ingresos registrados.</p>
@@ -180,7 +174,7 @@ function Leyenda({ color, texto }: { color: string; texto: string }) {
 }
 
 function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingreso; abierto: boolean; onAbrir: () => void; onCerrar: () => void }) {
-  const fuente = FUENTES_INGRESO.find((f) => f.id === i.fuente)?.label;
+  const fuente = i.fuente === 'otro' && i.fuenteOtra ? i.fuenteOtra : FUENTES_INGRESO.find((f) => f.id === i.fuente)?.label;
   const titulo = i.descripcion || fuente || 'Ingreso';
   const monto = i.moneda === 'USD' ? `US$${i.monto.toLocaleString('es-AR')}` : fmtMoney(i.monto);
   return (
