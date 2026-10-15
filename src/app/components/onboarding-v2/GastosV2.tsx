@@ -4,6 +4,7 @@ import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedT
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
+import { diaArgentina } from '../../api/v2/pasos';
 import { Fini } from './Fini';
 import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
@@ -384,23 +385,57 @@ export function GastosV2() {
   const offsetVentana = ventana === 'mes' ? mesOffset : semanaOffset;
 
   const totalGastado = gastosVentana.reduce((s, g) => s + g.montoArs, 0);
+  // Lo que SOBRÓ de los meses anteriores en cada medio de pago, que se suma al
+  // disponible del mes que se mira. Sólo pasa lo que sobra: un mes que cierra
+  // en negativo en un medio no arrastra la deuda, el siguiente arranca en cero.
+  // Se arrastra mes a mes (lo que sobró en agosto entra a septiembre, y lo que
+  // sobre al cierre de septiembre entra a octubre). Los gastos sin medio no se
+  // pueden asignar a ninguno y no arrastran nada. Con "Esta semana" no se
+  // arrastra: la semana se mira sola.
+  const sobranteAnterior = (() => {
+    const sobra = new Map<string, number>();
+    if (ventana !== 'mes') return sobra;
+    const claveVista = mesAtras(mesOffset);
+    const netos = new Map<string, Map<string, number>>(); // mes → medio → neto
+    const sumar = (ts: number, medio: string, delta: number) => {
+      const mes = diaArgentina(ts).slice(0, 7);
+      const deMes = netos.get(mes) ?? new Map<string, number>();
+      deMes.set(medio, (deMes.get(medio) ?? 0) + delta);
+      netos.set(mes, deMes);
+    };
+    for (const i of db.ingresos) if (i.medio) sumar(i.ts, i.medio, i.montoArs);
+    for (const c of db.cargas) sumar(c.ts, c.medio, c.montoArs);
+    for (const g of gastos) {
+      if (g.pagos?.length) for (const p of g.pagos) sumar(g.ts, p.medio, -p.monto);
+      else if (g.metodoPago) sumar(g.ts, g.metodoPago, -g.montoArs);
+    }
+    for (const mes of [...netos.keys()].sort()) {
+      if (mes >= claveVista) break;
+      for (const [medio, neto] of netos.get(mes)!) sobra.set(medio, Math.max(0, (sobra.get(medio) ?? 0) + neto));
+    }
+    return sobra;
+  })();
+
   // Cuánto queda en cada medio de pago EN EL PERÍODO que se está mirando (el
-  // mes o la semana de la torta), no su saldo de toda la vida: lo que entró en
-  // ese medio menos lo que salió de él en esos días. Un gasto dividido resta
-  // a cada medio lo suyo. Los gastos sin medio elegido no se pueden asignar a
-  // ninguno, así que no entran. Las barras se comparan contra el medio con
-  // más margen; un resultado en cero o negativo queda con la barra vacía y se
-  // dice con el número, sin alerta (regla 3: gastar más de lo que entró por un
+  // mes o la semana de la torta): lo que sobró de antes, más lo que entró en
+  // ese medio, menos lo que salió de él en esos días. Un gasto dividido resta
+  // a cada medio lo suyo. Las barras se comparan contra el medio con más
+  // margen; un resultado en cero o negativo queda con la barra vacía y se dice
+  // con el número, sin alerta (regla 3: gastar más de lo que entró por un
   // medio es un dato, no un error).
   const mediosVentana = (() => {
-    const mapa = new Map<string, { entro: number; salio: number }>();
+    const mapa = new Map<string, { previo: number; entro: number; salio: number }>();
     const de = (nombre: string) => {
       let v = mapa.get(nombre);
-      if (!v) { v = { entro: 0, salio: 0 }; mapa.set(nombre, v); }
+      if (!v) { v = { previo: 0, entro: 0, salio: 0 }; mapa.set(nombre, v); }
       return v;
     };
+    for (const [medio, v] of sobranteAnterior) if (v > 0) de(medio).previo = v;
+    let sinMedioEntro = 0;
     for (const i of db.ingresos) {
-      if (i.medio && i.ts >= desdeVentana && i.ts < hastaVentana) de(i.medio).entro += i.montoArs;
+      if (i.ts < desdeVentana || i.ts >= hastaVentana) continue;
+      if (i.medio) de(i.medio).entro += i.montoArs;
+      else sinMedioEntro += i.montoArs;
     }
     // Lo cargado como "Ya la tenía" también cuenta en el mes en que se cargó.
     for (const c of db.cargas) {
@@ -413,22 +448,23 @@ export function GastosV2() {
       else sinMedio += g.montoArs;
     }
     const filas = [...mapa.entries()]
-      .map(([nombre, v]) => ({ nombre, entro: v.entro, salio: v.salio, quedan: v.entro - v.salio }))
+      .map(([nombre, v]) => ({ nombre, previo: v.previo, entro: v.entro, salio: v.salio, quedan: v.previo + v.entro - v.salio }))
       .sort((x, y) => y.quedan - x.quedan);
-    // Lo gastado sin elegir medio también restó del mes: se muestra aparte, al
-    // final, para que las filas sumen lo mismo que el número de arriba.
-    if (sinMedio > 0) filas.push({ nombre: 'Sin medio elegido', entro: 0, salio: sinMedio, quedan: -sinMedio });
+    // Lo que entró o salió sin elegir medio también cuenta en el mes: se
+    // muestra aparte, al final, para que las filas sumen lo mismo que el
+    // número de arriba.
+    if (sinMedio > 0 || sinMedioEntro > 0) {
+      filas.push({ nombre: 'Sin medio elegido', previo: 0, entro: sinMedioEntro, salio: sinMedio, quedan: sinMedioEntro - sinMedio });
+    }
     return filas;
   })();
-  // Dinero disponible DEL PERÍODO: lo cargado ("Me entró" y "Ya la tenía")
-  // menos lo gastado en el mes (o la semana) que se está mirando. Cada mes arranca en cero y los meses
-  // anteriores guardan el suyo. En cero y no en negativo: gastar más de lo que
-  // se cargó como ingreso suele ser que falta cargar ingresos, y se ve en cada
-  // medio de abajo.
-  const entroVentana =
-    db.ingresos.filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana).reduce((t, i) => t + i.montoArs, 0)
-    + db.cargas.filter((c) => c.ts >= desdeVentana && c.ts < hastaVentana).reduce((t, c) => t + c.montoArs, 0);
-  const disponibleVentana = Math.max(entroVentana - totalGastado, 0);
+  // Dinero disponible DEL PERÍODO: lo que sobró de los meses anteriores, más lo
+  // cargado ("Me entró" y "Ya la tenía"), menos lo gastado en el mes (o la
+  // semana) que se está mirando. Es la suma de las filas de abajo. En cero y no
+  // en negativo: gastar más de lo que se cargó suele ser que falta cargar
+  // ingresos, y se ve en cada medio.
+  const previoTotal = mediosVentana.reduce((t, m) => t + m.previo, 0);
+  const disponibleVentana = Math.max(mediosVentana.reduce((t, m) => t + m.quedan, 0), 0);
   const maxQuedan = Math.max(...mediosVentana.map((m) => m.quedan), 0);
   const nombrePeriodoMedios = etiquetaVentana;
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
@@ -719,6 +755,11 @@ export function GastosV2() {
           <div>
             <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Dinero disponible</p>
             <Monto value={disponibleVentana} size={19} className="font-bold" />
+            {previoTotal > 0 && (
+              <p className="text-[12px] leading-snug mt-0.5" style={{ color: COLORS.inkSoft }}>
+                Incluye {fmtMoney(previoTotal)} que sobró del mes anterior
+              </p>
+            )}
           </div>
 
           {/* Cuánto queda en cada medio de pago en el período de la torta, en
@@ -742,7 +783,7 @@ export function GastosV2() {
                       className="h-2 rounded-full overflow-hidden"
                       style={{ background: COLORS.tint }}
                       role="img"
-                      aria-label={`${m.nombre}: entró ${fmtMoney(m.entro)}, salió ${fmtMoney(m.salio)}, queda ${texto}`}
+                      aria-label={`${m.nombre}: ${m.previo > 0 ? `sobró ${fmtMoney(m.previo)} del mes anterior, ` : ''}entró ${fmtMoney(m.entro)}, salió ${fmtMoney(m.salio)}, queda ${texto}`}
                     >
                       <div className="h-full rounded-full" style={{ width: `${maxQuedan > 0 ? (Math.max(m.quedan, 0) / maxQuedan) * 100 : 0}%`, background: COLORS.limaViz }} />
                     </div>
