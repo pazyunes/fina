@@ -5,6 +5,7 @@ import { IconBasura, IconCalendario, IconChevron } from './FinaIcons';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { diaArgentina } from '../../api/v2/pasos';
+import { VerTodos, recortar } from './VerTodos';
 import { FRECUENCIAS, cuandoVence, diasHasta, siguienteVencimiento, type FrecuenciaFija } from '../../api/v2/fechasFijos';
 import type { GastoFijo } from '../../api/v2/tipos';
 
@@ -75,8 +76,7 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">
-          <p id="fijo-titulo" className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Es un gasto fijo</p>
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>Se repite, como el alquiler o el gimnasio. Te avisamos cuando se acerca.</p>
+          <p id="fijo-titulo" className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Es un gasto que se repite</p>
         </div>
         <button
           type="button"
@@ -166,6 +166,7 @@ export function ListaGastosFijos() {
   const [borrando, setBorrando] = useState<string | null>(null);
   const [pagando, setPagando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [verTodos, setVerTodos] = useState(false);
 
   if (estado.gastosFijos.length === 0) return null;
 
@@ -183,7 +184,7 @@ export function ListaGastosFijos() {
     <section data-gastos-fijos className="flex flex-col gap-2 lg:col-span-3 scroll-mt-6">
       <TituloSeccion>Gastos fijos</TituloSeccion>
       <div className="flex flex-col">
-        {estado.gastosFijos.map((g) => {
+        {recortar(estado.gastosFijos, verTodos).map((g) => {
           const n = diasHasta(hoy, g.proximoPago);
           const sePuedePagar = n <= DIAS_PARA_PAGAR;
           return (
@@ -191,12 +192,12 @@ export function ListaGastosFijos() {
               <div className="flex items-center gap-2.5">
                 <span className="shrink-0" style={{ color: COLORS.brand }} aria-hidden><IconCalendario size={18} /></span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
+                  <p className="text-[16px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
                   <p className="text-[14px] truncate" style={{ color: COLORS.inkSoft }}>
-                    {[textoVencimiento(hoy, g.proximoPago), etiquetaFrecuencia(g.frecuencia), nombreSeccion(g.seccionId)].filter(Boolean).join(' · ')}
+                    {[textoVencimiento(hoy, g.proximoPago), etiquetaFrecuencia(g.frecuencia), nombreSeccion(g.seccionId)].filter(Boolean).join(', ')}
                   </p>
                 </div>
-                <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{MONTO(g)}</span>
+                <span className="font-mono tabular-nums text-[16px] shrink-0" style={{ color: COLORS.ink }}>{MONTO(g)}</span>
                 <button
                   type="button"
                   onClick={() => setBorrando(borrando === g.id ? null : g.id)}
@@ -240,6 +241,7 @@ export function ListaGastosFijos() {
           );
         })}
       </div>
+      <VerTodos total={estado.gastosFijos.length} abierta={verTodos} onToggle={() => setVerTodos((v) => !v)} />
       {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>{error}</p>}
     </section>
   );
@@ -274,11 +276,11 @@ export function AvisoVencimientoHome() {
           <IconCalendario size={20} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>
             {proximos.length === 1 ? 'Gasto fijo' : `${proximos.length} gastos fijos`}
           </p>
           <p className="text-[17px] font-bold leading-snug" style={{ color: COLORS.ink }}>
-            {g.descripcion} · <span className="font-mono tabular-nums">{MONTO(g)}</span>
+            {g.descripcion}: <span className="font-mono tabular-nums">{MONTO(g)}</span>
           </p>
           <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{textoVencimiento(hoy, g.proximoPago)}</p>
         </div>

@@ -7,7 +7,7 @@ export const isSupabaseConfigured = Boolean(url && anonKey);
 
 if (!isSupabaseConfigured) {
   // eslint-disable-next-line no-console
-  console.warn('[supabase] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing — reports will not be persisted.');
+  console.warn('[supabase] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing: no session and no data will be saved.');
 }
 
 // ── ¿Se llegó desde un link del mail? ──────────────────────────────────────
@@ -40,8 +40,8 @@ export const LLEGADA_DESDE_MAIL = leerLlegadaDesdeMail();
 export const supabase: SupabaseClient = createClient(
   url ?? 'http://localhost',
   anonKey ?? 'anon',
-  // PR3: persistimos la sesión para soportar login email/contraseña y el
-  // historial por usuario (/perfil). autoRefreshToken mantiene viva la sesión.
+  // Persistimos la sesión para el login con email y contraseña.
+  // autoRefreshToken mantiene viva la sesión.
   // detectSessionInUrl: procesa el token del link de recuperación de contraseña
   // (evento PASSWORD_RECOVERY) cuando la usuaria aterriza en /reset-password.
   { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }

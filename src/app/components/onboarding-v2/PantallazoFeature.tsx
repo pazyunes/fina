@@ -32,7 +32,7 @@ function Encabezado({ icono, texto }: { icono: React.ReactNode; texto: string })
       <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}>
         {icono}
       </span>
-      <span className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
+      <span className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>
         {texto}
       </span>
     </div>

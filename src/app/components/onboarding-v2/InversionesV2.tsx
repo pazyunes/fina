@@ -6,6 +6,7 @@ import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
 import { useDisplayCurrency, useMoney } from '../../lib/displayCurrency';
 import { cotizacionDolar } from '../../api/v2/cotizacion';
+import { VerTodos, recortar } from './VerTodos';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
 // explícito): un mini-quiz corto arma un perfil de riesgo real (no fijo),
@@ -35,27 +36,27 @@ type Instrumento = { id: string; nombre: string; desc: string; porQue: string; r
 const INSTRUMENTOS: Instrumento[] = [
   {
     id: 'cuenta_remunerada', nombre: 'Cuenta remunerada', desc: 'Tu plata rinde todos los días y la sacás cuando quieras.',
-    porQue: 'Te la recomendamos porque no perdés acceso a la plata ni un solo día — sirve como base antes de meterte en algo más largo, y por eso la sugerimos casi sin importar tu perfil.',
+    porQue: 'Te la recomendamos porque no perdés acceso a la plata ni un solo día. Sirve como base antes de meterte en algo más largo, y por eso la sugerimos casi sin importar tu perfil.',
     riesgo: 'Bajo', apps: ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank'], perfiles: ['conservador', 'moderado', 'arriesgado'],
   },
   {
     id: 'plazo_fijo', nombre: 'Plazo fijo UVA', desc: 'Dejás la plata quieta un tiempo y sigue la inflación.',
-    porQue: 'Te la recomendamos porque, dijiste que preferís cuidar lo que tenés antes que arriesgar — esto ajusta por inflación sin que tengas que mirar el mercado todos los días.',
+    porQue: 'Te la recomendamos porque dijiste que preferís cuidar lo que tenés antes que arriesgar. Esto ajusta por inflación sin que tengas que mirar el mercado todos los días.',
     riesgo: 'Bajo', apps: ['Banco tradicional', 'Mercado Pago', 'Ualá'], perfiles: ['conservador', 'moderado'],
   },
   {
     id: 'fci', nombre: 'Fondo Común de Inversión', desc: 'Un equipo profesional invierte por vos, retiro rápido.',
-    porQue: 'Te la recomendamos porque buscás algo de crecimiento sin manejarlo vos misma — un equipo decide dónde poner la plata, y la podés sacar en pocos días si la necesitás.',
+    porQue: 'Te la recomendamos porque buscás algo de crecimiento sin manejarlo vos misma: un equipo decide dónde poner la plata, y la podés sacar en pocos días si la necesitás.',
     riesgo: 'Medio', apps: ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank'], perfiles: ['moderado', 'arriesgado'],
   },
   {
     id: 'dolar_mep', nombre: 'Dólar MEP', desc: 'Protegés lo ahorrado de la devaluación.',
-    porQue: 'Te la recomendamos porque tu prioridad parece ser no perder poder de compra frente al dólar — no crece como una inversión de riesgo, pero cuida el valor de lo que ya juntaste.',
+    porQue: 'Te la recomendamos porque tu prioridad parece ser no perder poder de compra frente al dólar. No crece como una inversión de riesgo, pero cuida el valor de lo que ya juntaste.',
     riesgo: 'Medio', apps: ['Banco tradicional', 'Brubank'], perfiles: ['moderado', 'arriesgado'],
   },
   {
     id: 'cedears', nombre: 'CEDEARs', desc: 'Pedacitos de empresas grandes del exterior, en pesos.',
-    porQue: 'Te la recomendamos porque contestaste que te bancás la volatilidad a cambio de más potencial — subís y bajás con el mercado internacional, pero a largo plazo históricamente crece.',
+    porQue: 'Te la recomendamos porque contestaste que te bancás la volatilidad a cambio de más potencial. Subís y bajás con el mercado internacional, pero a largo plazo históricamente crece.',
     riesgo: 'Alto', apps: ['Banco tradicional'], perfiles: ['arriesgado'],
   },
 ];
@@ -281,6 +282,8 @@ export function InversionesV2() {
     ts: a.ts,
   })), [db.aportes]);
   const [errorAporte, setErrorAporte] = useState<string | null>(null);
+  // "Tus registros" muestra los primeros y "Ver todos" (§3.5, mostrar menos).
+  const [verTodosAportes, setVerTodosAportes] = useState(false);
   const [aporteMonto, setAporteMonto] = useState('');
   const [aporteInstrId, setAporteInstrId] = useState<string>(INSTRUMENTOS[0].id);
   // Moneda en la que se está cargando ESTE aporte. Es independiente de la
@@ -339,6 +342,9 @@ export function InversionesV2() {
   const recomendados = INSTRUMENTOS.filter((i) => i.perfiles.includes(perfilId))
     .sort((a, b) => Number(yaEnIds.has(a.id)) - Number(yaEnIds.has(b.id)))
     .slice(0, 3);
+  // La primera es LA recomendación (va arriba, grande); las otras, en la pestaña.
+  const principal: Instrumento | undefined = recomendados[0];
+  const otrasRecos = recomendados.slice(1);
 
   /** Devuelve si se pudo cargar: el modal se cierra sólo si salió bien. */
   async function agregarAporte(): Promise<boolean> {
@@ -365,7 +371,6 @@ export function InversionesV2() {
             personaje NO aparece en inversiones (plata seria). */}
         <header data-franja className="pb-1 mb-2">
           <Titulo>Inversiones</Titulo>
-          <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
         </header>
         <button
           type="button"
@@ -376,8 +381,8 @@ export function InversionesV2() {
           <span className="text-[20px] font-bold" style={{ color: COLORS.ink }}>Averiguá tu perfil de inversor</span>
           <span className="text-[15px]" style={{ color: COLORS.inkSoft }}>
             {prefilledPerfil
-              ? 'Ya nos contaste algo de esto en el onboarding — te faltan un par de preguntas más.'
-              : '2 minutos, para que las recomendaciones tengan que ver con vos — sin comprometerte a nada.'}
+              ? 'Ya nos contaste algo de esto en el onboarding. Te faltan un par de preguntas más.'
+              : '2 minutos, para que las recomendaciones tengan que ver con vos. No te compromete a nada.'}
           </span>
           <span className="self-end" style={{ color: COLORS.brand }}><IconChevron size={20} /></span>
         </button>
@@ -467,7 +472,7 @@ export function InversionesV2() {
             })()}
           </div>
 
-          <p className="text-[13px] leading-snug pt-1" style={{ color: COLORS.inkFaint }}>
+          <p className="text-[14px] leading-snug pt-1" style={{ color: COLORS.inkFaint }}>
             Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.
           </p>
         </div>
@@ -593,7 +598,7 @@ export function InversionesV2() {
                 {/* Se dice el equivalente y con qué cotización queda guardado,
                     para que no haya sorpresa después. */}
                 {aporteMoneda === 'USD' && rate && parseMoneyInput(aporteMonto) > 0 && (
-                  <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                  <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
                     Son <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{fmtMoney(parseMoneyInput(aporteMonto) * rate)}</span> al blue de hoy
                     (<span className="font-mono tabular-nums">{fmtMoney(rate)}</span>). Queda guardado a esa cotización.
                   </p>
@@ -665,55 +670,42 @@ export function InversionesV2() {
         {modalDetalle}
         {modalAporte}
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
-          {/* Banda editorial full-bleed. Sin Fini (guía §6): el personaje nunca
-              va cerca de un dato, y menos en inversiones. */}
-          <header data-franja className="pb-1 mb-2">
+          {/* Sin Fini (guía §6): el personaje nunca va cerca de un dato, y
+              menos en inversiones. */}
+          <header data-franja className="pb-1">
             <Titulo>Inversiones</Titulo>
-            <p className="text-[15px] mt-1" style={{ color: COLORS.inkSoft }}>Según tu perfil, esto es lo que te conviene.</p>
           </header>
-          {/* El perfil en una línea + el toggle de moneda, que ahora sí hace
-              algo. Cuando no hay cotización (local, o si la función falla) el
-              USD queda deshabilitado y se dice por qué, en vez de ofrecer un
-              botón que no responde. */}
-          <div className="flex items-start justify-between gap-3">
-            <p className="flex-1 text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              Sos <span className="font-bold" style={{ color: pl.strong }}>perfil {perfil.label.toLowerCase()}</span>: {perfil.copy.charAt(0).toLowerCase() + perfil.copy.slice(1)}
-            </p>
-            <div className="flex rounded-full p-0.5 shrink-0" style={{ background: COLORS.tint }}>
-              {(['ARS', 'USD'] as const).map((c) => {
-                const sinCotizacion = c === 'USD' && !rate;
-                const activo = currency === c;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => !sinCotizacion && setCurrency(c)}
-                    aria-pressed={activo}
-                    aria-disabled={sinCotizacion || undefined}
-                    title={sinCotizacion ? 'Todavía no tenemos la cotización del dólar' : `Ver en ${c === 'ARS' ? 'pesos' : 'dólares'}`}
-                    className="v2-focus rounded-full px-3 py-1.5 text-[13px] font-bold transition-colors duration-150"
-                    style={activo
-                      ? { background: COLORS.brand, color: COLORS.surface }
-                      : { color: sinCotizacion ? COLORS.inkFaint : COLORS.inkSoft, cursor: sinCotizacion ? 'not-allowed' : 'pointer' }}
-                  >
-                    {c === 'ARS' ? 'Pesos' : 'USD'}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          {/* Un monto convertido es un dato DERIVADO, no declarado: se dice a
-              qué se convirtió y con qué (§5). Sin esto, "US$ 120" parece que
-              pusiste dólares, cuando pusiste pesos. */}
-          {isUsd && (
-            <p className="text-[13px] leading-snug pl-3.5 border-l-2 -mt-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-              El total está pasado a dólares con el blue de hoy. Cada registro se muestra en la moneda en que lo cargaste.
-            </p>
+
+          {/* EL dato de la pantalla (§3.5): lo que te conviene según tu
+              perfil. Es la única tarjeta elevada; el resto (las otras
+              opciones, tus registros, el simulador) va debajo, más chico. */}
+          {principal && (
+            <section
+              aria-label={`Recomendación para tu perfil ${perfil.label.toLowerCase()}`}
+              className="rounded-2xl px-5 py-5 flex flex-col gap-2"
+              style={{ background: COLORS.surface, boxShadow: '0 2px 8px rgba(43,33,24,0.08)' }}
+            >
+              <p className="text-[15px] font-medium" style={{ color: COLORS.inkSoft }}>
+                Para tu perfil <span className="font-bold" style={{ color: pl.strong }}>{perfil.label.toLowerCase()}</span>
+              </p>
+              <p className="text-[28px] font-bold leading-tight tracking-[-0.01em]" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+                {principal.nombre}
+              </p>
+              <p className="text-[16px] leading-snug" style={{ color: COLORS.inkSoft }}>{principal.desc}</p>
+              <button
+                type="button"
+                onClick={() => setDetalle(principal)}
+                className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] mt-1 text-[16px] font-bold"
+                style={{ color: COLORS.brand }}
+              >
+                Ver por qué <IconChevron size={16} />
+              </button>
+            </section>
           )}
 
           <Tabs
             options={[
-              { id: 'recos' as Tab, label: 'Recomendaciones' },
+              { id: 'recos' as Tab, label: 'Otras opciones' },
               { id: 'mias' as Tab, label: 'Mis inversiones' },
               { id: 'evolucion' as Tab, label: 'Simular' },
             ]}
@@ -724,23 +716,13 @@ export function InversionesV2() {
           {tab === 'recos' && (
             <div className="flex flex-col gap-1">
               {enQue.length > 0 && (
-                <p className="text-[14px] leading-snug font-semibold pl-3.5 border-l-2" style={{ color: COLORS.limaText, borderColor: COLORS.lima }}>
-                  Ya invertís en {enQue.join(', ')} — priorizamos otras opciones para diversificar.
+                <p className="text-[15px] leading-snug pl-3.5 border-l-2 mb-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.lima }}>
+                  Ya invertís en {enQue.join(', ')}, así que priorizamos otras opciones para diversificar.
                 </p>
               )}
-              {/* DIVULGACIÓN PROGRESIVA. Antes cada fila mostraba a la vez el
-                  nombre, una pastilla de riesgo, dónde tenerlo, "ya lo hacés"
-                  y un desplegable con el porqué: cinco datos por ítem, quince
-                  en pantalla, para alguien que capaz nunca invirtió. Ahora la
-                  fila dice UNA cosa —qué es, en criollo— y todo lo demás vive
-                  en el detalle, a un toque.
-
-                  Un cambio de fondo: la fila mostraba "lo tenés a mano desde tu
-                  X" EN LUGAR de la descripción. Para quien no sabe qué es un
-                  FCI, saber desde qué app se hace no le sirve de nada si antes
-                  no sabe qué es. La descripción manda; el banco pasa al
-                  detalle, que es donde importa cuando ya decidiste. */}
-              {recomendados.map((r) => {
+              {/* Cada fila dice UNA cosa (qué es, en criollo); el riesgo, el
+                  porqué y desde dónde hacerlo viven en el detalle, a un toque. */}
+              {otrasRecos.map((r) => {
                 const already = yaEnIds.has(r.id);
                 return (
                   <button
@@ -752,9 +734,9 @@ export function InversionesV2() {
                   >
                     <span className="flex-1 min-w-0 flex flex-col gap-0.5">
                       <span className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-[17px]" style={{ color: COLORS.ink }}>{r.nombre}</span>
+                        <span className="font-semibold text-[17px]" style={{ color: COLORS.ink }}>{r.nombre}</span>
                         {already && (
-                          <span className="text-[12px] font-semibold rounded-full px-2 py-0.5" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
+                          <span className="text-[14px] font-semibold rounded-full px-2 py-0.5" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
                             Ya lo hacés
                           </span>
                         )}
@@ -765,7 +747,7 @@ export function InversionesV2() {
                   </button>
                 );
               })}
-              <p className="text-[12px] px-1" style={{ color: COLORS.inkFaint }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
+              <p className="text-[14px] leading-snug pt-2" style={{ color: COLORS.inkFaint }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
             </div>
           )}
 
@@ -781,40 +763,64 @@ export function InversionesV2() {
                   centerValue={fmtKpi(totalAportado)}
                   size={100}
                 />
-                <div className="flex-1 flex flex-col gap-1.5">
-                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Vas registrando lo que ponés en cada instrumento acá abajo.</p>
+                <div className="flex-1 flex flex-col gap-2 items-start">
                   {/* Lo invertido es lo que la persona cargó: dato declarado (§5). */}
                   <EstadoConfianza estado="declarado" />
+                  {/* Moneda en la que se ve el total. Sin cotización (local, o
+                      si la función falla) el USD queda deshabilitado y se dice
+                      por qué en el title. */}
+                  <div className="flex rounded-full p-0.5" style={{ background: COLORS.tint }}>
+                    {(['ARS', 'USD'] as const).map((c) => {
+                      const sinCotizacion = c === 'USD' && !rate;
+                      const activo = currency === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => !sinCotizacion && setCurrency(c)}
+                          aria-pressed={activo}
+                          aria-disabled={sinCotizacion || undefined}
+                          title={sinCotizacion ? 'Todavía no tenemos la cotización del dólar' : `Ver en ${c === 'ARS' ? 'pesos' : 'dólares'}`}
+                          className="v2-focus rounded-full px-3 min-h-[36px] text-[14px] font-bold transition-colors duration-150"
+                          style={activo
+                            ? { background: COLORS.brand, color: COLORS.surface }
+                            : { color: sinCotizacion ? COLORS.inkFaint : COLORS.inkSoft, cursor: sinCotizacion ? 'not-allowed' : 'pointer' }}
+                        >
+                          {c === 'ARS' ? 'Pesos' : 'USD'}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
+              {/* Un monto convertido es un dato DERIVADO, no declarado: se dice a
+                  qué se convirtió y con qué (§5). */}
+              {isUsd && (
+                <p className="text-[14px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+                  El total está pasado a dólares con el blue de hoy. Cada registro se muestra en la moneda en que lo cargaste.
+                </p>
+              )}
 
-              {/* Registrar un aporte pasa de formulario siempre abierto a
-                  botón. El formulario ocupaba media pantalla y empujaba los
-                  registros —que es lo que uno viene a mirar— abajo del fondo.
-                  Ahora el botón abre un paso que primero explica qué es esto
-                  (registrar no mueve plata: FINA no toca tu dinero) y recién
-                  después pide instrumento y monto. */}
+              {/* Registrar abre un paso que primero explica que esto no mueve
+                  plata y recién después pide instrumento y monto. */}
               <button
                 type="button"
                 onClick={() => abrirAlta()}
-                className="v2-focus w-full rounded-2xl py-4 text-[17px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
-                style={{ background: COLORS.brand, color: COLORS.surface, boxShadow: '0 10px 24px -8px rgba(118,38,179,0.45)' }}
+                className="v2-focus w-full rounded-2xl py-3.5 text-[16px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
+                style={{ background: COLORS.brand, color: COLORS.surface }}
               >
                 + Registrar un aporte
               </button>
 
-              {/* Los registros se ven sin apretar nada. */}
               <div className="flex flex-col gap-2 pt-2">
                 <TituloSeccion>Tus registros</TituloSeccion>
                 {aportes.length === 0 ? (
-                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes. Cuando sumes el primero, lo vas a ver acá.</p>
+                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>
                 ) : (
                   <div className="flex flex-col">
-                    {/* Cada registro se toca para editarlo o borrarlo. Se
-                        prefiere abrir el mismo formulario antes que meter dos
-                        iconos por fila: con cinco registros serían diez
-                        controles chiquitos compitiendo con el dato. */}
-                    {aportes.map((a) => (
+                    {/* Cada registro se toca para editarlo o borrarlo: abre el
+                        mismo formulario en vez de meter dos iconos por fila. */}
+                    {recortar(aportes, verTodosAportes).map((a) => (
                       <button
                         key={a.id}
                         type="button"
@@ -824,19 +830,18 @@ export function InversionesV2() {
                         style={{ borderColor: COLORS.line }}
                       >
                         <span className="flex-1 min-w-0 flex flex-col">
-                          <span className="text-[15px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
+                          <span className="text-[16px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
                           <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
                         </span>
-                        {/* Se muestra lo que cargaste, en la moneda en que lo
-                            cargaste: eso es el hecho y no se convierte nunca.
-                            Lo que sí respeta el toggle de arriba es el TOTAL,
-                            que es un derivado. */}
-                        <span className="text-[15px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>
+                        {/* Lo que cargaste, en la moneda en que lo cargaste: es
+                            el hecho y no se convierte nunca. */}
+                        <span className="text-[16px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>
                           {monedaDe(a) === 'USD' ? `US$ ${a.monto.toLocaleString('es-AR')}` : fmtMoney(a.monto)}
                         </span>
                         <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={16} /></span>
                       </button>
                     ))}
+                    <VerTodos total={aportes.length} abierta={verTodosAportes} onToggle={() => setVerTodosAportes((v) => !v)} />
                   </div>
                 )}
               </div>
@@ -926,7 +931,6 @@ export function InversionesV2() {
       {paso === 'bancos' && (
         <>
           <Titulo>¿Qué bancos o billeteras usás?</Titulo>
-          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Así te decimos exactamente desde dónde hacerlo.</p>
           <div className="flex flex-wrap gap-2.5">
             {BANCOS.map((b) => (
               <Chip key={b} on={bancos.includes(b)} onClick={() => toggleBanco(b)}>{b}</Chip>
@@ -991,13 +995,13 @@ const SUPUESTOS: Record<string, Supuesto> = {
     instrumentoId: 'dolar_mep',
     tna: null,
     comoFunciona: 'Comprar dólares no genera intereses: no hay un rendimiento que simular. Lo que hace es proteger lo que juntaste de una devaluación, y cuánto suba el dólar no lo sabe nadie.',
-    fuente: '—',
+    fuente: '',
   },
   cedears: {
     instrumentoId: 'cedears',
     tna: 0.10,
     enDolares: true,
-    comoFunciona: 'Son pedacitos de empresas del exterior. El 10% anual es el promedio histórico del S&P 500 en dólares a largo plazo — hubo años de +25% y años de −20%.',
+    comoFunciona: 'Son pedacitos de empresas del exterior. El 10% anual es el promedio histórico del S&P 500 en dólares a largo plazo. Hubo años de +25% y años de -20%.',
     fuente: 'Rendimiento medio anualizado del S&P 500, 1928-2024',
   },
 };
@@ -1111,7 +1115,6 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
     aportado.push(acumAp); proyectado.push(acumProy); lo.push(acumLo); hi.push(acumHi);
   }
   const totalAportado = aportado[aportado.length - 1] ?? 0;
-  const proyFinal = proyectado[proyectado.length - 1] ?? 0;
 
   // EL DATO HONESTO. Una tasa nominal alta con inflación más alta es una
   // pérdida de poder de compra, y en pesos eso no se ve: $1.200.000 dentro de
@@ -1124,20 +1127,26 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
   // comparar el resultado real contra la SUMA NOMINAL de las cuotas subestima
   // siempre (esa suma mezcla pesos de hoy con pesos de dentro de dos años).
   // Se descuenta cuota por cuota.
-  const proyReal = proyFinal / Math.pow(1 + INFLACION_MENSUAL, meses);
+  // Todo lo proyectado es ESTIMADO (§5.1): se muestra como rango, nunca como
+  // número exacto. El rango sale de la misma banda del gráfico (media tasa /
+  // tasa y media).
+  const loFinal = lo[lo.length - 1] ?? 0;
+  const hiFinal = hi[hi.length - 1] ?? 0;
+  const deflactor = Math.pow(1 + INFLACION_MENSUAL, meses);
+  const loReal = loFinal / deflactor;
+  const hiReal = hiFinal / deflactor;
   let aportadoReal = 0;
   for (let i = 1; i <= meses; i++) aportadoReal += montoNum / Math.pow(1 + INFLACION_MENSUAL, i);
-  const ganaPoderDeCompra = proyReal > aportadoReal;
+  // Contra lo que pusiste medido igual: le gana en todo el rango, en nada, o
+  // depende de cómo rinda.
+  const contraInflacion: 'gana' | 'pierde' | 'depende' = loReal > aportadoReal ? 'gana' : hiReal <= aportadoReal ? 'pierde' : 'depende';
 
   return (
     <div className={BLOQUE}>
-      <TituloSeccion>Probá antes de invertir plata real</TituloSeccion>
-      <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-        Elegí un instrumento y un monto imaginario. No mueve plata: es para ver cómo funciona cada uno.
-      </p>
+      <TituloSeccion>Simulá con plata imaginaria</TituloSeccion>
 
       <div className="flex flex-col gap-2.5">
-        <TituloSeccion>¿En qué?</TituloSeccion>
+        <p className="text-[16px] font-semibold" style={{ color: COLORS.ink }}>¿En qué?</p>
         <OpcionesGrid
           opciones={INSTRUMENTOS.map((i) => ({ id: i.id, label: i.nombre }))}
           valor={instrId}
@@ -1146,7 +1155,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
       </div>
 
       <div className="flex flex-col gap-2.5">
-        <TituloSeccion>¿Cuánto por mes?</TituloSeccion>
+        <p className="text-[16px] font-semibold" style={{ color: COLORS.ink }}>¿Cuánto por mes?</p>
         <div className="relative">
           <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
           <input
@@ -1179,10 +1188,19 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
 
       {montoNum > 0 && (
         <>
+          {rinde && (
+            <div className="flex flex-col gap-1.5 pt-1" aria-live="polite">
+              <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>A los {meses} meses podrías tener</p>
+              <Rango min={loFinal} max={hiFinal} />
+              <EstadoConfianza estado="estimado" />
+            </div>
+          )}
+
           <GraficoSimulacion aportado={aportado} proyectado={proyectado} lo={lo} hi={hi} meses={meses} mostrarBanda={rinde} />
 
-          {/* Leyenda: con dos series siempre va, y además cada una lleva su
-              cifra al lado, así la identidad no depende del color. */}
+          {/* Leyenda: con dos series siempre va. Lo que pondrías es un dato
+              (la suma de las cuotas); lo que podrías tener ya está arriba,
+              como rango. */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2.5">
               <span className="w-4 h-[2px] rounded-full shrink-0" style={{ background: COLORS.ink }} />
@@ -1192,59 +1210,48 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
             {rinde && (
               <div className="flex items-center gap-2.5">
                 <span className="w-4 h-[2.5px] rounded-full shrink-0" style={{ background: COLORS.brand }} />
-                <span className="flex-1 text-[15px]" style={{ color: COLORS.inkSoft }}>Lo que podrías tener</span>
-                <span className="font-mono tabular-nums font-semibold text-[15px]" style={{ color: COLORS.brand }}>{fmtMoney(proyFinal)}</span>
+                <span className="flex-1 text-[15px]" style={{ color: COLORS.inkSoft }}>Lo que podrías tener, estimado</span>
               </div>
             )}
           </div>
 
-          {rinde ? (
-            <div className="flex flex-col gap-2.5 pt-1">
-              <div className="flex flex-col gap-1.5">
-                <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>A los {meses} meses podrías tener</p>
-                <Rango min={lo[lo.length - 1]} max={hi[hi.length - 1]} />
-                <EstadoConfianza estado="estimado" />
-              </div>
-
-              {/* En Argentina el número nominal engaña: $1.200.000 el año que
-                  viene parecen más que $1.000.000 hoy aunque compren menos. */}
-              {!sup?.enDolares && (
-                <div className="flex flex-col gap-1.5 pt-1 pl-3.5 border-l-2" style={{ borderColor: ganaPoderDeCompra ? COLORS.lima : COLORS.star }}>
-                  <p className="text-[14px] font-semibold" style={{ color: COLORS.ink }}>En plata de hoy</p>
-                  <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-                    Con una inflación de {Math.round(INFLACION_ANUAL_ESPERADA * 100)}% anual, esos{' '}
-                    <span className="font-mono tabular-nums">{fmtMoney(proyFinal)}</span> comprarían como{' '}
-                    <span className="font-mono tabular-nums font-bold" style={{ color: COLORS.ink }}>{fmtMoney(proyReal)}</span> de hoy
-                    {ganaPoderDeCompra
-                      ? `, contra ${fmtMoney(aportadoReal)} que habrías puesto medido igual: le ganás a la inflación.`
-                      : `, contra ${fmtMoney(aportadoReal)} que habrías puesto medido igual: con este instrumento no le ganás a la inflación, la seguís de cerca.`}
-                  </p>
-                </div>
-              )}
+          {/* En Argentina el número nominal engaña: $1.200.000 el año que
+              viene parecen más que $1.000.000 hoy aunque compren menos. */}
+          {rinde && !sup?.enDolares && (
+            <div className="flex flex-col gap-1.5 pt-1 pl-3.5 border-l-2" style={{ borderColor: contraInflacion === 'gana' ? COLORS.lima : COLORS.star }}>
+              <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>En plata de hoy</p>
+              <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                Con una inflación de {Math.round(INFLACION_ANUAL_ESPERADA * 100)}% anual, comprarían como{' '}
+                <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>entre {fmtMoney(loReal)} y {fmtMoney(hiReal)}</span> de hoy.{' '}
+                {contraInflacion === 'gana'
+                  ? 'Le ganás a la inflación.'
+                  : contraInflacion === 'pierde'
+                    ? 'Con este instrumento no le ganás a la inflación, la seguís de cerca.'
+                    : 'Según cómo rinda, le ganás a la inflación o la seguís de cerca.'}
+              </p>
+              <EstadoConfianza estado="estimado" />
             </div>
-          ) : (
-            <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-              {sup?.comoFunciona}
-            </p>
           )}
 
           {/* Con qué se hizo la cuenta. Sin esto, "tendrías tanto" es un número
-              sin respaldo — y no todos los instrumentos funcionan igual. */}
+              sin respaldo, y no todos los instrumentos funcionan igual. */}
           <div className="flex flex-col gap-1.5 pt-1">
-            <TituloSeccion>Cómo se hizo esta cuenta</TituloSeccion>
+            <p className="text-[16px] font-semibold" style={{ color: COLORS.ink }}>Cómo se hizo esta cuenta</p>
             <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{sup?.comoFunciona}</p>
             {rinde && (
-              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
                 Supuesto: <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>
                   {Math.round((sup!.tna as number) * 100)}% anual{sup?.enDolares ? ' en dólares' : ''}
                 </span>
                 {sup?.ajustaPorInflacion ? ' (inflación esperada + spread).' : '.'}{' '}
-                La banda del gráfico va de la mitad a una vez y media esa tasa, porque ninguna es fija.
+                El rango va de la mitad a una vez y media esa tasa, porque ninguna es fija.
               </p>
             )}
-            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
-              Fuente: {sup?.fuente}. Datos de {FECHA_SUPUESTOS} — las tasas cambian.
-            </p>
+            {sup?.fuente && (
+              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkFaint }}>
+                Fuente: {sup.fuente}. Datos de {FECHA_SUPUESTOS}; las tasas cambian.
+              </p>
+            )}
           </div>
         </>
       )}
@@ -1256,4 +1263,3 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
     </div>
   );
 }
-

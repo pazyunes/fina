@@ -1,163 +1,131 @@
-# FINA — Resumen del proyecto y de los cambios
+# FINA, resumen del proyecto
 
-> Documento vivo para entender qué es FINA, cómo está armado, cómo se
-> despliega y qué se fue trabajando. Pensado también para que alguien nuevo
-> (ej. una colaboradora) se ponga al día rápido.
+Documento vivo para ponerse al día rápido: qué es FINA, cómo está armada la app hoy (la v2),
+dónde viven los datos y cómo se trabaja y se despliega. Lo pendiente no está acá sino en
+`DEBT.md`; las reglas de diseño y de código, en `src/styles/frontend.md`; las reglas que no
+se negocian, en `CLAUDE.md`.
 
----
+## Qué es
 
-## 1. Qué es FINA
+App web de finanzas personales para gente joven en Argentina que nunca tuvo educación
+financiera. Hace visible la plata, no la administra ni la juzga. Los gastos y los ingresos
+entran sobre todo por un bot de WhatsApp (vive en otro repo y escribe en la misma base con
+la `service_role` key); la app devuelve claridad, objetivos y recomendaciones. Producción:
+https://somosfina.com.ar.
 
-App web de finanzas personales para mujeres en Argentina. Deployada en Vercel:
+La app vieja (v1: el informe en `/result`, el onboarding de pasos, `reports.user_data`) se
+borró del código. Sus direcciones siguen existiendo sólo como redirecciones a la v2, en
+`src/app/routes.tsx`, por si alguien las tiene guardadas.
 
-- **Producción:** https://somosfina.com.ar (y `fina-ashen.vercel.app`)
-- La app te arma un **informe financiero** a partir de un onboarding, te muestra
-  un **presupuesto por categoría**, **objetivos de ahorro**, una sección de
-  **inversiones** y un **perfil** editable.
-- Hay (aparte, ya funcionando) un **chatbot de WhatsApp** que registra gastos e
-  ingresos en tiempo real y escribe en la misma base de datos (Supabase). Vive en
-  un server/repo aparte y se conecta con la `service_role` key (saltea RLS).
+## Stack
 
----
+Vite + React 18 + TypeScript, como SPA. Ruteo con `react-router` (`createBrowserRouter`).
+Tailwind 4, animaciones con `motion/react`, íconos propios en `FinaIcons.tsx` y algunos de
+`lucide-react`, avisos con `sonner`. Una sola familia tipográfica, Poppins. Backend en
+Supabase (Postgres con RLS, Auth y Storage). Funciones serverless en `api/` sobre Vercel,
+con la IA de recomendaciones en Anthropic. Gestor de paquetes: pnpm (`pnpm-lock.yaml`; no
+usar `npm install`, que crea un `package-lock.json`).
 
-## 2. Stack técnico
+## Rutas y pantallas
 
-- **Frontend:** Vite + React + TypeScript (SPA).
-- **Ruteo:** react-router (`createBrowserRouter`, layouts con `Outlet`).
-- **UI:** Tailwind CSS, componentes propios en `src/app/components/ui`,
-  animaciones con `motion/react`, íconos `lucide-react`, gráficos `recharts`.
-- **Backend:** Supabase (Postgres + RLS + Auth con anon key).
-- **Deploy:** Vercel, conectado al repo de GitHub. **Cada push a `main`
-  redeploya solo.**
+`/` decide: sin sesión va a `/onboarding-v2`, con sesión a `/onboarding-v2/home`
+(`RootRedirect.tsx`). El onboarding es la puerta de entrada y crea la cuenta en el último
+paso. `/onboarding-v2/entrar` es el login, `/onboarding-v2/terminos` los términos y la
+política de privacidad, y `/reset-password` recibe el link del mail de recuperación.
 
-### Cómo correr y buildear (local)
+Con sesión, dentro de `V2Layout` (que tiene la puerta de sesión, el menú lateral en
+desktop y la barra de abajo en el celular): Home (`/onboarding-v2/home`, el paso del día,
+la racha, ingresos y gastos por mes y la recomendación de la IA), Gastos
+(`/onboarding-v2/gastos`, gastos e ingresos, secciones con tope, medios de pago con saldo,
+gastos fijos), Objetivos, Inversiones (perfil inversor y aportes, sobre fondo oscuro),
+Perfil (datos, teléfono verificado por WhatsApp, notificaciones) y Grupos
+(`/onboarding-v2/grupos`, hoy fuera del menú). `/onboarding-v2/fini` es el banco de pruebas
+del personaje y sólo existe en `npm run dev`. Todos los componentes de estas pantallas están
+en `src/app/components/onboarding-v2/`.
+
+`src/app/mantenimiento.ts` tiene una puerta (`APP_CERRADA`) que muestra "Próximamente" a
+todo el mundo; hoy está abierta.
+
+## Capa de datos
+
+Ningún componente habla con Supabase ni hace `fetch` directo: todo pasa por
+`src/app/api/v2/`. `index.ts` tiene las lecturas y escrituras contra las tablas,
+`almacen.ts` y `AlmacenProvider.tsx` guardan en memoria todo lo de la persona (se hidrata
+una vez al entrar y las pantallas leen de ahí; las escrituras van a la base y, si fallan,
+la pantalla vuelve atrás y aparece una banda de "Algo no se guardó"), `acciones.ts` agrupa
+las acciones de la interfaz, `tipos.ts` los tipos, `cotizacion.ts` y `conversion.ts` el
+dólar, `recomendaciones.ts` y `pasos.ts` la IA y el paso del día, `notificaciones.ts` las
+notificaciones push. La sesión vive en `src/app/lib/auth.tsx` y el cliente de Supabase en
+`src/app/lib/supabase.ts`.
+
+Del lado del servidor, en `api/`: `dolar.ts` (cotización del blue, la escribe con service
+role), `recomendaciones.ts` (una llamada al modelo por día y por persona),
+`notificaciones.ts` (cron de Vercel dos veces por día, ver `vercel.json`) y
+`notificacion-prueba.ts`. Las variables de entorno están listadas en `.env.example`.
+
+## Tablas
+
+Lo de cada persona: `user_profiles` (datos y respuestas del onboarding en
+`onboarding_v2`), `transactions` (gastos e ingresos, con `type` `expense` o `income`,
+`source` `web` o `whatsapp`, pagos divididos en `payment_methods`), `payment_methods`
+(medios con su saldo, movido siempre con `mover_saldo`), `balance_loads` (cargas de "Ya la
+tenía"), `expense_sections`, `recurring_expenses` (gastos fijos), `goals` y
+`goal_contributions`, `investment_profiles` e `investment_contributions`, `daily_steps`
+(paso del día y racha), `recommendations`, `recommendation_checks` y
+`recommendation_memory`, `push_subscriptions`, `notification_prefs` y `notification_log`,
+`phone_verifications` y `phone_verification_attempts`, `feedback`. Grupos: `groups`,
+`group_members`, `group_expense_splits` y la vista `group_member_names`. Compartida:
+`exchange_rates`. Las fotos de perfil van al bucket `avatars` de Storage.
+
+Quedan tablas de la v1 que la app ya no lee (`reports`, `incomes`, `fixed_expenses`,
+`variable_expense_estimates`, `user_preferences`); el bot o datos viejos pueden seguir
+teniéndolas, así que no se borran sin revisar antes.
+
+## Migraciones
+
+Están en `supabase/migrations/`, numeradas de 0001 a 0040, y se corren a mano en el SQL
+editor de Supabase, una por vez y en orden (no hay CLI). Hasta la 0038 están corridas. La
+0039 (seguridad, DEBT S1 a S5) y la 0040 (cada movimiento de plata en una sola transacción,
+DEBT D3) están escritas y **pendientes de correr a mano**; antes de la 0039 hay que cargar
+`SUPABASE_SERVICE_ROLE_KEY` en Vercel. Qué hace cada una y qué probar después está en
+`supabase/README-migraciones-v2.md`. Toda tabla con RLS necesita su policy de UPDATE: si
+falta, los updates fallan en silencio.
+
+## Cómo se trabaja y se despliega
+
+Nunca se trabaja directo en `main`. Cada cambio va en una rama (hoy `juaniBranch`); cada
+push de la rama arma una preview en Vercel para verlo antes de mergear, y el merge a `main`
+es lo que despliega producción. Antes de abrir un PR corren los dos:
 
 ```bash
-cd Fina
-npm install                 # solo la primera vez
-./node_modules/.bin/vite build   # build de producción (esbuild)
+npx -y pnpm@10 install   # sólo la primera vez o si cambió package.json
+npm run typecheck        # tsc --noEmit: el build NO chequea tipos
+npm run build            # vite build
 ```
 
-> El build usa esbuild: ignora imports sin usar y errores de tipos. Si compila,
-> está OK para deployar.
+`npm run build` usa esbuild y borra los tipos sin validarlos: un import roto o un `any`
+pasan el build en verde. Por eso los dos. Después, el checklist de
+`src/styles/frontend.md` §13.
 
----
+## Backlog
 
-## 3. Cómo se despliega (GitHub → Vercel)
+`DEBT.md` en la raíz, ordenado por tipo (seguridad, funcionalidad, diseño, limpieza) y por
+prioridad. Cada ítem tiene un id para nombrarlo en commits; al terminarlo se pasa a la
+tabla de hechos en el mismo commit.
 
-1. Hacés un cambio en el código.
-2. Commit + push a la rama `main`.
-3. Vercel detecta el push y **redeploya automáticamente** en 1-2 minutos.
-4. Queda online en https://somosfina.com.ar
-
-**Convención del proyecto:** se commitea y pushea a `main` después de cada
-cambio (la preview de Vercel es la forma de verlo).
-
----
-
-## 4. Modelo de datos (Supabase)
-
-- La **fuente de verdad** de las lecturas es `reports.user_data` (un JSONB con
-  todo lo del onboarding). El análisis también se guarda como JSONB.
-- Al escribir, se **espeja** a tablas normalizadas (para el bot y reportes).
-- **RLS:** toda tabla con Row Level Security necesita una policy de UPDATE, si
-  no los updates fallan en silencio.
-- Las **migraciones SQL se corren a mano** en el panel de Supabase (no hay CLI).
-
----
-
-## 5. Features principales (estado actual)
-
-### Onboarding
-- Pasos: datos personales, contexto, actividad, banco, gastos fijos, servicios,
-  hábitos, objetivos, preferencias → informe.
-- **Gastos variables** (los que trackea el bot y se muestran como barras):
-  Salidas, Delivery, Cafeterías, Restaurantes, Supermercado, Belleza, Terapia,
-  Transporte. El resto son **fijos** (se descuentan solos el día que entra la plata).
-- **Delivery se ingresa "por mes"** (mucha gente no pide todas las semanas). Por
-  debajo se guarda en frecuencia semanal (÷4.33), igual que entretenimiento, así
-  el resto de los cálculos no cambian.
-
-### Informe / Presupuesto (`BudgetTracker`)
-- Cada categoría variable arranca con su **tope mensual** y baja a medida que el
-  bot registra gastos.
-- **Primer mes (arranque a mitad de mes):** hay un tramo violeta-clarito de
-  "referencia" = lo que ya venías gastando antes de arrancar. **Ya está
-  descontado del "te queda"** (el número y la barra son coherentes).
-
-### Objetivos (`ObjetivosPage`)
-- Donut con % logrado, monto/plazo, y un recuadro guía.
-- El recuadro se **genera en vivo**: respeta el toggle ARS/USD y descuenta lo que
-  ya separaste (usa lo que *falta*, no el total).
-- Podés agregar objetivos, marcar "¿ya pagaste?/¿ya separaste?" y sumar aportes.
-- **Reserva general** (`reserveArs`): plata que apartás, no atada a un objetivo.
-
-### Inversiones (`InversionesPage`)
-- Perfil de riesgo, panel "Tu plata hoy" (patrimonio), nudge "Tu plata parada"
-  (lo que pierde tu ahorro contra la inflación), proyección y explicador para
-  quien nunca invirtió.
-- **Personalizado según el banco/app de la persona**: si usás Ualá, te
-  recomienda Ualá. En la lista muestra "✓ Desde tu {app}".
-- Guía "¿Cómo lo hago?" en 3 pasos. El botón para **abrir la app aparece recién
-  al final**, después de leer el paso a paso (para no irte sin saber qué hacer).
-
-### Perfil
-- Columna centrada, datos financieros editables (`/editar/*`), ahorro e inversión
-  con toggle ARS/USD, cupones.
-
-### Encuestas de feedback
-- Pop-ups con escala de 4 emojis (par, obligatoria). Aparecen al terminar el
-  onboarding y **al salir** de Objetivos e Inversiones.
-- Cada encuesta muestra un **chip con el nombre de la pantalla** que se evalúa,
-  para que no parezca "siempre lo mismo".
-
-### Otros
-- Recuperación de contraseña (flujo nativo de Supabase).
-- Emails de marca (Resend SMTP + logo de FINA).
-- Toggle de moneda ARS/USD global (`useMoney` / `DisplayCurrencyToggle`).
-
----
-
-## 6. Cambios de esta sesión (resumen)
-
-1. **Inversiones coherentes con el banco de la persona** (destacar su app, botón
-   "Abrir", "✓ Desde tu {app}").
-2. **Guía de inversión:** abrir la app recién después del paso a paso.
-3. **Presupuesto:** "te queda" descuenta el tramo de referencia.
-4. **Encuestas:** chip con el nombre de la pantalla.
-5. **Objetivos:** recuadro en vivo (respeta USD y descuenta lo ya separado); se
-   arreglaron números absurdos (ej. "$281 millones") que venían de un texto viejo.
-6. **Delivery** pasa a "por mes"; **Restaurantes** → "Restaurantes / comidas".
-
----
-
-## 7. Temas abiertos / pendientes
-
-- **Ingresos a lo largo del mes:** hoy el modelo asume un ingreso mensual fijo
-  con un "día que se renueva la plata". Para quien cobra de a poco durante el mes,
-  se propuso: que el bot registre ingresos en vivo y mostrar "entró este mes vs.
-  estimado". **Decisión pendiente:** si el disponible se basa en la plata que ya
-  entró (realista, crece durante el mes) o se mantiene sobre un estimado.
-- **Deep-links a apps en el celular:** por ahora los botones "Abrir" van al sitio
-  web (siempre funciona). Se puede intentar abrir la app instalada, pero es frágil.
-- **Migraciones SQL pendientes de correr en Supabase:** `0015_feedback.sql`,
-  `0016_reserva_estado.sql`.
-- Ideas ofrecidas y no empezadas: conectar inversión con un objetivo, destacar UNA
-  opción "para arrancar", desacoplar el monto de ahorro del toggle "¿ahorrás?".
-
----
-
-## 8. Estructura rápida de carpetas
+## Carpetas
 
 ```
-Fina/
-  src/app/
-    components/     # pantallas y UI (Result, ObjetivosPage, InversionesPage, ...)
-    onboarding/     # pasos del onboarding (steps.ts)
-    lib/            # supabase, auth, reports, displayCurrency, feedback, ...
-    utils/          # financialAnalyzer, goalStrategies
-    types.ts        # tipos de UserData / FinancialAnalysis
-    routes.tsx      # definición de rutas
-  public/           # logos, íconos, og-image
-  supabase/         # migraciones SQL (se corren a mano)
+src/main.tsx                 entrada: monta App y registra el service worker
+src/app/App.tsx              puerta de mantenimiento, AuthProvider, router, avisos
+src/app/routes.tsx           rutas de la v2 y redirecciones de la v1
+src/app/api/v2/              capa de datos (todo lo que toca Supabase)
+src/app/components/onboarding-v2/   pantallas y componentes de la v2
+src/app/components/          RootRedirect, ResetPassword, Proximamente, WhatsAppFab
+src/app/lib/                 supabase, auth, displayCurrency, email, legales, telefono
+src/app/utils/goalStrategies.ts     lógica vieja de objetivos, se reusa en Objetivos (O1)
+src/styles/                  tokens.css, theme.css, frontend.md
+api/                         funciones serverless de Vercel
+supabase/                    migraciones y scripts que se corren a mano
+docs/                        bot de WhatsApp, protección de datos, tono
 ```

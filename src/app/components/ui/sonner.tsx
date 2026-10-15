@@ -1,14 +1,11 @@
-"use client";
-
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, ToasterProps } from "sonner";
 
+// Los avisos siguen el tema del sistema. Antes lo leía de next-themes, pero la
+// app nunca montó su ThemeProvider y siempre caía en "system".
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="system"
       className="toaster group"
       style={
         {

@@ -6,10 +6,8 @@ import { useAuth } from '../lib/auth';
 //   - Con sesión → Home. Mandar a alguien que ya tiene cuenta a rehacer el
 //     onboarding sería pedirle que conteste de nuevo todo lo que ya contestó.
 //
-// Antes `/` llevaba al flujo viejo (Splash → /result) y sólo con la app
-// cerrada redirigía al nuevo. Al abrirla, `/` tiene que seguir yendo al nuevo:
-// si no, abrir la app mostraba la versión anterior. El flujo viejo sigue
-// alcanzable escribiendo /login, /result, etc.
+// La app vieja (v1) ya no existe: sus direcciones (/login, /result, etc.)
+// redirigen a su equivalente en la v2 desde routes.tsx.
 export function RootRedirect() {
   const { session, loading } = useAuth();
   if (loading) return <CenteredLoading />;

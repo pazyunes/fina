@@ -1,8 +1,8 @@
 packages:
   - '.'
 allowBuilds:
-  '@tailwindcss/oxide': set this to true or false
-  esbuild: set this to true or false
+  '@tailwindcss/oxide': true
+  esbuild: true
 
 # Los tipos de React quedan fijados en 18 para todo el árbol. Sin esto,
 # @types/react-dom arrastra @types/react@19 y conviven dos definiciones de JSX:

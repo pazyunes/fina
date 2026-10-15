@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { COLORS, FONTS, fmtMoney } from './shared';
 import { IconBasura, IconEditar } from './FinaIcons';
 import { EditorIngreso } from './EditorIngreso';
+import { VerTodos, recortar } from './VerTodos';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { diaArgentina } from '../../api/v2/pasos';
@@ -106,6 +107,8 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
   const elegido = explorar ? tocado : (mesElegido ?? mesActual);
   const esEsteMes = elegido === mesActual;
   const [borrando, setBorrando] = useState<string | null>(null);
+  // La lista de ingresos (sólo en Gastos) muestra los primeros y "Ver todos".
+  const [verTodosIngresos, setVerTodosIngresos] = useState(false);
 
   const modoSemana = !!semana;
   const dias = semana
@@ -270,15 +273,16 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
 
       {conLista && (
         <div className="flex flex-col pt-1">
-          <p className="text-[15px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
-            {modoSemana ? `Ingresos · ${semana.etiqueta}` : `Ingresos de ${esEsteMes ? 'este mes' : nombreMes(elegido, true)}`}
+          <p className="text-[16px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+            {modoSemana ? `Ingresos de ${semana.actual ? 'esta semana' : semana.etiqueta === 'Semana pasada' ? 'la semana pasada' : `la semana del ${semana.etiqueta}`}` : `Ingresos de ${esEsteMes ? 'este mes' : nombreMes(elegido, true)}`}
           </p>
           {ingresosLista.length === 0 && (
             <p className="text-[14px] py-2" style={{ color: COLORS.inkSoft }}>No hay ingresos registrados.</p>
           )}
-          {ingresosLista.map((i) => (
+          {recortar(ingresosLista, verTodosIngresos).map((i) => (
             <FilaIngreso key={i.id} ingreso={i} abierto={borrando === i.id} onAbrir={() => setBorrando(borrando === i.id ? null : i.id)} onCerrar={() => setBorrando(null)} />
           ))}
+          <VerTodos total={ingresosLista.length} abierta={verTodosIngresos} onToggle={() => setVerTodosIngresos((v) => !v)} />
         </div>
       )}
     </div>
@@ -327,12 +331,12 @@ function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingr
       <div className="flex items-center gap-2.5">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: INGRESO }} aria-hidden />
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{titulo}</p>
-          <p className="text-[13px] truncate" style={{ color: COLORS.inkSoft }}>
-            {[i.medio, i.origen === 'whatsapp' ? 'por WhatsApp' : null, new Date(i.ts).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })].filter(Boolean).join(' · ')}
+          <p className="text-[16px] truncate" style={{ color: COLORS.ink }}>{titulo}</p>
+          <p className="text-[14px] truncate" style={{ color: COLORS.inkSoft }}>
+            {[i.medio, i.origen === 'whatsapp' ? 'por WhatsApp' : null, new Date(i.ts).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })].filter(Boolean).join(', ')}
           </p>
         </div>
-        <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>+{monto}</span>
+        <span className="font-mono tabular-nums text-[16px] shrink-0" style={{ color: COLORS.ink }}>+{monto}</span>
         <button
           type="button"
           onClick={() => { setEditando((v) => !v); onCerrar(); }}

@@ -358,26 +358,41 @@ export async function registrarGasto(g: {
   // detalle vive en `payment_methods`. Con uno solo, al revés — como siempre.
   const dividido = !!g.pagos?.length;
 
+  // Las columnas de `transactions`, sin `user_id`, `type` ni `source`: ésas
+  // las pone la base (con la 0040) o el insert de abajo (sin ella).
+  const fila: Record<string, unknown> = {
+    ...(g.id ? { id: g.id } : {}),
+    occurred_at: new Date(g.ts ?? Date.now()).toISOString(),
+    amount_ars: g.montoArs,
+    currency: g.moneda,
+    original_amount: g.moneda === 'USD' ? g.monto : null,
+    exchange_rate_id: g.cotizacionId ?? null,
+    description: g.descripcion,
+    section_id: g.seccionId,
+    expense_type: g.tipo,
+    // Las columnas de las migraciones 0035/0036 sólo se mandan cuando hay
+    // algo para guardar en ellas: así un gasto común no depende de que
+    // estén aplicadas.
+    ...(g.tipo === 'otro' && g.tipoOtro ? { expense_type_other: g.tipoOtro } : {}),
+    payment_method: dividido ? null : g.metodoPago,
+    ...(dividido ? { payment_methods: g.pagos } : {}),
+    group_id: g.grupoId ?? null,
+  };
+
+  // Con la migración 0040, la fila y los saldos van juntos en una sola
+  // transacción de la base. Sin ella, lo de abajo: varias llamadas con vuelta
+  // atrás a mano.
+  const rpc = await rpcNueva<FilaGasto>('registrar_gasto', { fila }, 'registrarGasto');
+  if (rpc) {
+    if (rpc.error !== null || !rpc.data) return falla<Gasto>(rpc.error ?? 'sin fila', 'registrarGasto');
+    return ok(aGasto(rpc.data));
+  }
+
   const r = await correr<FilaGasto[]>('registrarGasto', () =>
     supabase.from('transactions').insert({
-      ...(g.id ? { id: g.id } : {}),
+      ...fila,
       user_id: uid,
-      occurred_at: new Date(g.ts ?? Date.now()).toISOString(),
       type: 'expense',
-      amount_ars: g.montoArs,
-      currency: g.moneda,
-      original_amount: g.moneda === 'USD' ? g.monto : null,
-      exchange_rate_id: g.cotizacionId ?? null,
-      description: g.descripcion,
-      section_id: g.seccionId,
-      expense_type: g.tipo,
-      // Las columnas de las migraciones 0035/0036 sólo se mandan cuando hay
-      // algo para guardar en ellas: así un gasto común no depende de que
-      // estén aplicadas.
-      ...(g.tipo === 'otro' && g.tipoOtro ? { expense_type_other: g.tipoOtro } : {}),
-      payment_method: dividido ? null : g.metodoPago,
-      ...(dividido ? { payment_methods: g.pagos } : {}),
-      group_id: g.grupoId ?? null,
       // 'web' = lo cargó la persona en la app. El bot escribe 'whatsapp'.
       source: 'web',
     }).select('*'),
@@ -404,8 +419,8 @@ export async function registrarGasto(g: {
 /**
  * Aplica varios `mover_saldo` en orden. Si uno falla, devuelve los que ya se
  * habían aplicado: o se mueven todos, o ninguno. No es una transacción de la
- * base (eso pide una función SQL, ver DEBT D3), pero cubre el caso común de que
- * falle la red a mitad.
+ * base (eso lo hacen las funciones de la migración 0040, cuando está corrida),
+ * pero cubre el caso común de que falle la red a mitad.
  */
 async function moverSaldos(movimientos: { medio: string; delta: number }[]): Promise<Resultado<null>> {
   const hechos: { medio: string; delta: number }[] = [];
@@ -418,6 +433,62 @@ async function moverSaldos(movimientos: { medio: string; delta: number }[]): Pro
     hechos.push(m);
   }
   return ok(null);
+}
+
+/**
+ * Lo que un movimiento le hizo a cada medio, leído de su fila: un gasto
+ * dividido, cada parte; uno común, el total. `signo` es -1 para un gasto (le
+ * sacó plata al medio) y +1 para un ingreso. Es la misma cuenta que hace
+ * `efecto_en_medios` en la migración 0040.
+ */
+function efectoEnMedios(
+  f: { amount_ars: number; payment_method: string | null; payment_methods?: PagoMixto[] | null } | null,
+  signo: 1 | -1,
+): { medio: string; delta: number }[] {
+  if (!f) return [];
+  if (f.payment_methods?.length) return f.payment_methods.map((p) => ({ medio: p.medio, delta: signo * Number(p.monto) }));
+  return f.payment_method ? [{ medio: f.payment_method, delta: signo * Number(f.amount_ars ?? 0) }] : [];
+}
+
+const invertir = (movs: { medio: string; delta: number }[]) => movs.map((m) => ({ medio: m.medio, delta: -m.delta }));
+
+// ── Funciones de la base que pueden no existir todavía ───────────────────
+// Las migraciones se corren a mano y la preview usa la base de producción, así
+// que el código tiene que andar con la migración corrida y sin correr. Una
+// función que falta se reconoce por el error de PostgREST (PGRST202, "Could
+// not find the function") o de Postgres (42883, "function ... does not
+// exist"). Cuando falta, se recuerda hasta recargar para no pegarle de nuevo
+// en cada guardado.
+const funcionesQueFaltan = new Set<string>();
+
+function faltaFuncion(error: { code?: string; message: string }): boolean {
+  return error.code === 'PGRST202' || error.code === '42883'
+    || /could not find the function|function .* does not exist/i.test(error.message);
+}
+
+/**
+ * Llama a una función de la base que puede no existir. Devuelve `null` si no
+ * existe (para que quien llama siga por el camino viejo), o el resultado.
+ *
+ * Una función que existe y falla corre en una sola transacción, así que no
+ * dejó nada a medias: el error se devuelve tal cual, sin probar el camino
+ * viejo (que podría hacer a medias lo que la base ya rechazó entero).
+ */
+async function rpcNueva<T>(nombre: string, args: Record<string, unknown>, contexto: string): Promise<Resultado<T> | null> {
+  if (funcionesQueFaltan.has(nombre)) return null;
+  try {
+    const { data, error } = await supabase.rpc(nombre, args);
+    if (error) {
+      if (faltaFuncion(error)) {
+        funcionesQueFaltan.add(nombre);
+        return null;
+      }
+      return falla<T>(error.message, contexto);
+    }
+    return ok(data as T);
+  } catch (e) {
+    return falla<T>(e, contexto);
+  }
 }
 
 export async function editarGasto(id: string, g: {
@@ -433,6 +504,16 @@ export async function editarGasto(id: string, g: {
   ajustesSaldo?: { medio: string; delta: number }[];
 }, antes?: CambiosGasto): Promise<Resultado<null>> {
   const fila = filaDeGasto(g);
+
+  // Con la 0040, la base actualiza y mueve los saldos en una transacción, y
+  // los ajustes los calcula ella comparando la fila de antes con la de
+  // después (`ajustesSaldo` no se usa). Sin cambios en la fila no hay nada que
+  // mandarle.
+  if (Object.keys(fila).length > 0) {
+    const rpc = await rpcNueva<unknown>('editar_gasto', { id, cambios: fila }, 'editarGasto');
+    if (rpc) return rpc.error !== null ? rpc : ok(null);
+  }
+
   const actualizar = (f: Record<string, unknown>, contexto: string) => correr<null>(contexto, () =>
     supabase.from('transactions').update(f).eq('id', id).then(({ error }) => ({ data: null, error })),
   );
@@ -587,22 +668,26 @@ export async function registrarIngreso(i: {
 }): Promise<Resultado<null>> {
   const uid = await idUsuaria();
   if (!uid) return falla<null>('sin sesión', 'registrarIngreso');
+  const fila: Record<string, unknown> = {
+    ...(i.id ? { id: i.id } : {}),
+    occurred_at: new Date(i.ts ?? Date.now()).toISOString(),
+    amount_ars: i.montoArs,
+    currency: i.moneda,
+    original_amount: i.moneda === 'USD' ? i.monto : null,
+    exchange_rate_id: i.cotizacionId ?? null,
+    description: i.descripcion || null,
+    payment_method: i.medio,
+    ...(i.fuente ? { income_source: i.fuente } : {}),
+    ...(i.fuente === 'otro' && i.fuenteOtra ? { income_source_other: i.fuenteOtra } : {}),
+  };
+
+  // Con la 0040, fila y saldo en una sola transacción. Sin ella, lo de abajo.
+  const rpc = await rpcNueva<unknown>('registrar_ingreso', { fila }, 'registrarIngreso');
+  if (rpc) return rpc.error !== null ? rpc : ok(null);
+
   const w = await correr<null>('registrarIngreso', () =>
-    supabase.from('transactions').insert({
-      ...(i.id ? { id: i.id } : {}),
-      user_id: uid,
-      occurred_at: new Date(i.ts ?? Date.now()).toISOString(),
-      type: 'income',
-      amount_ars: i.montoArs,
-      currency: i.moneda,
-      original_amount: i.moneda === 'USD' ? i.monto : null,
-      exchange_rate_id: i.cotizacionId ?? null,
-      description: i.descripcion || null,
-      payment_method: i.medio,
-      ...(i.fuente ? { income_source: i.fuente } : {}),
-      ...(i.fuente === 'otro' && i.fuenteOtra ? { income_source_other: i.fuenteOtra } : {}),
-      source: 'web',
-    }).then(({ error }) => ({ data: null, error })),
+    supabase.from('transactions').insert({ ...fila, user_id: uid, type: 'income', source: 'web' })
+      .then(({ error }) => ({ data: null, error })),
   );
   if (w.error !== null) return w;
   // Entró plata en ese medio: su saldo sube. Mismo `mover_saldo` que los gastos.
@@ -615,21 +700,18 @@ export async function registrarIngreso(i: {
   return ok(null);
 }
 
-/**
- * Edita un ingreso. Cambiar el monto o el medio mueve plata: el medio viejo
- * pierde lo que había recibido y el nuevo lo recibe. `acciones.ts` calcula esos
- * ajustes (acá no se lee el estado anterior) y se aplican con `mover_saldo`,
- * igual que al editar un gasto.
- */
-export async function editarIngreso(id: string, g: {
+/** Los campos de un ingreso que se pueden editar, con nombres de la app. */
+export type CambiosIngreso = {
   monto?: number; moneda?: MonedaConvertible; montoArs?: number; cotizacionId?: string | null;
   fuente?: FuenteIngreso | null;
   // `null` = borrar lo escrito antes; `undefined` = no tocar la columna (así un
   // edit común no depende de la migración 0036).
   fuenteOtra?: string | null;
   descripcion?: string; medio?: string; ts?: number;
-  ajustesSaldo?: { medio: string; delta: number }[];
-}): Promise<Resultado<null>> {
+};
+
+/** Pasa los cambios de un ingreso a columnas de `transactions`; lo que viene undefined no se toca. */
+function filaDeIngreso(g: CambiosIngreso): Record<string, unknown> {
   const fila: Record<string, unknown> = {};
   if (g.montoArs !== undefined) fila.amount_ars = g.montoArs;
   if (g.moneda !== undefined) fila.currency = g.moneda;
@@ -640,34 +722,80 @@ export async function editarIngreso(id: string, g: {
   if (g.fuente !== undefined) fila.income_source = g.fuente;
   if (g.fuenteOtra !== undefined) fila.income_source_other = g.fuenteOtra;
   if (g.ts !== undefined) fila.occurred_at = new Date(g.ts).toISOString();
+  return fila;
+}
+
+/**
+ * Edita un ingreso. Cambiar el monto o el medio mueve plata: el medio viejo
+ * pierde lo que había recibido y el nuevo lo recibe.
+ *
+ * Con la migración 0040 lo hace la base en una sola transacción, y calcula ella
+ * cuánto mover. Sin la 0040, `acciones.ts` calcula esos ajustes (acá no se lee
+ * el estado anterior) y se aplican con `mover_saldo`, igual que al editar un
+ * gasto: si falla el saldo, los saldos ya movidos vuelven y la fila vuelve a
+ * `antes` (las mismas columnas, con los valores de antes).
+ */
+export async function editarIngreso(id: string, g: CambiosIngreso & {
+  ajustesSaldo?: { medio: string; delta: number }[];
+}, antes?: CambiosIngreso): Promise<Resultado<null>> {
+  const fila = filaDeIngreso(g);
 
   if (Object.keys(fila).length > 0) {
-    const r = await correr<null>('editarIngreso', () =>
-      supabase.from('transactions').update(fila).eq('id', id).eq('type', 'income').then(({ error }) => ({ data: null, error })),
-    );
+    const rpc = await rpcNueva<unknown>('editar_ingreso', { id, cambios: fila }, 'editarIngreso');
+    if (rpc) return rpc.error !== null ? rpc : ok(null);
+  }
+
+  const actualizar = (f: Record<string, unknown>, contexto: string) => correr<null>(contexto, () =>
+    supabase.from('transactions').update(f).eq('id', id).eq('type', 'income').then(({ error }) => ({ data: null, error })),
+  );
+
+  if (Object.keys(fila).length > 0) {
+    const r = await actualizar(fila, 'editarIngreso');
     if (r.error !== null) return r;
   }
-  for (const { medio, delta } of g.ajustesSaldo ?? []) {
-    const saldo = await moverSaldo(medio, delta);
-    if (saldo.error !== null) return falla<null>(saldo.error, 'editarIngreso/saldo');
+  const saldo = await moverSaldos(g.ajustesSaldo ?? []);
+  if (saldo.error !== null) {
+    if (antes && Object.keys(fila).length > 0) await actualizar(filaDeIngreso(antes), 'editarIngreso/deshacer');
+    return falla<null>(saldo.error, 'editarIngreso/saldo');
   }
   return ok(null);
 }
 
 /** Borra un ingreso y le saca esa plata al medio en el que había entrado. */
 export async function borrarIngreso(id: string): Promise<Resultado<null>> {
-  const previo = await correr<{ amount_ars: number; payment_method: string | null } | null>('borrarIngreso/leer', () =>
-    supabase.from('transactions').select('amount_ars, payment_method').eq('id', id).maybeSingle(),
+  const rpc = await rpcNueva<unknown>('borrar_ingreso', { id }, 'borrarIngreso');
+  if (rpc) return rpc.error !== null ? rpc : ok(null);
+  return borrarMovimiento(id, 1, 'borrarIngreso');
+}
+
+/**
+ * El camino sin la migración 0040 para borrar un gasto o un ingreso.
+ *
+ * Se lee la fila antes: el monto en pesos y el medio salen de ahí, no de lo que
+ * crea el cliente. Si la lectura falla no se borra: sin la fila no se sabe
+ * cuánto devolver, y borrar igual dejaría el saldo mal para siempre.
+ *
+ * Primero se devuelve la plata y DESPUÉS se borra. Al revés, si fallaba el
+ * saldo después de borrar no había vuelta atrás (una fila borrada no se puede
+ * volver a insertar igual desde acá). Así, si falla el saldo no se borró nada,
+ * y si falla el borrado se deshace el movimiento de saldo.
+ */
+async function borrarMovimiento(id: string, signo: 1 | -1, contexto: string): Promise<Resultado<null>> {
+  // `*` y no columnas sueltas: `payment_methods` (0035) puede no existir aún.
+  const previo = await correr<{ amount_ars: number; payment_method: string | null; payment_methods?: PagoMixto[] | null } | null>(`${contexto}/leer`, () =>
+    supabase.from('transactions').select('*').eq('id', id).maybeSingle(),
   );
-  // Sin la fila no se sabe cuánto sacarle al medio: borrar igual dejaría el
-  // saldo inflado para siempre.
-  if (previo.error !== null) return falla<null>(previo.error, 'borrarIngreso/leer');
-  const borrado = await borrarFila('transactions', id, 'borrarIngreso');
-  if (borrado.error !== null) return borrado;
-  const medio = previo.data?.payment_method;
-  if (medio) {
-    const saldo = await moverSaldo(medio, -Number(previo.data?.amount_ars ?? 0));
-    if (saldo.error !== null) return falla<null>(saldo.error, 'borrarIngreso/saldo');
+  if (previo.error !== null) return falla<null>(previo.error, `${contexto}/leer`);
+
+  // Lo contrario de lo que el movimiento le hizo a cada medio.
+  const devolver = invertir(efectoEnMedios(previo.data, signo));
+  const saldo = await moverSaldos(devolver);
+  if (saldo.error !== null) return falla<null>(saldo.error, `${contexto}/saldo`);
+
+  const borrado = await borrarFila('transactions', id, contexto);
+  if (borrado.error !== null) {
+    await moverSaldos(invertir(devolver));
+    return borrado;
   }
   return ok(null);
 }
@@ -693,38 +821,17 @@ async function borrarFila(tabla: string, id: string, contexto: string): Promise<
 }
 
 /**
- * Borra un gasto y le devuelve la plata al medio con el que se pagó.
+ * Borra un gasto y le devuelve la plata al medio (o a cada medio, si se
+ * dividió) con el que se pagó. Si sólo se borrara el gasto, el disponible
+ * quedaría descontado para siempre por algo que ya no existe.
  *
- * Se lee la fila antes de borrarla: el monto en pesos y el medio salen de ahí,
- * no de lo que crea el cliente. Si sólo se borrara el gasto, el disponible
- * quedaría descontado para siempre por algo que ya no existe. Por lo mismo, si
- * la lectura falla no se borra.
+ * Con la migración 0040 lo hace la base en una sola transacción; sin ella,
+ * `borrarMovimiento`.
  */
 export async function borrarGasto(id: string): Promise<Resultado<null>> {
-  // `*` y no columnas sueltas: `payment_methods` (0035) puede no existir aún.
-  const previo = await correr<{ amount_ars: number; payment_method: string | null; payment_methods?: PagoMixto[] | null } | null>('borrarGasto/leer', () =>
-    supabase.from('transactions').select('*').eq('id', id).maybeSingle(),
-  );
-  if (previo.error !== null) return falla<null>(previo.error, 'borrarGasto/leer');
-
-  const borrado = await borrarFila('transactions', id, 'borrarGasto');
-  if (borrado.error !== null) return borrado;
-
-  // Un gasto dividido le devuelve a cada medio lo suyo; uno común, el total.
-  const pagos = previo.data?.payment_methods;
-  if (pagos?.length) {
-    for (const p of pagos) {
-      const saldo = await moverSaldo(p.medio, p.monto);
-      if (saldo.error !== null) return falla<null>(saldo.error, 'borrarGasto/saldo');
-    }
-  } else {
-    const medio = previo.data?.payment_method;
-    if (medio) {
-      const saldo = await moverSaldo(medio, Number(previo.data?.amount_ars ?? 0));
-      if (saldo.error !== null) return falla<null>(saldo.error, 'borrarGasto/saldo');
-    }
-  }
-  return ok(null);
+  const rpc = await rpcNueva<unknown>('borrar_gasto', { id }, 'borrarGasto');
+  if (rpc) return rpc.error !== null ? rpc : ok(null);
+  return borrarMovimiento(id, -1, 'borrarGasto');
 }
 
 // ── Objetivos ────────────────────────────────────────────────────────────
@@ -1215,6 +1322,13 @@ export async function salirDelGrupo(grupoId: string): Promise<Resultado<null>> {
 export async function sumarActividad(grupoId: string, delta = 1): Promise<Resultado<null>> {
   const uid = await idUsuaria();
   if (!uid) return falla<null>('sin sesión', 'sumarActividad');
+
+  // Con la migración 0039 la suma es atómica en la base (`sumar_actividad`), y
+  // el cliente ya no puede escribir la actividad directo. Sin la 0039, el leer
+  // y escribir de siempre (que con dos registros a la vez puede perder uno).
+  const rpc = await rpcNueva<unknown>('sumar_actividad', { grupo: grupoId, n: delta }, 'sumarActividad');
+  if (rpc) return rpc.error !== null ? rpc : ok(null);
+
   const actual = await correr<{ activity: number } | null>('sumarActividad/leer', () =>
     supabase.from('group_members').select('activity').eq('group_id', grupoId).eq('user_id', uid).maybeSingle(),
   );

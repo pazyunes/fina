@@ -114,21 +114,31 @@ la decoración.
 
 ### 3.3 Color
 
+La paleta vive en `styles/tokens.css` y su espejo en `COLORS` de
+`onboarding-v2/shared.tsx`, que es lo que pinta la app hoy. Los dos tienen los mismos
+valores; si cambia uno, cambia el otro en el mismo commit.
+
 **Regla que rompe todo lo anterior si se ignora: los cuatro colores de marca son colores de
 relleno, no de texto.** Ninguno tiene contraste suficiente sobre el papel ni soporta texto
-blanco encima. Medidos sobre `#FFF4E4`:
+blanco encima. Por eso cada uno tiene su token `-suave` (superficie) y su `-texto` (la
+versión oscura, 6:1 o más, para cuando ese color tiene que decir algo en tipografía o en un
+ícono fino). Sobre relleno de color, el texto va siempre en `--fina-tinta`, nunca en blanco.
 
-| Color | Contraste sobre papel | Sirve para |
-| --- | --- | --- |
-| `#B0E150` lima | **1.41** | relleno, nunca texto ni ícono fino |
-| `#FFC457` star | **1.45** | relleno, nunca texto ni ícono fino |
-| `#CB9EFF` lila | **1.96** | relleno, nunca texto ni borde significativo |
-| `#FF7B4F` naranja | **2.36** | relleno, nunca texto |
-| `#7E5DA8` púrpura | 4.81 ✅ | texto, bordes, foco |
+| Color de marca | Relleno | Texto | Sirve para |
+| --- | --- | --- | --- |
+| Lima | `--fina-lima` `#B0E150` | `--fina-lima-texto` `#41660F` | valor, éxito, objetivo que avanza |
+| Star | `--fina-star` `#FFC457` | `--fina-star-texto` `#7A4F00` | Fini, medallitas, destacados |
+| Naranja | `--fina-naranja` `#FF7B4F` | `--fina-naranja-texto` `#A83208` | atención accionable |
+| Lila | `--fina-lila` `#CB9EFF` | `--fina-lila-texto` (violeta oscuro) | recuadros |
 
-Por eso cada acento tiene **dos tokens**: el de relleno (el hex original) y el `-texto`
-(la versión oscura, ≥ 6:1, para cuando ese color tiene que decir algo en tipografía).
-Sobre relleno de color, el texto va siempre en `--fina-tinta`, nunca en blanco.
+El lima tiene además `--fina-lima-dato` (`#5C8A18`) para marcas de datos, como el relleno
+de un anillo o una barra de progreso: el lima de marca contra su propio riel casi no se
+distingue (1.35:1) y éste llega a 3.6:1.
+
+El violeta (`--fina-violeta`, `#7626B3`) es el acento de interfaz: botones, progreso, foco y
+estado elegido. Es el único color de acento que sí funciona como texto (7.28:1 sobre papel)
+y que soporta texto blanco encima. Tiene `--fina-violeta-suave` para bandas y recuadros y
+`--fina-violeta-oscuro` para texto sobre lila y fondos plenos.
 
 **Roles semánticos:**
 
@@ -137,26 +147,27 @@ Sobre relleno de color, el texto va siempre en `--fina-tinta`, nunca en blanco.
 | Fondo general | `--fina-papel` | el campo de toda la app |
 | Superficie elevada | `--fina-superficie` | tarjetas sobre el papel |
 | Bloque hundido | `--fina-hueco` | agrupaciones, listas tintadas |
+| Separador | `--fina-hairline` | líneas decorativas |
+| Borde de control | `--fina-borde-control` | inputs y botones secundarios (3:1, WCAG 1.4.11) |
 | Texto principal | `--fina-tinta` | todo el texto y los montos |
-| Texto secundario | `--fina-tinta-media` | labels, fechas, unidades |
+| Texto secundario | `--fina-tinta-media`, `--fina-tinta-suave` | labels, fechas, unidades |
+| Acción e interacción | `--fina-violeta` | botones, foco, progreso, lo elegido |
 | Positivo / logro | `--fina-lima` + `--fina-lima-texto` | objetivo que avanza, ahorro, éxito |
-| Salida de dinero | `--fina-tinta` (neutral) | **los gastos no se pintan de alerta** |
+| Salida de dinero | `--fina-gastos` (igual a tinta, neutral) | **los gastos no se pintan de alerta** |
 | Atención real | `--fina-naranja` + `--fina-naranja-texto` | solo cuando hay algo que hacer ya |
 | Personaje / destacado | `--fina-star` + `--fina-star-texto` | Fini, medallitas, momentos de marca |
-| Estructura | `--fina-lila`, `--fina-purpura` | recuadros, bordes, foco |
+| Distinguir secciones de gastos | `--fina-purpura`, `--fina-azul`, `--fina-magenta`, `--fina-lila` | sólo para que dos secciones no se confundan; no dicen nada bueno ni malo |
+| Inversiones | `--fina-noche` y familia | la sección vive sobre fondo oscuro, sin ruido de color |
 
-> 📌 **Corrección respecto del md anterior.** Ahí `--fina-negative` cubría a la vez
-> "salidas de dinero" y "alertas". Eso contradice el atributo *sin juicio*: si cada gasto
-> se pinta de naranja, la app está diciendo "esto está mal" cientos de veces por mes. **Un
-> gasto es un dato neutral y se muestra en tinta.** El naranja se reserva para cuando hay
-> una acción concreta pendiente (un débito automático que se viene, un dato que hay que
-> confirmar) — y aun así, el copy nunca reta.
+**Un gasto es un dato neutral y se muestra en tinta.** Si cada gasto se pintara de naranja
+o de rojo, la app estaría diciendo "esto está mal" cientos de veces por mes. En la paleta no
+hay rojo: el naranja se reserva para cuando hay una acción concreta pendiente (un débito
+automático que se viene, un dato que hay que confirmar), y aun así el copy nunca reta.
+`--destructive` (borrar algo, un error de formulario) usa `--fina-naranja-texto` y nunca se
+aplica a un monto gastado.
 
-> 📌 **Sobre el púrpura.** El brief marca el violeta como colisión de categoría: el usuario
-> argentino no lee "FINA", lee "otra fintech violeta". Se queda, pero **degradado a rol
-> estructural**: bordes, recuadros, foco, fondo oscuro. No es el color de marca. El color
-> con el que se tiene que recordar la app es el lima en el momento de mayor valor: cuando
-> un objetivo avanza.
+El color con el que se tiene que recordar la app es el lima en el momento de mayor valor:
+cuando un objetivo avanza. El violeta organiza la interfaz, pero no es lo que se recuerda.
 
 ### 3.4 Tipografía
 
@@ -190,8 +201,8 @@ Reglas duras:
 ### 3.5 Forma, espacio y variedad de contenedores
 
 - Escala de espaciado de **4px** (`--space-1` … `--space-10`). Nada de `margin: 13px`.
-- Tres radios y no más: `--radius-sm` (6px, chips e inputs), `--radius-md` (14px, tarjetas),
-  `--radius-full` (pill, botones y avatares).
+- Radios sólo de la escala de `tokens.css`: `--fina-r-xs` (8px), `--fina-r-sm` (12px),
+  `--fina-r-md` (18px), `--fina-r-lg` (24px) y `--fina-r-full` (pill, botones y avatares).
 - **Un dato central por pantalla.** Jerarquía brutal: el total antes que el desglose.
 - **Cada pantalla tiene un objetivo, y la vista va ahí primero.** Antes de diseñar,
   escribí en una línea qué tiene que entender o hacer la persona en esa pantalla. Ese
@@ -215,71 +226,73 @@ Fuente de verdad de color, tipografía, espacio y forma. **Ningún componente es
 
 ```css
 :root {
-  /* ---------- Tipografía: una sola familia ---------- */
-  --font-heading: 'Poppins', system-ui, sans-serif;
-  --font-body:    'Poppins', system-ui, sans-serif;
-  --font-mono:    'Poppins', system-ui, sans-serif;  /* montos: con tabular-nums */
+  /* Superficies */
+  --fina-papel:          #FAF7F1;  /* fondo general, casi blanco, apenas cálido */
+  --fina-superficie:     #FFFFFF;  /* tarjeta elevada */
+  --fina-hueco:          #EEE4D2;  /* bloque tintado / hundido */
+  --fina-hairline:       #D6CBB8;  /* separador, 1.5:1 sobre papel */
+  --fina-borde-control:  #998769;  /* borde de control, 3.26:1 */
+  --fina-marco:          #EFEAE0;  /* marco de la pantalla en desktop */
 
-  /* ---------- Superficies ---------- */
-  --fina-papel:       #FFF4E4;  /* fondo general */
-  --fina-superficie:  #FFFDF7;  /* tarjeta elevada */
-  --fina-hueco:       #F6E9D4;  /* bloque tintado / hundido */
-  --fina-hairline:    #E8D9C0;  /* separadores */
+  /* Tinta (texto) */
+  --fina-tinta:        #2B2118;  /* 14:1 sobre papel, texto y montos */
+  --fina-tinta-media:  #5F5346;  /* 6.9:1, labels, fechas */
+  --fina-tinta-suave:  #7A6A58;  /* texto auxiliar, mínimo AA */
 
-  /* ---------- Tinta (texto) ---------- */
-  --fina-tinta:        #2B2118;  /* 14.5:1 sobre papel — texto y montos */
-  --fina-tinta-media:  #5F5346;  /* 6.9:1  — labels, fechas */
-  --fina-tinta-suave:  #7A6A58;  /* 4.8:1  — texto auxiliar, mínimo AA */
+  /* Acento de interfaz */
+  --fina-violeta:         #7626B3;  /* botones, progreso, foco; 7.28:1 */
+  --fina-violeta-suave:   #E4D5F5;  /* bandas y recuadros */
+  --fina-violeta-oscuro:  #5C1B8E;  /* texto sobre lila, fondos plenos */
 
-  /* ---------- Acentos: relleno + texto ---------- */
-  --fina-lima:            #B0E150;  /* relleno: éxito, objetivo que avanza */
-  --fina-lima-texto:      #41660F;  /* 6.2:1 sobre papel */
-  --fina-naranja:         #FF7B4F;  /* relleno: atención accionable */
-  --fina-naranja-texto:   #A83208;  /* 6.2:1 sobre papel */
-  --fina-star:            #FFC457;  /* relleno: Fini, medallitas, destacados */
-  --fina-star-texto:      #7A4F00;  /* 6.6:1 sobre papel */
+  /* Marca: relleno + suave + texto */
+  --fina-lima:     #B0E150;  --fina-lima-suave:     #EAF5D0;  --fina-lima-texto:     #41660F;
+  --fina-lima-dato: #5C8A18; /* marcas de datos: anillos, barras */
+  --fina-star:     #FFC457;  --fina-star-suave:     #FFEECB;  --fina-star-texto:     #7A4F00;
+  --fina-naranja:  #FF7B4F;  --fina-naranja-suave:  #FFE3D6;  --fina-naranja-texto:  #A83208;
+  --fina-lila:     #CB9EFF;  --fina-lila-borde:     #9A6BD1;  --fina-lila-texto:     var(--fina-violeta-oscuro);
 
-  /* ---------- Estructura ---------- */
-  --fina-lila:         #CB9EFF;  /* relleno de recuadros */
-  --fina-lila-borde:   #9A6BD1;  /* 3.6:1 — bordes perceptibles */
-  --fina-purpura:      #7E5DA8;  /* 4.8:1 — texto sobre púrpura, foco */
-  --fina-noche:        #3D2A55;  /* fondo oscuro; papel encima da 11.6:1 */
+  /* Hues de apoyo para distinguir secciones de gastos */
+  --fina-purpura: #7E5DA8;  --fina-purpura-suave: #EEE7F6;
+  --fina-azul:    #3D6FF5;  --fina-azul-suave:    #E2EAFF;
+  --fina-magenta: #C23FA8;  --fina-magenta-suave: #F9E1F2;
 
-  /* ---------- Espacio (escala 4px) ---------- */
+  /* Secciones: gastos es neutral */
+  --fina-gastos:      var(--fina-tinta);         --fina-gastos-suave:      #F1EBDF;
+  --fina-objetivos:   var(--fina-lima-texto);    --fina-objetivos-suave:   var(--fina-lima-suave);
+  --fina-inversiones: var(--fina-purpura);       --fina-inversiones-suave: var(--fina-purpura-suave);
+  --fina-grupos:      var(--fina-star-texto);    --fina-grupos-suave:      var(--fina-star-suave);
+
+  /* Noche (Inversiones) */
+  --fina-noche:          #3D2A55;
+  --fina-noche-tarjeta:  #4A3663;
+  --fina-sobre-noche:    var(--fina-papel);
+
+  /* Tipografía: una sola familia */
+  --fina-font: "Poppins", ui-sans-serif, system-ui, sans-serif;
+
+  /* Espacio (escala 4px) */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
   --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
 
-  /* ---------- Forma ---------- */
-  --radius-sm: 6px;
-  --radius-md: 14px;
-  --radius-full: 999px;
+  /* Forma */
+  --fina-r-xs: 8px;  --fina-r-sm: 12px;  --fina-r-md: 18px;  --fina-r-lg: 24px;
+  --fina-r-full: 999px;
   --stroke-icon: 1.9px;
-  --shadow-card: 0 2px 8px rgba(74, 59, 42, 0.08);
-
-  /* ---------- Foco ---------- */
-  --focus-ring: 0 0 0 3px rgba(126, 93, 168, 0.45);
-}
-
-h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); }
-body { font-family: var(--font-body); color: var(--fina-tinta); background: var(--fina-papel); }
-
-/* Todo número comparable */
-.monto, [data-numeric] {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  --shadow-card: 0 2px 8px rgba(43, 33, 24, 0.08);
+  --focus-ring: 0 0 0 3px rgba(118, 38, 179, 0.45);
 }
 ```
 
-**Nota de migración.** El repo ya tiene `--font-serif` y `--font-sans` apuntando las dos a
-Poppins. No conviven dos sistemas: en el mismo PR en que entra `tokens.css` se reemplazan
-las referencias viejas. Si querés hacerlo por etapas, dejá los nombres viejos como alias
-(`--font-serif: var(--font-heading);`) y borralos cuando no queden usos — pero con fecha,
-no "algún día".
+`theme.css` mapea estos tokens a las variables genéricas que usan Tailwind y los
+componentes de `ui/` (`--background`, `--primary`, `--destructive`, `--chart-*`,
+`--font-sans`) y no tiene hex propios. Los nombres del manual anterior (`--fina-blanco`,
+`--fina-gris`, `--fina-linea`, `--fina-tinte`, `--fina-violeta-100`) siguen en `tokens.css`
+como alias; no se usan en código nuevo.
 
-**Dark mode.** `--fina-noche` sola no es un modo oscuro, es un color. Un dark mode real
-necesita redefinir todo el bloque de superficies y tinta bajo `[data-theme="dark"]`.
-Mientras eso no esté hecho, **no hay dark mode** y no se anuncia como si lo hubiera. Está en
-§12.4.
+**Dark mode.** `--fina-noche` y su familia son el fondo de Inversiones, no un modo oscuro.
+Un dark mode real necesita redefinir todo el bloque de superficies y tinta bajo
+`[data-theme="dark"]`. Mientras eso no esté hecho, **no hay dark mode** y no se anuncia como
+si lo hubiera. Está en §12.4.
 
 ---
 
@@ -435,7 +448,7 @@ UI. Nunca al revés.
 | Tipo / interface | `PascalCase`, sin prefijo `I` | `interface Movimiento` |
 | Constante global | `SCREAMING_SNAKE_CASE` | `const MAX_OBJETIVOS = 5` |
 | Token CSS de marca | `--fina-*` | `--fina-lima-texto` |
-| Token CSS de sistema | `--space-*`, `--radius-*` | `--space-4` |
+| Token CSS de sistema | `--space-*`, `--fina-r-*` | `--space-4` |
 | Id de ícono en el sprite | `fi-` + `kebab-case` | `#fi-objetivo` |
 
 **Un idioma por capa.** El dominio va en español (`Movimiento`, `Objetivo`, `Confianza`)
@@ -532,7 +545,7 @@ diseño antes de que se vuelvan caras de cambiar.
 
 1. **Tipografía.** Resuelto: Poppins como familia única (§3.4). Si se revisa, evaluar
    **sobre la pantalla de montos**, no sobre el logo.
-2. **Peso del púrpura.** Hoy es estructural (§3.3). Si en la exploración de identidad
+2. **Peso del violeta.** Hoy es el acento de interfaz y el lima es el color de valor (§3.3). Si en la exploración de identidad
    aparece un acento propio que lo reemplace, es un cambio de tokens.
 3. **Fini vs. símbolo de marca.** Falta definir si el isotipo del test de 40px es una
    versión reducida de Fini o una marca aparte. Hasta que se decida, no se congela el app

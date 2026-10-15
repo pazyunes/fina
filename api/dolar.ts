@@ -2,7 +2,18 @@
 // que NO se usa la firma `route.ts` del App Router). Vercel toma cualquier
 // archivo dentro de /api como función. Reusa las env vars ya configuradas
 // (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY) del lado servidor.
+//
+// Leer la cotización es público (anon). Escribirla, no: desde la migración 0039
+// la tabla ya no acepta inserts anónimos (cualquiera con la clave pública podía
+// meter un dólar falso, y todos los gastos en dólares se guardaban con ese
+// valor). Por eso el insert va con SUPABASE_SERVICE_ROLE_KEY. Si esa variable
+// no está, se intenta con la anon como antes: mientras la 0039 no esté corrida
+// sigue andando, y si ya está corrida el insert falla y se devuelve igual el
+// valor fresco, sin id.
 import { createClient } from '@supabase/supabase-js';
+
+type Req = { method?: string };
+type Res = { status(code: number): Res; json(body: unknown): void; setHeader(nombre: string, valor: string): void };
 
 const CURRENCY = 'USD_BLUE';
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -10,8 +21,9 @@ const DOLARAPI_URL = 'https://dolarapi.com/v1/dolares/blue';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-export default async function handler(req: any, res: any) {
+export default async function handler(_req: Req, res: Res) {
   res.setHeader('Cache-Control', 'no-store');
 
   if (!supabaseUrl || !supabaseKey) {
@@ -20,6 +32,10 @@ export default async function handler(req: any, res: any) {
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+  // Sólo para escribir. Sin la service key, la misma anon de siempre.
+  const escritor = serviceRoleKey
+    ? createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } })
+    : supabase;
 
   // 1) Última cotización guardada
   const { data: latest } = await supabase
@@ -52,7 +68,7 @@ export default async function handler(req: any, res: any) {
     const venta = Number(json?.venta);
     if (!venta || Number.isNaN(venta)) throw new Error('dolarapi sin valor de venta');
 
-    const { data: inserted, error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await escritor
       .from('exchange_rates')
       .insert({ currency: CURRENCY, rate: venta, source: 'dolarapi' })
       .select('id, rate, fetched_at')

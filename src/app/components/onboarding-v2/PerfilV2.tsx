@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import {
-  ArmarGrupoBtn, BotonVolver, COLORS, borrarDatosLocales, useVolver, FONTS, OpcionesLista, Titulo, TituloSeccion,
+  ArmarGrupoBtn, BotonVolver, COLORS, borrarDatosLocales, useVolver, FONTS, OpcionesLista, TituloSeccion,
   loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos,
   biometriaDisponible, guardarBloqueoPin, quitarBloqueoApp, quitarBloqueoBiometria, registrarBiometria, tieneBloqueoBiometria, tieneBloqueoPin,
 } from './shared';
@@ -12,6 +12,7 @@ import { cerrarSesion } from '../../api/v2/cuenta';
 import { llevarA, useAlLlegar } from './alLlegar';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 import { IconEditar } from './FinaIcons';
+import { MediosDePago } from './MediosDePago';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
@@ -174,20 +175,19 @@ export function PerfilV2() {
     // contorno propio: como lista con hairline se leen como lo que son, una
     // secuencia de cosas pendientes.
     <div className="px-6 pt-6 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-8">
-      <header className="mb-2 flex flex-col gap-2">
+      {/* El objetivo de la pantalla es quién sos: la foto y el nombre son lo
+          más grande (§3.5). Por eso no hay un título "Tu perfil" de 32px
+          compitiendo arriba; queda para lectores de pantalla. */}
+      <header className="flex flex-col gap-2">
         <BotonVolver onClick={volver} />
-        <div className="flex items-center gap-4">
-        <div className="flex-1 min-w-0">
-          <Titulo>Tu perfil</Titulo>
-        </div>
-        </div>
+        <h1 className="sr-only">Tu perfil</h1>
       </header>
 
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-3 -mt-4">
         <button
           type="button"
           onClick={elegirFoto}
-          className="v2-focus relative w-24 h-24 rounded-full overflow-hidden shrink-0 transition-transform duration-100 active:scale-95"
+          className="v2-focus relative w-28 h-28 rounded-full overflow-hidden shrink-0 transition-transform duration-100 active:scale-95"
           style={{ border: `1.5px solid ${COLORS.line}` }}
           aria-label="Cambiar foto de perfil"
         >
@@ -195,13 +195,13 @@ export function PerfilV2() {
             <img src={foto} alt="Tu foto de perfil" className="w-full h-full object-cover" />
           ) : (
             <span className="w-full h-full flex items-center justify-center" style={{ background: COLORS.starSoft }}>
-              <Fini state="idle" size={80} />
+              <Fini state="idle" size={92} />
             </span>
           )}
           {/* Scrim de tinta sobre la foto para que la etiqueta se lea (media
               overlay, no decoración de color). */}
           <span
-            className="absolute bottom-0 left-0 right-0 text-center text-[12px] font-bold py-1"
+            className="absolute bottom-0 left-0 right-0 text-center text-[14px] font-bold py-1"
             style={{ background: 'rgba(43,33,24,0.6)', color: COLORS.surface }}
           >
             Cambiar
@@ -251,7 +251,7 @@ export function PerfilV2() {
         </div>
       ) : (
         <div className="flex items-center justify-center gap-2">
-          <p className="text-[22px] font-bold truncate" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{nombreGuardado}</p>
+          <p className="text-[28px] font-bold leading-tight tracking-[-0.01em] truncate" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{nombreGuardado}</p>
           {guardado && (
             <span className="w-6 h-6 rounded-full inline-flex items-center justify-center shrink-0" style={{ background: COLORS.lima, color: COLORS.ink }} role="status" aria-label="Nombre guardado">
               <Check size={12} />
@@ -273,7 +273,6 @@ export function PerfilV2() {
         <section className="flex flex-col items-center gap-2 py-2">
           <Fini state="logro" size={124} />
           <p className="text-[16px] font-bold text-center" style={{ color: COLORS.ink }}>Tu perfil está completo</p>
-          <p className="text-[14px] text-center" style={{ color: COLORS.inkSoft }}>Con esto las recomendaciones te van a hablar en tu idioma.</p>
         </section>
       )}
 
@@ -338,9 +337,6 @@ export function PerfilV2() {
           {abriendoNivel && (
             <div ref={nivelRef} className="flex flex-col gap-3 pt-1">
               <TituloSeccion>¿Cómo describirías lo que sabés hoy?</TituloSeccion>
-              <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-                Así las recomendaciones te van a hablar en tu idioma, sin sonar ni muy básico ni muy técnico.
-              </p>
               <OpcionesLista
                 opciones={NIVELES_FINANCIEROS.map((n) => ({ id: n, label: n }))}
                 valor={nivel}
@@ -361,18 +357,17 @@ export function PerfilV2() {
 
       <AvisosFina />
 
+      <MediosDePago />
+
       {/* PIN / Face ID — pensado para que se sienta más seguro al entrar, no
           para reemplazar la cuenta: la sesión sigue siendo la de Supabase,
           esto solo tapa la plata en ESTE celular hasta que se vuelve a probar
           quién sos. Por eso vive en Perfil y no en el onboarding — cualquiera
           que ya tenga cuenta lo puede activar cuando quiera. */}
       <section className="flex flex-col gap-3">
-        <TituloSeccion>PIN y Face ID</TituloSeccion>
+        <TituloSeccion>Pedir PIN al abrir FINA</TituloSeccion>
         {!tienePin && !configurandoPin && (
           <>
-            <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              Pedí un PIN para entrar a FINA en este celular, así nadie más ve tu plata si te lo agarran desbloqueado.
-            </p>
             <button
               type="button"
               onClick={abrirConfigPin}
@@ -430,7 +425,7 @@ export function PerfilV2() {
               <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
                 <Check size={13} />
               </span>
-              <span className="flex-1 text-[15px] font-medium" style={{ color: COLORS.ink }}>PIN activado</span>
+              <span className="flex-1 text-[16px] font-medium" style={{ color: COLORS.ink }}>PIN activado</span>
               <button type="button" onClick={abrirConfigPin} className="v2-focus text-[14px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
                 Cambiar
               </button>
@@ -445,7 +440,7 @@ export function PerfilV2() {
                   <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
                     <Check size={13} />
                   </span>
-                  <span className="flex-1 text-[15px] font-medium" style={{ color: COLORS.ink }}>Face ID / Touch ID activado</span>
+                  <span className="flex-1 text-[16px] font-medium" style={{ color: COLORS.ink }}>Face ID / Touch ID activado</span>
                   <button type="button" onClick={desactivarBiometria} className="v2-focus text-[14px] font-semibold underline shrink-0" style={{ color: COLORS.inkSoft }}>
                     Desactivar
                   </button>

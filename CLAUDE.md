@@ -4,7 +4,9 @@ App de finanzas personales. Hace **visible** la plata de gente joven que nunca t
 educación financiera. No la administra, no la juzga. El registro de gastos entra por
 WhatsApp; la app devuelve claridad, objetivos y descuentos.
 
-Stack: React + TypeScript + Vite.
+Stack: React 18 + TypeScript + Vite, Supabase (Postgres, Auth, Storage) y funciones en `api/`
+sobre Vercel. Paquetes con pnpm (`npx -y pnpm@10 install`); no usar `npm install`, que crea
+un `package-lock.json`. Resumen de cómo está armada la app en `RESUMEN-CHAT.md`.
 
 ## Antes de tocar el frontend
 
@@ -15,7 +17,8 @@ están decididas.
 
 ## Reglas que no se negocian
 
-1. **Cero hex sueltos.** Todo color, espacio y radio sale de `styles/tokens.css`.
+1. **Cero hex sueltos.** Todo color, espacio y radio sale de `styles/tokens.css` (o de
+   `COLORS` en `onboarding-v2/shared.tsx`, que es su espejo con los mismos valores).
 2. **Los cuatro colores de marca son de relleno, no de texto.** Cada uno tiene su token
    `-texto` para cuando tiene que ir en tipografía.
 3. **Un gasto no es un error.** Los gastos se muestran neutrales, nunca en color de alerta.
@@ -23,7 +26,7 @@ están decididas.
 4. **Todo dato declara su estado de confianza** (confirmado / declarado / estimado / por
    descubrir). Un dato estimado se muestra como rango, nunca como número exacto.
 5. **Todo monto en cifras tabulares** (`font-variant-numeric: tabular-nums`).
-6. **Ningún componente hace `fetch` directo.** Todo pasa por `api/`.
+6. **Ningún componente hace `fetch` directo.** Todo pasa por `src/app/api/v2/`.
 7. **Sin `any`.**
 8. **Jerarquía.** Cada pantalla tiene un objetivo y un solo punto que se lleva la vista
    primero. Nada de subtítulos que expliquen lo que el título ya debería decir.
@@ -41,11 +44,11 @@ Lo pendiente está en `DEBT.md`, en la raíz. Al terminar un ítem, se marca ah�
 
 ```bash
 npm run dev        # desarrollo
-npm run build      # build de producción — tiene que pasar antes de cualquier PR
-npm run typecheck  # tsc --noEmit — tiene que pasar antes de cualquier PR
+npm run build      # build de producción, tiene que pasar antes de cualquier PR
+npm run typecheck  # tsc --noEmit, tiene que pasar antes de cualquier PR
 ```
 
-> ⚠️ **`npm run build` NO chequea tipos.** Vite compila con esbuild, que borra
+> **`npm run build` NO chequea tipos.** Vite compila con esbuild, que borra
 > las anotaciones sin validarlas: un import que falta o una comparación
 > imposible pasan el build en verde y explotan recién en el navegador. La regla
 > 7 ("sin `any`") tampoco la valida nadie sin `typecheck`. Corré los dos.

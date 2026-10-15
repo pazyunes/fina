@@ -23,7 +23,7 @@ function Bloque({ id, titulo, children }: { id?: string; titulo: string; childre
 function EnSimple({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-2xl px-4 py-3.5" style={{ background: COLORS.brandSoft }}>
-      <p className="text-[13px] font-bold uppercase tracking-[0.08em] mb-1" style={{ color: COLORS.brandDark, fontFamily: FONTS.mono }}>En simple</p>
+      <p className="text-[14px] font-bold mb-1" style={{ color: COLORS.brandDark }}>En simple</p>
       <p className="text-[15px] leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
     </div>
   );

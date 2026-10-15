@@ -2,51 +2,51 @@
 
 :root {
   --font-size: 16px;
-  /* Colores mapeados a los tokens FINA (ver tokens.css) */
+  /* Colores mapeados a los tokens FINA (ver tokens.css). Sin hex acá. */
   --background: var(--fina-papel);
   --foreground: var(--fina-tinta);
-  --card: var(--fina-blanco);
+  --card: var(--fina-superficie);
   --card-foreground: var(--fina-tinta);
-  --popover: var(--fina-blanco);
+  --popover: var(--fina-superficie);
   --popover-foreground: var(--fina-tinta);
   --primary: var(--fina-violeta);
-  --primary-foreground: var(--fina-blanco);
-  --secondary: var(--fina-violeta-100);
-  --secondary-foreground: var(--fina-violeta);
-  --muted: var(--fina-tinte);
-  --muted-foreground: var(--fina-gris);
-  --accent: var(--fina-violeta-100);
-  --accent-foreground: var(--fina-violeta);
-  --destructive: #d4183d;
-  --destructive-foreground: var(--fina-blanco);
-  --border: var(--fina-linea);
+  --primary-foreground: var(--fina-superficie);
+  --secondary: var(--fina-violeta-suave);
+  --secondary-foreground: var(--fina-violeta-oscuro);
+  --muted: var(--fina-hueco);
+  --muted-foreground: var(--fina-tinta-media);
+  --accent: var(--fina-violeta-suave);
+  --accent-foreground: var(--fina-violeta-oscuro);
+  --destructive: var(--fina-naranja-texto); /* borrar, error de formulario; nunca un gasto */
+  --destructive-foreground: var(--fina-superficie);
+  --border: var(--fina-hairline);
   --input: transparent;
-  --input-background: #f3f3f5;
-  --switch-background: #cbced4;
+  --input-background: var(--fina-hueco);
+  --switch-background: var(--fina-hairline);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: oklch(0.708 0 0);
   --chart-1: var(--fina-violeta);
-  --chart-2: var(--fina-gastos);
-  --chart-3: var(--fina-objetivos);
+  --chart-2: var(--fina-gastos); /* neutral: un gasto no es un error */
+  --chart-3: var(--fina-lima-dato);
   --chart-4: var(--fina-inversiones);
-  --chart-5: var(--fina-grupos);
+  --chart-5: var(--fina-star);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
+  --sidebar-primary: var(--fina-tinta);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
   
-  /* FINA Custom Colors (legacy → apuntan a los tokens nuevos) */
+  /* Nombres viejos de FINA, apuntan a los tokens de ahora */
   --fina-pink: var(--fina-violeta);
-  --fina-pink-light: var(--fina-violeta-100);
-  --fina-coral: var(--fina-gastos);
-  --fina-green: var(--fina-objetivos);
-  --fina-neutral: var(--fina-tinte);
+  --fina-pink-light: var(--fina-violeta-suave);
+  --fina-coral: var(--fina-gastos); /* neutral, ya no es coral */
+  --fina-green: var(--fina-lima);
+  --fina-neutral: var(--fina-hueco);
 
   /* Tipografía FINA: todo en Poppins (ver tokens.css) */
   --font-serif: var(--fina-display);

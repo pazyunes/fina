@@ -4,59 +4,49 @@ Lista viva de lo que hay que hacer, ordenada por tipo y, dentro de cada tipo, po
 
 El objetivo que ordena todo: que la persona primero entienda su situación financiera y después la mejore. Se trabaja en ramas (hoy `juaniBranch`), nunca en `main`, y cada push de la rama arma una preview en Vercel.
 
-Prioridad: alta (lo próximo que se hace), media (después de las altas de su tipo), baja (cuando haya lugar). Estado: pendiente, a definir (falta decidir qué hacer antes de tocar código), en curso, hecho. Cada ítem conserva su id para nombrarlo en commits y charlas; al terminar uno se pasa a la tabla de hechos en el mismo commit.
+Prioridad: alta (lo próximo que se hace), media (después de las altas de su tipo), baja (cuando haya lugar). Estado: pendiente, a definir (falta decidir qué hacer antes de tocar código), en curso, a revisar (hecho con una propuesta que hay que validar en la preview), hecho. Cada ítem conserva su id para nombrarlo en commits y charlas; al terminar uno se pasa a la tabla de hechos en el mismo commit.
+
+## Pasos manuales pendientes
+
+Cosas que el código ya soporta pero que tiene que hacer una persona con acceso.
+
+| Id | Qué | Estado |
+| --- | --- | --- |
+| M1 | Cargar `SUPABASE_SERVICE_ROLE_KEY` en Vercel (Production y Preview). Sin eso, cuando se corra 0039 la cotización del dólar deja de guardarse (se sigue mostrando, pero sin id). | pendiente |
+| M2 | Correr a mano en Supabase, en orden: `supabase/migrations/0039_seguridad.sql` y `0040_movimientos_atomicos.sql` (después de M1). La app funciona igual sin ellas: usa el camino viejo hasta que existan. | pendiente |
+| M3 | Confirmar en Vercel que `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` están habilitadas para Preview. | pendiente |
 
 ## 1. Seguridad
 
-Necesitan una migración SQL que se corre a mano en Supabase.
-
-| Id | Prioridad | Qué | Estado |
-| --- | --- | --- | --- |
-| S1 | alta | Cualquiera con la clave pública puede insertar una cotización falsa en `exchange_rates` (policy de 0001), y todos los gastos en dólares se guardarían con ese valor. Sacar el insert anónimo y que `api/dolar.ts` escriba con service role. | pendiente |
-| S2 | media | En `group_members` un miembro puede cambiarse `role` y `activity` (0022). Bloquear esas columnas y que la actividad sume por RPC atómica (hoy `sumarActividad` lee y escribe, y se pisan). | pendiente |
-| S3 | media | Los splits de gastos de grupo no validan que `user_id` sea miembro del grupo. | pendiente |
-| S4 | baja | `unirse_a_grupo` no tiene límite de intentos y el código es adivinable. Baja mientras los grupos estén ocultos (I9). | pendiente |
-| S5 | baja | `feedback` no tiene policy de UPDATE; faltan policies de DELETE en varias tablas (pensar en borrar cuenta). | pendiente |
+Todo lo de seguridad conocido está resuelto en la migración 0039 (ver hechos); falta correrla (M2).
 
 ## 2. Funcionalidad
 
-Lo que hace que los datos sean confiables y que la app ayude a mejorar la situación de la persona.
-
 | Id | Prioridad | Qué | Estado |
 | --- | --- | --- | --- |
-| I7 | alta | Inicio, objetivos: hoy sólo hay un anillo en el carrusel. Recordar que guardes, mostrar qué acción te acerca y avisar plazos (quedan 3 meses y no juntaste nada). No existe ningún aviso de plazo, ni en la app ni en `api/notificaciones.ts`. | a definir |
-| O1 | alta | Objetivos: la pantalla no dice nada. Volver a traer próximos pasos y formas de llegar antes; la lógica vieja está en `utils/goalStrategies.ts` y se puede reusar. | a definir |
-| I1 | alta | Inicio, paso del día: hoy sale de una lista fija de 10 pasos (`api/v2/pasos.ts`) que rota por día; la IA sólo elige entre esos. Que se basen en la situación de la persona, que varíen y que mejoren con el tiempo. | a definir |
-| I2 | media | Registrar el gasto como recordatorio fijo, con notificación, en vez de ser un paso más. | a definir |
-| GA2 | media | Gastos: sacar el gráfico de dinero disponible y los medios de pago. Antes hay que decidir de dónde sale el disponible si se van los medios. | a definir |
-| R1 | media | Retención: si la persona no tiene nada para hacer, la app no le da nada. Mantener la racha, mejorar las tareas y pensar un juego o actividad para quien quiera quedarse. | a definir |
-| I12 | media | La reserva (alcancía) sólo vivía en Inicio y se guarda sólo en el navegador, no en Supabase. Al sacar Tu plata guardada (I8) dejó de verse en toda la app. Decidir si vuelve, dónde, y guardarla en la base. | a definir |
-| D3 | media | Que cada movimiento de plata sea una sola transacción en la base. Hoy, si falla el saldo, se deshace paso a paso (D1), pero un corte justo mientras se deshace puede dejar algo suelto. Una función SQL por acción (registrar, editar y borrar gasto o ingreso) lo resuelve y necesita migración. Mientras tanto `editarIngreso` y `borrarGasto` no tienen la vuelta atrás de D1, y al deshacer una edición no se recupera la cotización anterior. | pendiente |
+| I7 | alta | Inicio, objetivos: recordar que guardes, mostrar qué acción te acerca y avisar plazos (quedan 3 meses y no juntaste nada). | en curso |
+| O1 | alta | Objetivos: próximos pasos y formas de llegar antes, reusando `utils/goalStrategies.ts`. | en curso |
+| I1 | alta | Inicio, paso del día: que se base en la situación de la persona, que varíe y que mejore con el tiempo. | en curso |
+| I2 | media | Registrar el gasto como recordatorio fijo, con notificación. | en curso |
+| R1 | media | Retención: algo para hacer en la app cuando no hay nada pendiente (juego o actividad). | en curso |
+| I12 | media | La reserva (alcancía) dejó de verse al sacar Tu plata guardada; vivía sólo en el navegador. Llevarla a Objetivos y guardarla en la base. | en curso |
+| D4 | media | Editar sólo el monto de un gasto en dólares no actualiza `original_amount`: `editarGasto` en `acciones.ts` manda la moneda sólo si cambió la moneda. | pendiente |
 | D2 | baja | Una sección nueva queda con slug vacío en pantalla hasta recargar (`crearSeccion`). | pendiente |
 
 ## 3. Diseño
 
-Jerarquía, cantidad de texto y detalles visuales.
-
 | Id | Prioridad | Qué | Estado |
 | --- | --- | --- | --- |
-| G1 | alta | Más jerarquía visual: que cada pantalla lleve la vista a un lugar puntual. Menos letra chica. | a definir |
-| G2 | alta | Quitar los subtítulos que explican lo que el título debería decir. Inicio y la cabecera de Perfil ya están; faltan Gastos, Objetivos, Inversiones y el resto de Perfil. | en curso |
-| G3 | media | Etiquetas en MAYÚSCULAS con letras separadas (eyebrows tipo "ESTE MES", "RECOMENDACIÓN") en 9 archivos de la v2. Las prohíbe la guía (§2.1) y con Poppins se notan más. Inicio ya no tiene; pasarlas a texto normal en el resto. | pendiente |
-| GA1 | media | Gastos: mucha letra chica. Mostrar menos y usar Ver todos al estilo Mercado Pago (las secciones expandidas no tienen límite). | a definir |
-| L3 | media | Tres paletas que no coinciden: `frontend.md`, `tokens.css` y `COLORS` en `onboarding-v2/shared.tsx`. Decidir una con diseño. | a definir |
-| IN1 | baja | Inversiones: tiene potencial. Bajar la letra chica. | a definir |
+| G2 | alta | Sin subtítulos explicativos. Hecho en Inicio, Gastos, Inversiones y Perfil; falta Objetivos (va con O1) y revisar `VerificarTelefono` y `AvisosFina`. | en curso |
+| G3 | media | Etiquetas en mayúsculas: sólo queda la de Objetivos (va con O1). | en curso |
+| L3b | baja | Confirmar con diseño la variante de texto del lila: hoy `--fina-lila-texto` apunta al violeta oscuro porque `COLORS` no tenía una propia. | a revisar |
 
 ## 4. Limpieza y documentación
 
-No cambian lo que ve la persona, pero bajan el riesgo de romper algo al tocar el código.
-
 | Id | Prioridad | Qué | Estado |
 | --- | --- | --- | --- |
-| L1 | media | Borrar la v1 muerta (`Main.tsx` y unos 45 archivos, `lib/reports.ts`, `lib/exchangeRate.ts`, `utils/*` salvo lo que se reuse para O1) y la consulta a `reports` en cada login (`lib/auth.tsx`). | pendiente |
-| L5 | media | Que el prompt de la IA (`api/_recomendaciones/prompt.ts`) pida la regla de Formato. | pendiente |
-| L4 | baja | Reescribir `RESUMEN-CHAT.md` para la v2; `.env.example` con las 8 variables; actualizar `supabase/borrar-todos-los-usuarios.sql`; sumar `balance_loads` a `docs/bot-ingresos.md`; corregir `supabase/README-migraciones-v2.md`. | pendiente |
-| L2 | baja | Dependencias sin uso en `package.json` (MUI, emotion, react-dnd, react-slick y otras) y el nombre `@figma/my-make-file`. | pendiente |
+| L5 | media | Que el prompt de la IA (`api/_recomendaciones/prompt.ts`) pida la regla de Formato. | en curso |
+| L6 | baja | `src/app/types.ts` y `lib/currency.ts` sobreviven sólo porque los usa `goalStrategies.ts` (tipos de la v1). Cuando O1 adapte esa lógica a la v2, borrarlos. Y el comentario de `routes.tsx` que menciona `hasReport`. | pendiente |
 
 ## Hechos
 
@@ -67,16 +57,31 @@ No cambian lo que ve la persona, pero bajan el riesgo de romper algo al tocar el
 | B3 | Funcionalidad | Borrar un gasto o ingreso cuando fallaba la lectura previa lo borraba igual y no ajustaba el saldo. Ahora corta (`api/v2/index.ts`). | f2addc5 |
 | B4 | Funcionalidad | Un gasto con un medio de pago nuevo creaba el medio en la base pero no en pantalla. Ahora se crea en los dos lados (`ajustarMedio` en `acciones.ts`). | f2addc5 |
 | B5 | Funcionalidad | Editar un aporte en dólares sin cotización lo guardaba en pesos sin avisar, y nunca guardaba el id de la cotización. Ahora convierte igual que el alta y avisa si falta el dólar. | f2addc5 |
-| B6 | Limpieza | Inversiones hacía `fetch` del dólar desde `lib/exchangeRate.ts`. Ahora usa `api/v2/cotizacion.ts`. El archivo viejo se borra con L1. | f2addc5 |
+| B6 | Limpieza | Inversiones hacía `fetch` del dólar desde `lib/exchangeRate.ts`. Ahora usa `api/v2/cotizacion.ts`. | f2addc5 |
 | B7 | Seguridad | La pantalla de prueba de Fini (`/onboarding-v2/fini`) era pública en producción. Ahora sólo existe en `npm run dev`. | f2addc5 |
-| I3 | Diseño | Inicio, paso del día: sin bajada. Queda Tu paso de hoy, el título del paso y el botón; ya no se muestra la explicación de cómo registrar el gasto ni el mensaje de la IA. | Inicio: más limpio |
+| I3 | Diseño | Inicio, paso del día: sin bajada. Queda Tu paso de hoy, el título del paso y el botón. | Inicio: más limpio |
 | I4 | Diseño | Inicio: fueguito de racha de 16 a 28px y número de 20 a 26px. | Inicio: más limpio |
-| I5 | Diseño | Inicio: el gráfico de ingresos y gastos ya no se sale de la pantalla (sin ancho mínimo por mes, tarjeta que no deja desbordar), arranca en el primer mes con datos y se llama Ingresos y gastos por mes. Te pasaste por pasó a Salió de más. | Inicio: más limpio |
+| I5 | Diseño | Inicio: el gráfico de ingresos y gastos ya no se sale de la pantalla, arranca en el primer mes con datos y se llama Ingresos y gastos por mes. Te pasaste por pasó a Salió de más. | Inicio: más limpio |
 | I6 | Diseño | Inicio: se sacó el gráfico Por día. | Inicio: más limpio |
 | I8 | Diseño | Inicio: se sacó Tu plata guardada; Completá tu perfil queda solo. Ver I12. | Inicio: más limpio |
 | I9 | Diseño | Inicio: se sacó Mis competencias. | Inicio: más limpio |
 | I10 | Funcionalidad | Inicio: la recomendación ya no se tacha; es un mensaje debajo de los gráficos. | Inicio: más limpio |
 | I11 | Diseño | Inicio: Sumá FINA a tu pantalla de inicio (y el aviso de vencimientos) sin bajada. En el onboarding la explicación queda. | Inicio: más limpio |
-| D1 | Funcionalidad | Guardados a medias. En la base: si se guarda un gasto o ingreso pero falla el saldo, se borra la fila y se devuelven los saldos ya movidos; si falla el saldo de una edición de gasto, la fila vuelve a como estaba. En pantalla: registrar y editar gasto, crear objetivo, sumar un registro a un objetivo y sumar o editar un aporte vuelven atrás si la base no lo guardó. Lo que falta está en D3. | D1 y P1 |
-| P1 | Diseño | Perfil: el nombre se ve como texto con un botón Editar; el campo aparece al tocarlo, con Guardar y Cancelar (también Enter y Esc). Sin nombre guardado arranca editando. Sale el subtítulo de la cabecera. | D1 y P1 |
-| T1 | Diseño | Una sola familia tipográfica: Poppins en toda la app (antes Baloo 2 en títulos, Figtree en texto e IBM Plex Mono en montos). Los montos siguen con cifras tabulares. Guía actualizada (§3.4 y §12.1). | Tipografía única |
+| D1 | Funcionalidad | Guardados a medias: en la base, si falla el saldo se deshace lo hecho; en pantalla, las acciones vuelven atrás si la base no guardó. | D1 y P1 |
+| P1 | Diseño | Perfil: el nombre se ve como texto con un botón Editar. | D1 y P1 |
+| T1 | Diseño | Una sola familia tipográfica: Poppins en toda la app. | Tipografía única |
+| S1 | Seguridad | 0039: sin insert anónimo en `exchange_rates`; `api/dolar.ts` escribe con service role (M1). | Etapa 1 |
+| S2 | Seguridad | 0039: un miembro ya no puede cambiarse `role` ni `activity`; la actividad suma por la RPC atómica `sumar_actividad`. También se cerró que cualquiera con el id de un grupo pudiera entrar sin código y como dueño. | Etapa 1 |
+| S3 | Seguridad | 0039: un split de gasto de grupo sólo puede ser de un miembro del grupo. | Etapa 1 |
+| S4 | Seguridad | 0039: `unirse_a_grupo` corta después de 10 códigos fallidos por hora. | Etapa 1 |
+| S5 | Seguridad | 0039: policy de UPDATE en `feedback` y de DELETE propias en las tablas que no tenían. | Etapa 1 |
+| D3 | Funcionalidad | 0040: registrar, editar y borrar gasto o ingreso en una sola transacción de la base. Mientras 0040 no esté corrida, la app usa el camino viejo, que ahora deshace lo hecho también al editar un ingreso y al borrar. | Etapa 1 |
+| L1 | Limpieza | Se borró la v1: 109 archivos (Main.tsx, 47 componentes, 47 de `components/ui`, libs y utils sin uso) y la consulta a `reports` en cada login. | Etapa 1 |
+| L2 | Limpieza | Dependencias: quedan 11; se fueron MUI, emotion, radix, recharts y otras. El paquete se llama `fina` y react está en dependencies. | Etapa 1 |
+| L3 | Diseño | Una paleta: `tokens.css` es espejo de `COLORS` (lo que pinta la app); gastos neutrales, sin rojo; sin hex en `theme.css`; `frontend.md` §3.3 y §4 documentan lo real. | Etapa 1 |
+| L4 | Docs | `RESUMEN-CHAT.md` reescrito para la v2; `.env.example` con las 8 variables; script de borrado con transacción; `balance_loads` en `docs/bot-ingresos.md`; README de migraciones al día. | Etapa 1 |
+| GA1 | Diseño | Gastos: listas de hasta 5 con Ver todos (`VerTodos.tsx`); nada importante debajo de 14px. | Etapa 1 |
+| GA2 | Diseño | Gastos: el dinero disponible es el dato principal, grande y arriba; salen la torta y los medios de pago. Los medios se editan y unen desde Perfil (`MediosDePago.tsx`). | Etapa 1 |
+| G1 | Diseño | Jerarquía: Gastos lleva al disponible, Inversiones a la recomendación para tu perfil, Perfil a tu foto y nombre. Una sola tarjeta elevada por pantalla. | Etapa 1 |
+| IN1 | Diseño | Inversiones: menos letra chica; lo proyectado se muestra como rango estimado, no como número exacto. | Etapa 1 |
+| GA3 | Diseño | El tipo de gasto Impulsivo se muestra como Gusto (el valor guardado no cambia). | Etapa 1 |

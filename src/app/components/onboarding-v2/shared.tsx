@@ -44,6 +44,10 @@ import { sumarEn } from '../../api/v2/conversion';
 //   · Los gastos se muestran NEUTRALES (tinta), nunca en color de alerta.
 // El fondo se bajó de intensidad respecto del crema del manual (#FFF4E4) a un
 // casi-blanco cálido, por pedido de diseño.
+//
+// src/styles/tokens.css es el espejo de este objeto (mismos valores, nombres en
+// castellano: ink = --fina-tinta, brand = --fina-violeta, lima = --fina-lima,
+// etc.). Si cambiás un valor acá, cambialo allá en el mismo commit.
 export const COLORS = {
   // Neutros / superficies
   ink: '#2B2118',        // tinta — texto y montos (14:1+ sobre papel)
@@ -1011,8 +1015,8 @@ export function Apoyo({ children }: { children: React.ReactNode }) {
 export function Contador({ actual, total }: { actual: number; total: number }) {
   return (
     <p
-      className="text-[12px] font-semibold uppercase tracking-[0.12em]"
-      style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}
+      className="text-[13px] font-semibold tabular-nums"
+      style={{ color: COLORS.inkSoft }}
     >
       Pregunta {actual} de {total}
     </p>

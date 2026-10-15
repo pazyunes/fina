@@ -1,46 +1,78 @@
-/* ─────────────────────────────────────────────────────────────────────
-   FINA · Design Tokens (fuente de verdad) — Manual de Identidad v2.0
-   theme.css los consume para mapear las variables que ya usa la app
-   (--primary, --font-sans, etc.).
-   ───────────────────────────────────────────────────────────────────── */
+/* FINA, design tokens.
+   Espejo de COLORS en src/app/components/onboarding-v2/shared.tsx, que es lo
+   que pinta la app hoy. Si cambia un valor allá, cambia acá en el mismo commit
+   (y al revés). La guía está en src/styles/frontend.md, secciones 3.3 y 4.
+   theme.css los consume para mapear las variables genéricas (--primary,
+   --background, --font-sans, etc.). */
 :root {
-  /* Marca — violeta */
-  --fina-violeta: #7626B3;      /* primario: botones, marca, trazo de íconos */
-  --fina-violeta-700: #5C1B8E;  /* hover / pressed */
-  --fina-violeta-900: #431C72;  /* contorno de Fini, fondos plenos, banners */
-  --fina-violeta-400: #A56BE0;  /* trazos secundarios, bordes activos, foco */
-  --fina-violeta-100: #F0E7FA;  /* superficie tintada suave */
+  /* Superficies */
+  --fina-papel: #FAF7F1;          /* fondo general, casi blanco, apenas cálido */
+  --fina-superficie: #FFFFFF;     /* superficie elevada: tarjetas */
+  --fina-hueco: #EEE4D2;          /* bloque tintado / hundido */
+  --fina-hairline: #D6CBB8;       /* separador decorativo, 1.5:1 sobre papel */
+  --fina-borde-control: #998769;  /* borde de control (input, botón), 3.26:1 */
+  --fina-marco: #EFEAE0;          /* fondo del marco que envuelve la pantalla en desktop */
 
-  /* Amarillo */
-  --fina-amarillo: #FFC93C;     /* Fini, logros, badges, CTA secundarios */
-  --fina-amarillo-700: #C4820C; /* texto/íconos sobre amarillo claro */
-  --fina-amarillo-300: #FFE9A8;
-  --fina-amarillo-100: #FFF6DE;
+  /* Tinta (texto) */
+  --fina-tinta: #2B2118;          /* texto y montos, 14:1 sobre papel */
+  --fina-tinta-media: #5F5346;    /* labels, fechas, 6.9:1 */
+  --fina-tinta-suave: #7A6A58;    /* auxiliar, mínimo AA */
 
-  /* Fideo magenta — extremidades de Fini */
-  --fina-fideo: #C23FA8;
+  /* Acento de interfaz: botones, progreso, foco, estado elegido */
+  --fina-violeta: #7626B3;        /* 7.28:1 sobre papel, texto blanco encima 7.78:1 */
+  --fina-violeta-suave: #E4D5F5;  /* bandas y recuadros; violeta encima 7.6:1 */
+  --fina-violeta-oscuro: #5C1B8E; /* texto sobre lila, fondos plenos */
 
-  /* Neutros / superficies */
-  --fina-tinta: #1F1B2E;   /* texto principal */
-  --fina-gris: #6B647A;    /* subtítulos, labels */
-  --fina-linea: #E9E3F1;   /* separadores, contornos de tarjeta */
-  --fina-tinte: #F0E7FA;   /* violeta 100 = superficie de apoyo */
-  --fina-papel: #FBFAF8;   /* fondo app (calidez, evita blanco puro) */
-  --fina-blanco: #FFFFFF;  /* tarjetas / elevación */
+  /* Colores de marca. Son de RELLENO, nunca de texto: cada uno tiene su
+     -suave (superficie) y su -texto (6:1 o más) para tipografía o ícono fino. */
+  --fina-lima: #B0E150;           /* valor, éxito, objetivo que avanza */
+  --fina-lima-suave: #EAF5D0;
+  --fina-lima-texto: #41660F;
+  --fina-lima-dato: #5C8A18;      /* marcas de datos (anillo, barra): 3.6:1 contra su riel */
+  --fina-star: #FFC457;           /* Fini, medallitas, destacados */
+  --fina-star-suave: #FFEECB;
+  --fina-star-texto: #7A4F00;
+  --fina-naranja: #FF7B4F;        /* atención accionable, nunca un gasto */
+  --fina-naranja-suave: #FFE3D6;
+  --fina-naranja-texto: #A83208;
+  --fina-lila: #CB9EFF;           /* relleno de recuadros */
+  --fina-lila-borde: #9A6BD1;     /* 3.6:1, bordes perceptibles */
+  --fina-lila-texto: var(--fina-violeta-oscuro);
 
-  /* Semánticos por categoría + versión suave */
-  --fina-gastos: #F4557A;        --fina-gastos-100: #FFE7EC;
-  --fina-objetivos: #16A97A;     --fina-objetivos-100: #DFF4EC;
-  --fina-inversiones: #3D6FF5;   --fina-inversiones-100: #E2EAFF;
-  --fina-grupos: #E8952B;        --fina-grupos-100: #FDEEDA;
-  --fina-error: #DD3350;         --fina-error-100: #FCE4E8;
+  /* Hues de apoyo para distinguir secciones de gastos entre sí (no son alerta) */
+  --fina-purpura: #7E5DA8;
+  --fina-purpura-suave: #EEE7F6;
+  --fina-azul: #3D6FF5;
+  --fina-azul-suave: #E2EAFF;
+  --fina-magenta: #C23FA8;
+  --fina-magenta-suave: #F9E1F2;
 
-  /* Tipografía: una sola familia, Poppins. Los tres nombres quedan para no
-     romper lo que ya los usa; apuntan todos a lo mismo. */
+  /* Secciones. Gastos es neutral a propósito: un gasto no es un error. */
+  --fina-gastos: var(--fina-tinta);
+  --fina-gastos-suave: #F1EBDF;
+  --fina-objetivos: var(--fina-lima-texto);
+  --fina-objetivos-suave: var(--fina-lima-suave);
+  --fina-inversiones: var(--fina-purpura);
+  --fina-inversiones-suave: var(--fina-purpura-suave);
+  --fina-grupos: var(--fina-star-texto);
+  --fina-grupos-suave: var(--fina-star-suave);
+
+  /* Noche: Inversiones vive en modo oscuro. No es un dark mode de la app. */
+  --fina-noche: #3D2A55;
+  --fina-noche-tarjeta: #4A3663;
+  --fina-noche-linea: rgba(250, 247, 241, 0.12);
+  --fina-sobre-noche: var(--fina-papel);
+  --fina-sobre-noche-suave: rgba(250, 247, 241, 0.6);
+
+  /* Tipografía: una sola familia, Poppins. Los tres nombres apuntan a lo mismo. */
   --fina-font: "Poppins", ui-sans-serif, system-ui, sans-serif;
   --fina-display: var(--fina-font);
   --fina-sans: var(--fina-font);
   --fina-mono: var(--fina-font);
+
+  /* Espacio, escala de 4px */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
 
   /* Radios */
   --fina-r-xs: 8px;
@@ -49,9 +81,19 @@
   --fina-r-lg: 24px;
   --fina-r-full: 999px;
 
-  /* Modo noche (referencia del manual — todavía no cableado en la app) */
-  --fina-dark-bg: #171227;
-  --fina-dark-surface: #241C3B;
-  --fina-dark-linea: #362B52;
-  --fina-dark-texto: #F3EEFA;
+  /* Forma y foco */
+  --stroke-icon: 1.9px;
+  --shadow-card: 0 2px 8px rgba(43, 33, 24, 0.08);
+  --focus-ring: 0 0 0 3px rgba(118, 38, 179, 0.45);
+
+  /* Nombres del manual anterior (v2.0, violeta). Quedan como alias por si algo
+     los sigue leyendo; no usarlos en código nuevo. */
+  --fina-blanco: var(--fina-superficie);
+  --fina-gris: var(--fina-tinta-media);
+  --fina-linea: var(--fina-hairline);
+  --fina-tinte: var(--fina-hueco);
+  --fina-violeta-100: var(--fina-violeta-suave);
+  --fina-violeta-700: var(--fina-violeta-oscuro);
+  --fina-amarillo: var(--fina-star);
+  --fina-fideo: var(--fina-magenta);
 }

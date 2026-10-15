@@ -1,4 +1,4 @@
-# Bot de WhatsApp de FINA — ingresos
+# Bot de WhatsApp de FINA: ingresos
 
 **Para:** quien está modificando el bot (Kapso).
 **Fecha:** 17 de septiembre de 2026.
@@ -113,9 +113,19 @@ vez). El bot tiene que hacer la misma diferencia:
 | Si dice… | Qué hacer |
 | --- | --- |
 | "cobré 450.000", "me pagaron 80 lucas" | **Ingreso**: el `insert` en `transactions` (punto 1) **y** sumar al saldo (punto 2) |
-| "tengo 200.000 en el banco", "en Mercado Pago tengo 50.000" | **Sólo saldo**: el punto 2, **sin** guardar nada en `transactions` |
+| "tengo 200.000 en el banco", "en Mercado Pago tengo 50.000" | **Carga de saldo**: el punto 2 **y** una fila en `balance_loads` (abajo), **sin** guardar nada en `transactions` |
 
 Si no queda claro, preguntar: *"¿Te entró ahora o es plata que ya tenías?"*
+
+Una carga de "ya la tenía" no es sólo mover el saldo: también se guarda en `balance_loads`
+(migración 0037), con el mismo medio y el monto en pesos. Es lo que hace la app desde esa
+migración, y de ahí sale el dinero disponible de cada mes (lo cargado menos lo gastado en ese
+mes). Si el bot sólo mueve el saldo, la carga no figura en ningún mes.
+
+```sql
+insert into balance_loads (user_id, medio, amount_ars, occurred_at)
+values (:uid, :medio, :monto_ars, now());   -- monto POSITIVO, mismo :medio que en payment_methods
+```
 
 Si "ya la tenía" se guardara como ingreso, el gráfico mostraría que ese mes le
 entró todo lo que tenía ahorrado.
@@ -155,7 +165,7 @@ Corto y sin retar. Si informa totales, **sumar por `amount_ars`**.
 | --- | --- | --- |
 | 1 | Al bot: "cobré 450.000 en Mercado Pago" | En **Gastos → Lo que entra y lo que sale**: "Entró" sube $450.000, aparece en "Ingresos de este mes" como *Sueldo · Mercado Pago · por WhatsApp*, y el **dinero disponible** sube $450.000 |
 | 2 | Al bot: "me regalaron 20 dólares" | Aparece como regalo, en pesos al blue de hoy |
-| 3 | Al bot: "en el banco tengo 100.000" | El **dinero disponible** sube $100.000, pero **"Entró" no cambia** |
+| 3 | Al bot: "en el banco tengo 100.000" | El **dinero disponible** sube $100.000, pero **"Entró" no cambia**; en la base hay una fila nueva en `balance_loads` |
 | 4 | En la app, borrar el ingreso del paso 1 (tachito) | Desaparece de la lista y el disponible baja $450.000 |
 | 5 | En la app, "+ Agregar plata" → "Me entró" → $30.000 | El bot, si informa lo que entró en el mes, lo incluye |
 
@@ -167,3 +177,4 @@ Corto y sin retar. Si informa totales, **sumar por `amount_ars`**.
 | 1 | `income_source` con las mismas palabras | Aparece como "Ingreso" sin decir de dónde vino |
 | 2 | Sumar al saldo del medio con `on conflict … + monto` | El dinero disponible no refleja lo que entró |
 | 4 | Distinguir "me entró" de "ya la tenía" | El gráfico muestra ingresos que no existieron |
+| 4 | "Ya la tenía" también inserta en `balance_loads` | La carga no cuenta en el disponible de ningún mes |

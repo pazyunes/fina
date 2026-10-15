@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { llevarA, useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { ArmarGrupoBtn, COLORS, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
@@ -12,12 +12,14 @@ import { IngresosVsGastos, lunesAtras, mesAtras } from './IngresosVsGastos';
 import { CamposGastoFijo, ListaGastosFijos, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
 import { FUENTES_INGRESO, type FuenteIngreso, type PagoMixto } from '../../api/v2/tipos';
 import { IconClose } from './FinaIcons';
+import { VerTodos, recortar } from './VerTodos';
 
-// REDISEÑO v2 — Mis Gastos. Estructura del boceto: dinero disponible +
-// gastos con sus botones de "agregar", visualización arriba (donut +
-// distribución por tipo), sobres por categoría con tope editable, buscador
-// de gastos, y una reserva tipo ahorro (mismo concepto que
-// ReserveControl.tsx de la app real, pasado a esta estética).
+// REDISEÑO v2 — Mis Gastos. El objetivo de la pantalla es uno: cuánta plata
+// tenés disponible. Ese número va arriba y grande; debajo, las dos acciones
+// (agregar gasto, agregar plata), lo que entra contra lo que sale, la
+// distribución por tipo, las secciones con su tope y el buscador. La torta y
+// las barras por medio de pago se sacaron (DEBT GA2); unir medios vive en
+// Perfil (MediosDePago.tsx).
 //
 // Alineado a la guía (src/styles/frontend.md): todo el color sale de COLORS
 // (cero hex/rgba crudo salvo sombras basadas en tinta); los gastos se muestran
@@ -91,7 +93,9 @@ type EstadoGastos = { categorias: Categoria[]; gastos: Gasto[]; disponible: numb
 // —reservado a atención accionable— para que "urgente" no lea como reto.
 const TIPO_INFO: Record<TipoGasto, { label: string; color: string }> = {
   urgente: { label: 'Urgente', color: COLORS.lila },
-  impulsivo: { label: 'Impulsivo', color: COLORS.gold },
+  // Se guarda 'impulsivo' (el dato no cambia), pero se dice "Gusto":
+  // "impulsivo" juzga el gasto y la app no moraliza el consumo (regla 3).
+  impulsivo: { label: 'Gusto', color: COLORS.gold },
   necesario: { label: 'Necesario', color: COLORS.green },
   otro: { label: 'Otro', color: COLORS.sky },
 };
@@ -188,7 +192,7 @@ function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () 
   return (
     <div className="mt-2 mb-1 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
       <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
-        ¿Borrar “{gasto.descripcion}” de <span className="font-mono tabular-nums">{fmtGasto(gasto)}</span>?
+        ¿Borrar "{gasto.descripcion}" de <span className="font-mono tabular-nums">{fmtGasto(gasto)}</span>?
         {gasto.pagos?.length ? ` La plata vuelve a ${fmtPagos(gasto.pagos)}.` : gasto.metodoPago ? ` La plata vuelve a ${gasto.metodoPago}.` : ''}
       </p>
       <div className="flex gap-2">
@@ -327,12 +331,8 @@ export function GastosV2() {
   // Con esto en true, "Tus gastos" deja de truncar en 6. Buscar por nombre o
   // filtrar por fecha ya implica querer ver la lista completa que matchea.
   const [verTodos, setVerTodos] = useState(false);
-  // "Cuánto tenés" por medio de pago: se ven los primeros y el resto se despliega.
-  const [verTodosMedios, setVerTodosMedios] = useState(false);
-  // Editar medios de pago: unir dos en uno.
-  const [editandoMedios, setEditandoMedios] = useState(false);
-  const [uniendoMedio, setUniendoMedio] = useState<string | null>(null);
-  const [uniendoHacia, setUniendoHacia] = useState('');
+  // Sección abierta con todos sus gastos a la vista (si no, los primeros 5).
+  const [seccionCompleta, setSeccionCompleta] = useState<string | null>(null);
   // Editar secciones: renombrar o borrar. Una a la vez.
   const [editandoSecciones, setEditandoSecciones] = useState(false);
   const [renombrandoId, setRenombrandoId] = useState<string | null>(null);
@@ -465,14 +465,8 @@ export function GastosV2() {
   // ingresos, y se ve en cada medio.
   const previoTotal = mediosVentana.reduce((t, m) => t + m.previo, 0);
   const disponibleVentana = Math.max(mediosVentana.reduce((t, m) => t + m.quedan, 0), 0);
-  const maxQuedan = Math.max(...mediosVentana.map((m) => m.quedan), 0);
-  const nombrePeriodoMedios = etiquetaVentana;
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
-
-  const donutCategorias = categorias
-    .map((c) => ({ color: colorDe(c.id), pct: totalGastado > 0 ? (gastadoEn(c.id) / totalGastado) * 100 : 0 }))
-    .filter((s) => s.pct > 0);
 
   // El "otro" se abre por lo que la persona escribió (Salud, Mascota…): cada
   // texto es su propia fila, con el color de "otro". Los "otro" sin texto
@@ -701,13 +695,34 @@ export function GastosV2() {
           números y el personaje no va cerca de datos (§6). */}
       <header data-franja className="pb-1 mb-2">
         <Titulo>Mis gastos</Titulo>
-        <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>Todo lo que registrás, en un solo lugar. Ponéle un tope a cada sección.</p>
       </header>
 
+      {/* EL dato de la pantalla (§3.5): cuánta plata tenés disponible en el
+          período que se mira. Es la única tarjeta elevada y lo más grande de
+          todo; el resto baja de tamaño y de peso. Mismo cálculo que antes:
+          lo que sobró de antes, más lo cargado, menos lo gastado. */}
+      <section
+        aria-label={`Dinero disponible, ${textoPeriodo}`}
+        className="rounded-2xl px-5 py-5 flex flex-col gap-1 lg:max-w-xl"
+        style={CARD_ELEVADA}
+      >
+        <p className="text-[15px] font-medium" style={{ color: COLORS.inkSoft }}>
+          {ventana === 'mes' && mesOffset === 0 ? 'Dinero disponible' : `Dinero disponible, ${textoPeriodo.toLowerCase()}`}
+        </p>
+        <span aria-live="polite">
+          <Monto value={disponibleVentana} size={40} className="font-bold leading-tight tracking-[-0.01em]" />
+        </span>
+        {previoTotal > 0 && (
+          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            Incluye <span className="font-mono tabular-nums">{fmtMoney(previoTotal)}</span> que sobró del mes anterior
+          </p>
+        )}
+        <EstadoConfianza estado="declarado" className="mt-1" />
+      </section>
+
       {/* "Gastado" sin período no se puede comparar con nada, y los topes son
-          por semana o por mes. Se elige una ventana y el donut, el total y la
-          distribución por tipo la respetan. Va a lo ancho y arriba porque
-          manda sobre todo el resumen, no solo sobre el donut. */}
+          por semana o por mes. Se elige una ventana y el disponible, la lista
+          y la distribución por tipo la respetan. */}
       <SegmentedTab
         options={[{ id: 'mes' as Periodo, label: 'Este mes' }, { id: 'semana' as Periodo, label: 'Esta semana' }]}
         value={ventana}
@@ -721,7 +736,7 @@ export function GastosV2() {
           type="button"
           onClick={() => (ventana === 'mes' ? setMesOffset((o) => o + 1) : setSemanaOffset((o) => o + 1))}
           aria-label={ventana === 'mes' ? 'Ver mes anterior' : 'Ver semana anterior'}
-          className="v2-focus w-9 h-9 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+          className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
           style={{ color: COLORS.inkSoft }}
         >
           <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} />
@@ -734,7 +749,7 @@ export function GastosV2() {
           onClick={() => (ventana === 'mes' ? setMesOffset((o) => Math.max(0, o - 1)) : setSemanaOffset((o) => Math.max(0, o - 1)))}
           disabled={offsetVentana === 0}
           aria-label={ventana === 'mes' ? 'Ver mes siguiente' : 'Ver semana siguiente'}
-          className="v2-focus w-9 h-9 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+          className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
           style={{ color: COLORS.inkSoft, opacity: offsetVentana === 0 ? 0.3 : 1, cursor: offsetVentana === 0 ? 'default' : 'pointer' }}
         >
           <IconChevron size={15} />
@@ -744,144 +759,6 @@ export function GastosV2() {
       {/* En desktop, todo lo de abajo se acomoda en grilla; en mobile sigue
           siendo una sola columna apilada (idéntico a antes). */}
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:gap-5 lg:gap-y-5 lg:grid-flow-row-dense lg:items-start">
-      {/* Resumen: donut + disponible/gastado — el DATO CENTRAL, única tarjeta elevada */}
-      <div className={`rounded-2xl p-4 flex gap-4 items-center lg:h-full ${porTipo.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`} style={CARD_ELEVADA}>
-        <Donut
-          segments={donutCategorias}
-          centerLabel={etiquetaVentana}
-          centerValue={fmtMontoCompacto(totalGastado)}
-        />
-        <div className="flex-1 min-w-0 flex flex-col gap-3">
-          <div>
-            <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Dinero disponible</p>
-            <Monto value={disponibleVentana} size={19} className="font-bold" />
-            {previoTotal > 0 && (
-              <p className="text-[12px] leading-snug mt-0.5" style={{ color: COLORS.inkSoft }}>
-                Incluye {fmtMoney(previoTotal)} que sobró del mes anterior
-              </p>
-            )}
-          </div>
-
-          {/* Cuánto queda en cada medio de pago en el período de la torta, en
-              barritas. El número va en tinta; el color de la barra es el del
-              dato (limaViz). */}
-          {mediosVentana.length === 0 ? (
-            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              Cuando cargues plata o un gasto con un medio, acá ves cuánto te queda en cada uno este período.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2" aria-label={`Cuánto te queda en cada medio de pago: ${nombrePeriodoMedios}`}>
-              {(verTodosMedios ? mediosVentana : mediosVentana.slice(0, 4)).map((m) => {
-                const texto = m.quedan < 0 ? `-${fmtMoney(-m.quedan)}` : fmtMoney(m.quedan);
-                return (
-                  <div key={m.nombre} className="flex flex-col gap-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-[13px] truncate" style={{ color: COLORS.ink }}>{m.nombre}</span>
-                      <span className="text-[13px] shrink-0 font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{texto}</span>
-                    </div>
-                    <div
-                      className="h-2 rounded-full overflow-hidden"
-                      style={{ background: COLORS.tint }}
-                      role="img"
-                      aria-label={`${m.nombre}: ${m.previo > 0 ? `sobró ${fmtMoney(m.previo)} del mes anterior, ` : ''}entró ${fmtMoney(m.entro)}, salió ${fmtMoney(m.salio)}, queda ${texto}`}
-                    >
-                      <div className="h-full rounded-full" style={{ width: `${maxQuedan > 0 ? (Math.max(m.quedan, 0) / maxQuedan) * 100 : 0}%`, background: COLORS.limaViz }} />
-                    </div>
-                  </div>
-                );
-              })}
-              {mediosVentana.length > 4 && (
-                <button
-                  type="button"
-                  onClick={() => setVerTodosMedios((v) => !v)}
-                  className="v2-focus self-start text-[13px] font-semibold underline"
-                  style={{ color: COLORS.brand }}
-                >
-                  {verTodosMedios ? 'Ver menos' : `Ver los ${mediosVentana.length}`}
-                </button>
-              )}
-            </div>
-          )}
-
-          {db.mediosPago.length > 0 && (
-            <button
-              type="button"
-              aria-expanded={editandoMedios}
-              onClick={() => { setEditandoMedios((v) => !v); setUniendoMedio(null); setUniendoHacia(''); }}
-              className="v2-focus self-start text-[13px] font-semibold underline"
-              style={{ color: COLORS.brand }}
-            >
-              {editandoMedios ? 'Listo' : 'Editar medios'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Editar medios de pago: unir dos en uno (por ejemplo "MP" y "Mercado
-          Pago"). Full-width y no adentro de la tarjeta de la torta, que es
-          angosta. */}
-      {editandoMedios && (
-        <div className="lg:col-span-3 rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.tint }}>
-          <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Tus medios de pago</p>
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            {db.mediosPago.length < 2
-              ? 'Cuando tengas dos medios que en realidad son el mismo (por ejemplo "MP" y "Mercado Pago") los vas a poder unir acá.'
-              : 'Si tenés el mismo medio con dos nombres (por ejemplo "MP" y "Mercado Pago"), unilos: se juntan los saldos y todos los gastos, ingresos y cargas pasan al que elijas.'}
-          </p>
-          <ul className="flex flex-col">
-            {db.mediosPago.map((m) => {
-              const otros = db.mediosPago.filter((x) => x.nombre !== m.nombre);
-              const abierto = uniendoMedio === m.nombre;
-              return (
-                <li key={m.id} className="py-2.5 border-b last:border-b-0 flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
-                  <div className="flex items-center gap-2">
-                    <span className="flex-1 min-w-0 truncate text-[16px] font-semibold" style={{ color: COLORS.ink }}>{m.nombre}</span>
-                    {otros.length > 0 && (
-                      <button
-                        type="button"
-                        aria-expanded={abierto}
-                        onClick={() => { setUniendoMedio(abierto ? null : m.nombre); setUniendoHacia(''); }}
-                        className="v2-focus min-h-[44px] px-3 rounded-full text-[14px] font-semibold shrink-0"
-                        style={{ color: COLORS.brand, border: `1.5px solid ${COLORS.brandSoft}` }}
-                      >
-                        Unir con otro
-                      </button>
-                    )}
-                  </div>
-                  {abierto && (
-                    <div className="flex flex-col gap-2.5" role="group" aria-label={`Unir ${m.nombre} con otro medio`}>
-                      <Desplegable id={`unir-${m.id}`} label={`Unir “${m.nombre}” con…`} value={uniendoHacia} onChange={setUniendoHacia}>
-                        <option value="" style={OPCION}>Elegí el medio que queda</option>
-                        {otros.map((x) => <option key={x.id} value={x.nombre} style={OPCION}>{x.nombre}</option>)}
-                      </Desplegable>
-                      {uniendoHacia && (
-                        <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
-                          “{m.nombre}” desaparece y todo lo suyo pasa a “{uniendoHacia}”. No se puede deshacer.
-                        </p>
-                      )}
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => { setUniendoMedio(null); setUniendoHacia(''); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!uniendoHacia}
-                          onClick={() => { acciones.unirMedios(m.nombre, uniendoHacia); setUniendoMedio(null); setUniendoHacia(''); }}
-                          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-bold v2-disabled"
-                          style={{ background: COLORS.ink, color: COLORS.paper }}
-                        >
-                          Unir
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
       {/* Agregar gasto / Agregar plata — misma jerarquía, lado a lado, debajo
           del resumen y antes de los gráficos: son las dos acciones que se
           hacen todo el tiempo, así que no deberían pedir scroll. Mismo botón,
@@ -894,7 +771,7 @@ export function GastosV2() {
               type="button"
               onClick={() => { setChooser(true); setWaStep(false); }}
               className="v2-focus flex-1 rounded-2xl py-4 text-[16px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
-              style={{ background: COLORS.brand, color: COLORS.surface, boxShadow: '0 10px 24px -8px rgba(118,38,179,0.45)' }}
+              style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               + Agregar gasto
             </button>
@@ -917,7 +794,7 @@ export function GastosV2() {
               onChange={(v) => setAddDispEsIngreso(v === 'ingreso')}
               trackColor={COLORS.tint}
             />
-            <p className="text-[12px] leading-snug" style={{ color: COLORS.inkFaint }}>
+            <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
               {addDispEsIngreso
                 ? 'Cuenta como ingreso: se suma a lo que entró este mes.'
                 : 'Sólo suma a tu dinero disponible, sin contar como ingreso.'}
@@ -978,7 +855,7 @@ export function GastosV2() {
             )}
             {/* Se pregunta el medio acá para que después, al registrar un
                 gasto, se puedan ofrecer los que de verdad tenés. */}
-            <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{addDispEsIngreso ? '¿Dónde entró?' : '¿En qué lo tenés?'}</p>
+            <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>{addDispEsIngreso ? '¿Dónde entró?' : '¿En qué lo tenés?'}</p>
             <div className="flex flex-wrap gap-1.5">
               {metodosOfrecidos.map((m) => (
                 <button
@@ -1152,7 +1029,7 @@ export function GastosV2() {
                     <button
                       type="button"
                       onClick={() => { setNgDividido(true); setNgPagos([filaPagoVacia(), filaPagoVacia()]); }}
-                      className="v2-focus self-start text-[13px] font-semibold underline"
+                      className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
                       style={{ color: COLORS.brand }}
                     >
                       Pagado con más de un medio
@@ -1162,7 +1039,7 @@ export function GastosV2() {
                   <button
                     type="button"
                     onClick={() => { setNgDividido(false); setNgPagos([filaPagoVacia(), filaPagoVacia()]); }}
-                    className="v2-focus self-start text-[13px] font-semibold underline"
+                    className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
                     style={{ color: COLORS.inkSoft }}
                   >
                     Pagar con un solo medio
@@ -1226,12 +1103,12 @@ export function GastosV2() {
                 <button
                   type="button"
                   onClick={() => setNgPagos((v) => [...v, filaPagoVacia()])}
-                  className="v2-focus self-start text-[13px] font-semibold underline"
+                  className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
                   style={{ color: COLORS.brand }}
                 >
                   + Agregar otro medio
                 </button>
-                <p className="text-[13px]" style={{ color: pagosValidos ? COLORS.inkSoft : COLORS.coralDark }}>
+                <p className="text-[14px] tabular-nums" style={{ color: pagosValidos ? COLORS.inkSoft : COLORS.coralDark }}>
                   Sumado: {fmtMoney(sumaPagos)} de {fmtMoney(parseMoneyInput(ngMonto))}
                 </p>
               </div>
@@ -1329,7 +1206,7 @@ export function GastosV2() {
         />
       </section>
 
-      {/* Distribución por tipo — bloque tintado (§3.5): cuánto es impulso vs necesidad */}
+      {/* Distribución por tipo: cuánto fue necesario, urgente, gusto u otro. */}
       {porTipo.length > 0 && (
         <div className="flex flex-col gap-2 lg:col-span-1 lg:h-full">
           <TituloSeccion>¿En qué tipo de gasto se te va?</TituloSeccion>
@@ -1494,7 +1371,7 @@ export function GastosV2() {
 
               {open && (
                 <div className="mt-3 pt-3 border-t border-dashed flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
-                  {movs.map((m) => (
+                  {recortar(movs, seccionCompleta === cat.id).map((m) => (
                     <div key={m.id}>
                       <div className="flex items-center justify-between text-[15px] gap-2 min-h-[36px]" style={{ color: COLORS.ink }}>
                         <span className="flex items-center gap-1.5 min-w-0">
@@ -1511,6 +1388,11 @@ export function GastosV2() {
                       {borrando === m.id && <ConfirmarBorrado gasto={m} onCancelar={() => setBorrando(null)} />}
                     </div>
                   ))}
+                  <VerTodos
+                    total={movs.length}
+                    abierta={seccionCompleta === cat.id}
+                    onToggle={() => setSeccionCompleta(seccionCompleta === cat.id ? null : cat.id)}
+                  />
                   <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                     <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Tope de la sección</p>
                     <div className="relative">
@@ -1625,7 +1507,7 @@ export function GastosV2() {
                       {borrandoSeccionId === c.id && (
                         <div className="rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado de la sección">
                           <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
-                            ¿Borrar la sección “{c.nombre}”?
+                            ¿Borrar la sección "{c.nombre}"?
                             {cantGastos > 0
                               ? ` Sus ${cantGastos} ${cantGastos === 1 ? 'gasto no se borra' : 'gastos no se borran'}: ${cantGastos === 1 ? 'queda' : 'quedan'} sin sección.`
                               : ' No tiene gastos.'}
@@ -1684,7 +1566,7 @@ export function GastosV2() {
             />
             <div className="flex gap-2">
               <div className="flex-1 flex flex-col gap-1">
-                <label htmlFor="filtro-desde" className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>Desde</label>
+                <label htmlFor="filtro-desde" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Desde</label>
                 <input
                   id="filtro-desde"
                   type="date"
@@ -1697,7 +1579,7 @@ export function GastosV2() {
                 />
               </div>
               <div className="flex-1 flex flex-col gap-1">
-                <label htmlFor="filtro-hasta" className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>Hasta</label>
+                <label htmlFor="filtro-hasta" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Hasta</label>
                 <input
                   id="filtro-hasta"
                   type="date"
@@ -1714,7 +1596,7 @@ export function GastosV2() {
                   type="button"
                   onClick={() => { setFiltroDesde(''); setFiltroHasta(''); }}
                   aria-label="Sacar el filtro de fecha"
-                  className="v2-focus self-end mb-0.5 text-[13px] font-semibold underline"
+                  className="v2-focus self-end min-h-[44px] text-[14px] font-semibold underline"
                   style={{ color: COLORS.inkSoft }}
                 >
                   Sacar
@@ -1739,7 +1621,7 @@ export function GastosV2() {
               : `Todavía no hay gastos en ${textoPeriodo}.`}
           </p>
         )}
-        {gastosFiltrados.slice(0, mostrarTodos ? undefined : 6).map((g) => {
+        {recortar(gastosFiltrados, mostrarTodos).map((g) => {
           const cat = categorias.find((c) => c.id === g.categoriaId);
           return (
             // Idem: un movimiento no es una tarjeta, es un renglón.
@@ -1747,14 +1629,12 @@ export function GastosV2() {
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[g.tipo].color }} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
-                  <p className="text-[14px] flex items-center gap-1.5" style={{ color: COLORS.inkSoft }}>
-                    <span className="truncate">{cat?.nombre ?? 'Sin sección'}</span>
-                    {g.tipoOtro && <span className="truncate">· {g.tipoOtro}</span>}
-                    <span className="shrink-0">{fechaDisplay(g.ts)}</span>
+                  <p className="text-[16px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
+                  <p className="text-[14px] truncate" style={{ color: COLORS.inkSoft }}>
+                    {[cat?.nombre ?? 'Sin sección', g.tipoOtro, fechaDisplay(g.ts)].filter(Boolean).join(', ')}
                   </p>
                 </div>
-                <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
+                <span className="font-mono tabular-nums text-[16px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
                 {/* Todos se pueden editar y borrar, también los que llegaron por WhatsApp. */}
                 <BotonEditar gasto={g} onClick={() => empezarEdicion(g)} />
                 <BotonBorrar gasto={g} abierto={borrando === g.id} onClick={() => setBorrando(borrando === g.id ? null : g.id)} />
@@ -1763,15 +1643,8 @@ export function GastosV2() {
             </div>
           );
         })}
-        {!hayBusqueda && !hayFiltroFecha && gastosFiltrados.length > 6 && (
-          <button
-            type="button"
-            onClick={() => setVerTodos((v) => !v)}
-            className="v2-focus self-center text-[14px] font-semibold underline mt-1"
-            style={{ color: COLORS.brand }}
-          >
-            {verTodos ? 'Ver menos' : `Ver todos (${gastosFiltrados.length})`}
-          </button>
+        {!hayBusqueda && !hayFiltroFecha && (
+          <VerTodos total={gastosFiltrados.length} abierta={verTodos} onToggle={() => setVerTodos((v) => !v)} />
         )}
       </div>
 

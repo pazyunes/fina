@@ -294,16 +294,13 @@ export async function editarIngreso(id: string, c: {
     : undefined;
   let mediosPago = est.mediosPago;
   const ahora = new Date().toISOString();
-  for (const { medio: m, delta } of ajustesSaldo ?? []) {
-    mediosPago = mediosPago.some((x) => x.nombre === m)
-      ? mediosPago.map((x) => (x.nombre === m ? { ...x, saldo: x.saldo + delta } : x))
-      : [{ id: nuevoId(), nombre: m, saldo: delta, usadoEn: ahora }, ...mediosPago];
-  }
+  for (const { medio: m, delta } of ajustesSaldo ?? []) mediosPago = ajustarMedio(mediosPago, m, delta, ahora);
 
   parchearEstado({
     ingresos: est.ingresos.map((x) => (x.id === id ? ingreso : x)).sort((a, b) => b.ts - a.ts),
     mediosPago,
   });
+  const tocaFuenteOtra = !!(fuenteOtra || actual.fuenteOtra);
   push(() => api.editarIngreso(id, {
     monto: cambioMonto ? monto : undefined,
     moneda: cambioMonto ? moneda : undefined,
@@ -312,12 +309,28 @@ export async function editarIngreso(id: string, c: {
     fuente: c.fuente,
     // Sólo se toca la columna nueva si hay algo que guardar o algo viejo que
     // borrar.
-    fuenteOtra: (fuenteOtra || actual.fuenteOtra) ? (fuenteOtra ?? null) : undefined,
+    fuenteOtra: tocaFuenteOtra ? (fuenteOtra ?? null) : undefined,
     descripcion: c.descripcion !== undefined ? ingreso.descripcion : undefined,
     medio: medioNuevo,
     ts: c.ts,
     ajustesSaldo,
-  }), 'Ingreso editado con éxito.', () => parchearEstado({ ingresos: est.ingresos, mediosPago: est.mediosPago }));
+  }, {
+    // Cómo estaba, con las mismas columnas: si falla el saldo, la base vuelve
+    // la fila a esto. La cotización vieja no se conoce acá, así que no se toca.
+    monto: cambioMonto ? actual.monto : undefined,
+    moneda: cambioMonto ? actual.moneda : undefined,
+    montoArs: cambioMonto ? actual.montoArs : undefined,
+    fuente: c.fuente !== undefined ? actual.fuente : undefined,
+    fuenteOtra: tocaFuenteOtra ? (actual.fuenteOtra ?? null) : undefined,
+    descripcion: c.descripcion !== undefined ? actual.descripcion : undefined,
+    medio: medioNuevo !== undefined ? (actual.medio ?? undefined) : undefined,
+    ts: c.ts !== undefined ? actual.ts : undefined,
+  }), 'Ingreso editado con éxito.', () => {
+    // La base quedó como antes: la pantalla también. Sobre el estado de AHORA,
+    // no sobre la foto de antes, para no pisar lo que pasó mientras tanto.
+    parchearEstado({ ingresos: leerEstado().ingresos.map((x) => (x.id === id ? actual : x)).sort((a, b) => b.ts - a.ts) });
+    deshacerMedios(ajustesSaldo ?? [], est.mediosPago);
+  });
 
   return { error: null };
 }
