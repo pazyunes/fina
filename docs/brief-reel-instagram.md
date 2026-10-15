@@ -154,6 +154,18 @@ en redes: es lo más jugoso para un reel.
 **Inversiones**
 - Cuestionario de perfil inversor y sugerencias acordes, sin mover plata.
 
+**Entrar rápido y seguro** **NUEVO**
+- PIN y Face ID / Touch ID para abrir FINA en el celular. El PIN se guarda
+  cifrado en el propio teléfono, nunca en un servidor.
+
+**Detalles que se agregaron y se ven bien en cámara** **NUEVO**
+- Un gasto se puede pagar **con más de un medio** (mitad efectivo, mitad débito).
+- Un gasto se puede **editar entero** después: monto, moneda, descripción,
+  sección, tipo, medio y fecha.
+- Se pueden **mirar los meses anteriores** en el resumen, con flechitas.
+- Las secciones se ordenan de mayor a menor gasto, y la que queda vacía
+  desaparece sola.
+
 ---
 
 ## 5. Qué se puede mostrar y qué no
