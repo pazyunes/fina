@@ -52,7 +52,8 @@ const REDIRECCIONES: [string, string][] = [
 
 export const router = createBrowserRouter([
   {
-    // PR6 — `/` decide qué mostrar según sesión + hasReport.
+    // `/` decide según la sesión: sin sesión al onboarding, con sesión a Home
+    // (ver RootRedirect).
     path: "/",
     element: <RootRedirect />,
   },

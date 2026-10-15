@@ -1,13 +1,13 @@
 # Migraciones del flujo v2: qué correr y en qué orden
 
 Las migraciones se corren a mano en el SQL editor de Supabase; no hay CLI ni nada que las
-corra solo al desplegar. Las de la v2 van de la 0020 a la 0040.
+corra solo al desplegar. Las de la v2 van de la 0020 a la 0041.
 
 **Estado:** de la 0020 a la 0038 están corridas en la base real. La 0020 a la 0025 se
 probaron de punta a punta el 10 de septiembre de 2026 (alta de cuenta, teléfono, perfil,
 secciones, gastos en pesos y en dólares, objetivos con contribuciones, perfil inversor,
 aportes, grupo con código, foto a Storage y saldo por medio de pago); las siguientes se
-fueron corriendo a medida que entraba cada función. **La 0039 y la 0040 están pendientes de
+fueron corriendo a medida que entraba cada función. **La 0039, la 0040 y la 0041 están pendientes de
 correr a mano** (ver las notas de cada una en la tabla). La app funciona con o sin ellas.
 
 Lo de abajo queda como referencia de qué hace cada una y qué verificar si alguna vez hay que
@@ -18,7 +18,7 @@ rehacer la base. Para borrar todos los usuarios y empezar de cero está
 
 ## Las migraciones: qué son y en qué orden
 
-Veintiún archivos, de la 0020 a la 0040. **Correlos en orden**, uno por uno, leyendo el
+Veintidós archivos, de la 0020 a la 0041. **Correlos en orden**, uno por uno, leyendo el
 resultado antes de pasar al siguiente.
 
 | Orden | Archivo | Qué agrega |
@@ -44,6 +44,7 @@ resultado antes de pasar al siguiente.
 | 19 | `0038_unir_medios.sql` | `unir_medios(origen, destino)`: une dos medios de pago en uno (o renombra uno) en una sola transacción, moviendo saldo, gastos, ingresos, pagos divididos, gastos fijos y cargas |
 | 20 | `0039_seguridad.sql` | Seguridad (DEBT S1 a S5): saca el insert anónimo de `exchange_rates` (la cotización la escribe `api/dolar.ts` con `SUPABASE_SERVICE_ROLE_KEY`); en `group_members` nadie se cambia rol ni actividad desde el cliente y la actividad sube con `sumar_actividad`; los repartos de un gasto de grupo sólo para miembros; tope de 10 códigos equivocados por hora en `unirse_a_grupo`; policy de UPDATE en `feedback` y de DELETE de dueña en varias tablas. Antes de correrla, cargar `SUPABASE_SERVICE_ROLE_KEY` en Vercel; si no, el dólar se sigue mostrando pero no se guarda |
 | 21 | `0040_movimientos_atomicos.sql` | DEBT D3: registrar, editar y borrar un gasto o un ingreso, cada uno en una sola transacción de la base (la fila y los saldos de los medios juntos). La app las usa si existen y, si no, sigue con las varias llamadas de antes |
+| 22 | `0041_reserva.sql` | Asegura la columna `reserve_ars` de `user_profiles` (la reserva, que vuelve en Objetivos) y suma el tipo `plazo` a `notification_log`, para el aviso de plazo de un objetivo. Sin ella el aviso de plazo no sale; nada se rompe |
 
 <!-- Migraciones nuevas: agregar la fila al final de la tabla de arriba, con el número de orden siguiente. -->
 

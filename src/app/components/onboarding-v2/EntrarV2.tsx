@@ -189,7 +189,7 @@ export function EntrarV2() {
             {mailEnviado ? (
               <>
                 <FiniPresenta
-                  dice="Fijate en tu correo — si no aparece, mirá en spam."
+                  dice="Fijate en tu correo. Si no aparece, mirá en spam."
                   state="registro"
                   size={132}
                 />
@@ -279,7 +279,7 @@ export function EntrarV2() {
           ) : (
             <>
               <Cta label={trabajando ? 'Entrando…' : 'Entrar'} disabled={trabajando} onClick={() => void entrar()} />
-              <BotonFantasma label="No tengo cuenta — quiero crear una" onClick={() => navigate('/onboarding-v2')} />
+              <BotonFantasma label="No tengo cuenta, quiero crear una" onClick={() => navigate('/onboarding-v2')} />
             </>
           )}
         </div>

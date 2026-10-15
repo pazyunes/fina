@@ -12,7 +12,9 @@ import type { AccionPaso } from '../../api/v2/pasos';
 //
 // Se limpia enseguida: volver atrás o recargar no tiene que abrirlo otra vez.
 
-export function useAlLlegar(accion: AccionPaso | 'fijos', hacer: () => void) {
+// `hacer` recibe lo que vino en el state (sin `abrir`), por ejemplo `ref`: el id
+// de la sección o del objetivo del que habla el paso ("Ponele un tope a X").
+export function useAlLlegar(accion: AccionPaso | 'fijos', hacer: (datos: Record<string, unknown>) => void) {
   const location = useLocation();
   const navigate = useNavigate();
   useEffect(() => {
@@ -23,7 +25,7 @@ export function useAlLlegar(accion: AccionPaso | 'fijos', hacer: () => void) {
     query.delete('abrir');
     const busqueda = query.toString();
     navigate(`${location.pathname}${busqueda ? `?${busqueda}` : ''}`, { replace: true, state: Object.keys(resto).length ? resto : null });
-    hacer();
+    hacer(resto);
     // Sólo cuando se llega con una navegación nueva.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);

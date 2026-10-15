@@ -1229,7 +1229,7 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
             ))}
           </ul>
         </div>
-        <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu información es privada — no la compartimos con nadie.</p>
+        <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu información es privada, no la compartimos con nadie.</p>
       </aside>
 
       {/* Flujo de preguntas */}

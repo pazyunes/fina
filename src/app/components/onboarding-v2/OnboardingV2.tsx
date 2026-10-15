@@ -84,17 +84,17 @@ type StepKey =
 const FINI_DICE: Record<StepKey, { dice: string; estado: FiniState } | null> = {
   intro: null,
   nombre: { dice: 'Así te vamos a hablar de acá en adelante.', estado: 'saludo' },
-  genero: { dice: 'Elegí la que mejor te represente hoy — después vas a poder hacer todo lo demás igual.', estado: 'idle' },
+  genero: { dice: 'Elegí la que mejor te represente hoy, después vas a poder hacer todo lo demás igual.', estado: 'idle' },
   edad: { dice: 'Nos sirve para comparar tu situación con la de gente parecida a vos.', estado: 'idle' },
   objetivo: { dice: 'Con esto armamos por dónde arrancar. Después podés cambiarlo cuando quieras.', estado: 'pensando' },
-  situacion: { dice: 'No hace falta que sea exacto — con que sea parecido a tu realidad alcanza.', estado: 'idle' },
+  situacion: { dice: 'No hace falta que sea exacto, con que sea parecido a tu realidad alcanza.', estado: 'idle' },
   zona: { dice: 'Los precios y las opciones para invertir cambian según dónde estés.', estado: 'idle' },
   ingresos: { dice: 'Podés marcar más de una. Muchos no tenemos una sola fuente.', estado: 'idle' },
   estabilidadIngresos: { dice: 'Con esto afinamos qué opciones tienen más sentido para vos.', estado: 'idle' },
-  tedioso: { dice: 'Contame la verdad — si te da fiaca, hay una forma de hacerlo sin abrir la app.', estado: 'idle' },
+  tedioso: { dice: 'Contame la verdad, si te da fiaca, hay una forma de hacerlo sin abrir la app.', estado: 'idle' },
   invReaccion: { dice: 'No hay respuesta correcta. Sirve para saber cuánto vaivén te resulta cómodo.', estado: 'pensando' },
   invYaInvierte: { dice: 'Si todavía no, no importa: la mayoría arranca justo acá.', estado: 'idle' },
-  objetivoInversion: { dice: 'Nunca movemos tu plata — esto es solo para recomendarte según vos.', estado: 'idle' },
+  objetivoInversion: { dice: 'Nunca movemos tu plata, esto es solo para recomendarte según vos.', estado: 'idle' },
   definirObjetivo: { dice: 'Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.', estado: 'progreso' },
   intermedia: null,
   comoConocio: { dice: 'Última, prometido. Nos ayuda a saber dónde contarle a más gente.', estado: 'idle' },
@@ -179,10 +179,10 @@ const OBJETIVOS: { id: ObjetivoId; label: string }[] = [
 ];
 
 const BUBBLE_POR_TOP: Record<ObjetivoId, string> = {
-  invertir: 'Buenísimo — te ayudamos a que tu plata trabaje para vos.',
+  invertir: 'Buenísimo, te ayudamos a que tu plata trabaje para vos.',
   ahorrar: 'Modo ahorro activado. Lo vamos a hacer fácil.',
   objetivo: 'Con la mira puesta en lo que de verdad te importa.',
-  no_claro: 'Tranqui — lo vamos descubriendo juntas, a tu ritmo.',
+  no_claro: 'Tranqui, lo vamos descubriendo juntas, a tu ritmo.',
 };
 
 const ZONAS: { id: string; label: string; muted?: boolean }[] = [
@@ -246,8 +246,8 @@ const COMO_CONOCIO: { id: string; label: string }[] = [
 const PREVIEW_INFO: Record<ObjetivoId, { titulo: string; desc: string; bg: string }> = {
   invertir: { titulo: 'Inversiones', desc: 'Según tu perfil, te mostramos en qué te conviene poner tu plata para que rinda.', bg: COLORS.skySoft },
   ahorrar: { titulo: 'Ahorro', desc: 'Apartás plata en tu reserva y ves crecer cuánto llevás guardado, sin tentarte.', bg: COLORS.goldSoft },
-  objetivo: { titulo: 'Objetivos', desc: 'Tu meta con su progreso — vas viendo cuánto te falta para lograrla.', bg: COLORS.goldSoft },
-  no_claro: { titulo: 'Tu FINA', desc: 'Gastos, ahorro, objetivos e inversiones — todo en un lugar, a tu ritmo.', bg: COLORS.tint },
+  objetivo: { titulo: 'Objetivos', desc: 'Tu meta con su progreso, vas viendo cuánto te falta para lograrla.', bg: COLORS.goldSoft },
+  no_claro: { titulo: 'Tu FINA', desc: 'Gastos, ahorro, objetivos e inversiones, todo en un lugar, a tu ritmo.', bg: COLORS.tint },
 };
 
 // Inputs: la clase solo lleva forma/espacio; el color sale de COLORS (sin hex
@@ -789,7 +789,7 @@ export function OnboardingV2() {
                       </li>
                     ))}
                   </ul>
-                  <p className="text-[18px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
+                  <p className="text-[18px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo, no hace falta que sepas nada todavía.</p>
                 </>
               )}
 
@@ -863,7 +863,7 @@ export function OnboardingV2() {
               {currentKey === 'ingresos' && (
                 <>
                   <Titulo>¿De dónde vienen tus ingresos hoy?</Titulo>
-                  <Nota>Esto es solo tuyo — nadie más lo ve. Elegí todas las que apliquen.</Nota>
+                  <Nota>Esto es solo tuyo, nadie más lo ve. Elegí todas las que apliquen.</Nota>
                   <MultiOtroChips opciones={INGRESOS_OPCIONES.map((v) => ({ value: v, display: v }))} seleccion={ingresos} toggle={toggleIngresos} otro={ingresosOtro} />
                 </>
               )}
@@ -898,7 +898,7 @@ export function OnboardingV2() {
                         <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}><IconChat size={24} /></span>
                         <div className="flex flex-col">
                           <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>
-                            {tedioso === 'si' ? 'Tranqui — para eso está tu FINA en WhatsApp' : 'Igual te va a encantar tu FINA en WhatsApp'}
+                            {tedioso === 'si' ? 'Tranqui, para eso está tu FINA en WhatsApp' : 'Igual te va a encantar tu FINA en WhatsApp'}
                           </p>
                           <p className="text-[14px]" style={{ color: COLORS.limaText }}>Sin planillas, sin abrir la app.</p>
                         </div>
@@ -1003,7 +1003,7 @@ export function OnboardingV2() {
                       <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}><IconChat size={24} /></span>
                       <div>
                         <p className="font-bold text-[16px]" style={{ color: COLORS.ink }}>Tu bot de WhatsApp</p>
-                        <p className="text-[14px]" style={{ color: COLORS.limaText }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
+                        <p className="text-[14px]" style={{ color: COLORS.limaText }}>Es el botón redondo del medio, abajo de todo. Contale un gasto hablando y listo, sin abrir la app.</p>
                       </div>
                     </div>
                   </div>
@@ -1126,7 +1126,7 @@ export function OnboardingV2() {
                 <div className="flex flex-col items-center gap-3 text-center">
                   <div className="py-2"><Fini state="logro" size={150} /></div>
                   <Titulo className="text-center">¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</Titulo>
-                  <p className="text-[16px]" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
+                  <p className="text-[16px]" style={{ color: COLORS.inkSoft }}>Ya está, a partir de ahora, te acompañamos en esto.</p>
                   <InvitacionAvisos momento="onboarding" />
                 </div>
               )}

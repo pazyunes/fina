@@ -546,10 +546,12 @@ export function GastosV2() {
   useAlLlegar('fijos', () => {
     llevarA(() => pantallaRef.current?.querySelector<HTMLElement>('[data-gastos-fijos]'));
   });
-  useAlLlegar('tope', () => {
+  useAlLlegar('tope', ({ ref }) => {
+    // Si el paso nombra una sección ("Ponele un tope a Delivery"), esa.
+    const pedida = categorias.find((c) => c.id === ref);
     const sinTope = categorias.filter((c) => !topes[c.id]);
     const candidatas = sinTope.length ? sinTope : categorias;
-    const elegida = [...candidatas].sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id))[0];
+    const elegida = pedida ?? [...candidatas].sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id))[0];
     if (!elegida) return;
     setVentana('mes');
     setMesOffset(0);

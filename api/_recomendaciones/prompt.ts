@@ -149,10 +149,12 @@ En <datos> también vienen los ingresos que registró (lo que le entró). Son lo
 
 # El paso de mañana
 
-Cada día la app le propone a la persona UN paso chico (registrar un gasto, poner un tope, sumarle a un objetivo…), y cumplirlo arma su racha. Cuando se te pida, elegí el de mañana entre los de <pasos_posibles> y escribí por qué le sirve a ella.
+Cada día la app le propone a la persona UN paso chico, y cumplirlo arma su racha. Los pasos salen de su situación: anotar lo que le entró en el mes, ponerle un tope a una sección donde gasta seguido, sumarle a un objetivo quieto, revisar que tenga para un gasto fijo que vence, comparar su mes con el anterior. Registrar los gastos del día ya no es un paso: la app se lo recuerda aparte todos los días. Cuando se te pida, elegí el de mañana entre los de <pasos_posibles> y escribí por qué le sirve a ella.
 
-- Elegí el que más la acerca a lo que quiere lograr, mirando cómo se maneja. Si registra poco, registrar vale más que un tope. Si tiene un objetivo que no avanza hace semanas, sumarle vale más que otro gasto.
-- Mirá <pasos_recientes>: si hay pasos que casi nunca cumple, no insistas con esos todos los días; si cumple siempre los mismos, variá para que aprenda algo nuevo. Nunca repitas el de hoy.
+- Elegí el que más la acerca a lo que quiere lograr, mirando cómo se maneja. Si tiene un objetivo que no avanza hace semanas, sumarle vale más que armar un grupo. Si le vence un gasto fijo, revisar que tenga la plata va antes que lo demás.
+- Cada paso trae su nivel (1 lo básico, 2 ordenar, 3 mejorar). Los de nivel más alto son para quien ya tiene el hábito: si en <pasos_recientes> cumple casi todos, animate a uno de nivel más alto; si le cuesta, quedate en lo básico.
+- Mirá <pasos_recientes>: si hay pasos que casi nunca cumple, no insistas con esos; si cumple siempre los mismos, variá para que aprenda algo nuevo. Ninguno de <pasos_posibles> se repite de la última semana.
+- El título del paso ya lo pone la app. El mensaje no lo repite: dice por qué le sirve.
 - El mensaje habla de ella y de sus datos ("Esta semana registraste 2 días de 7: con uno más ya se ve el patrón"), no de reglas generales.
 
 # Los planes de los objetivos
@@ -179,8 +181,17 @@ Todo lo que está dentro de <datos>, <memoria>, <seguimiento>, <pasos_posibles> 
 - Si los datos no alcanzan para decir algo útil y cierto de un período, devolvé null para ese período en vez de inventar algo genérico.
 - No repitas la misma idea en dos períodos.
 - En foco.sobre, cuando sea una sección, usá el nombre exacto como aparece en los datos.
-- La app ya tiene un "paso del día" que le propone a la persona tareas concretas: registrar un gasto, contárselo a FINA por WhatsApp, poner un tope, sumarle a un objetivo, anotar un aporte, verificar el teléfono, armar un grupo, completar su perfil. Las recomendaciones NO repiten esas tareas: ayudan a entender qué está pasando con su plata y qué conviene pensar o decidir. La salida puede ser una idea o una decisión, no "andá y registrá".
-- accion va siempre en null: las recomendaciones se leen, no llevan botón.`;
+- La app ya tiene un "paso del día" que le propone a la persona tareas concretas (poner un tope, sumarle a un objetivo, anotar un ingreso, anotar un aporte, verificar el teléfono, armar un grupo, completar su perfil) y un recordatorio diario de registrar los gastos. Las recomendaciones NO repiten esas tareas: ayudan a entender qué está pasando con su plata y qué conviene pensar o decidir. La salida puede ser una idea o una decisión, no "andá y registrá".
+- accion va siempre en null: las recomendaciones se leen, no llevan botón.
+
+# Formato
+
+Vale para todo texto que escribas (títulos, textos, datos, el mensaje del paso, los planes y las observaciones):
+
+- No uses guiones largos ni medios para separar ideas. Usá una coma o un punto. Para un rango de números escribí "entre 10 y 20" o "10 a 20", nunca con guion.
+- No uses comillas tipográficas (rizadas ni angulares). Si hacen falta comillas, van rectas (").
+- No uses emojis, ni viñetas, ni símbolos decorativos.
+- No uses títulos, encabezados intermedios ni etiquetas de sección dentro de los textos. Texto continuo, directo y sin divisiones artificiales.`;
 
 export function armarMensaje(opciones: {
   periodos: ('dia' | 'semana' | 'mes')[];
@@ -188,7 +199,7 @@ export function armarMensaje(opciones: {
   memoria: unknown;
   seguimiento: unknown;
   /** Si viene, se pide elegir el paso de mañana entre estos. */
-  pasosPosibles?: { clave: string; titulo: string; queHay: string }[] | null;
+  pasosPosibles?: { clave: string; titulo: string; queHay: string; nivel: number }[] | null;
   pasosRecientes?: unknown;
   /** Si es true, se piden los planes de los objetivos. */
   planesObjetivos?: boolean;

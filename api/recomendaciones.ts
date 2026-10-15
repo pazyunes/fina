@@ -25,7 +25,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { PASOS } from '../src/app/api/v2/pasos.js';
+import { esClaveElegible, pasoPorClave, tituloDePaso, type Nombres } from '../src/app/api/v2/pasos.js';
 import { claveMes, claveSemana, diaAR, sumarDias } from './_recomendaciones/fechas.js';
 import {
   SISTEMA, Respuesta, armarMensaje, normalizar,
@@ -36,7 +36,7 @@ import {
   type Entrada, type FilaGasto, type FilaIngreso, type FilaMedio, type FilaObjetivo, type FilaPasoDelDia, type FilaPerfil,
   type FilaRecomendacion, type FilaSeccion, type Observacion, type Racha,
 } from './_recomendaciones/resumen.js';
-import { revisarRecomendacion, revisarTexto, type Problema } from './_recomendaciones/tono.js';
+import { limpiarTexto, revisarRecomendacion, revisarTexto, type Problema } from './_recomendaciones/tono.js';
 
 type Req = {
   method?: string;
@@ -61,10 +61,10 @@ export type Tarjeta =
 const MODELO = 'claude-sonnet-5';
 const ESPERA_ENTRE_INTENTOS = 20 * 60 * 1000;
 
-// El paso de mañana nunca puede ser "registrá tu primer gasto": ese lo decide
-// la regla (va primero siempre que no haya gastos), no el modelo.
-const PASOS_ELEGIBLES = new Map(PASOS.filter((p) => p.clave !== 'primer_gasto').map((p) => [p.clave as string, p]));
-const TITULO_PASO = new Map(PASOS.map((p) => [p.clave as string, p.titulo]));
+// El paso de mañana nunca puede ser "registrá tu primer gasto" (ese lo decide
+// la regla, va primero siempre que no haya gastos) ni uno de los viejos que
+// salieron de la rotación: `esClaveElegible` deja pasar sólo los demás.
+const MAX_PASOS_POSIBLES = 10;
 
 export default async function handler(req: Req, res: Res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -93,13 +93,9 @@ export default async function handler(req: Req, res: Res) {
 
   // Los pasos que la persona puede cumplir mañana. Los calcula la app (es la
   // que sabe mirar sus datos con el catálogo); acá sólo se aceptan claves que
-  // existen en el catálogo.
-  const pedidos = String(Array.isArray(req.query?.pasos) ? req.query?.pasos[0] : req.query?.pasos ?? '')
-    .split(',').map((c) => c.trim()).filter((c) => PASOS_ELEGIBLES.has(c));
-  const pasosPosibles = [...new Set(pedidos)].map((c) => {
-    const p = PASOS_ELEGIBLES.get(c)!;
-    return { clave: p.clave as string, titulo: p.titulo, queHay: p.msg };
-  });
+  // existen en el catálogo. Los títulos se arman más abajo, con los datos.
+  const pedidos = [...new Set(String(Array.isArray(req.query?.pasos) ? req.query?.pasos[0] : req.query?.pasos ?? '')
+    .split(',').map((c) => c.trim()).filter(esClaveElegible))].slice(0, MAX_PASOS_POSIBLES);
 
   // ── 1. Lo que ya está generado para este día / semana / mes ────────────
   const guardadas = await leerGuardadas(supabase, claves);
@@ -114,6 +110,21 @@ export default async function handler(req: Req, res: Res) {
   // ── 2. Los datos de la persona ─────────────────────────────────────────
   const entrada = await leerEntrada(supabase, uid, ahora);
   if ('error' in entrada) { res.status(500).json({ error: entrada.error }); return; }
+
+  // Los pasos con nombre ("Ponele un tope a Delivery") se titulan con los
+  // datos que ya se leyeron. Se sacan los que tuvo en la última semana (hoy
+  // incluido): la regla es no repetir ninguno de los últimos 7 días.
+  const nombres: Nombres = {
+    seccion: (id) => entrada.secciones.find((s) => s.id === id)?.name,
+    objetivo: (id) => entrada.objetivos.find((o) => o.id === id)?.title,
+    fijo: (id) => entrada.fijos.find((f) => f.id === id)?.description,
+  };
+  const semana = new Set(entrada.pasosDelDia.filter((p) => p.day >= sumarDias(hoy, -6)).map((p) => p.step_key));
+  const pasosPosibles = pedidos.filter((c) => !semana.has(c)).map((c) => {
+    const p = pasoPorClave(c);
+    return { clave: c, titulo: tituloDePaso(c, nombres) ?? c, queHay: p?.msg ?? '', nivel: p?.nivel ?? 1 };
+  });
+  const titulosPasos = new Map(entrada.pasosDelDia.map((p) => [p.step_key, tituloDePaso(p.step_key, nombres) ?? p.step_key]));
 
   // ── 3. Para qué períodos alcanzan los datos ────────────────────────────
   // Sin datos suficientes no se llama al modelo: saldría una recomendación
@@ -160,7 +171,7 @@ export default async function handler(req: Req, res: Res) {
     memoria: entrada.memoria,
     seguimiento: armarSeguimiento(entrada),
     pasosPosibles: aGenerar.includes('dia') && pasosPosibles.length > 0 ? pasosPosibles : null,
-    pasosRecientes: armarPasosRecientes(entrada, TITULO_PASO),
+    pasosRecientes: armarPasosRecientes(entrada, titulosPasos),
     planesObjetivos: aGenerar.includes('semana') && objetivosEnCurso.length > 0,
   };
   let generada: RespuestaModelo;
@@ -236,7 +247,7 @@ type Pedido = {
   resumen: unknown;
   memoria: Observacion[];
   seguimiento: unknown;
-  pasosPosibles: { clave: string; titulo: string; queHay: string }[] | null;
+  pasosPosibles: { clave: string; titulo: string; queHay: string; nivel: number }[] | null;
   pasosRecientes: unknown;
   planesObjetivos: boolean;
 };
@@ -289,7 +300,32 @@ async function pedir(client: Anthropic, pedido: Pedido, correcciones?: string[])
   if (mensaje.stop_reason === 'refusal') throw new Error('El modelo declinó la solicitud');
   if (mensaje.stop_reason === 'max_tokens') throw new Error('La respuesta se cortó por largo');
   if (!mensaje.parsed_output) throw new Error('La respuesta no tuvo el formato esperado');
-  return normalizar(mensaje.parsed_output);
+  return limpiarRespuesta(normalizar(mensaje.parsed_output));
+}
+
+// La regla de Formato (frontend.md §5.5) en código: el prompt la pide, y lo que
+// se escape (un guion largo, comillas rizadas, un emoji) se arregla acá antes de
+// guardar. No se toca `foco.sobre`, que tiene que ser el nombre exacto de la
+// sección, ni los ids.
+function limpiarRespuesta(r: RespuestaModelo): RespuestaModelo {
+  const rec = (x: RecomendacionModelo | null): RecomendacionModelo | null => (x
+    ? {
+      ...x,
+      titulo: limpiarTexto(x.titulo),
+      texto: limpiarTexto(x.texto),
+      dato: { valor: limpiarTexto(x.dato.valor), referencia: limpiarTexto(x.dato.referencia) },
+      accion: x.accion ? { ...x.accion, etiqueta: limpiarTexto(x.accion.etiqueta) } : null,
+    }
+    : null);
+  return {
+    ...r,
+    dia: rec(r.dia),
+    semana: rec(r.semana),
+    mes: rec(r.mes),
+    pasoManana: r.pasoManana ? { ...r.pasoManana, mensaje: limpiarTexto(r.pasoManana.mensaje) } : null,
+    objetivos: r.objetivos.map((o) => ({ ...o, titulo: limpiarTexto(o.titulo), texto: limpiarTexto(o.texto) })),
+    observaciones: r.observaciones.map((o) => ({ texto: limpiarTexto(o.texto), evidencia: limpiarTexto(o.evidencia) })),
+  };
 }
 
 function revisar(r: RespuestaModelo, pedido: Pedido): { donde: string; problema: Problema }[] {
@@ -336,13 +372,15 @@ async function leerGuardadas(supabase: Cliente, claves: Record<Periodo, string>)
   return { filas: (data ?? []) as Guardada[], error: null };
 }
 
-async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promise<(Entrada & { ultimoIntento: string | null }) | { error: string }> {
+type Extra = { ultimoIntento: string | null; fijos: { id: string; description: string }[] };
+
+async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promise<(Entrada & Extra) | { error: string }> {
   const hoy = diaAR(ahora);
   const hace90 = `${sumarDias(hoy, -90)}T00:00:00-03:00`;
   const hace30 = `${sumarDias(hoy, -30)}T00:00:00-03:00`;
   const hace21 = sumarDias(hoy, -21);
 
-  const [gastos, ingresos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA, hechas, dolar] = await Promise.all([
+  const [gastos, ingresos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA, hechas, dolar, fijos] = await Promise.all([
     supabase.from('transactions').select('amount_ars, occurred_at, created_at, section_id, expense_type, payment_method, source')
       .eq('type', 'expense').gte('occurred_at', hace90).order('occurred_at', { ascending: true }),
     // `*`: sin la migración 0033 no existe income_source.
@@ -363,6 +401,9 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
     supabase.from('recommendation_checks').select('ref').like('ref', 'ia:%').gte('hecha_at', hace30),
     // El dólar, para pasar a dólares lo que se separó en pesos.
     supabase.from('exchange_rates').select('rate').eq('currency', 'USD_BLUE').order('fetched_at', { ascending: false }).limit(1).maybeSingle(),
+    // Sólo para titular el paso "Revisá que tengas para X". Sin la 0034 no
+    // existe: el paso queda con el título general.
+    supabase.from('recurring_expenses').select('id, description').eq('active', true),
   ]);
 
   const error = [gastos, secciones, medios, objetivos, perfil, inversor, aportes, memoria, historial, pasos, pasosIA].find((r) => r.error)?.error;
@@ -388,5 +429,6 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
     pasosDelDia: (pasos.data ?? []) as FilaPasoDelDia[],
     pasosElegidosPorIA: ((pasosIA.data ?? []) as { clave: string; foco_ref: string | null }[]).map((f) => `${f.clave}:${f.foco_ref}`),
     recomendacionesHechas: hechas.error ? [] : ((hechas.data ?? []) as { ref: string }[]).map((f) => f.ref.slice(3)),
+    fijos: fijos.error ? [] : (fijos.data ?? []) as { id: string; description: string }[],
   };
 }

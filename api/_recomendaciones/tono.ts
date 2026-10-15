@@ -57,6 +57,49 @@ export function revisarTexto(campo: string, texto: string): Problema[] {
   return problemas;
 }
 
+// ── Formato (frontend.md §5.5) ───────────────────────────────────────────
+// Esto no se rechaza: se arregla. Un guion largo no hace mala a una
+// recomendación, y volver a pedirla costaría otra generación.
+//
+// · "algo — aclaración — sigue" pasa a "algo, aclaración, sigue": el guion
+//   largo casi siempre marca una pausa, y la coma es la pausa que corresponde.
+// · Un guion entre números ("10–20") es un rango: "10 a 20".
+// · Un guion al principio de una línea es una viñeta: se saca.
+// · Comillas rizadas y angulares pasan a rectas; el apóstrofo rizado, a recto.
+// · Emojis y viñetas Unicode decorativas se sacan.
+// Las rayas van como rango de U+2012 a U+2015: guion de cifras, guion medio,
+// raya y barra horizontal.
+export function limpiarTexto(texto: string): string {
+  let t = texto;
+  if (/[‒-―]/.test(t)) {
+    t = t
+      // Rango de números, con o sin signo de pesos: "entre 10–20" pasa a
+      // "entre 10 y 20"; "10–20" suelto, a "10 a 20".
+      .replace(/(\bentre\s+(?:US)?\$?\s?[\d.,]*\d)\s*[‒-―]\s*((?:US)?\$?\s?\d)/gi, '$1 y $2')
+      .replace(/(\d)\s*[‒-―]\s*((?:US)?\$?\s?\d)/g, '$1 a $2')
+      .replace(/^[ \t]*[‒-―][ \t]*/gm, '')
+      // Antes de un signo de puntuación, la raya sobra.
+      .replace(/\s*[‒-―]\s*(?=[.,;:!?)])/g, '')
+      .replace(/\s*[‒-―]\s*/g, ', ');
+  }
+  t = t
+    // Comillas dobles rizadas, bajas, angulares y el signo de segundos.
+    .replace(/[“-‟«»″]/g, '"')
+    // Comillas simples rizadas y el signo de minutos.
+    .replace(/[‘-‛′]/g, "'")
+    // Viñetas: punto, cuadrado, círculos y triángulo.
+    .replace(/[•▪●◦‣⁃]\s*/g, '')
+    .replace(/\p{Extended_Pictographic}/gu, '')
+    // Lo que queda de un emoji compuesto: el unidor y el selector de variante.
+    .replace(/[‍️]/g, '')
+    // Lo que pudo quedar de los reemplazos: comas dobles, espacio antes de coma.
+    .replace(/,\s*,/g, ',')
+    .replace(/\s+,/g, ',')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+  return t;
+}
+
 export type RecomendacionTexto = { titulo: string; texto: string; dato: { valor: string; referencia: string } };
 
 export function revisarRecomendacion(r: RecomendacionTexto): Problema[] {

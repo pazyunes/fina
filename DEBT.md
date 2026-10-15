@@ -13,7 +13,7 @@ Cosas que el código ya soporta pero que tiene que hacer una persona con acceso.
 | Id | Qué | Estado |
 | --- | --- | --- |
 | M1 | Cargar `SUPABASE_SERVICE_ROLE_KEY` en Vercel (Production y Preview). Sin eso, cuando se corra 0039 la cotización del dólar deja de guardarse (se sigue mostrando, pero sin id). | pendiente |
-| M2 | Correr a mano en Supabase, en orden: `supabase/migrations/0039_seguridad.sql` y `0040_movimientos_atomicos.sql` (después de M1). La app funciona igual sin ellas: usa el camino viejo hasta que existan. | pendiente |
+| M2 | Correr a mano en Supabase, en orden: `supabase/migrations/0039_seguridad.sql`, `0040_movimientos_atomicos.sql` y `0041_reserva.sql` (después de M1). La app funciona igual sin ellas: usa el camino viejo hasta que existan. Sin la 0041 no sale el aviso de plazo de objetivos. | pendiente |
 | M3 | Confirmar en Vercel que `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` están habilitadas para Preview. | pendiente |
 
 ## 1. Seguridad
@@ -24,12 +24,14 @@ Todo lo de seguridad conocido está resuelto en la migración 0039 (ver hechos);
 
 | Id | Prioridad | Qué | Estado |
 | --- | --- | --- | --- |
-| I7 | alta | Inicio, objetivos: recordar que guardes, mostrar qué acción te acerca y avisar plazos (quedan 3 meses y no juntaste nada). | en curso |
-| O1 | alta | Objetivos: próximos pasos y formas de llegar antes, reusando `utils/goalStrategies.ts`. | en curso |
-| I1 | alta | Inicio, paso del día: que se base en la situación de la persona, que varíe y que mejore con el tiempo. | en curso |
-| I2 | media | Registrar el gasto como recordatorio fijo, con notificación. | en curso |
-| R1 | media | Retención: algo para hacer en la app cuando no hay nada pendiente (juego o actividad). | en curso |
-| I12 | media | La reserva (alcancía) dejó de verse al sacar Tu plata guardada; vivía sólo en el navegador. Llevarla a Objetivos y guardarla en la base. | en curso |
+| I7 | alta | Inicio, objetivos: bloque Tus objetivos en Inicio (el más relevante, cuánto avanzó esta semana, aviso de plazo con salida en rango y un botón) y notificación de plazo a los 90, 30 y 7 días, una vez por semana como mucho. Propuesta hecha: validar en la preview. | a revisar |
+| O1 | alta | Objetivos: Próximo paso y Formas de llegar antes (hasta 3, con tus secciones, gastos fijos y ritmo; impacto en tiempo como rango). Propuesta hecha: validar en la preview. | a revisar |
+| I1 | alta | Paso del día personalizado: pasos que nombran tu sección u objetivo, tres niveles que se desbloquean con los días de uso (5 y 15), sin repetir en 7 días. La IA elige entre esos. Propuesta hecha: validar. | a revisar |
+| I2 | media | Registrar gastos es un recordatorio fijo en Inicio (¿Anotaste lo de hoy?, se oculta cuando ya hay un gasto hoy) y la notificación de la tarde lo prioriza. Ya no es un paso del día. | a revisar |
+| R1 | media | Pregunta del día: 35 preguntas de plata para Argentina, una por día, con explicación y conteo de aciertos. No suma a la racha. Se guarda sólo en el navegador. | a revisar |
+| R2 | baja | Si R1 funciona, guardar las respuestas de la pregunta del día en la base (hoy en localStorage) y pensar si suma a la racha. | a definir |
+| O2 | baja | Formas de llegar antes no tiene ¿Te sirvió?; sumarlo para aprender qué opciones sirven. | pendiente |
+| I13 | baja | Paso Anotá lo que te entró este mes: lleva a Gastos pero no abre el formulario de ingreso (no tiene acción para abrirlo). | pendiente |
 | D4 | media | Editar sólo el monto de un gasto en dólares no actualiza `original_amount`: `editarGasto` en `acciones.ts` manda la moneda sólo si cambió la moneda. | pendiente |
 | D2 | baja | Una sección nueva queda con slug vacío en pantalla hasta recargar (`crearSeccion`). | pendiente |
 
@@ -37,16 +39,14 @@ Todo lo de seguridad conocido está resuelto en la migración 0039 (ver hechos);
 
 | Id | Prioridad | Qué | Estado |
 | --- | --- | --- | --- |
-| G2 | alta | Sin subtítulos explicativos. Hecho en Inicio, Gastos, Inversiones y Perfil; falta Objetivos (va con O1) y revisar `VerificarTelefono` y `AvisosFina`. | en curso |
-| G3 | media | Etiquetas en mayúsculas: sólo queda la de Objetivos (va con O1). | en curso |
+| G2 | baja | Sin subtítulos explicativos: hecho en todas las pantallas principales; falta revisar `VerificarTelefono`, `AvisosFina` y el onboarding. | pendiente |
 | L3b | baja | Confirmar con diseño la variante de texto del lila: hoy `--fina-lila-texto` apunta al violeta oscuro porque `COLORS` no tenía una propia. | a revisar |
 
 ## 4. Limpieza y documentación
 
 | Id | Prioridad | Qué | Estado |
 | --- | --- | --- | --- |
-| L5 | media | Que el prompt de la IA (`api/_recomendaciones/prompt.ts`) pida la regla de Formato. | en curso |
-| L6 | baja | `src/app/types.ts` y `lib/currency.ts` sobreviven sólo porque los usa `goalStrategies.ts` (tipos de la v1). Cuando O1 adapte esa lógica a la v2, borrarlos. Y el comentario de `routes.tsx` que menciona `hasReport`. | pendiente |
+| L7 | baja | El bundle pesa unos 900 kB (avisa el build). Partir por pantalla con import dinámico. | pendiente |
 
 ## Hechos
 
@@ -85,3 +85,8 @@ Todo lo de seguridad conocido está resuelto en la migración 0039 (ver hechos);
 | G1 | Diseño | Jerarquía: Gastos lleva al disponible, Inversiones a la recomendación para tu perfil, Perfil a tu foto y nombre. Una sola tarjeta elevada por pantalla. | Etapa 1 |
 | IN1 | Diseño | Inversiones: menos letra chica; lo proyectado se muestra como rango estimado, no como número exacto. | Etapa 1 |
 | GA3 | Diseño | El tipo de gasto Impulsivo se muestra como Gusto (el valor guardado no cambia). | Etapa 1 |
+| I12 | Funcionalidad | La reserva vuelve como Plata apartada arriba de Objetivos, guardada en la base (`user_profiles.reserve_ars`, ya existía desde 0023), con sumar y sacar. | Etapa 2 |
+| G3 | Diseño | Sin etiquetas en mayúsculas en las pantallas de la v2. | Etapa 2 |
+| L5 | Docs | El prompt de la IA pide la regla de Formato y `tono.ts` limpia guiones largos, comillas rizadas y emojis de lo generado. | Etapa 2 |
+| L6 | Limpieza | `goalStrategies.ts` reescrito para la v2 (lo usan Objetivos, Inicio y el aviso de plazo); se borró `types.ts` de la v1. | Etapa 2 |
+| F1 | Docs | Textos visibles sin guiones largos (onboarding, entrar, avisos). | Etapa 2 |

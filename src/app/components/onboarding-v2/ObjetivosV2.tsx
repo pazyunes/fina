@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { Fini } from './Fini';
+import { colorDeTono, datosDelObjetivo } from './ObjetivosEnInicio';
+import { formasDeLlegarAntes, mensajePlazo, textoImpacto, type FormaDeLlegar } from '../../utils/goalStrategies';
 import { llevarA, useAlLlegar } from './alLlegar';
 import { COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
@@ -247,15 +250,94 @@ function estadoMonto(o: Objetivo): 'definido' | 'desconocido' | 'incompleto' {
   return 'incompleto';
 }
 
-// Consejo para llegar más rápido a un objetivo — con lo único que ya
-// sabemos de verdad (las categorías que la persona dijo que le gustaría
-// recortar en el onboarding), no un cálculo de "ahorrá $X/mes" inventado.
-function consejoPara(o: Objetivo, estado: 'definido' | 'desconocido' | 'incompleto'): string | null {
-  if (estado !== 'definido') return null;
-  const perfil = loadV2PerfilOnboarding();
-  const categoria = perfil?.categoriasRecortar?.[0];
-  if (!categoria) return null;
-  return `Nos dijiste que querías gastar menos en ${categoria} — cada peso que ahorres ahí puede ir directo a "${o.nombre}".`;
+// Formas de llegar antes (DEBT O1): opciones concretas armadas con lo que la
+// persona registró (ver utils/goalStrategies.ts). Cada una con su impacto en
+// tiempo, como rango y marcado estimado. Son opciones, no indicaciones: el
+// texto dice qué pasa "si", nunca qué hacer.
+function frasesDeImpacto(f: FormaDeLlegar): string {
+  const t = textoImpacto(f);
+  return f.modo === 'antes' ? `Llegás ${t}` : `${t.charAt(0).toUpperCase()}${t.slice(1)}`;
+}
+
+function FormasDeLlegar({ formas }: { formas: FormaDeLlegar[] }) {
+  return (
+    <section className="flex flex-col gap-1" aria-label="Formas de llegar antes">
+      <TituloSeccion>Formas de llegar antes</TituloSeccion>
+      <ul className="flex flex-col">
+        {formas.map((f) => (
+          <li key={f.id} className="py-3 border-b last:border-b-0 flex flex-col gap-0.5" style={{ borderColor: COLORS.line }}>
+            <p className="text-[16px] font-semibold" style={{ color: COLORS.ink }}>{f.titulo}</p>
+            <p className="text-[15px] font-semibold tabular-nums" style={{ color: COLORS.limaText }}>{frasesDeImpacto(f)}</p>
+            <p className="text-[14px] leading-snug tabular-nums" style={{ color: COLORS.inkSoft }}>{f.detalle}</p>
+          </li>
+        ))}
+      </ul>
+      <EstadoConfianza estado="estimado" />
+    </section>
+  );
+}
+
+// Plata apartada (la reserva, DEBT I12): un número propio, aparte de los
+// objetivos, que la persona suma o saca. Se guarda en la base
+// (`user_profiles.reserve_ars`) con `acciones.guardarReserva`. Es lo que la
+// persona nos dijo: dato declarado. Va en bloque tintado y no en tarjeta: lo
+// principal de la pantalla es la lista de objetivos.
+function PlataApartada({ monto }: { monto: number }) {
+  const [modo, setModo] = useState<'sumar' | 'sacar' | null>(null);
+  const [txt, setTxt] = useState('');
+  const valor = parseMoneyInput(txt);
+  const invalido = valor <= 0 || (modo === 'sacar' && valor > monto);
+
+  function confirmar() {
+    if (!modo || invalido) return;
+    acciones.guardarReserva(
+      modo === 'sumar' ? monto + valor : monto - valor,
+      modo === 'sumar' ? 'Plata apartada sumada con éxito.' : 'Plata apartada sacada con éxito.',
+    );
+    setModo(null); setTxt('');
+  }
+
+  const botonSecundario = { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` };
+  return (
+    <section className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.tint }} aria-label="Plata apartada">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-[17px] font-bold" style={{ color: COLORS.ink }}>Plata apartada</h2>
+        <span className="text-[20px] font-bold font-mono tabular-nums" style={{ color: COLORS.ink }} aria-live="polite">{fmtMoney(monto)}</span>
+      </div>
+      <EstadoConfianza estado="declarado" className="-mt-2" />
+      {modo === null ? (
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setModo('sumar')} className="v2-focus flex-1 min-h-[44px] rounded-xl text-[15px] font-semibold transition-all duration-100 active:scale-95" style={botonSecundario}>Sumar</button>
+          <button type="button" onClick={() => setModo('sacar')} disabled={monto <= 0} className="v2-focus flex-1 min-h-[44px] rounded-xl text-[15px] font-semibold v2-disabled transition-all duration-100 active:scale-95" style={botonSecundario}>Sacar</button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <div className="relative flex-1 min-w-0">
+              <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
+              <input
+                autoFocus
+                className={`w-full ${inputClass} pl-8`}
+                aria-label={modo === 'sumar' ? 'Cuánto sumás' : 'Cuánto sacás'}
+                placeholder={modo === 'sumar' ? 'Cuánto sumás' : 'Cuánto sacás'}
+                inputMode="decimal"
+                value={txt}
+                onChange={(e) => setTxt(formatThousands(e.target.value))}
+                onKeyDown={(e) => { if (e.key === 'Enter') confirmar(); if (e.key === 'Escape') { setModo(null); setTxt(''); } }}
+              />
+            </div>
+            <button type="button" onClick={confirmar} disabled={invalido} className="v2-focus shrink-0 min-h-[44px] rounded-xl px-4 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
+              {modo === 'sumar' ? 'Sumar' : 'Sacar'}
+            </button>
+          </div>
+          {modo === 'sacar' && valor > monto && (
+            <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Tenés <span className="font-mono tabular-nums">{fmtMoney(monto)}</span> apartados.</p>
+          )}
+          <button type="button" onClick={() => { setModo(null); setTxt(''); }} className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline" style={{ color: COLORS.inkSoft }}>Cancelar</button>
+        </div>
+      )}
+    </section>
+  );
 }
 
 // El plan que arma la IA para un objetivo: qué está pasando, una salida, y un
@@ -267,7 +349,8 @@ function PlanDelObjetivo({ plan, moneda, onMarcar }: {
   const rango = plan.separarPorSemana;
   return (
     <section className="flex flex-col gap-2 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }} aria-label="Tu plan para este objetivo">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>Tu plan</p>
+      {/* Sentence case, sin eyebrow en mayúsculas (frontend.md §2.1 y §3.4). */}
+      <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu plan</p>
       <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{plan.titulo}</p>
       <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{plan.texto}</p>
       {rango && (
@@ -307,7 +390,7 @@ function PlanDelObjetivo({ plan, moneda, onMarcar }: {
 }
 
 function montoLabel(o: Objetivo): string {
-  if (o.montoModo === 'rango' && o.montoMin) return `${fmtMonto(o.montoMin, o.moneda)}–${fmtMonto(o.montoTotal, o.moneda)}`;
+  if (o.montoModo === 'rango' && o.montoMin) return `entre ${fmtMonto(o.montoMin, o.moneda)} y ${fmtMonto(o.montoTotal, o.moneda)}`;
   return fmtMonto(o.montoTotal, o.moneda);
 }
 
@@ -382,7 +465,7 @@ function MontoPicker({
       )}
 
       {modo === 'desconocido' && (
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Buenísimo — lo vas a poder poner más adelante, cuando lo tengas más claro.</p>
+        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Lo ponés más adelante, cuando lo tengas más claro.</p>
       )}
     </div>
   );
@@ -494,11 +577,20 @@ export function ObjetivosV2() {
   // que le sumó — es al que viene aportando —; si nunca le sumó a ninguno, el
   // primero. El nombre del objetivo queda arriba de todo, así que si no es ese,
   // se ve enseguida y se vuelve con la flecha.
-  useAlLlegar('aporte_objetivo', () => {
+  //
+  // Si viene de un objetivo puntual (el bloque de objetivos en Home, o un aviso
+  // de plazo con `?objetivo=<id>`), abre ESE.
+  const location = useLocation();
+  const navigate = useNavigate();
+  useAlLlegar('aporte_objetivo', ({ objetivoId, ref }) => {
     const enCurso = db.objetivos.filter((o) => o.estado === 'active');
     if (enCurso.length === 0) return;
+    // `objetivoId` viene del bloque de objetivos de Home; `ref`, del paso del
+    // día ("Sumale algo a X"); `?objetivo=`, de un aviso del celular.
+    const pedido = objetivoId ?? ref ?? new URLSearchParams(location.search).get('objetivo');
     const ultimoAporte = (o: (typeof enCurso)[number]) => Math.max(0, ...o.contribuciones.map((c) => c.ts));
-    const elegido = [...enCurso].sort((a, b) => ultimoAporte(b) - ultimoAporte(a))[0];
+    const elegido = db.objetivos.find((o) => o.id === pedido)
+      ?? [...enCurso].sort((a, b) => ultimoAporte(b) - ultimoAporte(a))[0];
     setOpenId(elegido.id);
     llevarA(
       () => document.querySelector<HTMLElement>('[data-sumar-registro]'),
@@ -506,6 +598,18 @@ export function ObjetivosV2() {
     );
   });
   useEffect(() => { if (abierto) setRegMoneda(abierto.moneda); }, [abierto?.id]);
+
+  // Desde Home sin objetivos ("Crear un objetivo"): abre el formulario. Se
+  // limpia el estado para que volver atrás no lo abra otra vez.
+  useEffect(() => {
+    const estadoNav = location.state as ({ crearObjetivo?: unknown } & Record<string, unknown>) | null;
+    if (!estadoNav?.crearObjetivo) return;
+    const { crearObjetivo: _crear, ...resto } = estadoNav;
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: Object.keys(resto).length ? resto : null });
+    setCreating(true);
+    // Sólo cuando se llega con una navegación nueva.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
 
   async function crearObjetivo() {
     if (!nombre.trim()) return;
@@ -624,6 +728,34 @@ export function ObjetivosV2() {
   const saved = (o: Objetivo) => totalDe(o).total;
   const pct = (o: Objetivo) => (o.montoTotal > 0 ? Math.min(Math.round((saved(o) / o.montoTotal) * 100), 100) : 0);
 
+  // Ritmo, plazo y formas de llegar antes, con los datos reales de la persona.
+  const ahora = Date.now();
+  const preferidas = loadV2PerfilOnboarding()?.categoriasRecortar ?? [];
+  const datosDe = (id: string) => {
+    const o = db.objetivos.find((x) => x.id === id);
+    return o ? datosDelObjetivo(o, dolar, ahora) : null;
+  };
+  const formasDe = (o: Objetivo): FormaDeLlegar[] => {
+    const d = datosDe(o.id);
+    if (!d || estadoMonto(o) !== 'definido' || d.restante <= 0) return [];
+    return formasDeLlegarAntes({
+      restante: d.restante, ritmo: d.ritmo, factor: d.factor,
+      fmtObjetivo: (n) => fmtMonto(n, o.moneda),
+      gastos: db.gastos, secciones: db.secciones, fijos: db.gastosFijos, ingresos: db.ingresos,
+      preferidas, ahora,
+    });
+  };
+
+  // "Sumar un registro" del próximo paso: lleva al formulario, con el monto
+  // por semana precargado si hay uno sugerido.
+  function irASumar(montoSugerido: number | null) {
+    if (montoSugerido && montoSugerido > 0) { setRegMonto(formatMontoInicial(Math.round(montoSugerido))); setKind('saved'); }
+    llevarA(
+      () => document.querySelector<HTMLElement>('[data-sumar-registro]'),
+      () => document.querySelector<HTMLElement>('[data-monto-registro]'),
+    );
+  }
+
   // Diálogo de confirmación de borrado — se muestra tanto en la lista como
   // en el detalle. El naranja (atención accionable) va de RELLENO con texto en
   // tinta (guía §3.3: los acentos nunca llevan texto blanco); "No" en hueco.
@@ -633,7 +765,7 @@ export function ObjetivosV2() {
       <div className="w-full max-w-[320px] rounded-2xl p-5 flex flex-col gap-4" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col gap-1">
           <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>¿Borrar este objetivo?</p>
-          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Se va a eliminar “{objAConfirmar.nombre}” y todos sus registros. No se puede deshacer.</p>
+          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Se van a borrar {objAConfirmar.nombre} y todos sus registros. No se puede deshacer.</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -675,9 +807,21 @@ export function ObjetivosV2() {
     // Cuándo llegás: lo CALCULAMOS nosotras a partir del ritmo reciente, así
     // que es un ESTIMADO (§5.1) y se muestra como rango de semanas con su
     // marca, nunca como un número exacto (§5.2).
-    const semanasEstimadas = estado === 'definido' && !done && aporteSemana > 0 && restante > 0
+    const datos = datosDe(abierto.id);
+    const mensaje = datos ? mensajePlazo(datos.situacion, (n) => fmtMonto(n, abierto.moneda)) : null;
+    // Con plazo, el mensaje del plazo ya dice si llega: no se repite.
+    const semanasEstimadas = !mensaje && estado === 'definido' && !done && aporteSemana > 0 && restante > 0
       ? { lo: Math.max(1, Math.floor(restante / aporteSemana)), hi: Math.ceil(restante / aporteSemana) + 1 }
       : null;
+    const formas = done ? [] : formasDe(abierto);
+    // El próximo paso: una sola acción concreta. Sin plazo, el texto sale de
+    // lo que viene haciendo con este objetivo.
+    const sinPlazo = abierto.contribuciones.length === 0
+      ? 'Todavía no tiene registros. Si ya separaste algo, sumalo y empezás a ver el avance.'
+      : aporteSemana > 0
+        ? 'Si separaste algo más, sumalo y se ve en el avance.'
+        : 'Esta semana todavía no le sumaste. Si separaste algo, sumalo acá.';
+    const pasoVencido = mensaje !== null && datos?.situacion.tipo === 'vencido';
 
     return (
       <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
@@ -791,9 +935,6 @@ export function ObjetivosV2() {
                 )}
               </>
             )}
-            {estado !== 'definido' && (
-              <p className="text-[14px] mt-1" style={{ color: COLORS.inkSoft }}>Todavía no le pusimos un monto. Cuando lo tengas te muestro el progreso — y si querés lo afinamos juntas.</p>
-            )}
           </div>
         </div>
         )}
@@ -827,12 +968,34 @@ export function ObjetivosV2() {
           </div>
         )}
 
-        {!done && planes.get(abierto.id) ? (
+        {/* Próximo paso: junto con el progreso, lo principal del detalle (G1).
+            Un dato, su salida y UNA acción. El color del borde dice el tono:
+            naranja de relleno si hay algo para hacer, nunca rojo. */}
+        {!editando && estado === 'definido' && !done && (
+          <section
+            className="flex flex-col gap-2 pl-3.5 border-l-[3px]"
+            style={{ borderColor: mensaje ? colorDeTono(mensaje.tono) : COLORS.brandSoft }}
+            aria-label="Próximo paso"
+          >
+            <TituloSeccion>Próximo paso</TituloSeccion>
+            <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>{mensaje?.texto ?? sinPlazo}</p>
+            {mensaje?.salida && <p className="text-[15px] leading-snug tabular-nums" style={{ color: COLORS.ink }}>{mensaje.salida}</p>}
+            {mensaje && mensaje.tono !== 'neutral' && <EstadoConfianza estado="estimado" />}
+            <button
+              type="button"
+              onClick={() => (pasoVencido ? empezarEdicion() : irASumar(mensaje?.porSemana?.min ?? null))}
+              className="v2-focus self-start min-h-[44px] rounded-full px-5 text-[15px] font-bold transition-all duration-100 active:scale-95"
+              style={{ background: COLORS.brand, color: COLORS.surface }}
+            >
+              {pasoVencido ? 'Cambiar la fecha' : 'Sumar un registro'}
+            </button>
+          </section>
+        )}
+
+        {!editando && formas.length > 0 && <FormasDeLlegar formas={formas} />}
+
+        {!done && planes.get(abierto.id) && (
           <PlanDelObjetivo plan={planes.get(abierto.id)!} moneda={abierto.moneda} onMarcar={marcarPlan} />
-        ) : !done && consejoPara(abierto, estado) && (
-          <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.star }}>
-            {consejoPara(abierto, estado)}
-          </p>
         )}
 
         {/* Registrar un pago o un ahorro */}
@@ -985,14 +1148,10 @@ export function ObjetivosV2() {
       {/* Banda editorial full-bleed (desencajonado). Fini acompaña en el
           encabezado (§6: onboarding/estados vacíos) — sin montos ni progreso
           al lado, así que no compite con ningún dato. */}
+      {/* Sin bajada (DEBT G2): el título se entiende solo. */}
       <header data-franja className="pb-1 mb-2 flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <Titulo>Tus objetivos</Titulo>
-          <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>
-            {objetivos.length > 0
-              ? `Vas por ${objetivos.length} objetivo${objetivos.length > 1 ? 's' : ''}, a tu ritmo.`
-              : 'Ponéle nombre a eso que querés lograr. Lo hacemos juntas, a tu ritmo.'}
-          </p>
         </div>
       </header>
 
@@ -1000,6 +1159,11 @@ export function ObjetivosV2() {
       <div className="flex flex-col gap-4 lg:flex-row lg:gap-6 lg:items-start">
       {/* Columna principal */}
       <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0">
+
+      {/* Plata apartada arriba de la lista (DEBT I12). En el día 1 sin
+          objetivos ni reserva no aparece: la pantalla vacía es la invitación a
+          crear el primero. */}
+      {(objetivos.length > 0 || db.perfil.reserva > 0) && <PlataApartada monto={db.perfil.reserva} />}
 
       {/* Estado vacío con onda: sugerencias para arrancar (abren el modal).
           Fini acompaña acá y no en la lista con objetivos: §6 lo deja en
@@ -1010,7 +1174,7 @@ export function ObjetivosV2() {
       {objetivos.length === 0 && (
         <div className="flex flex-col gap-3 pt-1">
           <FiniPresenta
-            dice="¿Qué es eso que querés lograr? Empezá por ponerle nombre — el monto lo vemos después."
+            dice="¿Qué es eso que querés lograr? Empezá por ponerle nombre, el monto lo vemos después."
             state="vacio"
             size={124}
           />
@@ -1036,6 +1200,8 @@ export function ObjetivosV2() {
 
       {objetivos.map((o) => {
         const estado = estadoMonto(o);
+        // La versión corta de "Formas de llegar antes": sólo la primera.
+        const forma = formasDe(o)[0];
         return (
           <div key={o.id} className="relative w-full py-4 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
             <button
@@ -1075,6 +1241,12 @@ export function ObjetivosV2() {
                 ) : (
                   // Invitación, no error (§5.1).
                   <EstadoConfianza estado="por-descubrir" className="mt-0.5" />
+                )}
+                {forma && (
+                  <p className="text-[14px] mt-1.5 leading-snug" style={{ color: COLORS.inkSoft }}>
+                    {forma.titulo}: <span className="font-semibold tabular-nums" style={{ color: COLORS.limaText }}>{frasesDeImpacto(forma).toLowerCase()}</span>
+                    <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
+                  </p>
                 )}
               </div>
             </button>

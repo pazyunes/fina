@@ -150,6 +150,27 @@ export async function guardarPerfil(p: Partial<Perfil>): Promise<Resultado<null>
   );
 }
 
+/**
+ * La reserva ("Plata apartada" en Objetivos, DEBT I12). Vive en
+ * `user_profiles.reserve_ars` desde la migración 0023 (0041 lo re-asegura) y se
+ * lee con el perfil en `leerPerfil`.
+ *
+ * Update y no upsert: la fila del perfil ya existe (la crea el trigger de auth)
+ * y así no se puede crear una fila a medias. Con RLS, un update que no toca
+ * ninguna fila no da error: por eso se pide la fila de vuelta y se trata "cero
+ * filas" como falla, para que la pantalla vuelva atrás en vez de mentir.
+ */
+export async function guardarReserva(monto: number): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<null>('sin sesión', 'guardarReserva');
+  const r = await correr<{ id: string }[]>('guardarReserva', () =>
+    supabase.from('user_profiles').update({ reserve_ars: Math.max(0, monto) }).eq('id', uid).select('id'),
+  );
+  if (r.error !== null) return falla<null>(r.error, 'guardarReserva');
+  if (!r.data || r.data.length === 0) return falla<null>('sin fila', 'guardarReserva');
+  return ok(null);
+}
+
 // ── Secciones ────────────────────────────────────────────────────────────
 type FilaSeccion = { id: string; name: string; slug: string; cap_amount: number | null; cap_period: string | null };
 

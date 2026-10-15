@@ -68,6 +68,30 @@ export function guardarPerfil(parche: Partial<Perfil>, confirmacion?: string) {
   push(() => api.guardarPerfil(parche), confirmacion);
 }
 
+// Misma clave que LS_RESERVA en onboarding-v2/shared.tsx. La copia local se
+// mantiene igual a lo que se ve: `subirPendientesLocales` sube la local cuando
+// la base tiene 0, y si quedara un valor viejo acá, sacar toda la plata
+// apartada la haría volver a aparecer en el próximo ingreso.
+const LS_RESERVA = 'fina_v2_reserva';
+function espejarReservaLocal(monto: number) {
+  try { localStorage.setItem(LS_RESERVA, String(monto)); } catch { /* modo privado: no es crítico */ }
+}
+
+/**
+ * Plata apartada (la reserva). Pinta el monto nuevo, lo guarda en la base y, si
+ * la base no lo guarda, vuelve al monto anterior (DEBT D1).
+ */
+export function guardarReserva(monto: number, confirmacion?: string) {
+  const antes = leerEstado().perfil.reserva;
+  const nuevo = Math.max(0, Math.round(monto * 100) / 100);
+  parchearEstado({ perfil: { ...leerEstado().perfil, reserva: nuevo } });
+  espejarReservaLocal(nuevo);
+  push(() => api.guardarReserva(nuevo), confirmacion, () => {
+    parchearEstado({ perfil: { ...leerEstado().perfil, reserva: antes } });
+    espejarReservaLocal(antes);
+  });
+}
+
 // ── Secciones ────────────────────────────────────────────────────────────
 export function crearSeccion(nombre: string): Seccion {
   const seccion: Seccion = { id: nuevoId(), nombre: nombre.trim(), slug: '', tope: null };

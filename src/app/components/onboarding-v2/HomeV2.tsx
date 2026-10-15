@@ -11,6 +11,10 @@ import { IconFuego, IconPerfil } from './FinaIcons';
 import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
 import { pasoPorClave } from '../../api/v2/pasos';
 import { LinkWhatsApp } from './LinkWhatsApp';
+import { RecordatorioGastos } from './RecordatorioGastos';
+import { RevisionDelPaso } from './RevisionDelPaso';
+import { PreguntaDelDia } from './PreguntaDelDia';
+import { ObjetivosEnInicio } from './ObjetivosEnInicio';
 
 
 // El paso del día y la racha salen de PasoDelDiaProvider (api/v2). Antes Home
@@ -35,11 +39,15 @@ import { LinkWhatsApp } from './LinkWhatsApp';
 // use la app.
 export function HomeV2() {
   const navigate = useNavigate();
-  const gastosRegistrados = useAlmacen().estado.gastos.length;
+  const { estado } = useAlmacen();
+  const gastosRegistrados = estado.gastos.length;
   const nombre = loadV2Nombre();
   const foto = loadV2Foto();
-  const { paso, cumplido, racha } = usePasoDelDia();
+  const { paso, cumplido, racha, marcarRevisado } = usePasoDelDia();
   const [rachaAbierta, setRachaAbierta] = useState(false);
+  // Los pasos de revisión se hacen acá: el botón abre la comparación debajo.
+  const [revisando, setRevisando] = useState(false);
+  const mostrarRevision = revisando && !!paso?.revision && !cumplido;
 
   // PRUEBA — "Fini aterriza en el avatar", estilo Netflix. La animación la
   // hace Home y no el onboarding, porque el destino es ESTE avatar y solo acá
@@ -147,6 +155,10 @@ export function HomeV2() {
         )}
       </header>
 
+      {/* Registrar lo del día: recordatorio fijo, no paso (DEBT I2). Se va
+          solo cuando hoy hay un gasto. */}
+      <RecordatorioGastos />
+
       {/* Detalle de la racha: qué sumó cada día. Un número que no se puede
           abrir es un puntaje; abriéndolo es un dato. */}
       {rachaAbierta && racha.dias > 0 && (
@@ -166,7 +178,7 @@ export function HomeV2() {
                   {fechaDisplay(Date.parse(`${d.dia}T12:00:00-03:00`))}
                 </span>
                 <span className="flex-1 min-w-0 text-[14px]" style={{ color: d.tipo === 'comodin' ? COLORS.inkFaint : COLORS.inkSoft }}>
-                  {d.tipo === 'paso' && (pasoPorClave(d.paso ?? '')?.titulo ?? 'Cumpliste tu paso')}
+                  {d.tipo === 'paso' && (pasoPorClave(d.paso ?? '', estado)?.titulo ?? 'Cumpliste tu paso')}
                   {d.tipo === 'whatsapp' && 'Le contaste un gasto a FINA por WhatsApp'}
                   {d.tipo === 'comodin' && 'El comodín te salvó el día'}
                 </span>
@@ -198,7 +210,8 @@ export function HomeV2() {
         {/* Fini sólo en desktop. En el celular, a 164px, se llevaba casi la
             mitad del ancho y empujaba el texto del paso a cuatro líneas, sin
             decir nada que el globo no dijera. */}
-        <div className="hidden lg:block shrink-0 -ml-4 -mt-4">
+        {/* Con la comparación abierta Fini se va: quedaría al lado de los números. */}
+        <div className={`${mostrarRevision ? 'hidden' : 'hidden lg:block'} shrink-0 -ml-4 -mt-4`}>
           {/* Fini festeja cuando está cumplido. `logro` es de una pasada: salta
               una vez y vuelve a quedarse quieto, no queda saltando al lado de
               algo que ya pasó. */}
@@ -234,7 +247,19 @@ export function HomeV2() {
             )}
           </div>
           {paso && !cumplido && (
-            paso.destino === 'whatsapp' ? (
+            paso.revision ? (
+              // Se compara acá mismo; el botón abre y cierra la comparación.
+              !mostrarRevision && (
+                <button
+                  type="button"
+                  onClick={() => setRevisando(true)}
+                  className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold transition-transform duration-100 active:scale-[0.99]"
+                  style={{ background: COLORS.lima, color: COLORS.ink }}
+                >
+                  {paso.cta}
+                </button>
+              )
+            ) : paso.destino === 'whatsapp' ? (
               <LinkWhatsApp
                 className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold text-center transition-transform duration-100 active:scale-[0.99]"
                 style={{ background: COLORS.lima, color: COLORS.ink }}
@@ -244,7 +269,9 @@ export function HomeV2() {
             ) : (
               <button
                 type="button"
-                onClick={() => navigate(paso.destino, paso.abrir ? { state: { abrir: paso.abrir, from: '/onboarding-v2/home' } } : undefined)}
+                // `ref`: el id de la sección u objetivo del que habla el paso,
+                // para que la pantalla de destino abra ése.
+                onClick={() => navigate(paso.destino, paso.abrir ? { state: { abrir: paso.abrir, ref: paso.ref, from: '/onboarding-v2/home' } } : undefined)}
                 className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold transition-transform duration-100 active:scale-[0.99]"
                 style={{ background: COLORS.lima, color: COLORS.ink }}
               >
@@ -254,6 +281,11 @@ export function HomeV2() {
           )}
         </div>
       </section>
+
+      {mostrarRevision && paso && <RevisionDelPaso paso={paso} onRespondida={marcarRevisado} />}
+
+      {/* Tus objetivos: el más relevante, cuánto avanzó y qué hacer (DEBT I7). */}
+      <ObjetivosEnInicio />
 
       {/* Se fue "Tus secciones" (Gastos / Objetivos / Inversiones en tres
           fichas): repetía el menú de abajo, que ya lleva a las mismas tres
@@ -270,6 +302,10 @@ export function HomeV2() {
           diaria a la IA que elige el paso de mañana y arma los planes de
           objetivos. */}
       <Recomendaciones />
+
+      {/* Algo para hacer cuando no hay nada pendiente (DEBT R1). Secundario:
+          no suma a la racha ni compite con el paso de hoy. */}
+      <PreguntaDelDia />
 
       {/* Se fueron Tu plata guardada y Mis competencias (DEBT I8 e I9). La
           reserva sólo vivía acá y en el navegador (loadV2Reserva): deja de verse

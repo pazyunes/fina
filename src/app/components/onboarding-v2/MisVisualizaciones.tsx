@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
-import { COLORS, FONTS, TituloSeccion, fmtMoney, fmtMontoCompacto, vistaGastos, vistaObjetivos } from './shared';
+import { COLORS, FONTS, TituloSeccion, fmtMoney, vistaGastos } from './shared';
 import { IngresosVsGastos } from './IngresosVsGastos';
 import { IconChevron } from './FinaIcons';
 
@@ -10,6 +10,9 @@ import { IconChevron } from './FinaIcons';
 //
 // Armados con los datos que ya hay guardados: nada inventado, y si no alcanzan
 // los datos el gráfico lo dice en vez de dibujar una línea plana.
+//
+// Los objetivos ya no van acá (DEBT I7): tienen su propio bloque en Home,
+// ObjetivosEnInicio, con el avance de la semana y el próximo paso.
 //
 // COLOR. Se siguió la guía de dataviz y se validó con su script, no a ojo:
 //
@@ -57,40 +60,6 @@ function Barras({ filas }: { filas: { label: string; valor: number }[] }) {
   );
 }
 
-// ── Anillos de progreso (objetivos) ──────────────────────────────────────
-// Un anillo por objetivo, no una torta con todos.
-//
-// Una torta muestra cómo se REPARTE un total: "de todo lo que juntaste, el 40%
-// fue al viaje". Lo que se pregunta de un objetivo es otra cosa — cuánto te falta
-// para ESE — y eso es una proporción contra un límite, cuya forma es un medidor.
-// Además, con uno o dos objetivos una torta queda en una o dos porciones, que no
-// dice nada. El anillo tiene la forma circular que se buscaba y contesta la
-// pregunta correcta.
-function Anillo({ pct }: { pct: number }) {
-  const lado = 76;
-  const grosor = 9;
-  const r = (lado - grosor) / 2;
-  const largo = 2 * Math.PI * r;
-  return (
-    <svg width={lado} height={lado} viewBox={`0 0 ${lado} ${lado}`} role="img" aria-label={`${pct}% juntado`}>
-      <circle cx={lado / 2} cy={lado / 2} r={r} fill="none" stroke={COLORS.limaSoft} strokeWidth={grosor} />
-      {pct > 0 && (
-        <circle
-          cx={lado / 2} cy={lado / 2} r={r} fill="none"
-          stroke={COLORS.limaViz} strokeWidth={grosor} strokeLinecap="round"
-          strokeDasharray={`${(pct / 100) * largo} ${largo}`}
-          // Arranca arriba, como un reloj, y no a la derecha como el SVG por defecto.
-          transform={`rotate(-90 ${lado / 2} ${lado / 2})`}
-        />
-      )}
-      {/* El porcentaje va en tinta, nunca en el color del anillo. */}
-      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" fontSize="16" fontWeight="700" fill={COLORS.ink} fontFamily={FONTS.mono}>
-        {pct}%
-      </text>
-    </svg>
-  );
-}
-
 // ── Una tarjeta del carrusel ─────────────────────────────────────────────
 // Sin subtítulo: el título tiene que decir solo qué muestra el gráfico
 // (frontend.md §5.4). Si hiciera falta explicarlo, se cambia el título.
@@ -117,7 +86,6 @@ function Tarjeta({ titulo, ultima, children }: { titulo: string; ultima: boolean
 
 export function MisVisualizaciones() {
   const g = vistaGastos();
-  const objetivos = vistaObjetivos();
   const gastos = g.gastos;
 
   const filaRef = useRef<HTMLDivElement>(null);
@@ -142,10 +110,6 @@ export function MisVisualizaciones() {
     .filter((f) => f.valor > 0)
     .sort((a, b) => b.valor - a.valor);
 
-  // ── Objetivos ──────────────────────────────────────────────────────────
-  const conMonto = objetivos.filter((o) => o.montoTotal > 0);
-  const sinMonto = objetivos.length - conMonto.length;
-
   const tarjetas = [
     {
       titulo: 'Ingresos y gastos por mes',
@@ -167,44 +131,6 @@ export function MisVisualizaciones() {
         ? <SinDatos>Cuando registres gastos vas a poder ver cuánto fue necesario y cuánto impulso.</SinDatos>
         : porTipo.length === 0 ? <SinDatos>Todavía no hay gastos clasificados.</SinDatos>
         : <Barras filas={porTipo} />,
-    },
-    {
-      titulo: 'Cuánto juntaste por objetivo',
-      contenido: conMonto.length === 0
-        ? <SinDatos>Sumá un objetivo con su monto y acá vas a ver cuánto te falta para cada uno.</SinDatos>
-        : (
-          <div className="flex flex-col gap-3">
-            {/* Pequeños múltiplos: el mismo anillo, mismo tamaño y misma escala,
-                así se comparan de un vistazo. */}
-            {/* Con un solo objetivo, centrado: en dos columnas quedaba contra la
-                izquierda con la mitad derecha de la tarjeta vacía. */}
-            <div className={conMonto.length === 1 ? 'flex justify-center' : 'grid grid-cols-2 gap-x-3 gap-y-4'}>
-              {conMonto.slice(0, 4).map((o) => {
-                const juntado = o.juntado;
-                const pct = Math.min(100, Math.round((juntado / o.montoTotal) * 100));
-                return (
-                  <div key={o.id} className="flex flex-col items-center gap-1.5 text-center min-w-0">
-                    <Anillo pct={pct} />
-                    <span className="text-[14px] font-semibold leading-tight w-full truncate" style={{ color: COLORS.ink }}>{o.nombre}</span>
-                    <span className="text-[12px] leading-tight font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>
-                      {fmtMontoCompacto(juntado)} de {fmtMontoCompacto(o.montoTotal)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            {conMonto.length > 4 && (
-              <span className="text-[13px]" style={{ color: COLORS.inkFaint }}>Y {conMonto.length - 4} más en Objetivos.</span>
-            )}
-            {/* Un objetivo sin monto no es un 0%: todavía no se sabe cuánto
-                cuesta. Se dice aparte en vez de dibujarlo vacío. */}
-            {sinMonto > 0 && (
-              <span className="text-[13px]" style={{ color: COLORS.inkFaint }}>
-                {sinMonto === 1 ? '1 objetivo todavía no tiene monto' : `${sinMonto} objetivos todavía no tienen monto`}, así que no se puede medir su avance.
-              </span>
-            )}
-          </div>
-        ),
     },
   ];
 

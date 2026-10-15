@@ -57,7 +57,7 @@ function PantallazoObjetivo({ nombre }: { nombre: string }) {
         </div>
         <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>
           Llevás <span className="font-semibold tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(juntado)}</span> de{' '}
-          <span className="tabular-nums">{fmtMoney(total)}</span> — te falta{' '}
+          <span className="tabular-nums">{fmtMoney(total)}</span>, te falta{' '}
           <span className="font-semibold tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(total - juntado)}</span>.
         </p>
       </div>

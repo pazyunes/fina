@@ -5,9 +5,19 @@
 //       – un gasto fijo que vence hoy o mañana;
 //       – si no, "día de separar", el día del mes en que cobra (si lo cargó);
 //       – si no, los lunes, el resumen de la semana anterior.
-//   · ?turno=tarde  — 19 hs de Argentina, sólo a quien hoy todavía no sumó:
-//       – si tiene una racha de 2 días o más, el de la racha;
-//       – si no, el del paso del día.
+//   · ?turno=tarde  — 19 hs de Argentina, UN aviso que junta lo que falte:
+//       – sin gastos anotados hoy y con racha de 2 días o más sin sumar: el de
+//         la racha, que pide contarle a FINA lo de hoy (un gasto por WhatsApp
+//         salva el día);
+//       – sin gastos anotados hoy: el recordatorio de anotar lo de hoy, con el
+//         paso del día al lado si todavía está pendiente;
+//       – con gastos hoy pero sin sumar: el de la racha o el del paso, como
+//         antes.
+//
+// Registrar el gasto del día ya no es un paso (DEBT I2): es un recordatorio
+// fijo, y por eso va en el aviso de la tarde aunque el paso esté cumplido. No
+// hay preferencia propia: lo apaga la del paso del día, que es el aviso diario
+// del hábito (sin migración nueva).
 //
 // Máximo dos avisos por día. Cada tipo se apaga desde Perfil.
 //
@@ -18,22 +28,21 @@
 // Tono de FINA: los avisos recuerdan, no retan. Nunca "vas a perder tu racha".
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { PASOS } from '../src/app/api/v2/pasos.js';
+import { entidadDeClave, tituloDePaso } from '../src/app/api/v2/pasos.js';
 import { diaAR, diaDeSemana, diasDelMes, lunesDe, sumarDias } from './_recomendaciones/fechas.js';
 import { configurarPush, enviarAviso, type Aviso, type Suscripcion } from './_notificaciones/enviar.js';
+import { avisoDePlazo, type ObjetivoConAportes } from './_notificaciones/plazos.js';
 
 type Req = { headers: Record<string, string | string[] | undefined>; query?: Record<string, string | string[] | undefined> };
 type Res = { status(code: number): Res; json(body: unknown): void; setHeader(nombre: string, valor: string): void };
 
 type Turno = 'manana' | 'tarde';
-type Tipo = 'paso' | 'racha' | 'separar' | 'resumen' | 'vencimiento';
+type Tipo = 'paso' | 'racha' | 'separar' | 'resumen' | 'vencimiento' | 'registro' | 'plazo';
 type Racha = { dias: number; hoyCumplido: boolean };
 type FilaSuscripcion = Suscripcion & { id: string; user_id: string };
 // Con `select('*')`: si todavía no se corrió la 0031, las columnas nuevas no
 // vienen y valen sus valores por defecto, en vez de romper la tarea entera.
 type Prefs = { paso?: boolean; racha?: boolean; separar?: boolean; resumen?: boolean; vencimientos?: boolean; dia_cobro?: number | null };
-
-const TITULO_PASO = new Map(PASOS.map((p) => [p.clave as string, p.titulo]));
 
 export default async function handler(req: Req, res: Res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -108,6 +117,14 @@ async function avisoDeLaManana(supabase: SupabaseClient, uid: string, hoy: strin
     const aviso = await armarVencimiento(supabase, uid, hoy);
     if (aviso) return { tipo: 'vencimiento', aviso };
   }
+  // El plazo de un objetivo va antes que el día de cobro porque tiene fecha.
+  // Usa la preferencia de "separar", que es la de los avisos de objetivos.
+  // Antes de la migración 0041 el registro en notification_log falla y el aviso
+  // simplemente no sale (ver api/_notificaciones/plazos.ts).
+  if (pref.separar !== false) {
+    const aviso = await armarPlazo(supabase, uid, hoy);
+    if (aviso) return { tipo: 'plazo', aviso };
+  }
   // El día de cobro manda sobre el resumen: separar apenas entra la plata es lo
   // que más mueve. Si cae un lunes, ese lunes no hay resumen.
   if (pref.separar !== false && pref.dia_cobro) {
@@ -123,6 +140,22 @@ async function avisoDeLaManana(supabase: SupabaseClient, uid: string, hoy: strin
     if (aviso) return { tipo: 'resumen', aviso };
   }
   return null;
+}
+
+async function armarPlazo(supabase: SupabaseClient, uid: string, hoy: string): Promise<Aviso | null> {
+  // Una vez por semana por persona (y por lo tanto por objetivo).
+  const { data: log } = await supabase.from('notification_log')
+    .select('dia').eq('user_id', uid).eq('tipo', 'plazo')
+    .gte('dia', sumarDias(hoy, -6)).limit(1);
+  if (log && log.length > 0) return null;
+  const { data, error } = await supabase.from('goals')
+    .select('id, title, currency, amount_ars, horizon_label, status, goal_contributions(amount, currency, amount_ars, occurred_at)')
+    .eq('user_id', uid).eq('status', 'active');
+  if (error || !data) return null;
+  const { data: cot } = await supabase.from('exchange_rates')
+    .select('rate').eq('currency', 'USD_BLUE').order('fetched_at', { ascending: false }).limit(1).maybeSingle();
+  const dolar = cot ? Number((cot as { rate: number }).rate) : null;
+  return avisoDePlazo(data as ObjetivoConAportes[], hoy, { dolar });
 }
 
 const pesos = (n: number, moneda = 'ARS') =>
@@ -194,8 +227,8 @@ async function armarSeparar(supabase: SupabaseClient, uid: string): Promise<Avis
   return {
     title: 'Hoy cobrás: buen día para separar',
     body: rango && rango.max > 0
-      ? `Para “${objetivo.title}”, tu plan dice entre ${pesos(rango.min, objetivo.currency)} y ${pesos(rango.max, objetivo.currency)} por semana. Separalo apenas entra.`
-      : `Separá una parte para “${objetivo.title}” apenas entra la plata, antes de empezar a gastar.`,
+      ? `Para "${objetivo.title}", tu plan dice entre ${pesos(rango.min, objetivo.currency)} y ${pesos(rango.max, objetivo.currency)} por semana. Separalo apenas entra.`
+      : `Separá una parte para "${objetivo.title}" apenas entra la plata, antes de empezar a gastar.`,
     url: '/onboarding-v2/objetivos?abrir=aporte_objetivo',
     tag: 'fina-separar',
   };
@@ -242,21 +275,49 @@ async function armarResumenSemanal(supabase: SupabaseClient, uid: string, hoy: s
   };
 }
 
-// ── La tarde: racha o paso ───────────────────────────────────────────────
+// ── La tarde: registro, racha o paso ─────────────────────────────────────
+
+/** Si hoy (en Argentina) hay algún gasto anotado: cargado hoy o con fecha de hoy. */
+async function hayGastoHoy(supabase: SupabaseClient, uid: string, hoy: string): Promise<boolean | null> {
+  // En UTC: dentro de un `or` de PostgREST, un "-03:00" suelto es más frágil.
+  const desde = new Date(`${hoy}T00:00:00-03:00`).toISOString();
+  const { count, error } = await supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', uid)
+    .eq('type', 'expense')
+    .or(`created_at.gte.${desde},occurred_at.gte.${desde}`);
+  return error ? null : (count ?? 0) > 0;
+}
+
+/** El título del paso, con el nombre de la sección, el objetivo o el gasto fijo del que habla. */
+async function tituloConNombre(supabase: SupabaseClient, clave: string): Promise<string | null> {
+  const ent = entidadDeClave(clave);
+  if (!ent) return tituloDePaso(clave);
+  const tabla = ent.tipo === 'seccion' ? 'expense_sections' : ent.tipo === 'objetivo' ? 'goals' : 'recurring_expenses';
+  const columna = ent.tipo === 'seccion' ? 'name' : ent.tipo === 'objetivo' ? 'title' : 'description';
+  const { data } = await supabase.from(tabla).select(columna).eq('id', ent.id).maybeSingle();
+  const nombre = (data as Record<string, unknown> | null)?.[columna];
+  return tituloDePaso(clave, typeof nombre === 'string' ? { [ent.tipo]: () => nombre } : undefined);
+}
 
 async function avisoDeLaTarde(supabase: SupabaseClient, uid: string, hoy: string, pref: Prefs): Promise<{ tipo: Tipo; aviso: Aviso } | null> {
   const { data: rachaData, error } = await supabase.rpc('racha_de', { p_user: uid });
   if (error) return null;
   const racha = rachaData as Racha;
-  // Si hoy ya sumó (paso cumplido o gasto por WhatsApp), no hay nada que recordar.
-  if (racha.hoyCumplido) return null;
+  // Si no se pudo saber, se asume que hay: mejor no recordar que recordar de más.
+  const sinGastoHoy = (await hayGastoHoy(supabase, uid, hoy)) === false;
 
-  if (pref.racha !== false && racha.dias >= 2) {
+  // Racha en juego y nada anotado hoy: un solo aviso con las dos cosas. Contarle
+  // un gasto a FINA por WhatsApp anota lo de hoy y salva la racha a la vez.
+  if (!racha.hoyCumplido && pref.racha !== false && racha.dias >= 2) {
     return {
       tipo: 'racha',
       aviso: {
         title: `Tu racha de ${racha.dias} días`,
-        body: 'Hoy todavía no sumaste. Con registrar un gasto, acá o por WhatsApp, alcanza.',
+        body: sinGastoHoy
+          ? 'Hoy todavía no sumaste. Contale a FINA por WhatsApp lo que gastaste hoy y queda a salvo.'
+          : 'Hoy todavía no sumaste. Con tu paso de hoy o un gasto por WhatsApp, alcanza.',
         url: '/onboarding-v2/home',
         tag: 'fina-racha',
       },
@@ -266,8 +327,26 @@ async function avisoDeLaTarde(supabase: SupabaseClient, uid: string, hoy: string
 
   const { data: paso } = await supabase.from('daily_steps').select('*').eq('user_id', uid).eq('day', hoy).maybeSingle();
   const fila = paso as { step_key: string; completed_at: string | null; message?: string | null } | null;
-  if (fila?.completed_at) return null;
-  const titulo = fila ? TITULO_PASO.get(fila.step_key) : null;
+  const pasoPendiente = !racha.hoyCumplido && !fila?.completed_at;
+  const titulo = fila && pasoPendiente ? await tituloConNombre(supabase, fila.step_key) : null;
+
+  // Nada anotado hoy: el recordatorio de registrar, con el paso al lado si falta.
+  if (sinGastoHoy) {
+    return {
+      tipo: 'registro',
+      aviso: {
+        title: '¿Anotaste lo de hoy?',
+        body: (titulo
+          ? `Si gastaste algo, contáselo a FINA por WhatsApp o anotalo en la app. Y tu paso de hoy: ${titulo}.`
+          : 'Si gastaste algo, contáselo a FINA por WhatsApp o anotalo en la app. Te lleva un minuto.').slice(0, 180),
+        url: '/onboarding-v2/home',
+        tag: 'fina-registro',
+      },
+    };
+  }
+
+  // Ya anotó algo hoy: queda el paso, si sigue pendiente.
+  if (!pasoPendiente) return null;
   return {
     tipo: 'paso',
     aviso: titulo
