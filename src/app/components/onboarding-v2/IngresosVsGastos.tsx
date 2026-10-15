@@ -36,24 +36,30 @@ function ultimosMeses(n: number): string[] {
   });
 }
 
+/** La clave 'YYYY-MM' del mes de hace `n` meses (0 = el actual). */
+export function mesAtras(n: number): string {
+  return ultimosMeses(n + 1)[0];
+}
+
 const nombreMes = (clave: string, largo = false) =>
   new Date(`${clave}-15T12:00:00Z`).toLocaleDateString('es-AR', { month: largo ? 'long' : 'short', timeZone: 'UTC' }).replace('.', '');
 
 // Dos formas, según dónde se use:
 //
-// · Fijo (por defecto, la pantalla de Gastos): siempre parado en el mes actual,
-//   sólo para mirar y sólo "Entró" y "Salió". Ahí cada mes tocado sin querer te
-//   movía a otro mes con los números de arriba cambiados, sin que se notara que
-//   ya no era "este mes".
+// · Fijo (por defecto, la pantalla de Gastos): no se toca. Marca el mes que la
+//   pantalla está mirando (`mesElegido`, el de las flechas de la torta; si no
+//   se pasa, el actual) y atenúa los demás, y muestra sólo "Entró" y "Salió".
+//   Antes cada mes era un botón: un toque sin querer te movía a otro mes sin
+//   que la pantalla cambiara con él.
 // · `explorar` (Home): cada mes se puede tocar para ver sus números, y se dice
 //   cuánto te quedó o por cuánto te pasaste. Es un gráfico para recorrer, no
 //   donde estás parada.
-export function IngresosVsGastos({ conLista = false, explorar = false }: { conLista?: boolean; explorar?: boolean }) {
+export function IngresosVsGastos({ conLista = false, explorar = false, mesElegido }: { conLista?: boolean; explorar?: boolean; mesElegido?: string }) {
   const { estado } = useAlmacen();
   const meses = ultimosMeses(6);
   const mesActual = meses[meses.length - 1];
   const [tocado, setTocado] = useState(mesActual);
-  const elegido = explorar ? tocado : mesActual;
+  const elegido = explorar ? tocado : (mesElegido ?? mesActual);
   const esEsteMes = elegido === mesActual;
   const [borrando, setBorrando] = useState<string | null>(null);
 
@@ -62,7 +68,12 @@ export function IngresosVsGastos({ conLista = false, explorar = false }: { conLi
     entro: estado.ingresos.filter((i) => mesDe(i.ts) === mes).reduce((s, i) => s + i.montoArs, 0),
     salio: estado.gastos.filter((g) => mesDe(g.ts) === mes).reduce((s, g) => s + g.montoArs, 0),
   }));
-  const actual = porMes.find((p) => p.mes === elegido) ?? porMes[porMes.length - 1];
+  // Los números del mes elegido salen directo de los datos y no de `porMes`: el
+  // mes que se mira puede ser más viejo que los 6 que dibuja el gráfico.
+  const actual = {
+    entro: estado.ingresos.filter((i) => mesDe(i.ts) === elegido).reduce((s, i) => s + i.montoArs, 0),
+    salio: estado.gastos.filter((g) => mesDe(g.ts) === elegido).reduce((s, g) => s + g.montoArs, 0),
+  };
   const tope = Math.max(1, ...porMes.map((p) => Math.max(p.entro, p.salio)));
   const nadaRegistrado = porMes.every((p) => p.entro === 0 && p.salio === 0);
   const quedo = actual.entro - actual.salio;
@@ -136,7 +147,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false }: { conLi
                 role="img"
                 aria-label={nombre}
                 className="flex-1 min-w-[44px] h-full flex items-end justify-center gap-[2px] rounded-lg"
-                style={{ opacity: sel ? 1 : 0.4, background: sel ? COLORS.tint : 'transparent' }}
+                style={{ opacity: sel ? 1 : 0.4 }}
               >
                 {barras}
               </div>

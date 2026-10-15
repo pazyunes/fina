@@ -280,6 +280,12 @@ export function HomeV2() {
         </div>
       </section>
 
+      {/* UNA recomendación, justo debajo del paso de hoy: la de la IA con tus
+          datos si hay; si no, un tope sugerido con lo que solés gastar; si no,
+          un consejo general. Hace también la llamada diaria a la IA que elige el
+          paso de mañana y arma los planes de objetivos. */}
+      <Recomendaciones />
+
       {/* Se fue "Tus secciones" (Gastos / Objetivos / Inversiones en tres
           fichas): repetía el menú de abajo, que ya lleva a las mismas tres
           pantallas y está siempre a la vista. */}
@@ -287,13 +293,6 @@ export function HomeV2() {
       <AvisoVencimientoHome />
       <InvitacionAvisos momento="home" gastosRegistrados={gastosRegistrados} />
 
-      {/* Tu avance + Para vos. "Para vos" se había sacado de Home porque las
-          recomendaciones se sentían genéricas: ahora cada una dice si es "con tus
-          datos" o "general", las de tus datos van primero (incluido un tope
-          sugerido según lo que solés gastar), y "Tu avance" muestra lo que ya
-          cumpliste. Este componente también hace la llamada diaria a la IA que
-          elige el paso de mañana y arma los planes de objetivos. */}
-      <Recomendaciones />
 
       {/* PRUEBA — gráficos armados con los datos que ya hay guardados. */}
       <MisVisualizaciones />

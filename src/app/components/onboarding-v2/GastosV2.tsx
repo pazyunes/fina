@@ -7,7 +7,7 @@ import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
 import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
-import { IngresosVsGastos } from './IngresosVsGastos';
+import { IngresosVsGastos, mesAtras } from './IngresosVsGastos';
 import { CamposGastoFijo, ListaGastosFijos, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
 import { FUENTES_INGRESO, type FuenteIngreso, type PagoMixto } from '../../api/v2/tipos';
 import { IconClose } from './FinaIcons';
@@ -263,7 +263,7 @@ export function GastosV2() {
     ),
     metodosPago: db.mediosPago.map((m) => m.nombre),
   }), [db]);
-  const { categorias, gastos, disponible, topes } = estado;
+  const { categorias, gastos, topes } = estado;
 
   // La cotización se pide al entrar, no al tocar "guardar": si la persona carga
   // un gasto en dólares, el valor ya está y no espera a la red.
@@ -339,6 +339,11 @@ export function GastosV2() {
   const [verTodos, setVerTodos] = useState(false);
   // "Cuánto tenés" por medio de pago: se ven los primeros y el resto se despliega.
   const [verTodosMedios, setVerTodosMedios] = useState(false);
+  // Editar secciones: renombrar o borrar. Una a la vez.
+  const [editandoSecciones, setEditandoSecciones] = useState(false);
+  const [renombrandoId, setRenombrandoId] = useState<string | null>(null);
+  const [nombreNuevo, setNombreNuevo] = useState('');
+  const [borrandoSeccionId, setBorrandoSeccionId] = useState<string | null>(null);
 
   // El total y el donut miran una VENTANA, no todo el historial: "gastado"
   // sin período no se puede comparar con nada, y un tope es por semana o por
@@ -387,14 +392,29 @@ export function GastosV2() {
     for (const i of db.ingresos) {
       if (i.medio && i.ts >= desdeVentana && i.ts < hastaVentana) de(i.medio).entro += i.montoArs;
     }
+    let sinMedio = 0;
     for (const g of gastosVentana) {
       if (g.pagos?.length) for (const p of g.pagos) de(p.medio).salio += p.monto;
       else if (g.metodoPago) de(g.metodoPago).salio += g.montoArs;
+      else sinMedio += g.montoArs;
     }
-    return [...mapa.entries()]
+    const filas = [...mapa.entries()]
       .map(([nombre, v]) => ({ nombre, entro: v.entro, salio: v.salio, quedan: v.entro - v.salio }))
       .sort((x, y) => y.quedan - x.quedan);
+    // Lo gastado sin elegir medio también restó del mes: se muestra aparte, al
+    // final, para que las filas sumen lo mismo que el número de arriba.
+    if (sinMedio > 0) filas.push({ nombre: 'Sin medio elegido', entro: 0, salio: sinMedio, quedan: -sinMedio });
+    return filas;
   })();
+  // Dinero disponible DEL PERÍODO: lo que entró menos lo que salió en el mes
+  // (o la semana) que se está mirando. Cada mes arranca en cero y los meses
+  // anteriores guardan el suyo. En cero y no en negativo: gastar más de lo que
+  // se cargó como ingreso suele ser que falta cargar ingresos, y se ve en cada
+  // medio de abajo.
+  const entroVentana = db.ingresos
+    .filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana)
+    .reduce((t, i) => t + i.montoArs, 0);
+  const disponibleVentana = Math.max(entroVentana - totalGastado, 0);
   const maxQuedan = Math.max(...mediosVentana.map((m) => m.quedan), 0);
   const nombrePeriodoMedios = ventana === 'mes' ? nombreMesOffset(mesOffset) : 'Esta semana';
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
@@ -480,6 +500,7 @@ export function GastosV2() {
     const elegida = [...candidatas].sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id))[0];
     if (!elegida) return;
     setVentana('mes');
+    setMesOffset(0);
     setOpenCatId(elegida.id);
     llevarA(
       () => pantallaRef.current?.querySelector<HTMLElement>(`[data-seccion="${elegida.id}"]`),
@@ -677,15 +698,12 @@ export function GastosV2() {
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <div>
             <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Dinero disponible</p>
-            <Monto value={disponible} size={19} className="font-bold" />
+            <Monto value={disponibleVentana} size={19} className="font-bold" />
           </div>
 
           {/* Cuánto queda en cada medio de pago en el período de la torta, en
               barritas. El número va en tinta; el color de la barra es el del
               dato (limaViz). */}
-          <p className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
-            Por medio · {nombrePeriodoMedios}
-          </p>
           {mediosVentana.length === 0 ? (
             <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
               Cuando cargues plata o un gasto con un medio, acá ves cuánto te queda en cada uno este período.
@@ -721,7 +739,6 @@ export function GastosV2() {
                   {verTodosMedios ? 'Ver menos' : `Ver los ${mediosVentana.length}`}
                 </button>
               )}
-              <p className="text-[12px] leading-snug" style={{ color: COLORS.inkFaint }}>Lo que entró menos lo que salió de cada medio.</p>
             </div>
           )}
         </div>
@@ -1167,7 +1184,7 @@ export function GastosV2() {
           pregunta que sigue a "cuánto tengo" — "¿me alcanza lo que entra?". */}
       <section className="flex flex-col gap-3 lg:col-span-3">
         <TituloSeccion>Lo que entra y lo que sale</TituloSeccion>
-        <IngresosVsGastos conLista />
+        <IngresosVsGastos conLista mesElegido={mesAtras(ventana === 'mes' ? mesOffset : 0)} />
       </section>
 
       {/* Distribución por tipo — bloque tintado (§3.5): cuánto es impulso vs necesidad */}
@@ -1283,11 +1300,20 @@ export function GastosV2() {
         {/* De la que más plata se llevó a la que menos — el color de cada una
             no se mueve (sigue atado al orden en que se crearon, vía `colorDe`),
             sólo el orden en que aparecen en la lista. */}
-        {[...categorias].sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id)).map((cat) => {
+        {/* Sólo las secciones con gastos en el período que se mira: una sección
+            sin nada este mes no ocupa lugar con un "sin registros". Vuelve a
+            aparecer sola en cuanto se le carga un gasto. Para renombrarlas o
+            borrarlas (estén o no a la vista) está "Editar secciones", abajo. */}
+        {categorias.length > 0 && gastosVentana.length === 0 && (
+          <p className="py-4 text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            No hay gastos en {ventana === 'mes' ? (mesOffset === 0 ? 'este mes' : nombreMesOffset(mesOffset)) : 'esta semana'}.
+          </p>
+        )}
+        {categorias.filter((c) => gastosVentana.some((g) => g.categoriaId === c.id)).sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id)).map((cat) => {
           const open = openCatId === cat.id;
           const gastado = gastadoEn(cat.id);
           const tope = topes[cat.id];
-          const movs = gastos.filter((g) => g.categoriaId === cat.id);
+          const movs = gastosVentana.filter((g) => g.categoriaId === cat.id);
           return (
             // Cada categoría era su propia tarjeta con borde. Con seis
             // secciones eso son seis contornos apilados, que es lo que se lee
@@ -1299,9 +1325,7 @@ export function GastosV2() {
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: colorDe(cat.id) }} />
                   <div className="text-left">
                     <p className="font-semibold text-[16px]" style={{ color: COLORS.ink }}>{cat.nombre}</p>
-                    {gastado > 0
-                      ? <Monto value={gastado} className="text-[14px]" />
-                      : <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Sin registros todavía</p>}
+                    <Monto value={gastado} className="text-[14px]" />
                   </div>
                 </div>
                 <span className="shrink-0 flex items-center gap-2">
@@ -1328,7 +1352,6 @@ export function GastosV2() {
 
               {open && (
                 <div className="mt-3 pt-3 border-t border-dashed flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
-                  {movs.length === 0 && <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no hay movimientos acá.</p>}
                   {movs.map((m) => (
                     <div key={m.id}>
                       <div className="flex items-center justify-between text-[15px] gap-2 min-h-[36px]" style={{ color: COLORS.ink }}>
@@ -1385,6 +1408,108 @@ export function GastosV2() {
             </div>
           );
         })}
+
+        {categorias.length > 0 && (
+          <div className="pt-4 flex flex-col gap-2">
+            <button
+              type="button"
+              aria-expanded={editandoSecciones}
+              onClick={() => { setEditandoSecciones((v) => !v); setRenombrandoId(null); setBorrandoSeccionId(null); }}
+              className="v2-focus self-start text-[14px] font-semibold underline"
+              style={{ color: COLORS.brand }}
+            >
+              {editandoSecciones ? 'Listo' : 'Editar secciones'}
+            </button>
+
+            {editandoSecciones && (
+              <ul className="flex flex-col">
+                {categorias.map((c) => {
+                  const cantGastos = gastos.filter((g) => g.categoriaId === c.id).length;
+                  return (
+                    <li key={c.id} className="py-2.5 border-b last:border-b-0 flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
+                      {renombrandoId === c.id ? (
+                        <div className="flex gap-2">
+                          <input
+                            autoFocus
+                            aria-label={`Nuevo nombre para ${c.nombre}`}
+                            maxLength={40}
+                            className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[44px] text-[16px]"
+                            style={INPUT_STYLE}
+                            value={nombreNuevo}
+                            onChange={(e) => setNombreNuevo(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && nombreNuevo.trim()) { acciones.renombrarSeccion(c.id, nombreNuevo.trim()); setRenombrandoId(null); }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            disabled={!nombreNuevo.trim()}
+                            onClick={() => { acciones.renombrarSeccion(c.id, nombreNuevo.trim()); setRenombrandoId(null); }}
+                            className="v2-focus rounded-xl px-4 min-h-[44px] text-[14px] font-bold v2-disabled"
+                            style={{ background: COLORS.brand, color: COLORS.surface }}
+                          >
+                            Guardar
+                          </button>
+                          <button type="button" onClick={() => setRenombrandoId(null)} className="v2-focus rounded-xl px-3 min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full shrink-0" style={{ background: colorDe(c.id) }} />
+                          <span className="flex-1 min-w-0 truncate text-[16px] font-semibold" style={{ color: COLORS.ink }}>{c.nombre}</span>
+                          <button
+                            type="button"
+                            onClick={() => { setNombreNuevo(c.nombre); setRenombrandoId(c.id); setBorrandoSeccionId(null); }}
+                            aria-label={`Renombrar ${c.nombre}`}
+                            className="v2-focus w-11 h-11 rounded-full flex items-center justify-center shrink-0"
+                            style={{ color: COLORS.inkFaint }}
+                          >
+                            <IconEditar size={18} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setBorrandoSeccionId(borrandoSeccionId === c.id ? null : c.id); setRenombrandoId(null); }}
+                            aria-label={`Borrar la sección ${c.nombre}`}
+                            aria-expanded={borrandoSeccionId === c.id}
+                            className="v2-focus w-11 h-11 -mr-2 rounded-full flex items-center justify-center shrink-0"
+                            style={{ color: borrandoSeccionId === c.id ? COLORS.ink : COLORS.inkFaint }}
+                          >
+                            <IconBasura size={18} />
+                          </button>
+                        </div>
+                      )}
+
+                      {borrandoSeccionId === c.id && (
+                        <div className="rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado de la sección">
+                          <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+                            ¿Borrar la sección “{c.nombre}”?
+                            {cantGastos > 0
+                              ? ` Sus ${cantGastos} ${cantGastos === 1 ? 'gasto no se borra' : 'gastos no se borran'}: ${cantGastos === 1 ? 'queda' : 'quedan'} sin sección.`
+                              : ' No tiene gastos.'}
+                          </p>
+                          <div className="flex gap-2">
+                            <button type="button" autoFocus onClick={() => setBorrandoSeccionId(null)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { if (openCatId === c.id) setOpenCatId(null); acciones.borrarSeccion(c.id); setBorrandoSeccionId(null); }}
+                              className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-bold"
+                              style={{ background: COLORS.ink, color: COLORS.paper }}
+                            >
+                              Sí, borrar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       <ListaGastosFijos />
