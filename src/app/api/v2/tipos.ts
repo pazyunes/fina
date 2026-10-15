@@ -57,6 +57,9 @@ export type GastoFijo = {
   diaAncla: number | null;
 };
 
+/** Plata que se cargó como "Ya la tenía": suma al medio pero no es un ingreso. Ver migración 0037. */
+export type Carga = { id: string; medio: string; montoArs: number; ts: number };
+
 /** Plata que entró: un movimiento de `transactions` con type = 'income'. */
 export type Ingreso = {
   id: string;
@@ -248,6 +251,7 @@ export type EstadoV2 = {
   mediosPago: MedioPago[];
   gastos: Gasto[];
   ingresos: Ingreso[];
+  cargas: Carga[];
   gastosFijos: GastoFijo[];
   /** Pesos por dólar, para pasar registros de una moneda a otra. */
   dolar: number | null;
@@ -283,6 +287,7 @@ export const ESTADO_VACIO: EstadoV2 = {
   mediosPago: [],
   gastos: [],
   ingresos: [],
+  cargas: [],
   gastosFijos: [],
   dolar: null,
   objetivos: [],

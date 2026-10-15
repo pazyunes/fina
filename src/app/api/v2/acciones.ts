@@ -3,7 +3,7 @@ import { cotizacionDolar } from './cotizacion';
 import * as api from './index';
 import { idUsuaria } from './cliente';
 import type {
-  AporteInversion, Contribucion, FuenteIngreso, Gasto, GastoFijo, Grupo, Ingreso, Moneda, MonedaConvertible,
+  AporteInversion, Carga, Contribucion, FuenteIngreso, Gasto, GastoFijo, Grupo, Ingreso, Moneda, MonedaConvertible,
   Objetivo, PagoMixto, Perfil, PerfilInversor, Periodo, Seccion, TipoGasto,
 } from './tipos';
 import { esConvertible } from './tipos';
@@ -120,12 +120,17 @@ export function sumarDisponible(medio: string, monto: number) {
   const est = leerEstado();
   const existe = est.mediosPago.find((m) => m.nombre === nombre);
   const ahora = new Date().toISOString();
+  // Además de mover el saldo, la carga se anota con su fecha: es lo que permite
+  // que "Dinero disponible" sea de cada mes.
+  const carga: Carga = { id: nuevoId(), medio: nombre, montoArs: monto, ts: Date.now() };
   parchearEstado({
     mediosPago: existe
       ? est.mediosPago.map((m) => (m.nombre === nombre ? { ...m, saldo: m.saldo + monto, usadoEn: ahora } : m))
       : [{ id: nuevoId(), nombre, saldo: monto, usadoEn: ahora }, ...est.mediosPago],
+    cargas: [carga, ...est.cargas],
   });
   push(() => api.sumarDisponible(nombre, monto), 'Dinero agregado con éxito.');
+  push(() => api.registrarCarga(carga));
 }
 
 // ── Gastos fijos ─────────────────────────────────────────────────────────

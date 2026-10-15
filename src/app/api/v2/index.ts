@@ -3,7 +3,7 @@ import { cotizacionDolar } from './cotizacion';
 import {
   ESTADO_VACIO, PERFIL_VACIO,
   type AporteInversion, type Contribucion, type EstadoV2, type FuenteIngreso, type Gasto, type GastoFijo, type Grupo, type Ingreso,
-  type MedioPago, type MiembroGrupo, type Moneda, type MonedaConvertible,
+  type Carga, type MedioPago, type MiembroGrupo, type Moneda, type MonedaConvertible,
   type Objetivo, type PagoMixto, type Perfil,
   type PerfilInversor, type Periodo, type Seccion, type TipoGasto,
   type PasoGuardado, type Racha, RACHA_VACIA,
@@ -30,12 +30,13 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
   if (!uid) return falla<EstadoV2>('sin sesión', 'cargarTodo');
 
   try {
-    const [perfil, secciones, medios, gastos, ingresos, fijos, objetivos, perfInv, aportes, grupo, dolar] = await Promise.all([
+    const [perfil, secciones, medios, gastos, ingresos, cargas, fijos, objetivos, perfInv, aportes, grupo, dolar] = await Promise.all([
       leerPerfil(uid),
       listarSecciones(),
       listarMediosPago(),
       listarGastos(),
       listarIngresos(),
+      listarCargas(),
       listarGastosFijos(),
       listarObjetivos(),
       leerPerfilInversor(),
@@ -57,6 +58,8 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
       // Si la lectura de ingresos falla (por ejemplo, sin la migración 0033),
       // la app carga igual: sólo no se ven los ingresos.
       ingresos: ingresos.data ?? [],
+      // Sin la migración 0037 no hay tabla de cargas: la app carga igual.
+      cargas: cargas.data ?? [],
       // Sin cotización queda en null: los montos siguen en su moneda y no se
       // inventa una conversión.
       dolar: dolar?.valor ?? null,
@@ -252,6 +255,29 @@ export async function listarMediosPago(): Promise<Resultado<MedioPago[]>> {
 export async function moverSaldo(medio: string, delta: number): Promise<Resultado<null>> {
   return correr<null>('moverSaldo', () =>
     supabase.rpc('mover_saldo', { medio, delta }).then(({ error }) => ({ data: null, error })),
+  );
+}
+
+// ── Cargas de saldo ("Ya la tenía") ──────────────────────────────────────
+// Cada vez que se suma plata que ya se tenía queda anotada con su fecha, para
+// poder decir cuánto se cargó en cada mes. Ver migración 0037.
+type FilaCarga = { id: string; medio: string; amount_ars: number; occurred_at: string };
+
+export async function listarCargas(): Promise<Resultado<Carga[]>> {
+  const r = await correr<FilaCarga[]>('listarCargas', () =>
+    supabase.from('balance_loads').select('*').order('occurred_at', { ascending: false }).limit(500),
+  );
+  if (r.error !== null) return falla<Carga[]>(r.error, 'listarCargas');
+  return ok((r.data ?? []).map((f) => ({ id: f.id, medio: f.medio, montoArs: Number(f.amount_ars), ts: new Date(f.occurred_at).getTime() })));
+}
+
+export async function registrarCarga(c: { id: string; medio: string; montoArs: number; ts: number }): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<null>('sin sesión', 'registrarCarga');
+  return correr<null>('registrarCarga', () =>
+    supabase.from('balance_loads').insert({
+      id: c.id, user_id: uid, medio: c.medio, amount_ars: c.montoArs, occurred_at: new Date(c.ts).toISOString(),
+    }).then(({ error }) => ({ data: null, error })),
   );
 }
 

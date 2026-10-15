@@ -392,6 +392,10 @@ export function GastosV2() {
     for (const i of db.ingresos) {
       if (i.medio && i.ts >= desdeVentana && i.ts < hastaVentana) de(i.medio).entro += i.montoArs;
     }
+    // Lo cargado como "Ya la tenía" también cuenta en el mes en que se cargó.
+    for (const c of db.cargas) {
+      if (c.ts >= desdeVentana && c.ts < hastaVentana) de(c.medio).entro += c.montoArs;
+    }
     let sinMedio = 0;
     for (const g of gastosVentana) {
       if (g.pagos?.length) for (const p of g.pagos) de(p.medio).salio += p.monto;
@@ -406,14 +410,14 @@ export function GastosV2() {
     if (sinMedio > 0) filas.push({ nombre: 'Sin medio elegido', entro: 0, salio: sinMedio, quedan: -sinMedio });
     return filas;
   })();
-  // Dinero disponible DEL PERÍODO: lo que entró menos lo que salió en el mes
-  // (o la semana) que se está mirando. Cada mes arranca en cero y los meses
+  // Dinero disponible DEL PERÍODO: lo cargado ("Me entró" y "Ya la tenía")
+  // menos lo gastado en el mes (o la semana) que se está mirando. Cada mes arranca en cero y los meses
   // anteriores guardan el suyo. En cero y no en negativo: gastar más de lo que
   // se cargó como ingreso suele ser que falta cargar ingresos, y se ve en cada
   // medio de abajo.
-  const entroVentana = db.ingresos
-    .filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana)
-    .reduce((t, i) => t + i.montoArs, 0);
+  const entroVentana =
+    db.ingresos.filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana).reduce((t, i) => t + i.montoArs, 0)
+    + db.cargas.filter((c) => c.ts >= desdeVentana && c.ts < hastaVentana).reduce((t, c) => t + c.montoArs, 0);
   const disponibleVentana = Math.max(entroVentana - totalGastado, 0);
   const maxQuedan = Math.max(...mediosVentana.map((m) => m.quedan), 0);
   const nombrePeriodoMedios = ventana === 'mes' ? nombreMesOffset(mesOffset) : 'Esta semana';
