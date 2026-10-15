@@ -369,12 +369,34 @@ export function GastosV2() {
   };
 
   const totalGastado = gastosVentana.reduce((s, g) => s + g.montoArs, 0);
-  // Cuánto hay disponible en cada medio de pago (su saldo). Las barras se
-  // comparan contra el medio que más tiene; un saldo en cero o negativo
-  // queda con la barra vacía y se dice con el número, sin alerta (regla 3:
-  // gastar más de lo que cargaste en un medio es un dato, no un error).
-  const mediosConSaldo = db.mediosPago;
-  const maxSaldo = Math.max(...mediosConSaldo.map((m) => m.saldo), 0);
+  // Cuánto queda en cada medio de pago EN EL PERÍODO que se está mirando (el
+  // mes o la semana de la torta), no su saldo de toda la vida: lo que entró en
+  // ese medio menos lo que salió de él en esos días. Un gasto dividido resta
+  // a cada medio lo suyo. Los gastos sin medio elegido no se pueden asignar a
+  // ninguno, así que no entran. Las barras se comparan contra el medio con
+  // más margen; un resultado en cero o negativo queda con la barra vacía y se
+  // dice con el número, sin alerta (regla 3: gastar más de lo que entró por un
+  // medio es un dato, no un error).
+  const mediosVentana = (() => {
+    const mapa = new Map<string, { entro: number; salio: number }>();
+    const de = (nombre: string) => {
+      let v = mapa.get(nombre);
+      if (!v) { v = { entro: 0, salio: 0 }; mapa.set(nombre, v); }
+      return v;
+    };
+    for (const i of db.ingresos) {
+      if (i.medio && i.ts >= desdeVentana && i.ts < hastaVentana) de(i.medio).entro += i.montoArs;
+    }
+    for (const g of gastosVentana) {
+      if (g.pagos?.length) for (const p of g.pagos) de(p.medio).salio += p.monto;
+      else if (g.metodoPago) de(g.metodoPago).salio += g.montoArs;
+    }
+    return [...mapa.entries()]
+      .map(([nombre, v]) => ({ nombre, entro: v.entro, salio: v.salio, quedan: v.entro - v.salio }))
+      .sort((x, y) => y.quedan - x.quedan);
+  })();
+  const maxQuedan = Math.max(...mediosVentana.map((m) => m.quedan), 0);
+  const nombrePeriodoMedios = ventana === 'mes' ? nombreMesOffset(mesOffset) : 'Esta semana';
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
 
@@ -658,42 +680,48 @@ export function GastosV2() {
             <Monto value={disponible} size={19} className="font-bold" />
           </div>
 
-          {/* Cuánto hay en cada medio de pago, en barritas. El número va en
-              tinta; el color de la barra es el del dato (limaViz). */}
-          {mediosConSaldo.length === 0 ? (
+          {/* Cuánto queda en cada medio de pago en el período de la torta, en
+              barritas. El número va en tinta; el color de la barra es el del
+              dato (limaViz). */}
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
+            Por medio · {nombrePeriodoMedios}
+          </p>
+          {mediosVentana.length === 0 ? (
             <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              Cargá plata con "Agregar plata" y acá ves cuánto tenés en cada medio.
+              Cuando cargues plata o un gasto con un medio, acá ves cuánto te queda en cada uno este período.
             </p>
           ) : (
-            <div className="flex flex-col gap-2" aria-label="Cuánto tenés disponible en cada medio de pago">
-              {(verTodosMedios ? mediosConSaldo : mediosConSaldo.slice(0, 4)).map((m) => (
-                <div key={m.id} className="flex flex-col gap-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[13px] truncate" style={{ color: COLORS.ink }}>{m.nombre}</span>
-                    <span className="text-[13px] shrink-0 font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>
-                      {m.saldo < 0 ? `-${fmtMoney(-m.saldo)}` : fmtMoney(m.saldo)}
-                    </span>
+            <div className="flex flex-col gap-2" aria-label={`Cuánto te queda en cada medio de pago: ${nombrePeriodoMedios}`}>
+              {(verTodosMedios ? mediosVentana : mediosVentana.slice(0, 4)).map((m) => {
+                const texto = m.quedan < 0 ? `-${fmtMoney(-m.quedan)}` : fmtMoney(m.quedan);
+                return (
+                  <div key={m.nombre} className="flex flex-col gap-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[13px] truncate" style={{ color: COLORS.ink }}>{m.nombre}</span>
+                      <span className="text-[13px] shrink-0 font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{texto}</span>
+                    </div>
+                    <div
+                      className="h-2 rounded-full overflow-hidden"
+                      style={{ background: COLORS.tint }}
+                      role="img"
+                      aria-label={`${m.nombre}: entró ${fmtMoney(m.entro)}, salió ${fmtMoney(m.salio)}, queda ${texto}`}
+                    >
+                      <div className="h-full rounded-full" style={{ width: `${maxQuedan > 0 ? (Math.max(m.quedan, 0) / maxQuedan) * 100 : 0}%`, background: COLORS.limaViz }} />
+                    </div>
                   </div>
-                  <div
-                    className="h-2 rounded-full overflow-hidden"
-                    style={{ background: COLORS.tint }}
-                    role="img"
-                    aria-label={`${m.nombre}: ${m.saldo < 0 ? `-${fmtMoney(-m.saldo)}` : fmtMoney(m.saldo)} disponibles`}
-                  >
-                    <div className="h-full rounded-full" style={{ width: `${maxSaldo > 0 ? (Math.max(m.saldo, 0) / maxSaldo) * 100 : 0}%`, background: COLORS.limaViz }} />
-                  </div>
-                </div>
-              ))}
-              {mediosConSaldo.length > 4 && (
+                );
+              })}
+              {mediosVentana.length > 4 && (
                 <button
                   type="button"
                   onClick={() => setVerTodosMedios((v) => !v)}
                   className="v2-focus self-start text-[13px] font-semibold underline"
                   style={{ color: COLORS.brand }}
                 >
-                  {verTodosMedios ? 'Ver menos' : `Ver los ${mediosConSaldo.length}`}
+                  {verTodosMedios ? 'Ver menos' : `Ver los ${mediosVentana.length}`}
                 </button>
               )}
+              <p className="text-[12px] leading-snug" style={{ color: COLORS.inkFaint }}>Lo que entró menos lo que salió de cada medio.</p>
             </div>
           )}
         </div>
