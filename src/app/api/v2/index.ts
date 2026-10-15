@@ -258,6 +258,19 @@ export async function moverSaldo(medio: string, delta: number): Promise<Resultad
   );
 }
 
+/**
+ * Une el medio `origen` en `destino`: suma los saldos y pasa todos los
+ * movimientos, pagos divididos, gastos fijos y cargas. Es una función de la
+ * base (migración 0038) para que sea una sola transacción: hecho desde acá en
+ * varias llamadas, un corte a la mitad dejaría la plata repartida entre los
+ * dos nombres.
+ */
+export async function unirMedios(origen: string, destino: string): Promise<Resultado<null>> {
+  return correr<null>('unirMedios', () =>
+    supabase.rpc('unir_medios', { origen, destino }).then(({ error }) => ({ data: null, error })),
+  );
+}
+
 // ── Cargas de saldo ("Ya la tenía") ──────────────────────────────────────
 // Cada vez que se suma plata que ya se tenía queda anotada con su fecha, para
 // poder decir cuánto se cargó en cada mes. Ver migración 0037.

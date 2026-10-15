@@ -339,6 +339,10 @@ export function GastosV2() {
   const [verTodos, setVerTodos] = useState(false);
   // "Cuánto tenés" por medio de pago: se ven los primeros y el resto se despliega.
   const [verTodosMedios, setVerTodosMedios] = useState(false);
+  // Editar medios de pago: unir dos en uno.
+  const [editandoMedios, setEditandoMedios] = useState(false);
+  const [uniendoMedio, setUniendoMedio] = useState<string | null>(null);
+  const [uniendoHacia, setUniendoHacia] = useState('');
   // Editar secciones: renombrar o borrar. Una a la vez.
   const [editandoSecciones, setEditandoSecciones] = useState(false);
   const [renombrandoId, setRenombrandoId] = useState<string | null>(null);
@@ -465,7 +469,14 @@ export function GastosV2() {
     && Math.abs(sumaPagos - parseMoneyInput(ngMonto)) < 0.01
   );
 
-  const gastosFiltrados = gastos
+  const hayFiltroFecha = !!(filtroDesde || filtroHasta);
+  // Los recientes son los del período que se está mirando (el mes de las
+  // flechas, o la semana): el 1 de un mes nuevo la lista arranca vacía, sin los
+  // del mes anterior. Si la persona pone un rango de fechas es porque quiere
+  // mirar otros días, y ahí el rango manda.
+  const baseLista = hayFiltroFecha ? gastos : gastosVentana;
+  const textoPeriodo = ventana === 'mes' ? (mesOffset === 0 ? 'este mes' : nombreMesOffset(mesOffset)) : 'esta semana';
+  const gastosFiltrados = baseLista
     .filter((g) => !busqueda.trim() || g.descripcion.toLowerCase().includes(busqueda.trim().toLowerCase()))
     .filter((g) => !filtroDesde || g.ts >= new Date(`${filtroDesde}T00:00:00`).getTime())
     .filter((g) => !filtroHasta || g.ts <= new Date(`${filtroHasta}T23:59:59`).getTime())
@@ -473,7 +484,6 @@ export function GastosV2() {
     // de un gasto de $5.000, que es al revés.
     .sort((a, b) => (orden === 'monto' ? b.montoArs - a.montoArs : b.ts - a.ts));
   const hayBusqueda = !!busqueda.trim();
-  const hayFiltroFecha = !!(filtroDesde || filtroHasta);
   // Mostrar todos si están buscando o filtrando (recortar lo que ya filtraron
   // sería raro), o si tocaron "Ver todos" a mano.
   const mostrarTodos = hayBusqueda || hayFiltroFecha || verTodos;
@@ -745,8 +755,85 @@ export function GastosV2() {
               )}
             </div>
           )}
+
+          {db.mediosPago.length > 0 && (
+            <button
+              type="button"
+              aria-expanded={editandoMedios}
+              onClick={() => { setEditandoMedios((v) => !v); setUniendoMedio(null); setUniendoHacia(''); }}
+              className="v2-focus self-start text-[13px] font-semibold underline"
+              style={{ color: COLORS.brand }}
+            >
+              {editandoMedios ? 'Listo' : 'Editar medios'}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Editar medios de pago: unir dos en uno (por ejemplo "MP" y "Mercado
+          Pago"). Full-width y no adentro de la tarjeta de la torta, que es
+          angosta. */}
+      {editandoMedios && (
+        <div className="lg:col-span-3 rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.tint }}>
+          <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Tus medios de pago</p>
+          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            {db.mediosPago.length < 2
+              ? 'Cuando tengas dos medios que en realidad son el mismo (por ejemplo "MP" y "Mercado Pago") los vas a poder unir acá.'
+              : 'Si tenés el mismo medio con dos nombres (por ejemplo "MP" y "Mercado Pago"), unilos: se juntan los saldos y todos los gastos, ingresos y cargas pasan al que elijas.'}
+          </p>
+          <ul className="flex flex-col">
+            {db.mediosPago.map((m) => {
+              const otros = db.mediosPago.filter((x) => x.nombre !== m.nombre);
+              const abierto = uniendoMedio === m.nombre;
+              return (
+                <li key={m.id} className="py-2.5 border-b last:border-b-0 flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
+                  <div className="flex items-center gap-2">
+                    <span className="flex-1 min-w-0 truncate text-[16px] font-semibold" style={{ color: COLORS.ink }}>{m.nombre}</span>
+                    {otros.length > 0 && (
+                      <button
+                        type="button"
+                        aria-expanded={abierto}
+                        onClick={() => { setUniendoMedio(abierto ? null : m.nombre); setUniendoHacia(''); }}
+                        className="v2-focus min-h-[44px] px-3 rounded-full text-[14px] font-semibold shrink-0"
+                        style={{ color: COLORS.brand, border: `1.5px solid ${COLORS.brandSoft}` }}
+                      >
+                        Unir con otro
+                      </button>
+                    )}
+                  </div>
+                  {abierto && (
+                    <div className="flex flex-col gap-2.5" role="group" aria-label={`Unir ${m.nombre} con otro medio`}>
+                      <Desplegable id={`unir-${m.id}`} label={`Unir “${m.nombre}” con…`} value={uniendoHacia} onChange={setUniendoHacia}>
+                        <option value="" style={OPCION}>Elegí el medio que queda</option>
+                        {otros.map((x) => <option key={x.id} value={x.nombre} style={OPCION}>{x.nombre}</option>)}
+                      </Desplegable>
+                      {uniendoHacia && (
+                        <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+                          “{m.nombre}” desaparece y todo lo suyo pasa a “{uniendoHacia}”. No se puede deshacer.
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => { setUniendoMedio(null); setUniendoHacia(''); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!uniendoHacia}
+                          onClick={() => { acciones.unirMedios(m.nombre, uniendoHacia); setUniendoMedio(null); setUniendoHacia(''); }}
+                          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-bold v2-disabled"
+                          style={{ background: COLORS.ink, color: COLORS.paper }}
+                        >
+                          Unir
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* Agregar gasto / Agregar plata — misma jerarquía, lado a lado, debajo
           del resumen y antes de los gráficos: son las dos acciones que se
@@ -1597,7 +1684,8 @@ export function GastosV2() {
           <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>
             {hayFiltroFecha && hayBusqueda ? 'No encontramos gastos con ese nombre en ese rango de fechas.'
               : hayFiltroFecha ? 'No encontramos gastos en ese rango de fechas.'
-              : 'No encontramos gastos con ese nombre.'}
+              : hayBusqueda ? `No encontramos gastos con ese nombre en ${textoPeriodo}.`
+              : `Todavía no hay gastos en ${textoPeriodo}.`}
           </p>
         )}
         {gastosFiltrados.slice(0, mostrarTodos ? undefined : 6).map((g) => {

@@ -133,6 +133,41 @@ export function sumarDisponible(medio: string, monto: number) {
   push(() => api.registrarCarga(carga));
 }
 
+/**
+ * Une el medio `origen` en `destino`. En pantalla, igual que en la base: el
+ * origen desaparece, el destino se queda con la suma de los saldos y todo lo
+ * que decía "origen" pasa a decir "destino".
+ */
+export function unirMedios(origen: string, destino: string) {
+  const o = origen.trim();
+  const d = destino.trim();
+  if (!o || !d || o === d) return;
+  const est = leerEstado();
+  const saldoO = est.mediosPago.find((m) => m.nombre === o)?.saldo ?? 0;
+  const ahora = new Date().toISOString();
+  const sinOrigen = est.mediosPago.filter((m) => m.nombre !== o);
+  const mediosPago = sinOrigen.some((m) => m.nombre === d)
+    ? sinOrigen.map((m) => (m.nombre === d ? { ...m, saldo: m.saldo + saldoO, usadoEn: ahora } : m))
+    : [{ id: nuevoId(), nombre: d, saldo: saldoO, usadoEn: ahora }, ...sinOrigen];
+  const cambiar = (medio: string | null) => (medio === o ? d : medio);
+  parchearEstado({
+    mediosPago,
+    gastos: est.gastos.map((g) => ({
+      ...g,
+      metodoPago: cambiar(g.metodoPago),
+      pagos: g.pagos ? g.pagos.map((p) => ({ ...p, medio: p.medio === o ? d : p.medio })) : g.pagos,
+    })),
+    ingresos: est.ingresos.map((i) => ({ ...i, medio: cambiar(i.medio) })),
+    cargas: est.cargas.map((c) => ({ ...c, medio: c.medio === o ? d : c.medio })),
+    gastosFijos: est.gastosFijos.map((f) => ({ ...f, metodoPago: cambiar(f.metodoPago) })),
+  });
+  // Si la base no pudo unirlos, todo vuelve a como estaba: mostrar unidos dos
+  // medios que en la base siguen separados sería mentir.
+  push(() => api.unirMedios(o, d), 'Medios unidos con éxito.', () => parchearEstado({
+    mediosPago: est.mediosPago, gastos: est.gastos, ingresos: est.ingresos, cargas: est.cargas, gastosFijos: est.gastosFijos,
+  }));
+}
+
 // ── Gastos fijos ─────────────────────────────────────────────────────────
 export function crearGastoFijo(g: Omit<GastoFijo, 'id'>, avisar = true): GastoFijo {
   const fijo: GastoFijo = { ...g, id: nuevoId() };
