@@ -7,7 +7,7 @@ import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
 import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
-import { IngresosVsGastos, mesAtras } from './IngresosVsGastos';
+import { IngresosVsGastos, lunesAtras, mesAtras } from './IngresosVsGastos';
 import { CamposGastoFijo, ListaGastosFijos, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
 import { FUENTES_INGRESO, type FuenteIngreso, type PagoMixto } from '../../api/v2/tipos';
 import { IconClose } from './FinaIcons';
@@ -324,6 +324,8 @@ export function GastosV2() {
   // Sólo aplica con ventana === 'mes': 0 es el mes en curso, 1 el anterior, etc.
   // "Esta semana" no navega — no lo pidieron y complica menos que sumarle offset.
   const [mesOffset, setMesOffset] = useState(0);
+  // Lo mismo para "Esta semana": 0 es la semana en curso, 1 la pasada, etc.
+  const [semanaOffset, setSemanaOffset] = useState(0);
 
   // Buscador por nombre + orden. Los filtros por sección y por tipo se sacaron:
   // las secciones ya están separadas arriba, así que filtrar la lista por
@@ -356,16 +358,19 @@ export function GastosV2() {
   const desdeVentana = (() => {
     const d = new Date();
     if (ventana === 'mes') return new Date(d.getFullYear(), d.getMonth() - mesOffset, 1).getTime();
-    const dia = (d.getDay() + 6) % 7; // lunes = 0
-    const lunes = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dia);
-    return lunes.getTime();
+    // La semana va de lunes a domingo, en días de Argentina — los mismos que
+    // usa el gráfico de barras, para que torta, lista y gráfico hablen de lo
+    // mismo.
+    return Date.parse(`${lunesAtras(semanaOffset)}T00:00:00-03:00`);
   })();
   // Un mes pasado necesita también un límite de arriba: si no, "julio" incluye
   // agosto, septiembre... hasta hoy. El mes en curso y la semana no lo necesitan,
   // porque ya terminan hoy.
   const hastaVentana = ventana === 'mes' && mesOffset > 0
     ? (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() - mesOffset + 1, 1).getTime(); })()
-    : Infinity;
+    : ventana === 'semana' && semanaOffset > 0
+      ? desdeVentana + 7 * 86_400_000
+      : Infinity;
   const gastosVentana = gastos.filter((g) => g.ts >= desdeVentana && g.ts < hastaVentana);
   // Nombre del mes elegido, para el centro del donut y el selector de arriba.
   const nombreMesOffset = (offset: number) => {
@@ -376,6 +381,20 @@ export function GastosV2() {
     const conAño = objetivo.getFullYear() !== hoy.getFullYear() ? `${nombre} ${objetivo.getFullYear()}` : nombre;
     return conAño.charAt(0).toUpperCase() + conAño.slice(1);
   };
+
+  // Cómo se llama la semana que se mira: "Esta semana", "Semana pasada" o el
+  // rango de lunes a domingo ("10 – 16 sep").
+  const etiquetaSemana = (offset: number) => {
+    if (offset === 0) return 'Esta semana';
+    if (offset === 1) return 'Semana pasada';
+    const lunes = new Date(`${lunesAtras(offset)}T12:00:00Z`);
+    const domingo = new Date(lunes);
+    domingo.setUTCDate(domingo.getUTCDate() + 6);
+    const f = (d: Date) => d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', timeZone: 'UTC' }).replace('.', '');
+    return `${f(lunes)} – ${f(domingo)}`;
+  };
+  const etiquetaVentana = ventana === 'mes' ? nombreMesOffset(mesOffset) : etiquetaSemana(semanaOffset);
+  const offsetVentana = ventana === 'mes' ? mesOffset : semanaOffset;
 
   const totalGastado = gastosVentana.reduce((s, g) => s + g.montoArs, 0);
   // Cuánto queda en cada medio de pago EN EL PERÍODO que se está mirando (el
@@ -424,7 +443,7 @@ export function GastosV2() {
     + db.cargas.filter((c) => c.ts >= desdeVentana && c.ts < hastaVentana).reduce((t, c) => t + c.montoArs, 0);
   const disponibleVentana = Math.max(entroVentana - totalGastado, 0);
   const maxQuedan = Math.max(...mediosVentana.map((m) => m.quedan), 0);
-  const nombrePeriodoMedios = ventana === 'mes' ? nombreMesOffset(mesOffset) : 'Esta semana';
+  const nombrePeriodoMedios = etiquetaVentana;
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
 
@@ -475,7 +494,9 @@ export function GastosV2() {
   // del mes anterior. Si la persona pone un rango de fechas es porque quiere
   // mirar otros días, y ahí el rango manda.
   const baseLista = hayFiltroFecha ? gastos : gastosVentana;
-  const textoPeriodo = ventana === 'mes' ? (mesOffset === 0 ? 'este mes' : nombreMesOffset(mesOffset)) : 'esta semana';
+  const textoPeriodo = ventana === 'mes'
+    ? (mesOffset === 0 ? 'este mes' : nombreMesOffset(mesOffset))
+    : semanaOffset === 0 ? 'esta semana' : semanaOffset === 1 ? 'la semana pasada' : `la semana del ${etiquetaSemana(semanaOffset)}`;
   const gastosFiltrados = baseLista
     .filter((g) => !busqueda.trim() || g.descripcion.toLowerCase().includes(busqueda.trim().toLowerCase()))
     .filter((g) => !filtroDesde || g.ts >= new Date(`${filtroDesde}T00:00:00`).getTime())
@@ -667,37 +688,35 @@ export function GastosV2() {
       <SegmentedTab
         options={[{ id: 'mes' as Periodo, label: 'Este mes' }, { id: 'semana' as Periodo, label: 'Esta semana' }]}
         value={ventana}
-        onChange={(v) => { setVentana(v); setMesOffset(0); }}
+        onChange={(v) => { setVentana(v); setMesOffset(0); setSemanaOffset(0); }}
         trackColor={COLORS.tint}
       />
 
-      {/* Navegar meses anteriores — sólo tiene sentido con la ventana en "mes". */}
-      {ventana === 'mes' && (
-        <div className="flex items-center justify-center gap-3 -mt-1">
-          <button
-            type="button"
-            onClick={() => setMesOffset((o) => o + 1)}
-            aria-label="Ver mes anterior"
-            className="v2-focus w-9 h-9 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-            style={{ color: COLORS.inkSoft }}
-          >
-            <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} />
-          </button>
-          <span className="text-[14px] font-semibold min-w-[110px] text-center" style={{ color: COLORS.ink, fontFamily: FONTS.mono }}>
-            {nombreMesOffset(mesOffset)}
-          </span>
-          <button
-            type="button"
-            onClick={() => setMesOffset((o) => Math.max(0, o - 1))}
-            disabled={mesOffset === 0}
-            aria-label="Ver mes siguiente"
-            className="v2-focus w-9 h-9 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-            style={{ color: COLORS.inkSoft, opacity: mesOffset === 0 ? 0.3 : 1, cursor: mesOffset === 0 ? 'default' : 'pointer' }}
-          >
-            <IconChevron size={15} />
-          </button>
-        </div>
-      )}
+      {/* Navegar hacia atrás: meses con "Este mes", semanas con "Esta semana". */}
+      <div className="flex items-center justify-center gap-3 -mt-1">
+        <button
+          type="button"
+          onClick={() => (ventana === 'mes' ? setMesOffset((o) => o + 1) : setSemanaOffset((o) => o + 1))}
+          aria-label={ventana === 'mes' ? 'Ver mes anterior' : 'Ver semana anterior'}
+          className="v2-focus w-9 h-9 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+          style={{ color: COLORS.inkSoft }}
+        >
+          <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} />
+        </button>
+        <span className="text-[14px] font-semibold min-w-[130px] text-center" style={{ color: COLORS.ink, fontFamily: FONTS.mono }}>
+          {etiquetaVentana}
+        </span>
+        <button
+          type="button"
+          onClick={() => (ventana === 'mes' ? setMesOffset((o) => Math.max(0, o - 1)) : setSemanaOffset((o) => Math.max(0, o - 1)))}
+          disabled={offsetVentana === 0}
+          aria-label={ventana === 'mes' ? 'Ver mes siguiente' : 'Ver semana siguiente'}
+          className="v2-focus w-9 h-9 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+          style={{ color: COLORS.inkSoft, opacity: offsetVentana === 0 ? 0.3 : 1, cursor: offsetVentana === 0 ? 'default' : 'pointer' }}
+        >
+          <IconChevron size={15} />
+        </button>
+      </div>
 
       {/* En desktop, todo lo de abajo se acomoda en grilla; en mobile sigue
           siendo una sola columna apilada (idéntico a antes). */}
@@ -706,7 +725,7 @@ export function GastosV2() {
       <div className={`rounded-2xl p-4 flex gap-4 items-center lg:h-full ${porTipo.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`} style={CARD_ELEVADA}>
         <Donut
           segments={donutCategorias}
-          centerLabel={ventana === 'mes' ? nombreMesOffset(mesOffset) : 'Esta semana'}
+          centerLabel={etiquetaVentana}
           centerValue={fmtMontoCompacto(totalGastado)}
         />
         <div className="flex-1 min-w-0 flex flex-col gap-3">
@@ -1275,7 +1294,11 @@ export function GastosV2() {
           pregunta que sigue a "cuánto tengo" — "¿me alcanza lo que entra?". */}
       <section className="flex flex-col gap-3 lg:col-span-3">
         <TituloSeccion>Lo que entra y lo que sale</TituloSeccion>
-        <IngresosVsGastos conLista mesElegido={mesAtras(ventana === 'mes' ? mesOffset : 0)} />
+        <IngresosVsGastos
+          conLista
+          mesElegido={mesAtras(ventana === 'mes' ? mesOffset : 0)}
+          semana={ventana === 'semana' ? { lunes: lunesAtras(semanaOffset), etiqueta: etiquetaSemana(semanaOffset), actual: semanaOffset === 0 } : undefined}
+        />
       </section>
 
       {/* Distribución por tipo — bloque tintado (§3.5): cuánto es impulso vs necesidad */}
@@ -1397,7 +1420,7 @@ export function GastosV2() {
             borrarlas (estén o no a la vista) está "Editar secciones", abajo. */}
         {categorias.length > 0 && gastosVentana.length === 0 && (
           <p className="py-4 text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            No hay gastos en {ventana === 'mes' ? (mesOffset === 0 ? 'este mes' : nombreMesOffset(mesOffset)) : 'esta semana'}.
+            No hay gastos en {textoPeriodo}.
           </p>
         )}
         {categorias.filter((c) => gastosVentana.some((g) => g.categoriaId === c.id)).sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id)).map((cat) => {
