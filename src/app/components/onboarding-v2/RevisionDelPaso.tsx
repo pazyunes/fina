@@ -33,10 +33,10 @@ export function RevisionDelPaso({ paso, onRespondida }: { paso: Paso; onRespondi
         <Fila label={nombre ? `${nombre}, este mes hasta hoy` : 'Este mes, hasta hoy'} valor={c.esteMes} fuerte />
         <Fila label={`Del 1 al ${c.diaDelMes} del mes pasado`} valor={c.mismosDiasMesPasado} />
       </div>
-      <p className="text-[15px] leading-snug font-mono tabular-nums" style={{ color: COLORS.ink }}>{lectura}</p>
+      <p className="text-[14px] leading-snug font-mono tabular-nums" style={{ color: COLORS.ink }}>{lectura}</p>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-[15px] font-semibold mb-2" style={{ color: COLORS.ink }}>¿Es lo que esperabas?</legend>
+        <legend className="text-[14px] font-semibold mb-2" style={{ color: COLORS.ink }}>¿Es lo que esperabas?</legend>
         {RESPUESTAS.map((r, i) => (
           <button
             key={r}
@@ -44,7 +44,7 @@ export function RevisionDelPaso({ paso, onRespondida }: { paso: Paso; onRespondi
             disabled={elegida !== null}
             aria-pressed={elegida === i}
             onClick={() => { setElegida(i); onRespondida(); }}
-            className="v2-focus w-full min-h-[44px] px-4 py-2.5 rounded-xl text-left text-[15px] font-medium"
+            className="v2-focus w-full min-h-[44px] px-4 py-2.5 rounded-xl text-left text-[14px] font-medium"
             style={elegida === i
               ? { background: COLORS.brandSoft, color: COLORS.brandDark, border: `1.5px solid ${COLORS.brandSoft}` }
               : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
@@ -60,8 +60,8 @@ export function RevisionDelPaso({ paso, onRespondida }: { paso: Paso; onRespondi
 function Fila({ label, valor, fuerte = false }: { label: string; valor: number; fuerte?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-2.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
-      <span className="text-[15px]" style={{ color: COLORS.inkSoft }}>{label}</span>
-      <span className={`font-mono tabular-nums ${fuerte ? 'text-[18px] font-semibold' : 'text-[16px] font-medium'}`} style={{ color: COLORS.ink }}>
+      <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>{label}</span>
+      <span className={`font-mono tabular-nums ${fuerte ? 'text-[16px] font-semibold' : 'text-[15px] font-medium'}`} style={{ color: COLORS.ink }}>
         {fmtMoney(valor)}
       </span>
     </div>

@@ -13,7 +13,7 @@ import { pasoPorClave } from '../../api/v2/pasos';
 import { LinkWhatsApp } from './LinkWhatsApp';
 import { RecordatorioGastos } from './RecordatorioGastos';
 import { RevisionDelPaso } from './RevisionDelPaso';
-import { PreguntaDelDia } from './PreguntaDelDia';
+import { EntradaPreguntaDelDia } from './PreguntaDelDia';
 import { ObjetivosEnInicio } from './ObjetivosEnInicio';
 
 
@@ -85,7 +85,7 @@ export function HomeV2() {
     // solo sumaban contornos. Ahora el contenido se apoya directo sobre el
     // papel y se separa por aire y por hairline; la ÚNICA tarjeta elevada de
     // toda la app es "tu próximo paso", que es lo que de verdad tiene prioridad.
-    <div className="px-6 pt-8 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-10">
+    <div className="px-6 pt-6 pb-4 flex flex-col gap-5 lg:max-w-2xl lg:mx-auto lg:pt-10">
       {/* Fini aterrizando en el avatar. Sale del centro en grande y termina
           justo sobre el avatar, en su tamaño. */}
       {aterrizando && vuelo && (
@@ -129,7 +129,7 @@ export function HomeV2() {
           {/* Saludo y nombre en una sola línea. "Tu FINA" era el fallback sin
               nombre y terminaba siendo lo que veías: genérico donde tendría
               que estar lo personal. */}
-          <Titulo className="!text-[24px] lg:!text-[28px]">
+          <Titulo className="!text-[20px] lg:!text-[24px]">
             {saludoDelDia()}{nombre ? `, ${nombre}` : ''}
           </Titulo>
         </div>
@@ -144,7 +144,7 @@ export function HomeV2() {
             className="v2-focus flex flex-col items-center shrink-0 min-h-[44px] px-1 rounded-xl"
             style={{ color: COLORS.brand }}
           >
-            <span data-racha-numero className="flex items-center gap-1.5 text-[26px] font-bold leading-none"><IconFuego size={28} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
+            <span data-racha-numero className="flex items-center gap-1.5 text-[22px] font-bold leading-none"><IconFuego size={28} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
             <span className="text-[13px] font-semibold mt-0.5" style={{ color: COLORS.inkSoft }}>{racha.dias === 1 ? 'día' : 'días'}</span>
           </button>
         ) : (
@@ -229,12 +229,12 @@ export function HomeV2() {
               {cumplido ? 'Paso de hoy listo' : 'Tu paso de hoy'}
             </p>
             {!paso ? (
-              <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>Preparando tu paso de hoy...</p>
+              <p className="text-[14px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>Preparando tu paso de hoy...</p>
             ) : cumplido ? (
-              <p className="font-bold text-[21px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Listo por hoy, mañana te toca otro</p>
+              <p className="font-bold text-[18px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Listo por hoy, mañana te toca otro</p>
             ) : (
               <>
-                <p className="font-bold text-[21px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
+                <p className="font-bold text-[18px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
                 {/* Un gasto por WhatsApp salva el día aunque el paso sea otro.
                     Se dice, para que no parezca que la racha depende sólo de
                     este paso — y sin empujar a no hacerlo. */}
@@ -253,7 +253,7 @@ export function HomeV2() {
                 <button
                   type="button"
                   onClick={() => setRevisando(true)}
-                  className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold transition-transform duration-100 active:scale-[0.99]"
+                  className="v2-focus w-full rounded-2xl py-3.5 text-[16px] font-bold transition-transform duration-100 active:scale-[0.99]"
                   style={{ background: COLORS.lima, color: COLORS.ink }}
                 >
                   {paso.cta}
@@ -261,7 +261,7 @@ export function HomeV2() {
               )
             ) : paso.destino === 'whatsapp' ? (
               <LinkWhatsApp
-                className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold text-center transition-transform duration-100 active:scale-[0.99]"
+                className="v2-focus w-full rounded-2xl py-3.5 text-[16px] font-bold text-center transition-transform duration-100 active:scale-[0.99]"
                 style={{ background: COLORS.lima, color: COLORS.ink }}
               >
                 {paso.cta}
@@ -272,7 +272,7 @@ export function HomeV2() {
                 // `ref`: el id de la sección u objetivo del que habla el paso,
                 // para que la pantalla de destino abra ése.
                 onClick={() => navigate(paso.destino, paso.abrir ? { state: { abrir: paso.abrir, ref: paso.ref, from: '/onboarding-v2/home' } } : undefined)}
-                className="v2-focus w-full rounded-2xl py-3.5 text-[18px] font-bold transition-transform duration-100 active:scale-[0.99]"
+                className="v2-focus w-full rounded-2xl py-3.5 text-[16px] font-bold transition-transform duration-100 active:scale-[0.99]"
                 style={{ background: COLORS.lima, color: COLORS.ink }}
               >
                 {paso.cta}
@@ -281,6 +281,12 @@ export function HomeV2() {
           )}
         </div>
       </section>
+
+      {/* La pregunta del día, opcional, pegada al paso: se abre en un panel
+          (sola la primera vez del día) en vez de ocupar Inicio (DEBT R1). */}
+      <div className="-mt-2">
+        <EntradaPreguntaDelDia />
+      </div>
 
       {mostrarRevision && paso && <RevisionDelPaso paso={paso} onRespondida={marcarRevisado} />}
 
@@ -302,10 +308,6 @@ export function HomeV2() {
           diaria a la IA que elige el paso de mañana y arma los planes de
           objetivos. */}
       <Recomendaciones />
-
-      {/* Algo para hacer cuando no hay nada pendiente (DEBT R1). Secundario:
-          no suma a la racha ni compite con el paso de hoy. */}
-      <PreguntaDelDia />
 
       {/* Se fueron Tu plata guardada y Mis competencias (DEBT I8 e I9). La
           reserva sólo vivía acá y en el navegador (loadV2Reserva): deja de verse

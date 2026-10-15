@@ -37,13 +37,13 @@ export function RecordatorioGastos() {
       className="-mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl px-4 py-2.5"
       style={{ background: COLORS.tint }}
     >
-      <p className="flex-1 min-w-[140px] text-[15px] font-semibold" style={{ color: COLORS.ink }}>
+      <p className="flex-1 min-w-[140px] text-[14px] font-semibold" style={{ color: COLORS.ink }}>
         ¿Anotaste lo de hoy?
       </p>
       <div className="flex items-center gap-1">
         <LinkWhatsApp
           onClick={() => { fueAWhatsApp.current = true; }}
-          className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[15px] font-semibold"
+          className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[14px] font-semibold"
           style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
         >
           Por WhatsApp
@@ -51,7 +51,7 @@ export function RecordatorioGastos() {
         <button
           type="button"
           onClick={() => navigate('/onboarding-v2/gastos', { state: { abrir: 'gasto', from: '/onboarding-v2/home' } })}
-          className="v2-focus min-h-[44px] px-3 rounded-full text-[15px] font-semibold"
+          className="v2-focus min-h-[44px] px-3 rounded-full text-[14px] font-semibold"
           style={{ color: COLORS.brand }}
         >
           Acá

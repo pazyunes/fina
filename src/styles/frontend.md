@@ -212,6 +212,15 @@ Reglas duras:
   su situación financiera y después la mejore.
 - **Mostrar menos.** Una lista larga muestra los primeros ítems y un "Ver todos" (como
   Mercado Pago), no todo de una. Letra chica sólo para lo que de verdad es secundario.
+- **Lo importante, sin scrollear.** En un celular de 375px, lo principal de cada pantalla
+  se ve completo al abrirla. Tamaños de referencia: título de pantalla 26px, título de
+  sección 18px, texto 14 a 15px, dato principal 26 a 32px. Si algo no entra, se achica o
+  se va otra cosa, no se agranda la pantalla.
+- **Inicio es un tablero de entradas.** Lo que tiene su propia pantalla aparece en Inicio
+  como un botón o una fila compacta (título, una línea, a lo sumo una barrita) que lleva
+  ahí; el detalle vive en su pantalla. Ejemplo: el recordatorio de sumarle a un objetivo
+  es una fila que abre Objetivos con ese objetivo, no el plan completo en Inicio. La idea
+  es que el recorrido entre pantallas sea fluido, no que Inicio lo cuente todo.
 - **Alterná contenedores.** El antídoto contra el card grid spam es no usar tarjetas para
   todo: listas finas separadas por hairline, bloques tintados en `--fina-hueco`, y tarjeta
   elevada **solo** para lo que de verdad tiene prioridad. Si en una pantalla hay más de
@@ -311,7 +320,7 @@ gastamos el recurso cromático y funciona en escala de grises).
 | Estado | Qué significa | Trazo | Microcopy fijo |
 | --- | --- | --- | --- |
 | **Confirmado** | Verificado contra una fuente | línea llena, firme | — (sin marca) |
-| **Declarado** | Lo dijo el usuario | línea llena, más fina | "según lo que nos contaste" |
+| **Declarado** | Lo dijo el usuario | sin marca visible | (sin texto: lo que cargó la persona es su dato; decidido oct 2026) |
 | **Estimado** | Lo calculamos nosotras | línea punteada | "estimado" |
 | **Por descubrir** | Todavía no lo sabemos | contorno tenue, sin relleno | "todavía no lo sabemos" |
 

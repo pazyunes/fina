@@ -129,7 +129,7 @@ function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Mone
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={`Moneda: ${actual.code}`}
-        className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[15px] font-semibold transition-colors"
+        className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[14px] font-semibold transition-colors"
         style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
       >
         <span>{actual.code}</span>
@@ -144,7 +144,7 @@ function MonedaDropdown({ value, onChange }: { value: Moneda; onChange: (v: Mone
                 key={m.code}
                 type="button"
                 onClick={() => { onChange(m.code); setOpen(false); }}
-                className="ov2-menu-item v2-focus w-full flex items-center gap-2 px-3 py-2.5 text-left text-[15px] transition-colors"
+                className="ov2-menu-item v2-focus w-full flex items-center gap-2 px-3 py-2.5 text-left text-[14px] transition-colors"
                 style={{ color: COLORS.ink }}
               >
                 <span className="font-semibold w-9 shrink-0">{m.code}</span>
@@ -178,7 +178,7 @@ const CARD_SHADOW = 'border';
 // Borde + foco por CSS (ov2-input, ver V2_STYLES) para que el color salga de
 // COLORS y no de un hex crudo en la clase de Tailwind. v2-focus agrega el
 // anillo de foco de la guía (§11).
-const inputClass = 'ov2-input v2-focus rounded-xl px-3 py-2.5 text-[16px] outline-none transition-colors';
+const inputClass = 'ov2-input v2-focus rounded-xl px-3 py-2.5 text-[15px] outline-none transition-colors';
 
 const HORIZONTE_OPCIONES = ['Lo antes posible', 'Todavía no lo pensé'];
 
@@ -195,7 +195,7 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
             key={o}
             type="button"
             onClick={() => { setValor(o); setFecha(''); }}
-            className="v2-focus rounded-xl px-3 py-2 text-[15px] font-semibold transition-all duration-100 active:scale-95"
+            className="v2-focus rounded-xl px-3 py-2 text-[14px] font-semibold transition-all duration-100 active:scale-95"
             style={valor === o && !fechaElegida ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
           >
             {o}
@@ -204,7 +204,7 @@ function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string |
         <button
           type="button"
           onClick={() => setValor(null)}
-          className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[15px] font-semibold transition-all duration-100 active:scale-95"
+          className="v2-focus flex items-center gap-1.5 rounded-xl px-3 py-2 text-[14px] font-semibold transition-all duration-100 active:scale-95"
           style={fechaElegida || valor === null ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
         >
 <IconCalendario size={15} /> Fecha exacta
@@ -266,8 +266,8 @@ function FormasDeLlegar({ formas }: { formas: FormaDeLlegar[] }) {
       <ul className="flex flex-col">
         {formas.map((f) => (
           <li key={f.id} className="py-3 border-b last:border-b-0 flex flex-col gap-0.5" style={{ borderColor: COLORS.line }}>
-            <p className="text-[16px] font-semibold" style={{ color: COLORS.ink }}>{f.titulo}</p>
-            <p className="text-[15px] font-semibold tabular-nums" style={{ color: COLORS.limaText }}>{frasesDeImpacto(f)}</p>
+            <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>{f.titulo}</p>
+            <p className="text-[14px] font-semibold tabular-nums" style={{ color: COLORS.limaText }}>{frasesDeImpacto(f)}</p>
             <p className="text-[14px] leading-snug tabular-nums" style={{ color: COLORS.inkSoft }}>{f.detalle}</p>
           </li>
         ))}
@@ -301,14 +301,14 @@ function PlataApartada({ monto }: { monto: number }) {
   return (
     <section className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.tint }} aria-label="Plata apartada">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-[17px] font-bold" style={{ color: COLORS.ink }}>Plata apartada</h2>
-        <span className="text-[20px] font-bold font-mono tabular-nums" style={{ color: COLORS.ink }} aria-live="polite">{fmtMoney(monto)}</span>
+        <h2 className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Plata apartada</h2>
+        <span className="text-[18px] font-bold font-mono tabular-nums" style={{ color: COLORS.ink }} aria-live="polite">{fmtMoney(monto)}</span>
       </div>
       <EstadoConfianza estado="declarado" className="-mt-2" />
       {modo === null ? (
         <div className="flex gap-2">
-          <button type="button" onClick={() => setModo('sumar')} className="v2-focus flex-1 min-h-[44px] rounded-xl text-[15px] font-semibold transition-all duration-100 active:scale-95" style={botonSecundario}>Sumar</button>
-          <button type="button" onClick={() => setModo('sacar')} disabled={monto <= 0} className="v2-focus flex-1 min-h-[44px] rounded-xl text-[15px] font-semibold v2-disabled transition-all duration-100 active:scale-95" style={botonSecundario}>Sacar</button>
+          <button type="button" onClick={() => setModo('sumar')} className="v2-focus flex-1 min-h-[44px] rounded-xl text-[14px] font-semibold transition-all duration-100 active:scale-95" style={botonSecundario}>Sumar</button>
+          <button type="button" onClick={() => setModo('sacar')} disabled={monto <= 0} className="v2-focus flex-1 min-h-[44px] rounded-xl text-[14px] font-semibold v2-disabled transition-all duration-100 active:scale-95" style={botonSecundario}>Sacar</button>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -326,7 +326,7 @@ function PlataApartada({ monto }: { monto: number }) {
                 onKeyDown={(e) => { if (e.key === 'Enter') confirmar(); if (e.key === 'Escape') { setModo(null); setTxt(''); } }}
               />
             </div>
-            <button type="button" onClick={confirmar} disabled={invalido} className="v2-focus shrink-0 min-h-[44px] rounded-xl px-4 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
+            <button type="button" onClick={confirmar} disabled={invalido} className="v2-focus shrink-0 min-h-[44px] rounded-xl px-4 text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
               {modo === 'sumar' ? 'Sumar' : 'Sacar'}
             </button>
           </div>
@@ -351,11 +351,11 @@ function PlanDelObjetivo({ plan, moneda, onMarcar }: {
     <section className="flex flex-col gap-2 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }} aria-label="Tu plan para este objetivo">
       {/* Sentence case, sin eyebrow en mayúsculas (frontend.md §2.1 y §3.4). */}
       <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu plan</p>
-      <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{plan.titulo}</p>
-      <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{plan.texto}</p>
+      <p className="text-[15px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{plan.titulo}</p>
+      <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{plan.texto}</p>
       {rango && (
         <div className="flex flex-col gap-0.5">
-          <p className="text-[15px]" style={{ color: COLORS.ink }}>
+          <p className="text-[14px]" style={{ color: COLORS.ink }}>
             Separar entre <span className="font-semibold font-mono tabular-nums">{fmtMonto(Math.round(rango.min), moneda)}</span> y{' '}
             <span className="font-semibold font-mono tabular-nums">{fmtMonto(Math.round(rango.max), moneda)}</span> por semana
           </p>
@@ -764,14 +764,14 @@ export function ObjetivosV2() {
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-6" style={{ background: `${COLORS.ink}80` }} onClick={() => setConfirmarBorrar(null)}>
       <div className="w-full max-w-[320px] rounded-2xl p-5 flex flex-col gap-4" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col gap-1">
-          <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>¿Borrar este objetivo?</p>
-          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Se van a borrar {objAConfirmar.nombre} y todos sus registros. No se puede deshacer.</p>
+          <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>¿Borrar este objetivo?</p>
+          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Se van a borrar {objAConfirmar.nombre} y todos sus registros. No se puede deshacer.</p>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setConfirmarBorrar(null)}
-            className="v2-focus flex-1 rounded-xl py-2.5 text-[16px] font-bold transition-all duration-100 active:scale-95"
+            className="v2-focus flex-1 rounded-xl py-2.5 text-[15px] font-bold transition-all duration-100 active:scale-95"
             style={{ background: COLORS.tint, color: COLORS.inkSoft }}
           >
             No
@@ -779,7 +779,7 @@ export function ObjetivosV2() {
           <button
             type="button"
             onClick={() => { borrarObjetivo(objAConfirmar.id); setConfirmarBorrar(null); }}
-            className="v2-focus flex-1 rounded-xl py-2.5 text-[16px] font-bold transition-all duration-100 active:scale-95"
+            className="v2-focus flex-1 rounded-xl py-2.5 text-[15px] font-bold transition-all duration-100 active:scale-95"
             style={{ background: COLORS.naranja, color: COLORS.ink }}
           >
             Sí, borrar
@@ -828,7 +828,7 @@ export function ObjetivosV2() {
         {V2_STYLES}
         {confirmarBorrarModal}
         <div className="flex items-center justify-between">
-          <button type="button" className="v2-focus inline-flex items-center gap-1 text-[15px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>
+          <button type="button" className="v2-focus inline-flex items-center gap-1 text-[14px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>
             <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} /> Volver
           </button>
           <div className="flex items-center gap-3">
@@ -850,7 +850,7 @@ export function ObjetivosV2() {
               value={editTipo} onChange={setEditTipo} trackColor={COLORS.gold}
             />
             <div className="flex items-center justify-between">
-              <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>Moneda</p>
+              <p className="text-[14px] font-semibold" style={{ color: COLORS.ink }}>Moneda</p>
               <MonedaDropdown value={editMoneda} onChange={setEditMoneda} />
             </div>
             <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Cuánto necesitás?</p>
@@ -862,8 +862,8 @@ export function ObjetivosV2() {
             <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Para cuándo?</p>
             <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} />
             <div className="flex gap-2 mt-1">
-              <button type="button" onClick={() => setEditando(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[15px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
-              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
+              <button type="button" onClick={() => setEditando(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
+              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="v2-focus flex-[2] rounded-xl py-2.5 text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
             </div>
           </div>
         ) : (
@@ -879,7 +879,7 @@ export function ObjetivosV2() {
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-[20px] font-bold truncate" style={{ color: COLORS.ink }}>{abierto.nombre}</p>
+              <p className="text-[18px] font-bold truncate" style={{ color: COLORS.ink }}>{abierto.nombre}</p>
               {abierto.tipo === 'grupal' && (
                 <span className="inline-flex items-center gap-1 text-[12px] font-bold rounded-full px-2 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
                   <IconGrupo size={11} /> Grupal
@@ -901,7 +901,7 @@ export function ObjetivosV2() {
             )}
             {estado === 'definido' && (
               <>
-                <p className="text-[15px] mt-1.5" style={{ color: COLORS.ink }}>
+                <p className="text-[14px] mt-1.5" style={{ color: COLORS.ink }}>
                   Llevás <MontoObj monto={Math.round(animAcum)} moneda={abierto.moneda} className="font-semibold" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(abierto)}</span>
                 </p>
                 {/* El total es lo que la persona nos declaró (§5.1); si además
@@ -962,7 +962,7 @@ export function ObjetivosV2() {
         {done && (
           <div className="flex flex-col items-center gap-2 py-2">
             <Fini state="logro" size={132} />
-            <p className="rounded-2xl px-4 py-3.5 text-[16px] font-bold text-center" style={{ background: COLORS.lima, color: COLORS.ink }}>
+            <p className="rounded-2xl px-4 py-3.5 text-[15px] font-bold text-center" style={{ background: COLORS.lima, color: COLORS.ink }}>
               ¡Ya juntaste todo lo que necesitás para este objetivo!
             </p>
           </div>
@@ -978,13 +978,13 @@ export function ObjetivosV2() {
             aria-label="Próximo paso"
           >
             <TituloSeccion>Próximo paso</TituloSeccion>
-            <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>{mensaje?.texto ?? sinPlazo}</p>
-            {mensaje?.salida && <p className="text-[15px] leading-snug tabular-nums" style={{ color: COLORS.ink }}>{mensaje.salida}</p>}
+            <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>{mensaje?.texto ?? sinPlazo}</p>
+            {mensaje?.salida && <p className="text-[14px] leading-snug tabular-nums" style={{ color: COLORS.ink }}>{mensaje.salida}</p>}
             {mensaje && mensaje.tono !== 'neutral' && <EstadoConfianza estado="estimado" />}
             <button
               type="button"
               onClick={() => (pasoVencido ? empezarEdicion() : irASumar(mensaje?.porSemana?.min ?? null))}
-              className="v2-focus self-start min-h-[44px] rounded-full px-5 text-[15px] font-bold transition-all duration-100 active:scale-95"
+              className="v2-focus self-start min-h-[44px] rounded-full px-5 text-[14px] font-bold transition-all duration-100 active:scale-95"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               {pasoVencido ? 'Cambiar la fecha' : 'Sumar un registro'}
@@ -1019,7 +1019,7 @@ export function ObjetivosV2() {
                   key={k}
                   type="button"
                   onClick={() => setKind(k)}
-                  className="v2-focus py-2 rounded-xl text-[15px] font-semibold transition-all duration-100 active:scale-95"
+                  className="v2-focus py-2 rounded-xl text-[14px] font-semibold transition-all duration-100 active:scale-95"
                   style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                 >
                   {k === 'paid' ? 'Ya lo pagué' : 'Lo separé'}
@@ -1063,7 +1063,7 @@ export function ObjetivosV2() {
         {/* Historial de registros */}
         <div className="flex flex-col gap-2">
           <TituloSeccion>Registros</TituloSeccion>
-          {abierto.contribuciones.length === 0 && <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste nada.</p>}
+          {abierto.contribuciones.length === 0 && <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste nada.</p>}
           {abierto.contribuciones.map((c) => (
             <div key={c.id} className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
               <span
@@ -1073,10 +1073,10 @@ export function ObjetivosV2() {
                 {c.kind === 'paid' ? 'Pagado' : 'Separado'}
               </span>
               <span className="flex-1 min-w-0 truncate">
-                <span className="text-[15px]" style={{ color: COLORS.ink }}>{c.label}</span>
+                <span className="text-[14px]" style={{ color: COLORS.ink }}>{c.label}</span>
               </span>
               <span className="text-[14px] shrink-0" style={{ color: COLORS.inkSoft }}>{fechaDisplay(c.ts)}</span>
-              <MontoObj monto={c.monto} moneda={c.moneda} className="font-semibold text-[15px] shrink-0" />
+              <MontoObj monto={c.monto} moneda={c.moneda} className="font-semibold text-[14px] shrink-0" />
               <button type="button" onClick={() => borrarRegistro(c.id)} className="v2-focus shrink-0 w-8 h-8 flex items-center justify-center rounded-full" style={{ color: COLORS.inkFaint }} aria-label="Borrar registro"><IconBasura size={18} /></button>
             </div>
           ))}
@@ -1094,11 +1094,11 @@ export function ObjetivosV2() {
           <Titulo>Nuevo objetivo</Titulo>
           <button type="button" onClick={() => setCreating(false)} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
-        <input className={`${inputClass} rounded-2xl py-3 text-[18px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        <input className={`${inputClass} rounded-2xl py-3 text-[18px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+        <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
         <div className="flex flex-col gap-1.5">
-          <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿Individual o en conjunto?</p>
+          <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Individual o en conjunto?</p>
           <SegmentedTab
             options={[
               { id: 'individual', label: 'Individual' },
@@ -1117,12 +1117,12 @@ export function ObjetivosV2() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿Para cuándo?</p>
+          <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Para cuándo?</p>
           <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} />
         </div>
 
         <div className="flex items-center justify-between -mb-1">
-          <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+          <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
           <MonedaDropdown value={moneda} onChange={setMoneda} />
         </div>
         <MontoPicker
@@ -1188,7 +1188,7 @@ export function ObjetivosV2() {
                 key={s.nombre}
                 type="button"
                 onClick={() => { setNombre(s.nombre); setCreating(true); }}
-                className="v2-focus min-h-[52px] rounded-2xl px-3 py-3 text-[16px] font-semibold leading-snug transition-all duration-100 active:scale-[0.97]"
+                className="v2-focus min-h-[52px] rounded-2xl px-3 py-3 text-[15px] font-semibold leading-snug transition-all duration-100 active:scale-[0.97]"
                 style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
               >
                 {s.nombre}
@@ -1226,7 +1226,7 @@ export function ObjetivosV2() {
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-[18px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
+                  <p className="font-semibold text-[16px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
                   {o.tipo === 'grupal' && (
                     <span className="inline-flex items-center rounded-full px-1.5 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
                       <IconGrupo size={12} />
@@ -1287,7 +1287,7 @@ export function ObjetivosV2() {
       <button
         type="button"
         onClick={() => setCreating(true)}
-        className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-4 text-[18px] font-bold transition-all duration-100 active:scale-[0.99]"
+        className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-4 text-[16px] font-bold transition-all duration-100 active:scale-[0.99]"
         style={{ borderColor: COLORS.lineStrong, color: COLORS.ink }}
       >
         <IconMas size={17} /> Agregar objetivo

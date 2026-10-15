@@ -37,8 +37,8 @@ export function MediosDePago() {
         className="v2-focus w-full flex items-center gap-3 text-left min-h-[52px] py-3 border-b rounded-none"
         style={{ borderColor: COLORS.line }}
       >
-        <span className="flex-1 text-[16px] font-medium" style={{ color: COLORS.ink }}>Tus medios de pago</span>
-        <span className="text-[15px] tabular-nums" style={{ color: COLORS.inkSoft }}>{medios.length}</span>
+        <span className="flex-1 text-[15px] font-medium" style={{ color: COLORS.ink }}>Tus medios de pago</span>
+        <span className="text-[14px] tabular-nums" style={{ color: COLORS.inkSoft }}>{medios.length}</span>
         <span style={{ color: COLORS.inkFaint }} aria-hidden>
           <IconChevron size={16} style={{ transform: abierto ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 120ms' }} />
         </span>
@@ -53,7 +53,7 @@ export function MediosDePago() {
               return (
                 <li key={m.id} className="py-2.5 border-b last:border-b-0 flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
                   <div className="flex items-center gap-2">
-                    <span className="flex-1 min-w-0 truncate text-[16px]" style={{ color: COLORS.ink }}>{m.nombre}</span>
+                    <span className="flex-1 min-w-0 truncate text-[15px]" style={{ color: COLORS.ink }}>{m.nombre}</span>
                     {otros.length > 0 && (
                       <button
                         type="button"
@@ -77,7 +77,7 @@ export function MediosDePago() {
                             id={`unir-${m.id}`}
                             value={hacia}
                             onChange={(e) => setHacia(e.target.value)}
-                            className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[16px]"
+                            className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[15px]"
                             style={{ ...INPUT_STYLE, color: hacia ? COLORS.ink : COLORS.inkFaint }}
                           >
                             <option value="" style={{ color: COLORS.ink }}>Elegí el medio que queda</option>
@@ -89,7 +89,7 @@ export function MediosDePago() {
                         </div>
                       </div>
                       {hacia && (
-                        <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+                        <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
                           "{m.nombre}" desaparece y sus gastos, ingresos y saldo pasan a "{hacia}". No se puede deshacer.
                         </p>
                       )}
@@ -97,7 +97,7 @@ export function MediosDePago() {
                         <button
                           type="button"
                           onClick={cerrarUnion}
-                          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold"
+                          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold"
                           style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}
                         >
                           Cancelar
@@ -106,7 +106,7 @@ export function MediosDePago() {
                           type="button"
                           disabled={!hacia}
                           onClick={() => { acciones.unirMedios(m.nombre, hacia); cerrarUnion(); }}
-                          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-bold v2-disabled"
+                          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold v2-disabled"
                           style={{ background: COLORS.ink, color: COLORS.paper }}
                         >
                           Unir

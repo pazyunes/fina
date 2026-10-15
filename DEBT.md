@@ -92,4 +92,9 @@ Todo lo de seguridad conocido está resuelto en la migración 0039 (ver hechos);
 | L6 | Limpieza | `goalStrategies.ts` reescrito para la v2 (lo usan Objetivos, Inicio y el aviso de plazo); se borró `types.ts` de la v1. | Etapa 2 |
 | F1 | Docs | Textos visibles sin guiones largos (onboarding, entrar, avisos). | Etapa 2 |
 | GA4 | Funcionalidad | Gastos, gráfico principal: un anillo con lo que te entró en el período repartido en secciones y, en lima, lo que te queda (el disponible, que se arma solo con lo que registrás). Sin entradas registradas, muestra sólo cómo se reparten tus gastos y ofrece sumar lo que te entró. | Gastos: anillo y medios |
+| C1 | Diseño | Sale "según lo que nos contaste" de toda la app: el estado declarado ya no lleva marca visible (guía §5.1). | Ajustes de la preview 1 |
+| C2 | Diseño | La invitación a avisos dice ¿Querés que FINA te mande recordatorios y avisos? | Ajustes de la preview 1 |
+| C3 | Funcionalidad | La pregunta del día es un botón pegado al paso del día que abre un panel; la primera vez del día se abre sola, con Ahora no. Ya no ocupa Inicio. | Ajustes de la preview 1 |
+| C4 | Diseño | Regla nueva: Inicio es un tablero de entradas (CLAUDE.md 9 y guía §3.5). El bloque de objetivos pasa a ser una fila compacta que abre Objetivos con ese objetivo. | Ajustes de la preview 1 |
+| C5 | Diseño | Letra más chica en toda la app (366 tamaños: de 15px para arriba baja 1 a 6px; 14 y menos queda igual) y menos aire en Inicio, para ver lo importante sin scrollear. Regla con tamaños de referencia en la guía §3.5. | Ajustes de la preview 1 |
 | GA5 | Diseño | Gastos: nuevo gráfico Con qué pagaste este mes (barras por medio, un gasto dividido suma a cada medio su parte), debajo, fuera del dato principal. | Gastos: anillo y medios |

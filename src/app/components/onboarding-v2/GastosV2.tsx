@@ -141,7 +141,7 @@ function Desplegable({ id, label, value, onChange, children }: {
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[16px] transition-colors"
+          className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[15px] transition-colors"
           // Sin nada elegido, el texto va tenue como un placeholder.
           style={{ ...INPUT_STYLE, color: value ? COLORS.ink : COLORS.inkFaint }}
         >
@@ -191,7 +191,7 @@ function BotonEditar({ gasto, onClick }: { gasto: Gasto; onClick: () => void }) 
 function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () => void }) {
   return (
     <div className="mt-2 mb-1 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
-      <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+      <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
         ¿Borrar "{gasto.descripcion}" de <span className="font-mono tabular-nums">{fmtGasto(gasto)}</span>?
         {gasto.pagos?.length ? ` La plata vuelve a ${fmtPagos(gasto.pagos)}.` : gasto.metodoPago ? ` La plata vuelve a ${gasto.metodoPago}.` : ''}
       </p>
@@ -200,7 +200,7 @@ function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () 
           type="button"
           autoFocus
           onClick={onCancelar}
-          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold"
+          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold"
           style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}
         >
           Cancelar
@@ -208,7 +208,7 @@ function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () 
         <button
           type="button"
           onClick={() => { onCancelar(); acciones.borrarGasto(gasto.id); }}
-          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-bold transition-all duration-100 active:scale-95"
+          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold transition-all duration-100 active:scale-95"
           style={{ background: COLORS.ink, color: COLORS.paper }}
         >
           Sí, borrar
@@ -748,12 +748,12 @@ export function GastosV2() {
             centerValue={fmtMoney(conIngreso ? disponibleVentana : totalGastado)}
           />
           <div className="flex-1 min-w-0 flex flex-col gap-1" aria-live="polite">
-            <p className="text-[15px] font-medium" style={{ color: COLORS.inkSoft }}>
+            <p className="text-[14px] font-medium" style={{ color: COLORS.inkSoft }}>
               {conIngreso ? 'Te queda' : 'Gastaste'}{ventana === 'mes' && mesOffset === 0 ? ' este mes' : `, ${textoPeriodo.toLowerCase()}`}
             </p>
-            <Monto value={conIngreso ? disponibleVentana : totalGastado} size={32} className="font-bold leading-tight tracking-[-0.01em]" />
+            <Monto value={conIngreso ? disponibleVentana : totalGastado} size={26} className="font-bold leading-tight tracking-[-0.01em]" />
             {conIngreso && (
-              <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
                 De <span className="font-mono tabular-nums">{fmtMoney(plataDelPeriodo)}</span> que te entraron
               </p>
             )}
@@ -765,10 +765,10 @@ export function GastosV2() {
         {(porSeccion.length > 0 || conIngreso) && (
           <ul className="flex flex-col gap-1.5">
             {porSeccion.slice(0, 5).map((s) => (
-              <li key={s.id} className="flex items-center gap-2.5 text-[15px]">
+              <li key={s.id} className="flex items-center gap-2.5 text-[14px]">
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} aria-hidden />
                 <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{s.nombre}</span>
-                <Monto value={s.monto} className="text-[15px] font-semibold" />
+                <Monto value={s.monto} className="text-[14px] font-semibold" />
               </li>
             ))}
             {porSeccion.length > 5 && (
@@ -777,10 +777,10 @@ export function GastosV2() {
               </li>
             )}
             {conIngreso && (
-              <li className="flex items-center gap-2.5 text-[15px] font-semibold">
+              <li className="flex items-center gap-2.5 text-[14px] font-semibold">
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
                 <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>Te queda</span>
-                <Monto value={disponibleVentana} className="text-[15px] font-semibold" />
+                <Monto value={disponibleVentana} className="text-[14px] font-semibold" />
               </li>
             )}
           </ul>
@@ -800,14 +800,14 @@ export function GastosV2() {
           <button
             type="button"
             onClick={() => { setAddDispEsIngreso(true); setAddingDisponible(true); }}
-            className="v2-focus self-start min-h-[44px] text-[15px] font-semibold"
+            className="v2-focus self-start min-h-[44px] text-[14px] font-semibold"
             style={{ color: COLORS.brand }}
           >
             Sumá lo que te entró para ver cuánto te queda
           </button>
         )}
         {!conIngreso && totalGastado === 0 && (
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
             Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto te queda.
           </p>
         )}
@@ -863,7 +863,7 @@ export function GastosV2() {
             <button
               type="button"
               onClick={() => { setChooser(true); setWaStep(false); }}
-              className="v2-focus flex-1 rounded-2xl py-4 text-[16px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
+              className="v2-focus flex-1 rounded-2xl py-4 text-[15px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               + Agregar gasto
@@ -871,7 +871,7 @@ export function GastosV2() {
             <button
               type="button"
               onClick={() => setAddingDisponible(true)}
-              className="v2-focus flex-1 rounded-2xl py-4 text-[16px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
+              className="v2-focus flex-1 rounded-2xl py-4 text-[15px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
               style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
             >
               + Agregar plata
@@ -895,7 +895,7 @@ export function GastosV2() {
             <input
               autoFocus
               aria-label="Monto a agregar a tu dinero disponible"
-              className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[15px] transition-colors"
+              className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[14px] transition-colors"
               style={INPUT_STYLE}
               placeholder="Monto"
               inputMode="decimal"
@@ -907,7 +907,7 @@ export function GastosV2() {
                 aria-label="De dónde vino la plata"
                 value={addDispFuente}
                 onChange={(e) => setAddDispFuente(e.target.value as FuenteIngreso | '')}
-                className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[15px]"
+                className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[14px]"
                 style={{ ...INPUT_STYLE, color: addDispFuente ? COLORS.ink : COLORS.inkFaint }}
               >
                 <option value="" style={{ color: COLORS.ink }}>¿De dónde vino? (opcional)</option>
@@ -920,7 +920,7 @@ export function GastosV2() {
                   autoFocus
                   aria-label="De dónde vino la plata, cuál"
                   maxLength={40}
-                  className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[15px] transition-colors"
+                  className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[14px] transition-colors"
                   style={INPUT_STYLE}
                   placeholder="Escribí de dónde (ej: Beca, Alquiler)"
                   value={addDispFuenteOtra}
@@ -976,7 +976,7 @@ export function GastosV2() {
               <input
                 autoFocus
                 aria-label="En qué tenés esa plata"
-                className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[15px] transition-colors"
+                className="v2-focus w-full rounded-xl px-2.5 py-1.5 text-[14px] transition-colors"
                 style={INPUT_STYLE}
                 placeholder="Ej: Ualá"
                 value={addDispMetodoOtro}
@@ -996,14 +996,14 @@ export function GastosV2() {
 
         {addingGasto && (
           <div data-form-gasto className="py-2 flex flex-col gap-3">
-            {editandoId && <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Editar gasto</p>}
+            {editandoId && <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Editar gasto</p>}
             <div className="flex gap-2">
               <div className="relative flex-1 min-w-0">
                 <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{ngMoneda === 'USD' ? 'US$' : '$'}</span>
                 <input
                   autoFocus
                   aria-label="Monto del gasto"
-                  className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[16px] transition-colors"
+                  className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[15px] transition-colors"
                   style={INPUT_STYLE}
                   placeholder="Monto"
                   inputMode="decimal"
@@ -1027,7 +1027,7 @@ export function GastosV2() {
             </div>
             <input
               aria-label="Descripción del gasto"
-              className="v2-focus rounded-xl px-3.5 py-2.5 text-[16px] transition-colors"
+              className="v2-focus rounded-xl px-3.5 py-2.5 text-[15px] transition-colors"
               style={INPUT_STYLE}
               placeholder="Descripción (ej: PedidosYa)"
               value={ngDesc}
@@ -1041,7 +1041,7 @@ export function GastosV2() {
               <input
                 id="ng-fecha-hora"
                 type="datetime-local"
-                className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
+                className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
                 style={INPUT_STYLE}
                 value={ngFechaHora}
                 max={aInputFechaHora(Date.now())}
@@ -1084,7 +1084,7 @@ export function GastosV2() {
                   <input
                     autoFocus
                     aria-label="Nombre de la sección nueva"
-                    className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
+                    className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
                     style={INPUT_STYLE}
                     placeholder="Ej: Mascota"
                     value={ngNuevaCat}
@@ -1112,7 +1112,7 @@ export function GastosV2() {
                       <input
                         autoFocus
                         aria-label="Con qué lo pagaste"
-                        className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
+                        className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
                         style={INPUT_STYLE}
                         placeholder="Ej: Ualá"
                         value={ngMetodoOtro}
@@ -1154,7 +1154,7 @@ export function GastosV2() {
                       aria-label={`Medio ${i + 1}`}
                       value={f.medio}
                       onChange={(e) => setNgPagos((v) => v.map((x, idx) => (idx === i ? { ...x, medio: e.target.value } : x)))}
-                      className="v2-focus flex-1 min-w-0 rounded-xl pl-3 pr-2 min-h-[48px] text-[15px] transition-colors"
+                      className="v2-focus flex-1 min-w-0 rounded-xl pl-3 pr-2 min-h-[48px] text-[14px] transition-colors"
                       style={{ ...INPUT_STYLE, color: f.medio ? COLORS.ink : COLORS.inkFaint }}
                     >
                       <option value="" style={OPCION}>Medio</option>
@@ -1167,7 +1167,7 @@ export function GastosV2() {
                         placeholder="Ej: Ualá"
                         value={f.otro}
                         onChange={(e) => setNgPagos((v) => v.map((x, idx) => (idx === i ? { ...x, otro: e.target.value } : x)))}
-                        className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[48px] text-[15px] transition-colors"
+                        className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[48px] text-[14px] transition-colors"
                         style={INPUT_STYLE}
                       />
                     )}
@@ -1177,7 +1177,7 @@ export function GastosV2() {
                       inputMode="decimal"
                       value={f.monto}
                       onChange={(e) => setNgPagos((v) => v.map((x, idx) => (idx === i ? { ...x, monto: formatThousands(e.target.value) } : x)))}
-                      className="v2-focus w-[104px] shrink-0 rounded-xl px-2.5 min-h-[48px] text-[15px] transition-colors"
+                      className="v2-focus w-[104px] shrink-0 rounded-xl px-2.5 min-h-[48px] text-[14px] transition-colors"
                       style={INPUT_STYLE}
                     />
                     {ngPagos.length > 2 && (
@@ -1234,7 +1234,7 @@ export function GastosV2() {
                     autoFocus
                     aria-label="Qué tipo de gasto fue"
                     maxLength={40}
-                    className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[16px] transition-colors"
+                    className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
                     style={INPUT_STYLE}
                     placeholder="Escribí cuál (ej: Salud, Mascota)"
                     value={ngTipoOtro}
@@ -1271,14 +1271,14 @@ export function GastosV2() {
             )}
 
             <div className="flex gap-2 mt-1">
-              <button type="button" onClick={cancelarForm} className="v2-focus flex-1 rounded-xl py-2.5 text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+              <button type="button" onClick={cancelarForm} className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={() => void (editandoId ? guardarEdicion() : agregarGasto())}
                 disabled={parseMoneyInput(ngMonto) <= 0 || (!ngCatId && !ngNuevaCat.trim()) || (!editandoId && !opcionFijoValida(ngFijo)) || !pagosValidos}
-                className="v2-focus flex-[2] rounded-xl py-2.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-95"
+                className="v2-focus flex-[2] rounded-xl py-2.5 text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-95"
                 style={{ background: COLORS.brand, color: COLORS.surface }}
               >
                 {editandoId ? 'Guardar cambios' : ngFijo.activo && !ngFijo.yaPagado ? 'Guardar gasto fijo' : 'Agregar gasto'}
@@ -1328,8 +1328,8 @@ export function GastosV2() {
           {porMedio.map((x) => (
             <div key={x.nombre} className="flex flex-col gap-1">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[15px] truncate" style={{ color: COLORS.ink }}>{x.nombre}</span>
-                <Monto value={x.monto} className="text-[15px] font-semibold shrink-0" />
+                <span className="text-[14px] truncate" style={{ color: COLORS.ink }}>{x.nombre}</span>
+                <Monto value={x.monto} className="text-[14px] font-semibold shrink-0" />
               </div>
               <div className="h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.line }}>
                 <div className="h-full rounded-full" style={{ width: `${(x.monto / maxMedio) * 100}%`, background: COLORS.brand }} />
@@ -1349,7 +1349,7 @@ export function GastosV2() {
           <div className="w-full max-w-md rounded-2xl p-5 flex flex-col gap-3" style={{ background: COLORS.surface, boxShadow: '0 12px 40px -8px rgba(43,33,24,0.35)' }} onClick={(e) => e.stopPropagation()}>
             {!waStep ? (
               <>
-                <p className="text-[20px] font-bold" style={{ color: COLORS.ink }}>¿Cómo querés registrar el gasto?</p>
+                <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>¿Cómo querés registrar el gasto?</p>
                 <button
                   type="button"
                   onClick={() => { setChooser(false); setAddingGasto(true); }}
@@ -1358,7 +1358,7 @@ export function GastosV2() {
                 >
                   <span className="shrink-0" style={{ color: COLORS.brand }}><IconEditar size={22} /></span>
                   <span className="flex flex-col">
-                    <span className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Desde FINA</span>
+                    <span className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Desde FINA</span>
                     <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>Lo cargás acá, a mano, en un toque.</span>
                   </span>
                 </button>
@@ -1374,15 +1374,15 @@ export function GastosV2() {
                 >
                   <span className="shrink-0" style={{ color: COLORS.ink }}><IconChat size={22} /></span>
                   <span className="flex flex-col">
-                    <span className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Desde WhatsApp</span>
+                    <span className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Desde WhatsApp</span>
                     <span className="text-[14px]" style={{ color: COLORS.limaText }}>Se lo contás a FINA hablando, sin cargar nada.</span>
                   </span>
                 </button>
-                <button type="button" onClick={() => setChooser(false)} className="v2-focus text-[15px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>Cancelar</button>
+                <button type="button" onClick={() => setChooser(false)} className="v2-focus text-[14px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>Cancelar</button>
               </>
             ) : (
               <>
-                <p className="text-[20px] font-bold" style={{ color: COLORS.ink }}>Registrá tu gasto por WhatsApp</p>
+                <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Registrá tu gasto por WhatsApp</p>
                 <div className="flex flex-col gap-2.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }}>
                   {[
                     'Abrí el chat de FINA en WhatsApp.',
@@ -1391,18 +1391,18 @@ export function GastosV2() {
                   ].map((t, i) => (
                     <div key={i} className="flex gap-2.5 items-start">
                       <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[14px] font-bold" style={{ background: COLORS.lima, color: COLORS.ink }}>{i + 1}</span>
-                      <span className="flex-1 text-[15px]" style={{ color: COLORS.ink }}>{t}</span>
+                      <span className="flex-1 text-[14px]" style={{ color: COLORS.ink }}>{t}</span>
                     </div>
                   ))}
                 </div>
                 <LinkWhatsApp
                   onClick={() => setChooser(false)}
-                  className="v2-focus w-full rounded-2xl py-3.5 text-center text-[18px] font-bold transition-transform active:scale-[0.99]"
+                  className="v2-focus w-full rounded-2xl py-3.5 text-center text-[16px] font-bold transition-transform active:scale-[0.99]"
                   style={{ background: COLORS.lima, color: COLORS.ink }}
                 >
                   Ir a WhatsApp
                 </LinkWhatsApp>
-                <button type="button" onClick={() => setWaStep(false)} className="v2-focus inline-flex items-center justify-center gap-1 text-[15px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>
+                <button type="button" onClick={() => setWaStep(false)} className="v2-focus inline-flex items-center justify-center gap-1 text-[14px] font-semibold py-1" style={{ color: COLORS.inkSoft }}>
                   <IconChevron size={14} style={{ transform: 'rotate(180deg)' }} /> Volver
                 </button>
               </>
@@ -1420,8 +1420,8 @@ export function GastosV2() {
           <div className="py-6 flex flex-col items-center text-center gap-3">
             <Fini state="vacio" size={116} />
             <div className="flex flex-col gap-1">
-              <p className="text-[16px] font-semibold" style={{ color: COLORS.ink }}>Acá van a vivir tus secciones</p>
-              <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>Acá van a vivir tus secciones</p>
+              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
                 Cuando registres tu primer gasto, cada sección aparece sola con su tope. Todavía no lo sabemos: contame un par y se arma.
               </p>
             </div>
@@ -1436,7 +1436,7 @@ export function GastosV2() {
             aparecer sola en cuanto se le carga un gasto. Para renombrarlas o
             borrarlas (estén o no a la vista) está "Editar secciones", abajo. */}
         {categorias.length > 0 && gastosVentana.length === 0 && (
-          <p className="py-4 text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="py-4 text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
             No hay gastos en {textoPeriodo}.
           </p>
         )}
@@ -1455,7 +1455,7 @@ export function GastosV2() {
                 <div className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: colorDe(cat.id) }} />
                   <div className="text-left">
-                    <p className="font-semibold text-[16px]" style={{ color: COLORS.ink }}>{cat.nombre}</p>
+                    <p className="font-semibold text-[15px]" style={{ color: COLORS.ink }}>{cat.nombre}</p>
                     <Monto value={gastado} className="text-[14px]" />
                   </div>
                 </div>
@@ -1485,7 +1485,7 @@ export function GastosV2() {
                 <div className="mt-3 pt-3 border-t border-dashed flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
                   {recortar(movs, seccionCompleta === cat.id).map((m) => (
                     <div key={m.id}>
-                      <div className="flex items-center justify-between text-[15px] gap-2 min-h-[36px]" style={{ color: COLORS.ink }}>
+                      <div className="flex items-center justify-between text-[14px] gap-2 min-h-[36px]" style={{ color: COLORS.ink }}>
                         <span className="flex items-center gap-1.5 min-w-0">
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TIPO_INFO[m.tipo].color }} />
                           <span className="truncate">{m.descripcion}</span>
@@ -1512,7 +1512,7 @@ export function GastosV2() {
                       <input
                         aria-label={`Tope de ${cat.nombre}`}
                         data-tope-de={cat.id}
-                        className="v2-focus w-full rounded-xl pl-7 pr-3 py-2 text-[15px] transition-colors"
+                        className="v2-focus w-full rounded-xl pl-7 pr-3 py-2 text-[14px] transition-colors"
                         style={INPUT_STYLE}
                         placeholder="Monto"
                         inputMode="decimal"
@@ -1569,7 +1569,7 @@ export function GastosV2() {
                             autoFocus
                             aria-label={`Nuevo nombre para ${c.nombre}`}
                             maxLength={40}
-                            className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[44px] text-[16px]"
+                            className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[44px] text-[15px]"
                             style={INPUT_STYLE}
                             value={nombreNuevo}
                             onChange={(e) => setNombreNuevo(e.target.value)}
@@ -1593,7 +1593,7 @@ export function GastosV2() {
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="w-3 h-3 rounded-full shrink-0" style={{ background: colorDe(c.id) }} />
-                          <span className="flex-1 min-w-0 truncate text-[16px] font-semibold" style={{ color: COLORS.ink }}>{c.nombre}</span>
+                          <span className="flex-1 min-w-0 truncate text-[15px] font-semibold" style={{ color: COLORS.ink }}>{c.nombre}</span>
                           <button
                             type="button"
                             onClick={() => { setNombreNuevo(c.nombre); setRenombrandoId(c.id); setBorrandoSeccionId(null); }}
@@ -1618,20 +1618,20 @@ export function GastosV2() {
 
                       {borrandoSeccionId === c.id && (
                         <div className="rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado de la sección">
-                          <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+                          <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
                             ¿Borrar la sección "{c.nombre}"?
                             {cantGastos > 0
                               ? ` Sus ${cantGastos} ${cantGastos === 1 ? 'gasto no se borra' : 'gastos no se borran'}: ${cantGastos === 1 ? 'queda' : 'quedan'} sin sección.`
                               : ' No tiene gastos.'}
                           </p>
                           <div className="flex gap-2">
-                            <button type="button" autoFocus onClick={() => setBorrandoSeccionId(null)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+                            <button type="button" autoFocus onClick={() => setBorrandoSeccionId(null)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
                               Cancelar
                             </button>
                             <button
                               type="button"
                               onClick={() => { if (openCatId === c.id) setOpenCatId(null); acciones.borrarSeccion(c.id); setBorrandoSeccionId(null); }}
-                              className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-bold"
+                              className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold"
                               style={{ background: COLORS.ink, color: COLORS.paper }}
                             >
                               Sí, borrar
@@ -1670,7 +1670,7 @@ export function GastosV2() {
             <input
               autoFocus
               aria-label="Buscar gastos por nombre"
-              className="v2-focus rounded-2xl px-4 py-2.5 text-[16px] transition-colors"
+              className="v2-focus rounded-2xl px-4 py-2.5 text-[15px] transition-colors"
               style={INPUT_STYLE}
               placeholder="Buscar por nombre (ej: Rappi)"
               value={busqueda}
@@ -1683,7 +1683,7 @@ export function GastosV2() {
                   id="filtro-desde"
                   type="date"
                   aria-label="Filtrar gastos desde esta fecha"
-                  className="v2-focus w-full rounded-xl px-3 py-2 text-[15px] transition-colors"
+                  className="v2-focus w-full rounded-xl px-3 py-2 text-[14px] transition-colors"
                   style={INPUT_STYLE}
                   value={filtroDesde}
                   max={filtroHasta || undefined}
@@ -1696,7 +1696,7 @@ export function GastosV2() {
                   id="filtro-hasta"
                   type="date"
                   aria-label="Filtrar gastos hasta esta fecha"
-                  className="v2-focus w-full rounded-xl px-3 py-2 text-[15px] transition-colors"
+                  className="v2-focus w-full rounded-xl px-3 py-2 text-[14px] transition-colors"
                   style={INPUT_STYLE}
                   value={filtroHasta}
                   min={filtroDesde || undefined}
@@ -1724,9 +1724,9 @@ export function GastosV2() {
           trackColor={COLORS.tint}
         />
 
-        {gastos.length === 0 && <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
+        {gastos.length === 0 && <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
         {gastos.length > 0 && gastosFiltrados.length === 0 && (
-          <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
             {hayFiltroFecha && hayBusqueda ? 'No encontramos gastos con ese nombre en ese rango de fechas.'
               : hayFiltroFecha ? 'No encontramos gastos en ese rango de fechas.'
               : hayBusqueda ? `No encontramos gastos con ese nombre en ${textoPeriodo}.`
@@ -1741,12 +1741,12 @@ export function GastosV2() {
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[g.tipo].color }} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[16px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
+                  <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
                   <p className="text-[14px] truncate" style={{ color: COLORS.inkSoft }}>
                     {[cat?.nombre ?? 'Sin sección', g.tipoOtro, fechaDisplay(g.ts)].filter(Boolean).join(', ')}
                   </p>
                 </div>
-                <span className="font-mono tabular-nums text-[16px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
+                <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
                 {/* Todos se pueden editar y borrar, también los que llegaron por WhatsApp. */}
                 <BotonEditar gasto={g} onClick={() => empezarEdicion(g)} />
                 <BotonBorrar gasto={g} abierto={borrando === g.id} onClick={() => setBorrando(borrando === g.id ? null : g.id)} />

@@ -29,8 +29,13 @@ están decididas.
 6. **Ningún componente hace `fetch` directo.** Todo pasa por `src/app/api/v2/`.
 7. **Sin `any`.**
 8. **Jerarquía.** Cada pantalla tiene un objetivo y un solo punto que se lleva la vista
-   primero. Nada de subtítulos que expliquen lo que el título ya debería decir.
-9. **Formato** (aplica a todo: textos de la app, textos que genera la IA, docs, commits y
+   primero, y lo importante se ve sin scrollear. Nada de subtítulos que expliquen lo que
+   el título ya debería decir.
+9. **Inicio es un tablero de entradas, no un resumen de todo.** Lo que tiene su pantalla
+   (objetivos, gastos, inversiones) aparece en Inicio como un botón o fila compacta que
+   lleva a esa pantalla, donde está el detalle. El flujo es ir de una pantalla a otra, no
+   leer todo en Inicio.
+10. **Formato** (aplica a todo: textos de la app, textos que genera la IA, docs, commits y
    respuestas). No usar guiones largos, comillas rizadas, viñetas Unicode decorativas ni
    emojis. No usar subtítulos, encabezados intermedios ni etiquetas de sección salvo
    pedido explícito. Texto continuo, directo y sin divisiones artificiales. Detalle en

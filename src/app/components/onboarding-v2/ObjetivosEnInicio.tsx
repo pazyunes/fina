@@ -6,7 +6,8 @@ import {
   aporteDeLaSemana, diaArgentina, mensajePlazo, ritmoSemanal, situacionPlazo,
   type AporteEnMoneda, type MensajePlazo, type SituacionPlazo,
 } from '../../utils/goalStrategies';
-import { COLORS, EstadoConfianza, TituloSeccion, fmtMoney } from './shared';
+import { COLORS, fmtMoney } from './shared';
+import { IconChevron } from './FinaIcons';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Objetivos en Home (DEBT I7): el objetivo que más importa hoy, cuánto avanzó
@@ -81,6 +82,11 @@ function elegir(objetivos: Objetivo[], dolar: number | null): { o: Objetivo; d: 
   return conDatos[0];
 }
 
+// En Inicio es UNA fila que lleva a Objetivos, no el detalle (frontend.md,
+// Inicio es un tablero de entradas): el nombre, una barrita de avance y una
+// línea corta. El detalle (plazo, salida en rango, formas de llegar antes)
+// vive en la pantalla de Objetivos, que se abre con este objetivo y el
+// formulario para sumar.
 export function ObjetivosEnInicio() {
   const { estado } = useAlmacen();
   const navigate = useNavigate();
@@ -88,89 +94,61 @@ export function ObjetivosEnInicio() {
 
   if (!elegido) {
     return (
-      <section className="flex flex-col gap-2" aria-label="Tus objetivos">
-        <TituloSeccion>Tus objetivos</TituloSeccion>
-        <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Ponele nombre a algo que quieras lograr.</p>
-        <button
-          type="button"
-          onClick={() => navigate('/onboarding-v2/objetivos', { state: { crearObjetivo: true, from: '/onboarding-v2/home' } })}
-          className="v2-focus self-start min-h-[44px] rounded-full px-5 text-[15px] font-bold transition-all duration-100 active:scale-95"
-          style={{ background: COLORS.brand, color: COLORS.surface }}
-        >
-          Crear un objetivo
-        </button>
-      </section>
+      <Entrada
+        titulo="Creá tu primer objetivo"
+        linea="Algo para lo que quieras juntar"
+        onClick={() => navigate('/onboarding-v2/objetivos', { state: { crearObjetivo: true, from: '/onboarding-v2/home' } })}
+      />
     );
   }
 
   const { o, d } = elegido;
   const fmt = (n: number) => fmtEnMoneda(n, o.moneda);
   const conMonto = d.total > 0;
-  const pct = conMonto ? Math.min(100, Math.round((d.juntado / d.total) * 100)) : 0;
+  const pct = conMonto ? Math.min(100, Math.round((d.juntado / d.total) * 100)) : null;
   const mensaje = mensajePlazo(d.situacion, fmt);
-  const abrir = () => navigate('/onboarding-v2/objetivos', {
-    state: { abrir: 'aporte_objetivo', objetivoId: o.id, from: '/onboarding-v2/home' },
-  });
+  // Una sola línea: si está atrasado, eso (es lo accionable); si avanzó esta
+  // semana, el delta (§5.3); si no, cuánto lleva.
+  const linea = mensaje?.tono === 'accion'
+    ? mensaje.texto
+    : d.semana > 0 ? `+${fmt(d.semana)} esta semana`
+    : conMonto ? `Llevás ${fmt(d.juntado)} de ${fmt(d.total)}`
+    : 'Ponele un monto para ver cuánto falta';
 
   return (
-    <section className="flex flex-col gap-3" aria-label="Tu objetivo">
-      <div className="flex items-baseline justify-between gap-3">
-        <TituloSeccion>{o.nombre}</TituloSeccion>
-        <button
-          type="button"
-          onClick={() => navigate('/onboarding-v2/objetivos')}
-          className="v2-focus shrink-0 min-h-[44px] text-[14px] font-semibold underline"
-          style={{ color: COLORS.brand }}
-        >
-          Ver objetivos
-        </button>
-      </div>
+    <Entrada
+      titulo={conMonto ? `Sumale a ${o.nombre}` : o.nombre}
+      linea={linea}
+      pct={pct}
+      atencion={mensaje?.tono === 'accion'}
+      onClick={() => navigate('/onboarding-v2/objetivos', {
+        state: { abrir: 'aporte_objetivo', objetivoId: o.id, from: '/onboarding-v2/home' },
+      })}
+    />
+  );
+}
 
-      {conMonto ? (
-        <div className="flex flex-col gap-1.5" aria-live="polite">
-          <div
-            className="h-2.5 rounded-full overflow-hidden"
-            style={{ background: COLORS.limaSoft }}
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={pct}
-            aria-label={`${pct}% juntado`}
-          >
-            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: COLORS.limaViz }} />
-          </div>
-          <p className="text-[15px]" style={{ color: COLORS.ink }}>
-            Llevás <span className="font-semibold font-mono tabular-nums">{fmt(d.juntado)}</span> de{' '}
-            <span className="font-mono tabular-nums">{fmt(d.total)}</span>
-          </p>
-          {/* El delta de la semana en lima: el avance chico igual se lee como avance (§5.3). */}
-          {d.semana > 0 && (
-            <p className="text-[15px] font-semibold font-mono tabular-nums" style={{ color: COLORS.limaText }}>
-              +{fmt(d.semana)} esta semana
-            </p>
-          )}
-          <EstadoConfianza estado="declarado" />
-        </div>
-      ) : (
-        <EstadoConfianza estado="por-descubrir" />
-      )}
-
-      {mensaje && (
-        <div className="flex flex-col gap-1 pl-3.5 border-l-[3px]" style={{ borderColor: colorDeTono(mensaje.tono) }}>
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>{mensaje.texto}</p>
-          {mensaje.salida && <p className="text-[15px] leading-snug font-mono tabular-nums" style={{ color: COLORS.ink }}>{mensaje.salida}</p>}
-          <EstadoConfianza estado="estimado" />
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={abrir}
-        className="v2-focus self-start min-h-[44px] rounded-full px-5 text-[15px] font-bold transition-all duration-100 active:scale-95"
-        style={{ background: COLORS.brand, color: COLORS.surface }}
-      >
-        {conMonto ? 'Sumar un registro' : 'Ponerle un monto'}
-      </button>
-    </section>
+/** Fila-botón de Inicio: título, una línea y, si hay, una barrita de avance. */
+function Entrada({ titulo, linea, pct = null, atencion = false, onClick }: {
+  titulo: string; linea: string; pct?: number | null; atencion?: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="v2-focus w-full text-left rounded-2xl px-4 py-3 flex items-center gap-3 transition-transform duration-100 active:scale-[0.99]"
+      style={{ background: COLORS.surface, border: `1.5px solid ${atencion ? COLORS.naranja : COLORS.line}` }}
+    >
+      <span className="flex-1 min-w-0 flex flex-col gap-1">
+        <span className="text-[14px] font-bold truncate" style={{ color: COLORS.ink }}>{titulo}</span>
+        {pct !== null && (
+          <span className="h-1.5 rounded-full overflow-hidden" style={{ background: COLORS.limaSoft }} aria-hidden>
+            <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: COLORS.limaViz }} />
+          </span>
+        )}
+        <span className="text-[13px] truncate font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>{linea}</span>
+      </span>
+      <IconChevron size={16} style={{ color: COLORS.inkSoft }} />
+    </button>
   );
 }

@@ -62,7 +62,7 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
     <div className="min-h-full grid place-items-center px-6 py-16">
       <div className="flex flex-col items-center gap-3.5 w-full max-w-xs">
         <Fini state="idle" size={110} />
-        <p className="text-[19px] font-bold text-center" style={{ color: COLORS.ink }}>Ingresá tu PIN</p>
+        <p className="text-[17px] font-bold text-center" style={{ color: COLORS.ink }}>Ingresá tu PIN</p>
         <input
           ref={inputRef}
           type="password"
@@ -70,7 +70,7 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
           pattern="[0-9]*"
           maxLength={6}
           aria-label="PIN"
-          className="v2-focus w-full rounded-2xl px-4 py-3.5 text-[24px] text-center tracking-[0.5em] transition-colors"
+          className="v2-focus w-full rounded-2xl px-4 py-3.5 text-[20px] text-center tracking-[0.5em] transition-colors"
           style={{ background: COLORS.surface, border: `1.5px solid ${error ? COLORS.coralDark : COLORS.lineStrong}`, color: COLORS.ink }}
           value={pin}
           onChange={(e) => { setPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(false); }}
@@ -81,7 +81,7 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
           type="button"
           onClick={() => void confirmar()}
           disabled={!pin || verificando}
-          className="v2-focus w-full rounded-2xl py-3.5 text-[17px] font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
+          className="v2-focus w-full rounded-2xl py-3.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           {verificando ? 'Comprobando…' : 'Entrar'}
@@ -91,7 +91,7 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
             type="button"
             onClick={() => void probarBiometria()}
             disabled={probandoBio}
-            className="v2-focus text-[15px] font-semibold underline"
+            className="v2-focus text-[14px] font-semibold underline"
             style={{ color: COLORS.brand }}
           >
             {probandoBio ? 'Esperando…' : 'Usar Face ID / Touch ID'}

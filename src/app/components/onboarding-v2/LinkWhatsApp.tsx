@@ -84,11 +84,11 @@ function AvisoVerificar({ verificado, onCerrar }: { verificado: boolean; onCerra
           <>
             <div className="flex items-center gap-3">
               <div className="shrink-0 -ml-1"><Fini state="pensando" size={64} /></div>
-              <h2 id="aviso-wpp-titulo" className="text-[21px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+              <h2 id="aviso-wpp-titulo" className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
                 Antes, verificá tu teléfono
               </h2>
             </div>
-            <p className="text-[16px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
               Así FINA sabe que los gastos que le contás por WhatsApp son tuyos y los anota en tu cuenta.
               Es mandar un mensaje, tarda un minuto.
             </p>
@@ -97,7 +97,7 @@ function AvisoVerificar({ verificado, onCerrar }: { verificado: boolean; onCerra
               type="button"
               autoFocus
               onClick={onCerrar}
-              className="v2-focus self-center min-h-[44px] px-4 text-[15px] font-semibold rounded-full"
+              className="v2-focus self-center min-h-[44px] px-4 text-[14px] font-semibold rounded-full"
               style={{ color: COLORS.inkSoft }}
             >
               Ahora no
@@ -109,11 +109,11 @@ function AvisoVerificar({ verificado, onCerrar }: { verificado: boolean; onCerra
           <>
             <div className="flex items-center gap-3">
               <div className="shrink-0 -ml-1"><Fini state="logro" size={64} /></div>
-              <h2 id="aviso-wpp-titulo" className="text-[21px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+              <h2 id="aviso-wpp-titulo" className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
                 ¡Listo, ya está verificado!
               </h2>
             </div>
-            <p className="text-[16px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
               Ya podés contarle tus gastos a FINA por WhatsApp.
             </p>
             <a
@@ -121,7 +121,7 @@ function AvisoVerificar({ verificado, onCerrar }: { verificado: boolean; onCerra
               target="_blank"
               rel="noopener noreferrer"
               onClick={onCerrar}
-              className="v2-focus w-full rounded-2xl py-3.5 text-center text-[18px] font-bold transition-transform active:scale-[0.99]"
+              className="v2-focus w-full rounded-2xl py-3.5 text-center text-[16px] font-bold transition-transform active:scale-[0.99]"
               style={{ background: COLORS.lima, color: COLORS.ink }}
             >
               Ir a WhatsApp

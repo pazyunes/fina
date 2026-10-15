@@ -29,7 +29,7 @@ import { IconChevron } from './FinaIcons';
 
 function SinDatos({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[15px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+    <p className="text-[14px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
       {children}
     </p>
   );
@@ -78,7 +78,7 @@ function Tarjeta({ titulo, ultima, children }: { titulo: string; ultima: boolean
       className={`${ultima ? 'snap-end' : 'snap-start'} shrink-0 min-w-0 overflow-hidden w-[85%] sm:w-[360px] lg:w-[400px] rounded-2xl p-4 flex flex-col gap-3`}
       style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
     >
-      <h3 className="text-[18px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
+      <h3 className="text-[16px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
       {children}
     </article>
   );

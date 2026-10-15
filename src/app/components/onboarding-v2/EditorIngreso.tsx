@@ -55,7 +55,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
 
   return (
     <div className="mt-2 rounded-xl px-3.5 py-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }} role="group" aria-label="Editar ingreso">
-      <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Editar ingreso</p>
+      <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>Editar ingreso</p>
 
       <div className="flex gap-2">
         <div className="relative flex-1 min-w-0">
@@ -64,7 +64,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
             autoFocus
             aria-label="Monto del ingreso"
             inputMode="decimal"
-            className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[16px]"
+            className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[15px]"
             style={INPUT_STYLE}
             value={monto}
             onChange={(e) => setMonto(formatThousands(e.target.value))}
@@ -92,7 +92,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
           id={`ing-fuente-${ingreso.id}`}
           value={fuente}
           onChange={(e) => setFuente(e.target.value as FuenteIngreso | '')}
-          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[15px]"
           style={{ ...INPUT_STYLE, color: fuente ? COLORS.ink : COLORS.inkFaint }}
         >
           <option value="" style={{ color: COLORS.ink }}>Sin especificar</option>
@@ -103,7 +103,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
             aria-label="De dónde vino la plata, cuál"
             maxLength={40}
             placeholder="Escribí de dónde (ej: Beca, Alquiler)"
-            className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+            className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[15px]"
             style={INPUT_STYLE}
             value={fuenteOtra}
             onChange={(e) => setFuenteOtra(e.target.value)}
@@ -117,7 +117,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
           id={`ing-medio-${ingreso.id}`}
           value={medio}
           onChange={(e) => setMedio(e.target.value)}
-          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[15px]"
           style={{ ...INPUT_STYLE, color: medio ? COLORS.ink : COLORS.inkFaint }}
         >
           <option value="" style={{ color: COLORS.ink }}>Elegí un medio</option>
@@ -128,7 +128,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
           <input
             aria-label="En qué medio entró, cuál"
             placeholder="Ej: Ualá"
-            className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+            className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[15px]"
             style={INPUT_STYLE}
             value={medioOtro}
             onChange={(e) => setMedioOtro(e.target.value)}
@@ -139,7 +139,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
       <input
         aria-label="Descripción del ingreso"
         placeholder="Descripción (opcional)"
-        className="v2-focus rounded-xl px-3.5 py-2.5 text-[16px]"
+        className="v2-focus rounded-xl px-3.5 py-2.5 text-[15px]"
         style={INPUT_STYLE}
         value={descripcion}
         onChange={(e) => setDescripcion(e.target.value)}
@@ -150,7 +150,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
         <input
           id={`ing-fecha-${ingreso.id}`}
           type="datetime-local"
-          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[15px]"
           style={INPUT_STYLE}
           value={fechaHora}
           max={aInputFechaHora(Date.now())}
@@ -161,14 +161,14 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
       {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
 
       <div className="flex gap-2">
-        <button type="button" onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+        <button type="button" onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
           Cancelar
         </button>
         <button
           type="button"
           onClick={() => void guardar()}
           disabled={montoNum <= 0 || guardando}
-          className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[15px] font-bold v2-disabled"
+          className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[14px] font-bold v2-disabled"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           {guardando ? 'Guardando…' : 'Guardar cambios'}

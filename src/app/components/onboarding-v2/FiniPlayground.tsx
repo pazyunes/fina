@@ -44,7 +44,7 @@ export function FiniPlayground() {
     <div className="min-h-screen px-6 py-8 flex flex-col gap-6 lg:max-w-3xl lg:mx-auto" style={{ background: COLORS.paper }}>
       <header>
         <Titulo>Fini — prueba</Titulo>
-        <p className="text-[15px] mt-2" style={{ color: COLORS.inkSoft }}>
+        <p className="text-[14px] mt-2" style={{ color: COLORS.inkSoft }}>
           Rama descartable. Para volver a como está hoy: <span className="font-mono" style={{ color: COLORS.ink }}>git checkout dev</span>
         </p>
       </header>
@@ -87,22 +87,22 @@ export function FiniPlayground() {
           >
             {VEREDICTO[actual.veredicto].label} en la app
           </span>
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{actual.nota}</p>
+          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{actual.nota}</p>
         </div>
       )}
 
       <div className="flex flex-col gap-3">
         <TituloSeccion>Controles</TituloSeccion>
-        <label className="flex items-center gap-3 text-[15px] min-h-[44px]" style={{ color: COLORS.ink }}>
+        <label className="flex items-center gap-3 text-[14px] min-h-[44px]" style={{ color: COLORS.ink }}>
           <input type="checkbox" checked={once} onChange={(e) => { setOnce(e.target.checked); repetir(); }} className="v2-focus w-5 h-5" />
           Una sola pasada
         </label>
-        <label className="flex items-center gap-3 text-[15px]" style={{ color: COLORS.ink }}>
+        <label className="flex items-center gap-3 text-[14px]" style={{ color: COLORS.ink }}>
           <span className="w-20 shrink-0">Tamaño</span>
           <input type="range" min={40} max={320} value={size} onChange={(e) => setSize(Number(e.target.value))} className="v2-focus flex-1" />
           <span className="w-16 text-right font-mono tabular-nums" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>{size}px</span>
         </label>
-        <label className="flex items-center gap-3 text-[15px]" style={{ color: COLORS.ink }}>
+        <label className="flex items-center gap-3 text-[14px]" style={{ color: COLORS.ink }}>
           <span className="w-20 shrink-0">Ritmo</span>
           <input type="range" min={0.6} max={2} step={0.1} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="v2-focus flex-1" />
           <span className="w-16 text-right font-mono tabular-nums" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>{speed}×</span>
@@ -110,7 +110,7 @@ export function FiniPlayground() {
         <button
           type="button"
           onClick={repetir}
-          className="v2-focus self-start min-h-[44px] rounded-2xl px-5 text-[15px] font-bold transition-all duration-100 active:scale-[0.98]"
+          className="v2-focus self-start min-h-[44px] rounded-2xl px-5 text-[14px] font-bold transition-all duration-100 active:scale-[0.98]"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           Volver a reproducir
@@ -120,7 +120,7 @@ export function FiniPlayground() {
 
       <div className="flex flex-col gap-2">
         <TituloSeccion>Dónde está puesta en esta prueba</TituloSeccion>
-        <ul className="flex flex-col gap-1.5 list-none p-0 m-0 text-[15px]" style={{ color: COLORS.inkSoft }}>
+        <ul className="flex flex-col gap-1.5 list-none p-0 m-0 text-[14px]" style={{ color: COLORS.inkSoft }}>
           <li>· Avatar de Home y de Perfil — <span style={{ color: COLORS.ink }}>idle</span> (en todas las pantallas)</li>
           <li>· Onboarding, primera pantalla — <span style={{ color: COLORS.ink }}>saludo</span></li>
           <li>· Onboarding, «¿qué querés lograr?» — <span style={{ color: COLORS.ink }}>idle</span></li>

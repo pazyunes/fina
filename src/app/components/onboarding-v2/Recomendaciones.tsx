@@ -207,16 +207,16 @@ function Mensaje({ item, onUtil }: {
   const r = item.contenido;
   return (
     <article className="flex flex-col gap-2 pl-3.5 border-l-2" style={{ borderColor: COLORS.brandSoft }}>
-      <h3 className="text-[17px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+      <h3 className="text-[15px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
         {r.titulo}
       </h3>
-      <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
+      <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
 
       {(item.tipo === 'ia' || item.tipo === 'calculada') && (
         <>
           {/* El dato en el que se apoya, con contra qué se compara. */}
           <div className="flex flex-col gap-0.5">
-            <p className="text-[16px] font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{item.contenido.dato.valor}</p>
+            <p className="text-[15px] font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{item.contenido.dato.valor}</p>
             <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{item.contenido.dato.referencia}</p>
             {item.contenido.confianza === 'estimado' && <EstadoConfianza estado="estimado" />}
           </div>

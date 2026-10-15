@@ -27,8 +27,8 @@ export function TerminosGate() {
         <div className="flex items-center gap-3">
           <Fini state="idle" size={64} />
           <div className="flex flex-col gap-1">
-            <Titulo className="!text-[24px]">Antes de entrar</Titulo>
-            <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>
+            <Titulo className="!text-[20px]">Antes de entrar</Titulo>
+            <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
               Leé cómo cuidamos tu plata y tus datos, y aceptá para seguir.
             </p>
           </div>
@@ -50,7 +50,7 @@ export function TerminosGate() {
               className="v2-focus mt-0.5 w-6 h-6 shrink-0 rounded"
               style={{ accentColor: COLORS.brand }}
             />
-            <span className="text-[15px] font-medium leading-snug" style={{ color: COLORS.ink }}>
+            <span className="text-[14px] font-medium leading-snug" style={{ color: COLORS.ink }}>
               Leí y acepto los términos y condiciones y la política de privacidad.
             </span>
           </label>
