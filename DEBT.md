@@ -24,7 +24,6 @@ Lo que hace que los datos sean confiables y que la app ayude a mejorar la situac
 
 | Id | Prioridad | Qué | Estado |
 | --- | --- | --- | --- |
-| D1 | alta | Guardados a medias: `registrarGasto`, `editarGasto`, `crearObjetivo`, `sumarContribucion` y `sumarAporte` no deshacen el cambio en pantalla si falla; un gasto insertado con `mover_saldo` fallido no se revierte. La persona ve un número que la base no tiene. | pendiente |
 | I7 | alta | Inicio, objetivos: hoy sólo hay un anillo en el carrusel. Recordar que guardes, mostrar qué acción te acerca y avisar plazos (quedan 3 meses y no juntaste nada). No existe ningún aviso de plazo, ni en la app ni en `api/notificaciones.ts`. | a definir |
 | O1 | alta | Objetivos: la pantalla no dice nada. Volver a traer próximos pasos y formas de llegar antes; la lógica vieja está en `utils/goalStrategies.ts` y se puede reusar. | a definir |
 | I1 | alta | Inicio, paso del día: hoy sale de una lista fija de 10 pasos (`api/v2/pasos.ts`) que rota por día; la IA sólo elige entre esos. Que se basen en la situación de la persona, que varíen y que mejoren con el tiempo. | a definir |
@@ -32,6 +31,7 @@ Lo que hace que los datos sean confiables y que la app ayude a mejorar la situac
 | GA2 | media | Gastos: sacar el gráfico de dinero disponible y los medios de pago. Antes hay que decidir de dónde sale el disponible si se van los medios. | a definir |
 | R1 | media | Retención: si la persona no tiene nada para hacer, la app no le da nada. Mantener la racha, mejorar las tareas y pensar un juego o actividad para quien quiera quedarse. | a definir |
 | I12 | media | La reserva (alcancía) sólo vivía en Inicio y se guarda sólo en el navegador, no en Supabase. Al sacar Tu plata guardada (I8) dejó de verse en toda la app. Decidir si vuelve, dónde, y guardarla en la base. | a definir |
+| D3 | media | Que cada movimiento de plata sea una sola transacción en la base. Hoy, si falla el saldo, se deshace paso a paso (D1), pero un corte justo mientras se deshace puede dejar algo suelto. Una función SQL por acción (registrar, editar y borrar gasto o ingreso) lo resuelve y necesita migración. Mientras tanto `editarIngreso` y `borrarGasto` no tienen la vuelta atrás de D1, y al deshacer una edición no se recupera la cotización anterior. | pendiente |
 | D2 | baja | Una sección nueva queda con slug vacío en pantalla hasta recargar (`crearSeccion`). | pendiente |
 
 ## 3. Diseño
@@ -41,10 +41,9 @@ Jerarquía, cantidad de texto y detalles visuales.
 | Id | Prioridad | Qué | Estado |
 | --- | --- | --- | --- |
 | G1 | alta | Más jerarquía visual: que cada pantalla lleve la vista a un lugar puntual. Menos letra chica. | a definir |
-| G2 | alta | Quitar los subtítulos que explican lo que el título debería decir. Inicio ya está; faltan Gastos, Objetivos, Inversiones y Perfil. | en curso |
+| G2 | alta | Quitar los subtítulos que explican lo que el título debería decir. Inicio y la cabecera de Perfil ya están; faltan Gastos, Objetivos, Inversiones y el resto de Perfil. | en curso |
 | GA1 | media | Gastos: mucha letra chica. Mostrar menos y usar Ver todos al estilo Mercado Pago (las secciones expandidas no tienen límite). | a definir |
 | L3 | media | Tres paletas que no coinciden: `frontend.md`, `tokens.css` y `COLORS` en `onboarding-v2/shared.tsx`. Decidir una con diseño. | a definir |
-| P1 | baja | Perfil: el nombre está siempre en modo edición. Mostrarlo como texto con un botón Editar. | pendiente |
 | IN1 | baja | Inversiones: tiene potencial. Bajar la letra chica. | a definir |
 
 ## 4. Limpieza y documentación
@@ -77,3 +76,5 @@ No cambian lo que ve la persona, pero bajan el riesgo de romper algo al tocar el
 | I9 | Diseño | Inicio: se sacó Mis competencias. | Inicio: más limpio |
 | I10 | Funcionalidad | Inicio: la recomendación ya no se tacha; es un mensaje debajo de los gráficos. | Inicio: más limpio |
 | I11 | Diseño | Inicio: Sumá FINA a tu pantalla de inicio (y el aviso de vencimientos) sin bajada. En el onboarding la explicación queda. | Inicio: más limpio |
+| D1 | Funcionalidad | Guardados a medias. En la base: si se guarda un gasto o ingreso pero falla el saldo, se borra la fila y se devuelven los saldos ya movidos; si falla el saldo de una edición de gasto, la fila vuelve a como estaba. En pantalla: registrar y editar gasto, crear objetivo, sumar un registro a un objetivo y sumar o editar un aporte vuelven atrás si la base no lo guardó. Lo que falta está en D3. | D1 y P1 |
+| P1 | Diseño | Perfil: el nombre se ve como texto con un botón Editar; el campo aparece al tocarlo, con Guardar y Cancelar (también Enter y Esc). Sin nombre guardado arranca editando. Sale el subtítulo de la cabecera. | D1 y P1 |

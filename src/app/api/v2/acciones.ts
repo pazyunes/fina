@@ -372,6 +372,20 @@ function ajustarMedio(medios: MedioPago[], nombre: string, delta: number, usadoE
   return medios.map((m) => (m.nombre === nombre ? { ...m, saldo: m.saldo + delta, ...(usadoEn ? { usadoEn } : {}) } : m));
 }
 
+/**
+ * Deshace en pantalla lo que `ajustarMedio` aplicó, cuando la base no lo
+ * guardó. Se resta sobre el estado de AHORA (no se vuelve a una foto vieja,
+ * que pisaría lo que haya pasado mientras tanto), y un medio que esta misma
+ * acción había creado se saca.
+ */
+function deshacerMedios(ajustes: { medio: string; delta: number }[], mediosAntes: MedioPago[]) {
+  let medios = leerEstado().mediosPago;
+  for (const a of ajustes) medios = ajustarMedio(medios, a.medio, -a.delta);
+  const existian = new Set(mediosAntes.map((m) => m.nombre));
+  medios = medios.filter((m) => existian.has(m.nombre) || ajustes.every((a) => a.medio !== m.nombre));
+  parchearEstado({ mediosPago: medios });
+}
+
 // ── Gastos ───────────────────────────────────────────────────────────────
 export async function registrarGasto(g: {
   monto: number; moneda: MonedaConvertible; descripcion: string;
@@ -409,19 +423,22 @@ export async function registrarGasto(g: {
   const est = leerEstado();
   // El gasto descuenta del medio (o los medios) con que se pagó. Es lo que
   // hace que "¿de dónde salió?" tenga respuesta.
+  const ajustes = dividido
+    ? g.pagos!.map((p) => ({ medio: p.medio, delta: -p.monto }))
+    : g.metodoPago ? [{ medio: g.metodoPago, delta: -montoArs }] : [];
   let mediosPago = est.mediosPago;
   const ahora = new Date().toISOString();
-  if (dividido) {
-    for (const p of g.pagos!) mediosPago = ajustarMedio(mediosPago, p.medio, -p.monto, ahora);
-  } else if (g.metodoPago) {
-    mediosPago = ajustarMedio(mediosPago, g.metodoPago, -montoArs, ahora);
-  }
+  for (const a of ajustes) mediosPago = ajustarMedio(mediosPago, a.medio, a.delta, ahora);
 
   parchearEstado({ gastos: [gasto, ...est.gastos], mediosPago });
   const { confirmacion, ...datos } = g;
   push(() => api.registrarGasto({
     ...datos, tipoOtro, id: gasto.id, montoArs, cotizacionId: conv.cotizacionId,
-  }), confirmacion ?? 'Gasto registrado con éxito.');
+  }), confirmacion ?? 'Gasto registrado con éxito.', () => {
+    // La base no lo tiene: que la pantalla tampoco.
+    parchearEstado({ gastos: leerEstado().gastos.filter((x) => x.id !== gasto.id) });
+    deshacerMedios(ajustes, est.mediosPago);
+  });
 
   // Registrar es la actividad con la que se compite en el grupo: se puntúa
   // haber anotado el gasto, nunca el monto.
@@ -475,9 +492,15 @@ export async function editarGasto(id: string, cambios: {
     : pagosViejos.length === 1 ? [{ ...pagosViejos[0], monto: montoArs }] : pagosViejos;
 
   // Devolver lo viejo, descontar lo nuevo — un ajuste por medio.
+  const pagoOMontoCambio = pagoTocado || cambioMontoOMoneda;
+  const ajustes = pagoOMontoCambio
+    ? [
+      ...pagosViejos.map((p) => ({ medio: p.medio, delta: p.monto })),
+      ...pagosNuevos.map((p) => ({ medio: p.medio, delta: -p.monto })),
+    ]
+    : [];
   let mediosPago = est.mediosPago;
-  for (const p of pagosViejos) mediosPago = ajustarMedio(mediosPago, p.medio, p.monto);
-  for (const p of pagosNuevos) mediosPago = ajustarMedio(mediosPago, p.medio, -p.monto);
+  for (const a of ajustes) mediosPago = ajustarMedio(mediosPago, a.medio, a.delta);
 
   const tipoFinal = cambios.tipo ?? actual.tipo;
   const tipoOtroFinal = tipoFinal === 'otro'
@@ -514,12 +537,9 @@ export async function editarGasto(id: string, cambios: {
   // Un `mover_saldo` atómico por medio afectado — ver el comentario en
   // `index.ts`: esto es lo que faltaba para que editar (no sólo crear o
   // borrar) de verdad mueva el saldo en la base, no sólo en la pantalla.
-  const ajustesSaldo = (pagoTocado || cambioMontoOMoneda)
-    ? [
-      ...pagosViejos.map((p) => ({ medio: p.medio, delta: p.monto })),
-      ...pagosNuevos.map((p) => ({ medio: p.medio, delta: -p.monto })),
-    ]
-    : undefined;
+  const ajustesSaldo = pagoOMontoCambio ? ajustes : undefined;
+  const tocaTipoOtro = !!(tipoOtroFinal || actual.tipoOtro);
+  const tocaPagos = pagoTocado && !!(pagosFinal || actual.pagos?.length);
 
   push(() => api.editarGasto(id, {
     monto: cambioMontoOMoneda ? nuevoMontoOriginal : undefined,
@@ -531,12 +551,29 @@ export async function editarGasto(id: string, cambios: {
     tipo: cambios.tipo,
     // Sólo se toca la columna nueva si hay algo que guardar o algo viejo que
     // borrar: un edit común no depende de que la migración 0036 esté aplicada.
-    tipoOtro: (tipoOtroFinal || actual.tipoOtro) ? (tipoOtroFinal ?? null) : undefined,
+    tipoOtro: tocaTipoOtro ? (tipoOtroFinal ?? null) : undefined,
     metodoPago: pagoTocado ? metodoPagoFinal : undefined,
-    pagos: pagoTocado && (pagosFinal || actual.pagos?.length) ? (pagosFinal ?? null) : undefined,
+    pagos: tocaPagos ? (pagosFinal ?? null) : undefined,
     ts: cambios.ts,
     ajustesSaldo,
-  }), 'Gasto editado con éxito.');
+  }, {
+    // Cómo estaba, con las mismas columnas: si falla el saldo, la base vuelve
+    // la fila a esto. La cotización vieja no se conoce acá, así que no se toca.
+    monto: cambioMontoOMoneda ? actual.monto : undefined,
+    moneda: cambios.moneda !== undefined ? actual.moneda : undefined,
+    montoArs: cambioMontoOMoneda ? actual.montoArs : undefined,
+    descripcion: cambios.descripcion !== undefined ? actual.descripcion : undefined,
+    seccionId: cambios.seccionId !== undefined ? actual.seccionId : undefined,
+    tipo: cambios.tipo !== undefined ? actual.tipo : undefined,
+    tipoOtro: tocaTipoOtro ? (actual.tipoOtro ?? null) : undefined,
+    metodoPago: pagoTocado ? actual.metodoPago : undefined,
+    pagos: tocaPagos ? (actual.pagos?.length ? actual.pagos : null) : undefined,
+    ts: cambios.ts !== undefined ? actual.ts : undefined,
+  }), 'Gasto editado con éxito.', () => {
+    // La base quedó como antes: la pantalla también.
+    parchearEstado({ gastos: leerEstado().gastos.map((x) => (x.id === id ? actual : x)).sort((a, b) => b.ts - a.ts) });
+    deshacerMedios(ajustes, est.mediosPago);
+  });
 
   return { error: null };
 }
@@ -587,7 +624,9 @@ export function crearObjetivo(o: {
     contribuciones: [],
   };
   parchearEstado({ objetivos: [...leerEstado().objetivos, objetivo] });
-  push(() => api.crearObjetivo({ ...o, id: objetivo.id }), 'Objetivo creado con éxito.');
+  push(() => api.crearObjetivo({ ...o, id: objetivo.id }), 'Objetivo creado con éxito.', () => {
+    parchearEstado({ objetivos: leerEstado().objetivos.filter((x) => x.id !== objetivo.id) });
+  });
   return objetivo;
 }
 
@@ -628,7 +667,11 @@ export async function sumarContribucion(objetivoId: string, c: {
   });
   push(() => api.sumarContribucion(objetivoId, {
     ...c, id: contrib.id, montoArs: conv.montoArs, cotizacionId: conv.cotizacionId,
-  }), 'Registro sumado con éxito.');
+  }), 'Registro sumado con éxito.', () => parchearEstado({
+    objetivos: leerEstado().objetivos.map((x) => (x.id === objetivoId
+      ? { ...x, contribuciones: x.contribuciones.filter((k) => k.id !== contrib.id) }
+      : x)),
+  }));
   return { contribucion: contrib, error: null };
 }
 
@@ -665,7 +708,9 @@ export async function sumarAporte(a: {
   parchearEstado({ aportes: [aporte, ...leerEstado().aportes] });
   push(() => api.sumarAporte({
     ...a, id: aporte.id, montoArs: conv.montoArs ?? 0, cotizacionId: conv.cotizacionId,
-  }), 'Aporte registrado con éxito.');
+  }), 'Aporte registrado con éxito.', () => {
+    parchearEstado({ aportes: leerEstado().aportes.filter((x) => x.id !== aporte.id) });
+  });
   return { aporte, error: null };
 }
 
@@ -707,7 +752,9 @@ export async function editarAporte(id: string, c: {
     moneda: cambioMonto ? moneda : undefined,
     montoArs: cambioMonto ? montoArs : undefined,
     cotizacionId,
-  }), 'Cambios guardados con éxito.');
+  }), 'Cambios guardados con éxito.', () => {
+    parchearEstado({ aportes: leerEstado().aportes.map((x) => (x.id === id ? actual : x)) });
+  });
   return { error: null };
 }
 

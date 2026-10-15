@@ -387,17 +387,37 @@ export async function registrarGasto(g: {
   // El gasto descuenta del medio (o los medios) con que se pagó, y de paso
   // cada uno queda como el más reciente (lo hace `mover_saldo`), así la
   // próxima vez se ofrece primero. Si un medio no existía, lo crea con saldo
-  // negativo — que es la verdad: gastaste con algo que nunca cargaste.
-  if (dividido) {
-    for (const p of g.pagos!) {
-      const saldo = await moverSaldo(p.medio, -p.monto);
-      if (saldo.error !== null) return falla<Gasto>(saldo.error, 'registrarGasto/saldo');
-    }
-  } else if (g.metodoPago) {
-    const saldo = await moverSaldo(g.metodoPago, -g.montoArs);
-    if (saldo.error !== null) return falla<Gasto>(saldo.error, 'registrarGasto/saldo');
+  // negativo: es la verdad, gastaste con algo que nunca cargaste.
+  const movimientos = dividido
+    ? g.pagos!.map((p) => ({ medio: p.medio, delta: -p.monto }))
+    : g.metodoPago ? [{ medio: g.metodoPago, delta: -g.montoArs }] : [];
+  const saldo = await moverSaldos(movimientos);
+  if (saldo.error !== null) {
+    // Sin el descuento, el gasto quedaría registrado sin haber salido de
+    // ningún lado: se borra, así la base queda como antes de intentarlo.
+    await borrarFila('transactions', r.data[0].id, 'registrarGasto/deshacer');
+    return falla<Gasto>(saldo.error, 'registrarGasto/saldo');
   }
   return ok(aGasto(r.data[0]));
+}
+
+/**
+ * Aplica varios `mover_saldo` en orden. Si uno falla, devuelve los que ya se
+ * habían aplicado: o se mueven todos, o ninguno. No es una transacción de la
+ * base (eso pide una función SQL, ver DEBT D3), pero cubre el caso común de que
+ * falle la red a mitad.
+ */
+async function moverSaldos(movimientos: { medio: string; delta: number }[]): Promise<Resultado<null>> {
+  const hechos: { medio: string; delta: number }[] = [];
+  for (const m of movimientos) {
+    const r = await moverSaldo(m.medio, m.delta);
+    if (r.error !== null) {
+      for (const h of hechos.reverse()) await moverSaldo(h.medio, -h.delta);
+      return falla<null>(r.error, 'moverSaldos');
+    }
+    hechos.push(m);
+  }
+  return ok(null);
 }
 
 export async function editarGasto(id: string, g: {
@@ -411,7 +431,40 @@ export async function editarGasto(id: string, g: {
   // estado anterior. Positivo = se le devuelve plata (se le sacó el gasto o
   // bajó); negativo = se le descuenta más.
   ajustesSaldo?: { medio: string; delta: number }[];
-}): Promise<Resultado<null>> {
+}, antes?: CambiosGasto): Promise<Resultado<null>> {
+  const fila = filaDeGasto(g);
+  const actualizar = (f: Record<string, unknown>, contexto: string) => correr<null>(contexto, () =>
+    supabase.from('transactions').update(f).eq('id', id).then(({ error }) => ({ data: null, error })),
+  );
+
+  if (Object.keys(fila).length > 0) {
+    const r = await actualizar(fila, 'editarGasto');
+    if (r.error !== null) return r;
+  }
+
+  // Antes esto faltaba: el monto o el medio cambiaban en pantalla pero el
+  // saldo real en la base quedaba igual (mismo bug que describe 0025, acá
+  // vía "editar" en vez de "crear"). Se arregla igual: un `mover_saldo`
+  // atómico por cada medio afectado, nunca un update directo del saldo.
+  const saldo = await moverSaldos(g.ajustesSaldo ?? []);
+  if (saldo.error !== null) {
+    // Los saldos ya volvieron (moverSaldos); la fila se deja como estaba, si
+    // se sabe cómo estaba. Si no, quedaría con el monto nuevo y el saldo viejo.
+    if (antes && Object.keys(fila).length > 0) await actualizar(filaDeGasto(antes), 'editarGasto/deshacer');
+    return falla<null>(saldo.error, 'editarGasto/saldo');
+  }
+  return ok(null);
+}
+
+/** Los campos de un gasto que se pueden editar, con nombres de la app. */
+export type CambiosGasto = {
+  monto?: number; moneda?: MonedaConvertible; montoArs?: number; cotizacionId?: string | null;
+  descripcion?: string; seccionId?: string | null; tipo?: TipoGasto; tipoOtro?: string | null;
+  metodoPago?: string | null; pagos?: PagoMixto[] | null; ts?: number;
+};
+
+/** Pasa los cambios de un gasto a columnas de `transactions`; lo que viene undefined no se toca. */
+function filaDeGasto(g: CambiosGasto): Record<string, unknown> {
   const fila: Record<string, unknown> = {};
   if (g.montoArs !== undefined) fila.amount_ars = g.montoArs;
   if (g.moneda !== undefined) fila.currency = g.moneda;
@@ -424,25 +477,7 @@ export async function editarGasto(id: string, g: {
   if (g.metodoPago !== undefined) fila.payment_method = g.metodoPago;
   if (g.pagos !== undefined) fila.payment_methods = g.pagos?.length ? g.pagos : null;
   if (g.ts !== undefined) fila.occurred_at = new Date(g.ts).toISOString();
-
-  if (Object.keys(fila).length > 0) {
-    const r = await correr<null>('editarGasto', () =>
-      supabase.from('transactions').update(fila).eq('id', id).then(({ error }) => ({ data: null, error })),
-    );
-    if (r.error !== null) return r;
-  }
-
-  // Antes esto faltaba: el monto o el medio cambiaban en pantalla pero el
-  // saldo real en la base quedaba igual (mismo bug que describe 0025, acá
-  // vía "editar" en vez de "crear"). Se arregla igual: un `mover_saldo`
-  // atómico por cada medio afectado, nunca un update directo del saldo.
-  if (g.ajustesSaldo?.length) {
-    for (const { medio, delta } of g.ajustesSaldo) {
-      const saldo = await moverSaldo(medio, delta);
-      if (saldo.error !== null) return falla<null>(saldo.error, 'editarGasto/saldo');
-    }
-  }
-  return ok(null);
+  return fila;
 }
 
 // ── Gastos fijos ─────────────────────────────────────────────────────────
@@ -571,7 +606,13 @@ export async function registrarIngreso(i: {
   );
   if (w.error !== null) return w;
   // Entró plata en ese medio: su saldo sube. Mismo `mover_saldo` que los gastos.
-  return moverSaldo(i.medio, i.montoArs);
+  const saldo = await moverSaldo(i.medio, i.montoArs);
+  if (saldo.error !== null) {
+    // Igual que con un gasto: sin el saldo, el ingreso no queda registrado.
+    if (i.id) await borrarFila('transactions', i.id, 'registrarIngreso/deshacer');
+    return falla<null>(saldo.error, 'registrarIngreso/saldo');
+  }
+  return ok(null);
 }
 
 /**
