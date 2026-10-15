@@ -574,6 +574,45 @@ export async function registrarIngreso(i: {
   return moverSaldo(i.medio, i.montoArs);
 }
 
+/**
+ * Edita un ingreso. Cambiar el monto o el medio mueve plata: el medio viejo
+ * pierde lo que había recibido y el nuevo lo recibe. `acciones.ts` calcula esos
+ * ajustes (acá no se lee el estado anterior) y se aplican con `mover_saldo`,
+ * igual que al editar un gasto.
+ */
+export async function editarIngreso(id: string, g: {
+  monto?: number; moneda?: MonedaConvertible; montoArs?: number; cotizacionId?: string | null;
+  fuente?: FuenteIngreso | null;
+  // `null` = borrar lo escrito antes; `undefined` = no tocar la columna (así un
+  // edit común no depende de la migración 0036).
+  fuenteOtra?: string | null;
+  descripcion?: string; medio?: string; ts?: number;
+  ajustesSaldo?: { medio: string; delta: number }[];
+}): Promise<Resultado<null>> {
+  const fila: Record<string, unknown> = {};
+  if (g.montoArs !== undefined) fila.amount_ars = g.montoArs;
+  if (g.moneda !== undefined) fila.currency = g.moneda;
+  if (g.monto !== undefined && g.moneda !== undefined) fila.original_amount = g.moneda === 'USD' ? g.monto : null;
+  if (g.cotizacionId !== undefined) fila.exchange_rate_id = g.cotizacionId;
+  if (g.descripcion !== undefined) fila.description = g.descripcion || null;
+  if (g.medio !== undefined) fila.payment_method = g.medio;
+  if (g.fuente !== undefined) fila.income_source = g.fuente;
+  if (g.fuenteOtra !== undefined) fila.income_source_other = g.fuenteOtra;
+  if (g.ts !== undefined) fila.occurred_at = new Date(g.ts).toISOString();
+
+  if (Object.keys(fila).length > 0) {
+    const r = await correr<null>('editarIngreso', () =>
+      supabase.from('transactions').update(fila).eq('id', id).eq('type', 'income').then(({ error }) => ({ data: null, error })),
+    );
+    if (r.error !== null) return r;
+  }
+  for (const { medio, delta } of g.ajustesSaldo ?? []) {
+    const saldo = await moverSaldo(medio, delta);
+    if (saldo.error !== null) return falla<null>(saldo.error, 'editarIngreso/saldo');
+  }
+  return ok(null);
+}
+
 /** Borra un ingreso y le saca esa plata al medio en el que había entrado. */
 export async function borrarIngreso(id: string): Promise<Resultado<null>> {
   const previo = await correr<{ amount_ars: number; payment_method: string | null } | null>('borrarIngreso/leer', () =>

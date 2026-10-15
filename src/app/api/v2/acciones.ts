@@ -247,6 +247,81 @@ export async function registrarIngreso(i: {
   return { ingreso, error: null };
 }
 
+/**
+ * Edita un ingreso. Igual que `editarGasto`: se devuelve el efecto en el medio
+ * viejo y se aplica el nuevo, y sólo se vuelve a pedir la cotización si de
+ * verdad cambió el monto o la moneda.
+ */
+export async function editarIngreso(id: string, c: {
+  monto?: number; moneda?: MonedaConvertible; fuente?: FuenteIngreso | null; fuenteOtra?: string;
+  descripcion?: string; medio?: string; ts?: number;
+}): Promise<{ error: string | null }> {
+  const est = leerEstado();
+  const actual = est.ingresos.find((x) => x.id === id);
+  if (!actual) return { error: 'No encontramos ese ingreso.' };
+
+  const moneda = c.moneda ?? actual.moneda;
+  const monto = c.monto ?? actual.monto;
+  const cambioMonto = c.monto !== undefined || c.moneda !== undefined;
+  let montoArs = actual.montoArs;
+  let cotizacionId: string | null = null;
+  if (cambioMonto) {
+    const conv = await aPesos(monto, moneda);
+    if (conv.error !== null) return { error: conv.error };
+    montoArs = conv.montoArs ?? 0;
+    cotizacionId = conv.cotizacionId;
+  }
+
+  const medioNuevo = c.medio !== undefined ? (c.medio.trim() || 'Efectivo') : undefined;
+  const medio = medioNuevo ?? actual.medio;
+  const fuente = c.fuente !== undefined ? c.fuente : actual.fuente;
+  const fuenteOtra = fuente === 'otro'
+    ? (c.fuenteOtra !== undefined ? c.fuenteOtra.trim().slice(0, 40) || undefined : actual.fuenteOtra)
+    : undefined;
+  const ingreso: Ingreso = {
+    ...actual, monto, moneda, montoArs, fuente, fuenteOtra,
+    descripcion: c.descripcion !== undefined ? c.descripcion.trim() : actual.descripcion,
+    medio, ts: c.ts ?? actual.ts,
+  };
+
+  // Devolver lo viejo, aplicar lo nuevo — un ajuste por medio.
+  const cambioSaldo = cambioMonto || c.medio !== undefined;
+  const ajustesSaldo = cambioSaldo
+    ? [
+      ...(actual.medio ? [{ medio: actual.medio, delta: -actual.montoArs }] : []),
+      ...(medio ? [{ medio, delta: montoArs }] : []),
+    ]
+    : undefined;
+  let mediosPago = est.mediosPago;
+  const ahora = new Date().toISOString();
+  for (const { medio: m, delta } of ajustesSaldo ?? []) {
+    mediosPago = mediosPago.some((x) => x.nombre === m)
+      ? mediosPago.map((x) => (x.nombre === m ? { ...x, saldo: x.saldo + delta } : x))
+      : [{ id: nuevoId(), nombre: m, saldo: delta, usadoEn: ahora }, ...mediosPago];
+  }
+
+  parchearEstado({
+    ingresos: est.ingresos.map((x) => (x.id === id ? ingreso : x)).sort((a, b) => b.ts - a.ts),
+    mediosPago,
+  });
+  push(() => api.editarIngreso(id, {
+    monto: cambioMonto ? monto : undefined,
+    moneda: cambioMonto ? moneda : undefined,
+    montoArs: cambioMonto ? montoArs : undefined,
+    cotizacionId: cambioMonto ? cotizacionId : undefined,
+    fuente: c.fuente,
+    // Sólo se toca la columna nueva si hay algo que guardar o algo viejo que
+    // borrar.
+    fuenteOtra: (fuenteOtra || actual.fuenteOtra) ? (fuenteOtra ?? null) : undefined,
+    descripcion: c.descripcion !== undefined ? ingreso.descripcion : undefined,
+    medio: medioNuevo,
+    ts: c.ts,
+    ajustesSaldo,
+  }), 'Ingreso editado con éxito.', () => parchearEstado({ ingresos: est.ingresos, mediosPago: est.mediosPago }));
+
+  return { error: null };
+}
+
 export function borrarIngreso(id: string) {
   const est = leerEstado();
   const ingreso = est.ingresos.find((x) => x.id === id);

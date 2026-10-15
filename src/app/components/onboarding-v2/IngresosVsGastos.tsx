@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { COLORS, FONTS, fmtMoney } from './shared';
-import { IconBasura } from './FinaIcons';
+import { IconBasura, IconEditar } from './FinaIcons';
+import { EditorIngreso } from './EditorIngreso';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { diaArgentina } from '../../api/v2/pasos';
@@ -310,6 +311,8 @@ function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingr
   const fuente = i.fuente === 'otro' && i.fuenteOtra ? i.fuenteOtra : FUENTES_INGRESO.find((f) => f.id === i.fuente)?.label;
   const titulo = i.descripcion || fuente || 'Ingreso';
   const monto = i.moneda === 'USD' ? `US$${i.monto.toLocaleString('es-AR')}` : fmtMoney(i.monto);
+  // El lapicito abre el editor debajo del renglón, igual que en los gastos.
+  const [editando, setEditando] = useState(false);
   return (
     <div className="py-2.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
       <div className="flex items-center gap-2.5">
@@ -323,7 +326,17 @@ function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingr
         <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>+{monto}</span>
         <button
           type="button"
-          onClick={onAbrir}
+          onClick={() => { setEditando((v) => !v); onCerrar(); }}
+          aria-label={`Editar ingreso ${titulo}`}
+          aria-expanded={editando}
+          className="v2-focus w-11 h-11 -my-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+          style={{ color: editando ? COLORS.ink : COLORS.inkFaint }}
+        >
+          <IconEditar size={18} />
+        </button>
+        <button
+          type="button"
+          onClick={() => { setEditando(false); onAbrir(); }}
           aria-label={`Borrar ingreso ${titulo}`}
           aria-expanded={abierto}
           className="v2-focus w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center shrink-0"
@@ -332,6 +345,7 @@ function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingr
           <IconBasura size={18} />
         </button>
       </div>
+      {editando && <EditorIngreso ingreso={i} onCerrar={() => setEditando(false)} />}
       {abierto && (
         <div className="mt-2 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
           <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>

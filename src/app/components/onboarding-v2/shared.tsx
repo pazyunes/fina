@@ -169,6 +169,19 @@ export function parseMoneyInput(v: string): number {
   const n = Number(`${entero || '0'}${dec ? `.${dec}` : ''}`);
   return Number.isFinite(n) ? n : 0;
 }
+// Fecha y hora de un movimiento — se puede elegir cuando no es "ahora" (ej:
+// cargás a la noche un gasto de la mañana). `datetime-local` no lleva zona
+// horaria: se interpreta en la del dispositivo, que es la que la persona tiene
+// en la cabeza al elegirla.
+export function aInputFechaHora(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+export function deInputFechaHora(v: string): number {
+  const t = new Date(v).getTime();
+  return Number.isNaN(t) ? Date.now() : t;
+}
 export function formatThousands(v: string): string {
   const i = v.indexOf(',');
   const enteroRaw = i === -1 ? v : v.slice(0, i);

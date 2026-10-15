@@ -19,7 +19,8 @@
 -- Si `destino` no existe todavía, la función lo crea: unir "MP" con un nombre
 -- nuevo sirve también para renombrar.
 --
--- ADITIVA: sólo una función. Correr después de 0037.
+-- ADITIVA: sólo una función. Se puede volver a correr (create or replace).
+-- Correr después de 0037.
 -- ─────────────────────────────────────────────────────────────────────────
 
 create or replace function unir_medios(origen text, destino text)
@@ -59,21 +60,36 @@ begin
 
   update transactions set payment_method = d where user_id = uid and payment_method = o;
 
-  update transactions t
-     set payment_methods = (
-       select jsonb_agg(
-         case when e->>'medio' = o then jsonb_set(e, '{medio}', to_jsonb(d)) else e end
-         order by n
-       )
-       from jsonb_array_elements(t.payment_methods) with ordinality as x(e, n)
-     )
-   where t.user_id = uid
-     and t.payment_methods is not null
-     and exists (select 1 from jsonb_array_elements(t.payment_methods) e where e->>'medio' = o);
+  -- Lo opcional se toca sólo si existe en ESTA base: los pagos divididos son de
+  -- la migración 0035, los gastos fijos de la 0034 y las cargas de la 0037, y
+  -- una base a la que le falte alguna no tiene que impedir que se unan los
+  -- medios (la función falló justamente por eso con la 0034 sin correr).
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'transactions' and column_name = 'payment_methods'
+  ) then
+    execute $q$
+      update transactions t
+         set payment_methods = (
+           select jsonb_agg(
+             case when e->>'medio' = $2 then jsonb_set(e, '{medio}', to_jsonb($3::text)) else e end
+             order by n
+           )
+           from jsonb_array_elements(t.payment_methods) with ordinality as x(e, n)
+         )
+       where t.user_id = $1
+         and t.payment_methods is not null
+         and exists (select 1 from jsonb_array_elements(t.payment_methods) e where e->>'medio' = $2)
+    $q$ using uid, o, d;
+  end if;
 
-  update recurring_expenses set payment_method = d where user_id = uid and payment_method = o;
+  if to_regclass('public.recurring_expenses') is not null then
+    execute 'update recurring_expenses set payment_method = $3 where user_id = $1 and payment_method = $2' using uid, o, d;
+  end if;
 
-  update balance_loads set medio = d where user_id = uid and medio = o;
+  if to_regclass('public.balance_loads') is not null then
+    execute 'update balance_loads set medio = $3 where user_id = $1 and medio = $2' using uid, o, d;
+  end if;
 end;
 $$;
 

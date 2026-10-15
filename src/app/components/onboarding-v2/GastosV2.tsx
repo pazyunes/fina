@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { llevarA, useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
@@ -52,19 +52,6 @@ function fmtGasto(g: { monto: number; moneda: Moneda }): string {
 }
 function fmtPagos(pagos: PagoMixto[]): string {
   return pagos.map((p) => `${p.medio} (${fmtMoney(p.monto)})`).join(' + ');
-}
-// Fecha y hora del gasto — se puede elegir cuando no es "ahora" (ej: cargás a
-// la noche un gasto de la mañana). `datetime-local` no lleva zona horaria: se
-// interpreta en la del dispositivo, que es la que la persona tiene en la
-// cabeza al elegirla.
-function aInputFechaHora(ts: number): string {
-  const d = new Date(ts);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-function deInputFechaHora(v: string): number {
-  const t = new Date(v).getTime();
-  return Number.isNaN(t) ? Date.now() : t;
 }
 // Una fila del editor de "pagado con varios medios". `medio === 'otro'` usa
 // `otro` en vez del nombre — mismo patrón que el desplegable de medio único.
