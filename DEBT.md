@@ -14,7 +14,8 @@ Cosas que el código ya soporta pero que tiene que hacer una persona con acceso.
 | --- | --- | --- |
 | M1 | Cargar `SUPABASE_SERVICE_ROLE_KEY` en Vercel (Production y Preview). Sin eso, cuando se corra 0039 la cotización del dólar deja de guardarse (se sigue mostrando, pero sin id). | pendiente |
 | M2 | Correr a mano en Supabase, en orden: `supabase/migrations/0039_seguridad.sql`, `0040_movimientos_atomicos.sql` y `0041_reserva.sql` (después de M1). La app funciona igual sin ellas: usa el camino viejo hasta que existan. Sin la 0041 no sale el aviso de plazo de objetivos. | pendiente |
-| M3 | Confirmar en Vercel que `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` están habilitadas para Preview. | pendiente |
+| M3 | Confirmar en Vercel que `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` están habilitadas para Preview. | hecho (All Environments) |
+| M4 | Subir `juaniBranch` a GitHub (`git push -u origin juaniBranch`) desde una terminal donde GitHub pida login; desde la sesión de Claude no se puede iniciar sesión. Después, cada push actualiza la preview. | pendiente |
 
 ## 1. Seguridad
 
@@ -90,3 +91,5 @@ Todo lo de seguridad conocido está resuelto en la migración 0039 (ver hechos);
 | L5 | Docs | El prompt de la IA pide la regla de Formato y `tono.ts` limpia guiones largos, comillas rizadas y emojis de lo generado. | Etapa 2 |
 | L6 | Limpieza | `goalStrategies.ts` reescrito para la v2 (lo usan Objetivos, Inicio y el aviso de plazo); se borró `types.ts` de la v1. | Etapa 2 |
 | F1 | Docs | Textos visibles sin guiones largos (onboarding, entrar, avisos). | Etapa 2 |
+| GA4 | Funcionalidad | Gastos, gráfico principal: un anillo con lo que te entró en el período repartido en secciones y, en lima, lo que te queda (el disponible, que se arma solo con lo que registrás). Sin entradas registradas, muestra sólo cómo se reparten tus gastos y ofrece sumar lo que te entró. | Gastos: anillo y medios |
+| GA5 | Diseño | Gastos: nuevo gráfico Con qué pagaste este mes (barras por medio, un gasto dividido suma a cada medio su parte), debajo, fuera del dato principal. | Gastos: anillo y medios |

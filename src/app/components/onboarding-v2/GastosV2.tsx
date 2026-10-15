@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { llevarA, useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
@@ -468,6 +468,37 @@ export function GastosV2() {
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
 
+  // ── Gráfico principal: de lo que entró, cuánto se fue en cada sección y
+  // cuánto te queda. "Lo que entró" es lo que sobró del mes anterior más lo
+  // registrado en el período (Me entró y Ya la tenía): el disponible se arma
+  // solo con lo que registrás, sin tener que actualizarlo a mano. Sin nada
+  // registrado como entrada, el anillo muestra sólo cómo se reparten los gastos
+  // entre secciones (no hace falta cargar el ingreso para usar Gastos).
+  const plataDelPeriodo = mediosVentana.reduce((t, m) => t + m.previo + m.entro, 0);
+  const conIngreso = plataDelPeriodo > 0;
+  const porSeccion = [
+    ...categorias.map((c) => ({ id: c.id, nombre: c.nombre, color: colorDe(c.id), monto: gastadoEn(c.id) })),
+    { id: '__sin', nombre: 'Sin sección', color: COLORS.lineStrong, monto: gastosVentana.filter((g) => !g.categoriaId).reduce((s, g) => s + g.montoArs, 0) },
+  ].filter((s) => s.monto > 0).sort((a, b) => b.monto - a.monto);
+  const baseAnillo = conIngreso ? Math.max(plataDelPeriodo, totalGastado) : totalGastado;
+  const segmentosAnillo = [
+    ...porSeccion.map((s) => ({ color: s.color, pct: baseAnillo > 0 ? (s.monto / baseAnillo) * 100 : 0 })),
+    ...(conIngreso && disponibleVentana > 0 ? [{ color: COLORS.lima, pct: (disponibleVentana / baseAnillo) * 100 }] : []),
+  ];
+  const gastasteDeMas = conIngreso && totalGastado > plataDelPeriodo ? totalGastado - plataDelPeriodo : 0;
+
+  // ── Con qué pagaste en el período: cada medio con lo que salió de él. Un
+  // gasto dividido suma a cada medio su parte. No es el dato principal: va abajo.
+  const porMedio = (() => {
+    const m = new Map<string, number>();
+    for (const g of gastosVentana) {
+      if (g.pagos?.length) for (const p of g.pagos) m.set(p.medio, (m.get(p.medio) ?? 0) + p.monto);
+      else m.set(g.metodoPago || 'Sin medio elegido', (m.get(g.metodoPago || 'Sin medio elegido') ?? 0) + g.montoArs);
+    }
+    return [...m.entries()].map(([nombre, monto]) => ({ nombre, monto })).filter((x) => x.monto > 0).sort((a, b) => b.monto - a.monto);
+  })();
+  const maxMedio = Math.max(1, ...porMedio.map((x) => x.monto));
+
   // El "otro" se abre por lo que la persona escribió (Salud, Mascota…): cada
   // texto es su propia fila, con el color de "otro". Los "otro" sin texto
   // siguen juntos bajo "Otro".
@@ -699,27 +730,87 @@ export function GastosV2() {
         <Titulo>Mis gastos</Titulo>
       </header>
 
-      {/* EL dato de la pantalla (§3.5): cuánta plata tenés disponible en el
-          período que se mira. Es la única tarjeta elevada y lo más grande de
-          todo; el resto baja de tamaño y de peso. Mismo cálculo que antes:
-          lo que sobró de antes, más lo cargado, menos lo gastado. */}
+      {/* EL dato de la pantalla (§3.5). Con lo que te entró registrado: de esa
+          plata, cuánto se fue en cada sección y cuánto te queda (el
+          disponible, en lima, que es el valor). Sin entradas registradas: sólo
+          cómo se reparten tus gastos. Es la única tarjeta elevada; los medios
+          de pago no van acá, van en su propio gráfico más abajo. */}
       <section
-        aria-label={`Dinero disponible, ${textoPeriodo}`}
-        className="rounded-2xl px-5 py-5 flex flex-col gap-1 lg:max-w-xl"
+        aria-label={conIngreso ? `Te queda, ${textoPeriodo}` : `Tus gastos, ${textoPeriodo}`}
+        className="rounded-2xl px-5 py-5 flex flex-col gap-4 lg:max-w-xl"
         style={CARD_ELEVADA}
       >
-        <p className="text-[15px] font-medium" style={{ color: COLORS.inkSoft }}>
-          {ventana === 'mes' && mesOffset === 0 ? 'Dinero disponible' : `Dinero disponible, ${textoPeriodo.toLowerCase()}`}
-        </p>
-        <span aria-live="polite">
-          <Monto value={disponibleVentana} size={40} className="font-bold leading-tight tracking-[-0.01em]" />
-        </span>
+        <div className="flex items-center gap-5">
+          <Donut
+            size={150}
+            segments={segmentosAnillo}
+            centerLabel={conIngreso ? 'Te queda' : 'Gastaste'}
+            centerValue={fmtMoney(conIngreso ? disponibleVentana : totalGastado)}
+          />
+          <div className="flex-1 min-w-0 flex flex-col gap-1" aria-live="polite">
+            <p className="text-[15px] font-medium" style={{ color: COLORS.inkSoft }}>
+              {conIngreso ? 'Te queda' : 'Gastaste'}{ventana === 'mes' && mesOffset === 0 ? ' este mes' : `, ${textoPeriodo.toLowerCase()}`}
+            </p>
+            <Monto value={conIngreso ? disponibleVentana : totalGastado} size={32} className="font-bold leading-tight tracking-[-0.01em]" />
+            {conIngreso && (
+              <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                De <span className="font-mono tabular-nums">{fmtMoney(plataDelPeriodo)}</span> que te entraron
+              </p>
+            )}
+            <EstadoConfianza estado="declarado" className="mt-1" />
+          </div>
+        </div>
+
+        {/* Leyenda: cada sección con su monto, y lo que queda. */}
+        {(porSeccion.length > 0 || conIngreso) && (
+          <ul className="flex flex-col gap-1.5">
+            {porSeccion.slice(0, 5).map((s) => (
+              <li key={s.id} className="flex items-center gap-2.5 text-[15px]">
+                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} aria-hidden />
+                <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{s.nombre}</span>
+                <Monto value={s.monto} className="text-[15px] font-semibold" />
+              </li>
+            ))}
+            {porSeccion.length > 5 && (
+              <li className="text-[14px] pl-[22px]" style={{ color: COLORS.inkSoft }}>
+                Y {porSeccion.length - 5} secciones más, abajo
+              </li>
+            )}
+            {conIngreso && (
+              <li className="flex items-center gap-2.5 text-[15px] font-semibold">
+                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
+                <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>Te queda</span>
+                <Monto value={disponibleVentana} className="text-[15px] font-semibold" />
+              </li>
+            )}
+          </ul>
+        )}
+
         {previoTotal > 0 && (
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
             Incluye <span className="font-mono tabular-nums">{fmtMoney(previoTotal)}</span> que sobró del mes anterior
           </p>
         )}
-        <EstadoConfianza estado="declarado" className="mt-1" />
+        {gastasteDeMas > 0 && (
+          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            Salieron <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró
+          </p>
+        )}
+        {!conIngreso && totalGastado > 0 && (
+          <button
+            type="button"
+            onClick={() => { setAddDispEsIngreso(true); setAddingDisponible(true); }}
+            className="v2-focus self-start min-h-[44px] text-[15px] font-semibold"
+            style={{ color: COLORS.brand }}
+          >
+            Sumá lo que te entró para ver cuánto te queda
+          </button>
+        )}
+        {!conIngreso && totalGastado === 0 && (
+          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto te queda.
+          </p>
+        )}
       </section>
 
       {/* "Gastado" sin período no se puede comparar con nada, y los topes son
@@ -1227,6 +1318,25 @@ export function GastosV2() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Con qué pagaste en el período. Una sola serie (cuánto salió de cada
+          medio), así que un solo color; el monto en tinta. */}
+      {porMedio.length > 0 && (
+        <section className="flex flex-col gap-2.5 lg:col-span-2" aria-label="Con qué pagaste">
+          <TituloSeccion>Con qué pagaste {ventana === 'mes' ? (mesOffset === 0 ? 'este mes' : `en ${textoPeriodo.toLowerCase()}`) : (semanaOffset === 0 ? 'esta semana' : 'esa semana')}</TituloSeccion>
+          {porMedio.map((x) => (
+            <div key={x.nombre} className="flex flex-col gap-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[15px] truncate" style={{ color: COLORS.ink }}>{x.nombre}</span>
+                <Monto value={x.monto} className="text-[15px] font-semibold shrink-0" />
+              </div>
+              <div className="h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.line }}>
+                <div className="h-full rounded-full" style={{ width: `${(x.monto / maxMedio) * 100}%`, background: COLORS.brand }} />
+              </div>
+            </div>
+          ))}
+        </section>
       )}
 
       {/* Popup: ¿Desde FINA o Desde WhatsApp? Scrim = velo de tinta translúcido. */}
