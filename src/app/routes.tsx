@@ -87,12 +87,12 @@ export const router = createBrowserRouter([
       { path: "/onboarding-v2/grupos", element: <GruposV2 /> },
     ],
   },
-  {
-    // PRUEBA (rama prueba/fini) — banco de pruebas del personaje. Fuera del
-    // V2Layout a propósito: no lleva menú, es una pantalla de taller.
-    path: "/onboarding-v2/fini",
-    element: <FiniPlayground />,
-  },
+  // Banco de pruebas del personaje, sólo en desarrollo (npm run dev). En
+  // producción y en las previews cae en "*" y va al inicio. Fuera del V2Layout
+  // a propósito: no lleva menú, es una pantalla de taller.
+  ...(import.meta.env.DEV
+    ? [{ path: "/onboarding-v2/fini", element: <FiniPlayground /> }]
+    : []),
   {
     // Pública: llega desde el link del mail de recuperación (sesión de recovery).
     path: "/reset-password",

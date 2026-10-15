@@ -3,7 +3,7 @@ import { cotizacionDolar } from './cotizacion';
 import * as api from './index';
 import { idUsuaria } from './cliente';
 import type {
-  AporteInversion, Carga, Contribucion, FuenteIngreso, Gasto, GastoFijo, Grupo, Ingreso, Moneda, MonedaConvertible,
+  AporteInversion, Carga, Contribucion, FuenteIngreso, Gasto, GastoFijo, Grupo, Ingreso, MedioPago, Moneda, MonedaConvertible,
   Objetivo, PagoMixto, Perfil, PerfilInversor, Periodo, Seccion, TipoGasto,
 } from './tipos';
 import { esConvertible } from './tipos';
@@ -359,6 +359,19 @@ async function aPesos(monto: number, moneda: Moneda): Promise<{ montoArs: number
   return { montoArs: Math.round(monto * cot.valor), cotizacionId: cot.id, error: null };
 }
 
+/**
+ * Suma `delta` al saldo de un medio en pantalla, y si el medio no existe lo
+ * crea con ese saldo. Es lo mismo que hace `mover_saldo` en la base: si acá
+ * sólo se actualizaran los que ya existen, un medio nuevo quedaba en la base
+ * (con saldo negativo, si era un gasto) y no aparecía hasta recargar.
+ */
+function ajustarMedio(medios: MedioPago[], nombre: string, delta: number, usadoEn?: string): MedioPago[] {
+  if (!medios.some((m) => m.nombre === nombre)) {
+    return [{ id: nuevoId(), nombre, saldo: delta, usadoEn: usadoEn ?? new Date().toISOString() }, ...medios];
+  }
+  return medios.map((m) => (m.nombre === nombre ? { ...m, saldo: m.saldo + delta, ...(usadoEn ? { usadoEn } : {}) } : m));
+}
+
 // ── Gastos ───────────────────────────────────────────────────────────────
 export async function registrarGasto(g: {
   monto: number; moneda: MonedaConvertible; descripcion: string;
@@ -399,11 +412,9 @@ export async function registrarGasto(g: {
   let mediosPago = est.mediosPago;
   const ahora = new Date().toISOString();
   if (dividido) {
-    for (const p of g.pagos!) {
-      mediosPago = mediosPago.map((m) => (m.nombre === p.medio ? { ...m, saldo: m.saldo - p.monto, usadoEn: ahora } : m));
-    }
+    for (const p of g.pagos!) mediosPago = ajustarMedio(mediosPago, p.medio, -p.monto, ahora);
   } else if (g.metodoPago) {
-    mediosPago = mediosPago.map((m) => (m.nombre === g.metodoPago ? { ...m, saldo: m.saldo - montoArs, usadoEn: ahora } : m));
+    mediosPago = ajustarMedio(mediosPago, g.metodoPago, -montoArs, ahora);
   }
 
   parchearEstado({ gastos: [gasto, ...est.gastos], mediosPago });
@@ -465,12 +476,8 @@ export async function editarGasto(id: string, cambios: {
 
   // Devolver lo viejo, descontar lo nuevo — un ajuste por medio.
   let mediosPago = est.mediosPago;
-  for (const p of pagosViejos) {
-    mediosPago = mediosPago.map((m) => (m.nombre === p.medio ? { ...m, saldo: m.saldo + p.monto } : m));
-  }
-  for (const p of pagosNuevos) {
-    mediosPago = mediosPago.map((m) => (m.nombre === p.medio ? { ...m, saldo: m.saldo - p.monto } : m));
-  }
+  for (const p of pagosViejos) mediosPago = ajustarMedio(mediosPago, p.medio, p.monto);
+  for (const p of pagosNuevos) mediosPago = ajustarMedio(mediosPago, p.medio, -p.monto);
 
   const tipoFinal = cambios.tipo ?? actual.tipo;
   const tipoOtroFinal = tipoFinal === 'otro'
@@ -662,16 +669,46 @@ export async function sumarAporte(a: {
   return { aporte, error: null };
 }
 
-export function editarAporte(id: string, parche: Partial<AporteInversion>) {
-  parchearEstado({
-    aportes: leerEstado().aportes.map((x) => (x.id === id ? { ...x, ...parche } : x)),
-  });
+/**
+ * Edita un aporte. Si cambia el monto o la moneda se vuelve a pasar a pesos
+ * igual que en `sumarAporte`, con la cotización de hoy y su id: sin dólar no
+ * se guarda, en vez de grabarlo en pesos sin avisar.
+ */
+export async function editarAporte(id: string, c: {
+  instrumento?: string; monto?: number; moneda?: MonedaConvertible;
+}): Promise<{ error: string | null }> {
+  const actual = leerEstado().aportes.find((x) => x.id === id);
+  if (!actual) return { error: 'No encontramos ese aporte.' };
+  const monto = c.monto ?? actual.monto;
+  const moneda = c.moneda ?? actual.moneda;
+  const cambioMonto = c.monto !== undefined || c.moneda !== undefined;
+
+  let montoArs = actual.montoArs;
+  let cotizacionId: string | null | undefined;
+  if (cambioMonto) {
+    const conv = await aPesos(monto, moneda);
+    if (conv.error !== null) return { error: conv.error };
+    montoArs = conv.montoArs ?? 0;
+    cotizacionId = conv.cotizacionId;
+  }
+
+  const aporte: AporteInversion = {
+    ...actual,
+    instrumento: c.instrumento ?? actual.instrumento,
+    monto,
+    moneda,
+    montoArs,
+    cotizacion: !cambioMonto ? actual.cotizacion : moneda === 'USD' && monto > 0 ? montoArs / monto : null,
+  };
+  parchearEstado({ aportes: leerEstado().aportes.map((x) => (x.id === id ? aporte : x)) });
   push(() => api.editarAporte(id, {
-    instrumento: parche.instrumento,
-    monto: parche.monto,
-    moneda: parche.moneda,
-    montoArs: parche.montoArs ?? undefined,
+    instrumento: c.instrumento,
+    monto: cambioMonto ? monto : undefined,
+    moneda: cambioMonto ? moneda : undefined,
+    montoArs: cambioMonto ? montoArs : undefined,
+    cotizacionId,
   }), 'Cambios guardados con éxito.');
+  return { error: null };
 }
 
 export function borrarAporte(id: string) {

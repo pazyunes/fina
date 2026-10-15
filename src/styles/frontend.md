@@ -188,6 +188,14 @@ Reglas duras:
 - Tres radios y no más: `--radius-sm` (6px, chips e inputs), `--radius-md` (14px, tarjetas),
   `--radius-full` (pill, botones y avatares).
 - **Un dato central por pantalla.** Jerarquía brutal: el total antes que el desglose.
+- **Cada pantalla tiene un objetivo, y la vista va ahí primero.** Antes de diseñar,
+  escribí en una línea qué tiene que entender o hacer la persona en esa pantalla. Ese
+  elemento es el más grande, el de más peso y el único con color de acento; todo lo demás
+  es secundario en tamaño, peso y color. Si dos cosas compiten por la mirada, una de las
+  dos baja o se va. El objetivo de fondo de toda la app: que la persona primero entienda
+  su situación financiera y después la mejore.
+- **Mostrar menos.** Una lista larga muestra los primeros ítems y un "Ver todos" (como
+  Mercado Pago), no todo de una. Letra chica sólo para lo que de verdad es secundario.
 - **Alterná contenedores.** El antídoto contra el card grid spam es no usar tarjetas para
   todo: listas finas separadas por hairline, bloques tintados en `--fina-hueco`, y tarjeta
   elevada **solo** para lo que de verdad tiene prioridad. Si en una pantalla hay más de
@@ -330,8 +338,20 @@ chico y aun así tiene que leerse como avance.**
   mes pasado` sí.
 - **Voz:** segunda del singular rioplatense (*vos, tenés, mirá, fijate*); primera del plural
   para la marca (*te mostramos, averiguamos por vos*).
-- **Emojis:** máximo uno por mensaje, nunca reemplazando una palabra, **nunca en un dato
-  duro**.
+- **Sin emojis** (ver §5.5).
+- **Sin subtítulos explicativos.** Un título se tiene que entender solo. Si necesita una
+  bajada en letra chica para explicar qué es ("Lo que te entró contra lo que gastaste"),
+  el problema es el título: se cambia el título y se borra la bajada. Tampoco se explica
+  lo que se sobreentiende (cómo se usa un botón, qué es un gráfico).
+
+### 5.5 Formato
+
+Aplica a todo texto: copy de la app, textos que genera la IA (el prompt de
+`api/_recomendaciones/prompt.ts` lo tiene que pedir), notificaciones, docs, commits.
+
+- No usar guiones largos, comillas rizadas, viñetas Unicode decorativas ni emojis.
+- No usar subtítulos, encabezados intermedios ni etiquetas de sección salvo que se pidan
+  explícitamente. Texto continuo, directo y sin divisiones artificiales.
 
 ---
 
@@ -528,6 +548,9 @@ diseño antes de que se vuelvan caras de cambiar.
 - [ ] Cero hex sueltos: todo por tokens.
 - [ ] Los gastos se muestran neutrales, no en color de alerta.
 - [ ] El copy no reta, no ordena y no felicita sin dato.
+- [ ] Se sabe cuál es el objetivo de la pantalla y la vista va ahí primero.
+- [ ] Ningún título necesita un subtítulo que lo explique.
+- [ ] Sin guiones largos, comillas rizadas, emojis ni viñetas decorativas (§5.5).
 - [ ] Fini no está cerca de ningún número.
 
 **Sistema propietario**
@@ -560,7 +583,7 @@ diseño antes de que se vuelvan caras de cambiar.
 Para revisar el estado actual sin tocar código todavía:
 
 ```
-Leé docs/frontend.md como estándar del frontend de FINA. Auditá todo src/ contra esa
+Leé src/styles/frontend.md como estándar del frontend de FINA. Auditá todo src/ contra esa
 guía (secciones 2 a 11) y devolvé un informe, sin modificar nada todavía.
 
 Por cada problema:

@@ -362,7 +362,7 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
     // Sin la migración 0032 la tabla no existe: se sigue sin esa señal.
     supabase.from('recommendation_checks').select('ref').like('ref', 'ia:%').gte('hecha_at', hace30),
     // El dólar, para pasar a dólares lo que se separó en pesos.
-    supabase.from('exchange_rates').select('rate').eq('currency', 'USD_BLUE').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('exchange_rates').select('rate').eq('currency', 'USD_BLUE').order('fetched_at', { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const error = [gastos, secciones, medios, objetivos, perfil, inversor, aportes, memoria, historial, pasos, pasosIA].find((r) => r.error)?.error;

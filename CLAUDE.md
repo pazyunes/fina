@@ -8,7 +8,7 @@ Stack: React + TypeScript + Vite.
 
 ## Antes de tocar el frontend
 
-**Leé `docs/frontend.md` completo antes de escribir o modificar cualquier cosa en `src/`.**
+**Leé `src/styles/frontend.md` completo antes de escribir o modificar cualquier cosa en `src/`.**
 Ahí están las reglas de identidad visual, los tokens, el sistema de estados de confianza y
 las convenciones de código. No improvises color, tipografía ni estructura de carpetas: ya
 están decididas.
@@ -25,6 +25,17 @@ están decididas.
 5. **Todo monto en cifras tabulares** (`font-variant-numeric: tabular-nums`).
 6. **Ningún componente hace `fetch` directo.** Todo pasa por `api/`.
 7. **Sin `any`.**
+8. **Jerarquía.** Cada pantalla tiene un objetivo y un solo punto que se lleva la vista
+   primero. Nada de subtítulos que expliquen lo que el título ya debería decir.
+9. **Formato** (aplica a todo: textos de la app, textos que genera la IA, docs, commits y
+   respuestas). No usar guiones largos, comillas rizadas, viñetas Unicode decorativas ni
+   emojis. No usar subtítulos, encabezados intermedios ni etiquetas de sección salvo
+   pedido explícito. Texto continuo, directo y sin divisiones artificiales. Detalle en
+   `src/styles/frontend.md` §5.5.
+
+## Backlog
+
+Lo pendiente está en `DEBT.md`, en la raíz. Al terminar un ítem, se marca ahí.
 
 ## Comandos
 
@@ -43,4 +54,7 @@ npm run typecheck  # tsc --noEmit — tiene que pasar antes de cualquier PR
 
 ## Antes de abrir un PR
 
-Pasá el checklist de `docs/frontend.md` §13.
+Pasá el checklist de `src/styles/frontend.md` §13.
+
+Nunca se trabaja directo en `main`: cada cambio va en una rama, y el push de la rama
+genera una preview en Vercel para verlo antes de mergear.

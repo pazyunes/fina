@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { useAuth } from '../../lib/auth';
 import {
-  estaHidratado, hidratar, leerEstado, leerGuardado, olvidar, suscribir,
+  estaHidratado, hayPendientes, hidratar, leerEstado, leerGuardado, olvidar, suscribir,
   type EstadoGuardado,
 } from './almacen';
 import type { EstadoV2 } from './tipos';
@@ -56,13 +56,18 @@ export function AlmacenProvider({ children }: { children: React.ReactNode }) {
   // tiene que pegarle a la base cada vez), y nunca con escrituras pendientes
   // (recargar a mitad de un guardado podría hacer desaparecer por un momento
   // lo que la persona acaba de cargar).
+  //
+  // Se mira la cola y no el cartel de guardado: el cartel se queda en "error"
+  // hasta que la persona reintenta, y frenar por eso dejaba de traer lo de
+  // WhatsApp por el resto de la sesión. Con la cola vacía recargar es seguro, y
+  // después de un error es justo lo que hace falta: trae lo que la base tiene.
   useEffect(() => {
     if (!uid) return;
     let ultima = Date.now();
     const alVolver = () => {
       if (document.visibilityState !== 'visible') return;
       if (Date.now() - ultima < 20_000) return;
-      if (leerGuardado().tipo !== 'quieto' || !estaHidratado()) return;
+      if (hayPendientes() || !estaHidratado()) return;
       ultima = Date.now();
       void hidratar().then((e) => { if (e === null) setError(null); });
     };

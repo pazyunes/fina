@@ -5,7 +5,7 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
 import { useDisplayCurrency, useMoney } from '../../lib/displayCurrency';
-import { fetchExchangeRate } from '../../lib/exchangeRate';
+import { cotizacionDolar } from '../../api/v2/cotizacion';
 
 // REDISEÑO v2 — Inversiones. La clave es la personalización (pedido
 // explícito): un mini-quiz corto arma un perfil de riesgo real (no fijo),
@@ -181,7 +181,7 @@ export function InversionesV2() {
   useEffect(() => {
     if (rate) return; // ya la trajo otra pantalla: no la pisamos
     let vivo = true;
-    fetchExchangeRate().then((r) => { if (vivo && r?.rate) setRate(r.rate); });
+    void cotizacionDolar().then((c) => { if (vivo && c) setRate(c.valor); });
     return () => { vivo = false; };
   }, [rate, setRate]);
 
@@ -237,20 +237,21 @@ export function InversionesV2() {
     setAportePaso('datos');
     setAporteAbierto(true);
   }
-  function guardarEdicion() {
+  /** Devuelve si se pudo guardar: igual que el alta, sin dólar no se cierra. */
+  async function guardarEdicion(): Promise<boolean> {
     const monto = parseMoneyInput(aporteMonto);
-    if (monto <= 0 || !editandoId) return;
+    if (monto <= 0 || !editandoId) return false;
     // Se conserva la fecha original: editar un monto mal tipeado no debería
     // mover el aporte a hoy y romper la evolución. La cotización SÍ se
-    // reescribe con la de hoy si se pasa a dólares, porque es una carga nueva
-    // en esa moneda; si sigue en pesos, no hay cotización que guardar.
-    const datos = nuevoAporte(monto);
-    acciones.editarAporte(editandoId, {
+    // reescribe con la de hoy si cambia el monto o la moneda.
+    setErrorAporte(null);
+    const r = await acciones.editarAporte(editandoId, {
       instrumento: aporteInstrId,
-      monto: datos.monto,
-      moneda: datos.moneda ?? 'ARS',
-      montoArs: datos.montoArs,
+      monto,
+      moneda: aporteMoneda === 'USD' ? 'USD' : 'ARS',
     });
+    if (r.error !== null) { setErrorAporte(r.error); return false; }
+    return true;
   }
   function borrarAporte() {
     if (!editandoId) return;
@@ -338,15 +339,6 @@ export function InversionesV2() {
   const recomendados = INSTRUMENTOS.filter((i) => i.perfiles.includes(perfilId))
     .sort((a, b) => Number(yaEnIds.has(a.id)) - Number(yaEnIds.has(b.id)))
     .slice(0, 3);
-
-  // El equivalente en pesos se congela con la cotización del momento: si el
-  // aporte fue en dólares, se guarda a cuánto estaba el blue ese día.
-  function nuevoAporte(monto: number): Pick<Aporte, 'monto' | 'moneda' | 'cotizacion' | 'montoArs'> {
-    if (aporteMoneda === 'USD' && rate) {
-      return { monto, moneda: 'USD', cotizacion: rate, montoArs: Math.round(monto * rate) };
-    }
-    return { monto, moneda: 'ARS', montoArs: monto };
-  }
 
   /** Devuelve si se pudo cargar: el modal se cierra sólo si salió bien. */
   async function agregarAporte(): Promise<boolean> {
@@ -618,7 +610,7 @@ export function InversionesV2() {
                 // El modal se cierra sólo si el aporte se pudo cargar: si falla
                 // la cotización, se queda abierto con el monto ya escrito.
                 onClick={() => {
-                  if (editandoId) { guardarEdicion(); cerrarAporte(); return; }
+                  if (editandoId) { void guardarEdicion().then((ok) => { if (ok) cerrarAporte(); }); return; }
                   void agregarAporte().then((ok) => { if (ok) cerrarAporte(); });
                 }}
               />

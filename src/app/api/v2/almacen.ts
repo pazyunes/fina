@@ -70,6 +70,8 @@ let guardado: EstadoGuardado = { tipo: 'quieto' };
 export function leerGuardado(): EstadoGuardado { return guardado; }
 
 let pendientes = 0;
+/** true si hay escrituras en la cola que todavía no terminaron. */
+export function hayPendientes(): boolean { return pendientes > 0; }
 
 /**
  * Corre una escritura y refleja su resultado en el estado de guardado.

@@ -618,6 +618,9 @@ export async function borrarIngreso(id: string): Promise<Resultado<null>> {
   const previo = await correr<{ amount_ars: number; payment_method: string | null } | null>('borrarIngreso/leer', () =>
     supabase.from('transactions').select('amount_ars, payment_method').eq('id', id).maybeSingle(),
   );
+  // Sin la fila no se sabe cuánto sacarle al medio: borrar igual dejaría el
+  // saldo inflado para siempre.
+  if (previo.error !== null) return falla<null>(previo.error, 'borrarIngreso/leer');
   const borrado = await borrarFila('transactions', id, 'borrarIngreso');
   if (borrado.error !== null) return borrado;
   const medio = previo.data?.payment_method;
@@ -628,13 +631,6 @@ export async function borrarIngreso(id: string): Promise<Resultado<null>> {
   return ok(null);
 }
 
-/**
- * Borra un gasto y le devuelve la plata al medio con el que se pagó.
- *
- * Se lee la fila antes de borrarla: el monto en pesos y el medio salen de ahí,
- * no de lo que crea el cliente. Si sólo se borrara el gasto, el disponible
- * quedaría descontado para siempre por algo que ya no existe.
- */
 /**
  * Borra UNA fila por id y confirma que de verdad se borró.
  *
@@ -655,11 +651,20 @@ async function borrarFila(tabla: string, id: string, contexto: string): Promise<
   return ok(null);
 }
 
+/**
+ * Borra un gasto y le devuelve la plata al medio con el que se pagó.
+ *
+ * Se lee la fila antes de borrarla: el monto en pesos y el medio salen de ahí,
+ * no de lo que crea el cliente. Si sólo se borrara el gasto, el disponible
+ * quedaría descontado para siempre por algo que ya no existe. Por lo mismo, si
+ * la lectura falla no se borra.
+ */
 export async function borrarGasto(id: string): Promise<Resultado<null>> {
   // `*` y no columnas sueltas: `payment_methods` (0035) puede no existir aún.
   const previo = await correr<{ amount_ars: number; payment_method: string | null; payment_methods?: PagoMixto[] | null } | null>('borrarGasto/leer', () =>
     supabase.from('transactions').select('*').eq('id', id).maybeSingle(),
   );
+  if (previo.error !== null) return falla<null>(previo.error, 'borrarGasto/leer');
 
   const borrado = await borrarFila('transactions', id, 'borrarGasto');
   if (borrado.error !== null) return borrado;
