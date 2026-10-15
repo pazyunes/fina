@@ -6,8 +6,8 @@ import { AvisoVencimientoHome } from './GastosFijos';
 import { InvitacionAvisos } from './InvitacionAvisos';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { useNavigate } from 'react-router';
-import { Celebracion, COLORS, consumirFiniAterriza, EstadoConfianza, FONTS, Fila, Monto, Titulo, TituloSeccion, fechaDisplay, formatThousands, loadV2Foto, loadV2Grupo, loadV2Nombre, loadV2Reserva, parseMoneyInput, saludoDelDia, saveV2Reserva } from './shared';
-import { IconChevron, IconFuego, IconGrupo, IconPerfil, IconReserva } from './FinaIcons';
+import { COLORS, consumirFiniAterriza, FONTS, Fila, Titulo, TituloSeccion, fechaDisplay, loadV2Foto, loadV2Nombre, saludoDelDia } from './shared';
+import { IconFuego, IconPerfil } from './FinaIcons';
 import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
 import { pasoPorClave } from '../../api/v2/pasos';
 import { LinkWhatsApp } from './LinkWhatsApp';
@@ -38,12 +38,9 @@ export function HomeV2() {
   const gastosRegistrados = useAlmacen().estado.gastos.length;
   const nombre = loadV2Nombre();
   const foto = loadV2Foto();
-  const grupo = loadV2Grupo();
-  const topGrupo = grupo ? [...grupo.miembros].sort((a, b) => b.actividad - a.actividad).slice(0, 3) : [];
-  const { paso, mensaje, cumplido, racha } = usePasoDelDia();
+  const { paso, cumplido, racha } = usePasoDelDia();
   const [rachaAbierta, setRachaAbierta] = useState(false);
 
-  // Reserva ("alcancía") — se movió acá desde Gastos.
   // PRUEBA — "Fini aterriza en el avatar", estilo Netflix. La animación la
   // hace Home y no el onboarding, porque el destino es ESTE avatar y solo acá
   // se puede medir dónde cae de verdad: en desktop el sidebar mide 240px y el
@@ -71,22 +68,6 @@ export function HomeV2() {
     });
     setAterrizando(true);
   }, []);
-
-  const [reserva, setReserva] = useState(() => loadV2Reserva());
-  const [reservaOpen, setReservaOpen] = useState(false);
-  const [reservaVal, setReservaVal] = useState('');
-  const [celebrarReserva, setCelebrarReserva] = useState(false);
-  function guardarReserva() {
-    const n = parseMoneyInput(reservaVal);
-    if (!n) return;
-    const nuevo = reserva + n;
-    setReserva(nuevo);
-    saveV2Reserva(nuevo);
-    setReservaVal('');
-    setReservaOpen(false);
-    setCelebrarReserva(true);
-    setTimeout(() => setCelebrarReserva(false), 800);
-  }
 
   return (
     // DIRECCIÓN C — Home des-encajonado. Antes casi todo elemento vivía dentro
@@ -155,13 +136,13 @@ export function HomeV2() {
             className="v2-focus flex flex-col items-center shrink-0 min-h-[44px] px-1 rounded-xl"
             style={{ color: COLORS.brand }}
           >
-            <span data-racha-numero className="flex items-center gap-1 text-[20px] font-bold leading-none"><IconFuego size={16} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
-            <span className="text-[12px] font-semibold" style={{ color: COLORS.inkSoft }}>{racha.dias === 1 ? 'día' : 'días'}</span>
+            <span data-racha-numero className="flex items-center gap-1.5 text-[26px] font-bold leading-none"><IconFuego size={28} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
+            <span className="text-[13px] font-semibold mt-0.5" style={{ color: COLORS.inkSoft }}>{racha.dias === 1 ? 'día' : 'días'}</span>
           </button>
         ) : (
           <div data-racha-destino className="flex flex-col items-center shrink-0" style={{ color: COLORS.inkFaint }} aria-label="Todavía no arrancaste tu racha">
-            <IconFuego size={16} />
-            <span className="text-[12px] font-semibold leading-none mt-1">Racha</span>
+            <IconFuego size={28} />
+            <span className="text-[13px] font-semibold leading-none mt-1">Racha</span>
           </div>
         )}
       </header>
@@ -228,25 +209,19 @@ export function HomeV2() {
             className="relative rounded-[20px] lg:rounded-tl-md px-4 py-3.5"
             style={{ background: cumplido ? COLORS.limaSoft : COLORS.surface, border: `1.5px solid ${cumplido ? COLORS.lima : COLORS.line}` }}
           >
-            <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: cumplido ? COLORS.limaText : COLORS.inkSoft, fontFamily: FONTS.mono }}>
-              {cumplido ? 'Paso de hoy · listo' : 'Tu paso de hoy'}
+            {/* Sin bajada explicativa (frontend.md §5.4): el título del paso y
+                el botón dicen qué hacer. El mensaje de la IA y el texto del
+                catálogo siguen en pasos.ts por si se usan en otro lado. */}
+            <p className="text-[14px] font-semibold" style={{ color: cumplido ? COLORS.limaText : COLORS.inkSoft }}>
+              {cumplido ? 'Paso de hoy listo' : 'Tu paso de hoy'}
             </p>
             {!paso ? (
-              <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>Preparando tu paso de hoy…</p>
+              <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>Preparando tu paso de hoy...</p>
             ) : cumplido ? (
-              <>
-                <p className="font-bold text-[19px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>¡Listo por hoy!</p>
-                <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>
-                  {paso.titulo}. Mañana te toca otro
-                  {racha.dias > 1 ? ` — ya van ${racha.dias} días seguidos.` : '.'}
-                </p>
-              </>
+              <p className="font-bold text-[21px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Listo por hoy, mañana te toca otro</p>
             ) : (
               <>
-                <p className="font-bold text-[19px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
-                {/* Si el paso lo eligió la IA, trae un mensaje escrito para esta
-                    persona; si no, el texto general del catálogo. */}
-                <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>{mensaje ?? paso.msg}</p>
+                <p className="font-bold text-[21px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
                 {/* Un gasto por WhatsApp salva el día aunque el paso sea otro.
                     Se dice, para que no parezca que la racha depende sólo de
                     este paso — y sin empujar a no hacerlo. */}
@@ -280,12 +255,6 @@ export function HomeV2() {
         </div>
       </section>
 
-      {/* UNA recomendación, justo debajo del paso de hoy: la de la IA con tus
-          datos si hay; si no, un tope sugerido con lo que solés gastar; si no,
-          un consejo general. Hace también la llamada diaria a la IA que elige el
-          paso de mañana y arma los planes de objetivos. */}
-      <Recomendaciones />
-
       {/* Se fue "Tus secciones" (Gastos / Objetivos / Inversiones en tres
           fichas): repetía el menú de abajo, que ya lleva a las mismas tres
           pantallas y está siempre a la vista. */}
@@ -294,85 +263,22 @@ export function HomeV2() {
       <InvitacionAvisos momento="home" gastosRegistrados={gastosRegistrados} />
 
 
-      {/* PRUEBA — gráficos armados con los datos que ya hay guardados. */}
       <MisVisualizaciones />
 
-      {/* Reservas + perfil */}
-      <section className="flex flex-col gap-2">
-        <TituloSeccion>Tu plata guardada</TituloSeccion>
-        <div className="flex flex-col">
-          <div className="relative flex items-center gap-3 min-h-[56px] py-3 border-b" style={{ borderColor: COLORS.line }}>
-            <Celebracion show={celebrarReserva} />
-            <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.starSoft, color: COLORS.starText }}><IconReserva size={18} /></span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[18px] font-semibold" style={{ color: COLORS.ink }}>Reservas</p>
-              <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
-                {reserva > 0 ? <>Tenés <Monto value={reserva} className="text-[14px]" /> apartados</> : 'Apartá plata para no gastarla — tipo alcancía.'}
-              </p>
-              {/* La reserva la cargó la persona: dato declarado (§5.1). */}
-              {reserva > 0 && <EstadoConfianza estado="declarado" className="mt-1" />}
-            </div>
-            <button type="button" onClick={() => setReservaOpen((o) => !o)} className="v2-focus flex items-center justify-center min-h-[44px] px-3 rounded-full text-[15px] font-bold shrink-0" style={{ color: COLORS.brand, border: `1.5px solid ${COLORS.brandSoft}` }}>
-              {reserva > 0 ? 'Sumar' : 'Reservar'}
-            </button>
-          </div>
-          {reservaOpen && (
-            <div className="py-3 flex gap-2 border-b" style={{ borderColor: COLORS.line }}>
-              <input
-                autoFocus
-                className="v2-focus flex-1 min-w-0 rounded-xl px-3 py-2 min-h-[44px] text-[16px] outline-none"
-                style={{ border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink, background: COLORS.surface }}
-                placeholder="¿Cuánto querés reservar?"
-                inputMode="decimal"
-                aria-label="Monto a reservar"
-                value={reservaVal}
-                onChange={(e) => setReservaVal(formatThousands(e.target.value))}
-              />
-              <button type="button" onClick={guardarReserva} className="v2-focus rounded-xl px-4 min-h-[44px] text-[15px] font-bold transition-all duration-100 active:scale-95 shrink-0" style={{ background: COLORS.brand, color: COLORS.surface }}>
-                Guardar
-              </button>
-            </div>
-          )}
-          <Fila
-            icon={<IconPerfil size={18} />}
-            label="Completá tu perfil"
-            onClick={() => navigate('/onboarding-v2/perfil')}
-          />
-        </div>
-      </section>
+      {/* UNA recomendación, como mensaje y debajo de los gráficos: no es una
+          tarea ni lo central de la pantalla (DEBT I10). Hace también la llamada
+          diaria a la IA que elige el paso de mañana y arma los planes de
+          objetivos. */}
+      <Recomendaciones />
 
-      {/* Mis competencias */}
-      <section className="flex flex-col gap-2">
-        <TituloSeccion>Mis competencias</TituloSeccion>
-        {grupo ? (
-          <button
-            type="button"
-            onClick={() => navigate('/onboarding-v2/grupos', { state: { from: '/onboarding-v2/home' } })}
-            className="v2-focus text-left flex flex-col gap-2.5 transition-transform duration-100 active:scale-[0.99]"
-          >
-            <span className="flex items-center gap-2 text-[16px] font-bold" style={{ color: COLORS.brand }}>
-              <IconGrupo size={16} /> {grupo.nombre}
-              <span className="ml-auto flex items-center gap-0.5 text-[14px] font-semibold">Ver todo <IconChevron size={13} /></span>
-            </span>
-            <span className="flex flex-col">
-              {topGrupo.map((m, i) => (
-                <span key={m.nombre} className="flex items-center gap-2.5 text-[15px] py-2 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
-                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 font-mono tabular-nums" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>{i + 1}</span>
-                  <span className="flex-1 truncate" style={{ color: m.sosVos ? COLORS.brand : COLORS.ink, fontWeight: m.sosVos ? 700 : 500 }}>
-                    {m.nombre}{m.sosVos ? ' (vos)' : ''}
-                  </span>
-                  <span className="font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>{m.actividad}</span>
-                </span>
-              ))}
-            </span>
-          </button>
-        ) : (
-          <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-            Todavía no tenés un grupo. Armá uno desde <strong style={{ color: COLORS.brandDark }}>Objetivos</strong> para competir con tus amigas y amigos.
-          </p>
-        )}
-      </section>
-
+      {/* Se fueron Tu plata guardada y Mis competencias (DEBT I8 e I9). La
+          reserva sólo vivía acá y en el navegador (loadV2Reserva): deja de verse
+          hasta decidir si vuelve, y dónde. */}
+      <Fila
+        icon={<IconPerfil size={18} />}
+        label="Completá tu perfil"
+        onClick={() => navigate('/onboarding-v2/perfil')}
+      />
     </div>
   );
 }

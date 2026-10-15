@@ -1,28 +1,24 @@
 import { useEffect, useState } from 'react';
-import { useReducedMotion } from 'motion/react';
-import { CheckIcon, COLORS, EstadoConfianza, FONTS, fmtMoney } from './shared';
+import { COLORS, EstadoConfianza, FONTS, fmtMoney } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
 import { diaArgentina, pasosPosiblesManana } from '../../api/v2/pasos';
 import type { EstadoV2 } from '../../api/v2/tipos';
 import {
-  PERIODOS_RECOMENDACION, clavesDeHoy, leerHechas, leerRecomendaciones, marcarHecha, marcarUtil, recomendacionesRecordadas,
+  PERIODOS_RECOMENDACION, clavesDeHoy, leerHechas, leerRecomendaciones, marcarUtil, recomendacionesRecordadas,
   type PeriodoRecomendacion, type Recomendacion, type Recomendaciones as RecomendacionesT,
 } from '../../api/v2/recomendaciones';
 
 // "Para vos": una recomendación para hoy, una para la semana y una para el mes.
 //
-// Cada una se puede TACHAR. Al tacharla aparece la siguiente de ese período, y
-// cuando cambia el día, la semana o el mes vuelven a empezar. El orden de cada
-// período es:
+// Se muestra como un mensaje, no como una tarea: antes se podía tachar, pero
+// no es algo que se cumple, y la casilla competía con el paso del día (DEBT
+// I10). Lo que se tachó antes de este cambio sigue sin volver a aparecer
+// (`leerHechas`). Cambia sola cuando cambia el día, la semana o el mes. El
+// orden de cada período es:
 //   1. la que armó la IA con los datos de la persona (si hay);
 //   2. los consejos generales de la app, rotando desde el que toca en ese
 //      período, así no arrancan siempre por el mismo.
-// Cuando tachó todas, se lo dice y se le avisa cuándo hay nuevas.
-//
-// No se pide otra a la IA al tachar: tardaría hasta un minuto y costaría otra
-// llamada cada vez. Lo que sí hace la IA es leer cuáles tachó, al armar las
-// siguientes (ver api/recomendaciones.ts).
 //
 // Reglas que se ven acá:
 // · Todo dato lleva su referencia ("contra los mismos días del mes pasado").
@@ -171,19 +167,12 @@ export function Recomendaciones() {
     });
   }
 
-  async function tachar(periodo: PeriodoRecomendacion, ref: string): Promise<boolean> {
-    const r = await marcarHecha(periodo, claves[periodo], ref);
-    if (r.error !== null) return false;
-    setHechas((h) => new Set(h).add(`${periodo}|${ref}`));
-    return true;
-  }
-
-  // UNA sola recomendación, debajo del paso de hoy. La primera que haya, en
+  // UNA sola recomendación, debajo de los gráficos. La primera que haya, en
   // este orden: la que armó la IA con los datos de la persona (la de hoy, si
   // no la de la semana o el mes), después el tope sugerido con lo que suele
-  // gastar y, si no hay nada de eso, un consejo general. Al tacharla entra la
-  // siguiente. Mientras llegan los datos no se muestra nada: que aparezca una
-  // general y un segundo después la cambie la personalizada es peor que esperar.
+  // gastar y, si no hay nada de eso, un consejo general. Mientras llegan los
+  // datos no se muestra nada: que aparezca una general y un segundo después la
+  // cambie la personalizada es peor que esperar.
   if (!datos && !fallo) return null;
   const candidatas = PERIODOS_RECOMENDACION.flatMap((p) => {
     const it = colaDe(p, datos, estado).find((x) => !hechas.has(`${p}|${x.ref}`));
@@ -198,14 +187,7 @@ export function Recomendaciones() {
 
   return (
     <section className="flex flex-col gap-2">
-      <Tarjeta
-        // La key cambia con la recomendación: al tachar, la nueva entra como
-        // una tarjeta nueva y no hereda el estado de la anterior.
-        key={`${elegida.periodo}-${elegida.item.ref}`}
-        item={elegida.item}
-        onTachar={(ref) => tachar(elegida.periodo, ref)}
-        onUtil={marcarUtilidad}
-      />
+      <Mensaje key={`${elegida.periodo}-${elegida.item.ref}`} item={elegida.item} onUtil={marcarUtilidad} />
       <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
         {elegida.item.tipo === 'ia' ? 'Hecha con IA a partir de tus datos. No es asesoramiento financiero.'
           : elegida.item.tipo === 'calculada' ? 'Calculada con tus gastos de los últimos 30 días. No es asesoramiento financiero.'
@@ -215,77 +197,33 @@ export function Recomendaciones() {
   );
 }
 
-function Tarjeta({ item, onTachar, onUtil }: {
+// Un mensaje, sin casilla: se lee, no se cumple. Va apoyado en el papel con
+// una línea a la izquierda, sin tarjeta, para no pelearle la mirada al paso del
+// día ni a los gráficos.
+function Mensaje({ item, onUtil }: {
   item: Item;
-  onTachar: (ref: string) => Promise<boolean>;
   onUtil: (id: string, util: boolean | null) => void;
 }) {
-  const reducir = useReducedMotion();
-  // Se ve tachada un momento antes de dar paso a la siguiente: si cambiara en
-  // el acto, no se entendería qué pasó con la que se tocó.
-  const [tachando, setTachando] = useState(false);
-  const [error, setError] = useState(false);
-
-  const etiqueta = (
-    <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
-      Recomendación
-      <span style={{ color: item.tipo === 'general' ? COLORS.inkFaint : COLORS.brandDark }}>
-        {' · '}{item.tipo === 'general' ? 'general' : 'con tus datos'}
-      </span>
-    </p>
-  );
-
-  async function tachar() {
-    if (tachando) return;
-    setError(false);
-    setTachando(true);
-    // Se guarda y, a la vez, se deja ver el tachado un momento.
-    const [ok] = await Promise.all([onTachar(item.ref), reducir ? Promise.resolve() : new Promise((r) => setTimeout(r, 500))]);
-    if (!ok) { setTachando(false); setError(true); }
-  }
-
   const r = item.contenido;
   return (
-    <article className="py-4 border-b last:border-b-0 flex gap-3" style={{ borderColor: COLORS.line }}>
-      {/* La casilla para tacharla. Target de 44px; el círculo dibujado es más chico. */}
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={tachando}
-        aria-label={`Marcar como hecha: ${r.titulo}`}
-        onClick={() => void tachar()}
-        className="v2-focus w-11 h-11 -ml-2 -mt-2 shrink-0 rounded-full flex items-center justify-center"
-      >
-        <span
-          className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200"
-          style={tachando ? { background: COLORS.brand } : { border: `2px solid ${COLORS.lineStrong}` }}
-        >
-          {tachando && <CheckIcon />}
-        </span>
-      </button>
+    <article className="flex flex-col gap-2 pl-3.5 border-l-2" style={{ borderColor: COLORS.brandSoft }}>
+      <h3 className="text-[17px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+        {r.titulo}
+      </h3>
+      <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
 
-      <div className="flex-1 min-w-0 flex flex-col gap-2 transition-opacity duration-300" style={{ opacity: tachando ? 0.55 : 1 }}>
-        {etiqueta}
-        <h3
-          className="text-[18px] font-bold leading-tight"
-          style={{ color: COLORS.ink, fontFamily: FONTS.display, textDecoration: tachando ? 'line-through' : 'none' }}
-        >
-          {r.titulo}
-        </h3>
-        <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
+      {(item.tipo === 'ia' || item.tipo === 'calculada') && (
+        <>
+          {/* El dato en el que se apoya, con contra qué se compara. */}
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[16px] font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{item.contenido.dato.valor}</p>
+            <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{item.contenido.dato.referencia}</p>
+            {item.contenido.confianza === 'estimado' && <EstadoConfianza estado="estimado" />}
+          </div>
 
-        {(item.tipo === 'ia' || item.tipo === 'calculada') && (
-          <>
-            {/* El dato en el que se apoya, con contra qué se compara. */}
-            <div className="flex flex-col gap-0.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.brandSoft }}>
-              <p className="text-[16px] font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{item.contenido.dato.valor}</p>
-              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{item.contenido.dato.referencia}</p>
-              {item.contenido.confianza === 'estimado' && <EstadoConfianza estado="estimado" />}
-            </div>
-
-            {/* Lo que marca la persona es lo que usa el modelo la próxima vez
-                para no insistir con lo que no le sirve. Tocar de nuevo saca la marca. */}
-            {item.tipo === 'ia' && (
+          {/* Lo que marca la persona es lo que usa el modelo la próxima vez
+              para no insistir con lo que no le sirve. Tocar de nuevo saca la marca. */}
+          {item.tipo === 'ia' && (
             <div className="flex items-center gap-1 pt-1" role="group" aria-label="¿Te sirvió esta recomendación?">
               <span className="text-[14px] mr-1" style={{ color: COLORS.inkFaint }}>¿Te sirvió?</span>
               {([true, false] as const).map((v) => {
@@ -306,14 +244,9 @@ function Tarjeta({ item, onTachar, onUtil }: {
                 );
               })}
             </div>
-            )}
-          </>
-        )}
-
-        {error && (
-          <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>No se pudo guardar. Probá de nuevo.</p>
-        )}
-      </div>
+          )}
+        </>
+      )}
     </article>
   );
 }

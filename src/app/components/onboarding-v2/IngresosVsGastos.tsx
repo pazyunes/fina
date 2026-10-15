@@ -93,7 +93,14 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
   conLista?: boolean; explorar?: boolean; mesElegido?: string; semana?: Semana;
 }) {
   const { estado } = useAlmacen();
-  const meses = ultimosMeses(6);
+  // De los últimos 6 meses, desde el primero que tiene algo cargado: los meses
+  // de antes de empezar a usar FINA no dicen nada y achicaban las columnas.
+  // El actual queda siempre, aunque esté vacío.
+  const seisMeses = ultimosMeses(6);
+  const conDatos = (mes: string) =>
+    estado.ingresos.some((i) => mesDe(i.ts) === mes) || estado.gastos.some((g) => mesDe(g.ts) === mes);
+  const primero = seisMeses.findIndex(conDatos);
+  const meses = seisMeses.slice(primero === -1 ? seisMeses.length - 1 : primero);
   const mesActual = meses[meses.length - 1];
   const [tocado, setTocado] = useState(mesActual);
   const elegido = explorar ? tocado : (mesElegido ?? mesActual);
@@ -149,7 +156,9 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
     : estado.ingresos.filter((i) => mesDe(i.ts) === elegido);
   const tituloPeriodo = modoSemana ? semana.etiqueta : esEsteMes ? 'Este mes' : nombreMes(elegido, true);
   const esteTexto = modoSemana ? (semana.actual ? 'esta semana' : 'esa semana') : esEsteMes ? 'este mes' : 'ese mes';
-  const anchoColumna = modoSemana ? 'min-w-[34px]' : 'min-w-[44px]';
+  // Los meses no llevan ancho mínimo: con 6 columnas de 44px el gráfico medía
+  // más que la tarjeta en un celular de 360px y se salía de la pantalla.
+  const anchoColumna = modoSemana ? 'min-w-[34px]' : 'min-w-0';
 
   if (nadaRegistrado) {
     return (
@@ -163,7 +172,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
     <div className="flex flex-col gap-3">
       {/* El período elegido, en números. */}
       <div className="flex flex-col gap-2">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
+        <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>
           {tituloPeriodo}
         </p>
         <div className={`grid gap-2 ${explorar ? 'grid-cols-3' : 'grid-cols-2'}`}>
@@ -174,7 +183,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
               alerta: pasarse no es un error (regla 3). */}
           {explorar && actual.entro > 0 && (
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? 'Te quedó' : 'Te pasaste por'}</span>
+              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? 'Te quedó' : 'Salió de más'}</span>
               <span className="text-[17px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
             </div>
           )}
@@ -195,7 +204,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
           className="flex items-end gap-1"
           style={{ height: 124 }}
           role="group"
-          aria-label={modoSemana ? `Ingresos y gastos de cada día: ${semana.etiqueta}` : 'Ingresos y gastos de los últimos 6 meses'}
+          aria-label={modoSemana ? `Ingresos y gastos de cada día: ${semana.etiqueta}` : 'Ingresos y gastos por mes'}
         >
           {columnas.map((c) => {
             const barras = (

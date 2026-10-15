@@ -80,8 +80,10 @@ export function InvitacionAvisos({ momento, gastosRegistrados = 0 }: { momento: 
   }
 
   const iphone = soporte === 'iphone-sin-instalar';
-  const titulo = iphone ? 'Sumá FINA a tu pantalla de inicio' : '¿Te avisamos?';
-  const texto = iphone
+  // En Home va sólo el título, sin bajada (DEBT I11): el botón ya dice qué
+  // pasa. En el onboarding se mantiene la explicación, que es la primera vez.
+  const titulo = iphone ? 'Sumá FINA a tu pantalla de inicio' : momento === 'home' ? '¿Te avisamos cuando vence un gasto?' : '¿Te avisamos?';
+  const texto = momento === 'home' ? null : iphone
     ? 'En iPhone, los avisos llegan sólo con FINA en tu inicio. Son tres toques y te mostramos cómo.'
     : 'Cuando vence un gasto fijo, el día que cobrás y si tu paso del día quedó pendiente. Como mucho, dos por día.';
 
@@ -97,7 +99,7 @@ export function InvitacionAvisos({ momento, gastosRegistrados = 0 }: { momento: 
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <p className="text-[17px] font-bold leading-snug" style={{ color: COLORS.ink }}>{titulo}</p>
-            <p className="text-[15px] leading-snug mt-0.5" style={{ color: COLORS.ink }}>{texto}</p>
+            {texto && <p className="text-[15px] leading-snug mt-0.5" style={{ color: COLORS.ink }}>{texto}</p>}
           </div>
           {momento === 'home' && (
             <button type="button" onClick={ahoraNo} aria-label="Cerrar" className="v2-focus w-11 h-11 -mt-2 -mr-2 rounded-full flex items-center justify-center shrink-0" style={{ color: COLORS.inkSoft }}>

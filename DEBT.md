@@ -31,7 +31,7 @@ Lo que hace que los datos sean confiables y que la app ayude a mejorar la situac
 | I2 | media | Registrar el gasto como recordatorio fijo, con notificación, en vez de ser un paso más. | a definir |
 | GA2 | media | Gastos: sacar el gráfico de dinero disponible y los medios de pago. Antes hay que decidir de dónde sale el disponible si se van los medios. | a definir |
 | R1 | media | Retención: si la persona no tiene nada para hacer, la app no le da nada. Mantener la racha, mejorar las tareas y pensar un juego o actividad para quien quiera quedarse. | a definir |
-| I10 | media | Inicio, recomendación: se tacha pero no es una tarea (y no se puede destachar). Pasarla a un mensaje simple debajo de las visualizaciones. | pendiente |
+| I12 | media | La reserva (alcancía) sólo vivía en Inicio y se guarda sólo en el navegador, no en Supabase. Al sacar Tu plata guardada (I8) dejó de verse en toda la app. Decidir si vuelve, dónde, y guardarla en la base. | a definir |
 | D2 | baja | Una sección nueva queda con slug vacío en pantalla hasta recargar (`crearSeccion`). | pendiente |
 
 ## 3. Diseño
@@ -40,17 +40,10 @@ Jerarquía, cantidad de texto y detalles visuales.
 
 | Id | Prioridad | Qué | Estado |
 | --- | --- | --- | --- |
-| I5 | alta | Inicio, gráficos: Entra y sale se sale de la pantalla en celulares (6 columnas de 44px mínimo en `IngresosVsGastos.tsx`) y muestra meses vacíos. Mostrar sólo meses con datos y un título que se entienda solo. | pendiente |
 | G1 | alta | Más jerarquía visual: que cada pantalla lleve la vista a un lugar puntual. Menos letra chica. | a definir |
-| G2 | alta | Quitar los subtítulos que explican lo que el título debería decir, en todas las pantallas. | pendiente |
-| I8 | media | Inicio: sacar Tu plata guardada y su botón. | pendiente |
-| I9 | media | Inicio: sacar Mis competencias hasta diseñar cómo se compite y cuál es el premio. | pendiente |
-| I6 | media | Inicio, gráficos: sacar el gráfico Por día. | pendiente |
+| G2 | alta | Quitar los subtítulos que explican lo que el título debería decir. Inicio ya está; faltan Gastos, Objetivos, Inversiones y Perfil. | en curso |
 | GA1 | media | Gastos: mucha letra chica. Mostrar menos y usar Ver todos al estilo Mercado Pago (las secciones expandidas no tienen límite). | a definir |
 | L3 | media | Tres paletas que no coinciden: `frontend.md`, `tokens.css` y `COLORS` en `onboarding-v2/shared.tsx`. Decidir una con diseño. | a definir |
-| I3 | baja | Inicio, paso del día: acortar o sacar la explicación de cómo registrar un gasto. | pendiente |
-| I4 | baja | Inicio: agrandar el fueguito de racha (hoy 16px en `HomeV2.tsx`). | pendiente |
-| I11 | baja | Inicio: Sumá FINA a tu pantalla de inicio queda, sin subtítulo. | pendiente |
 | P1 | baja | Perfil: el nombre está siempre en modo edición. Mostrarlo como texto con un botón Editar. | pendiente |
 | IN1 | baja | Inversiones: tiene potencial. Bajar la letra chica. | a definir |
 
@@ -76,3 +69,11 @@ No cambian lo que ve la persona, pero bajan el riesgo de romper algo al tocar el
 | B5 | Funcionalidad | Editar un aporte en dólares sin cotización lo guardaba en pesos sin avisar, y nunca guardaba el id de la cotización. Ahora convierte igual que el alta y avisa si falta el dólar. | f2addc5 |
 | B6 | Limpieza | Inversiones hacía `fetch` del dólar desde `lib/exchangeRate.ts`. Ahora usa `api/v2/cotizacion.ts`. El archivo viejo se borra con L1. | f2addc5 |
 | B7 | Seguridad | La pantalla de prueba de Fini (`/onboarding-v2/fini`) era pública en producción. Ahora sólo existe en `npm run dev`. | f2addc5 |
+| I3 | Diseño | Inicio, paso del día: sin bajada. Queda Tu paso de hoy, el título del paso y el botón; ya no se muestra la explicación de cómo registrar el gasto ni el mensaje de la IA. | Inicio: más limpio |
+| I4 | Diseño | Inicio: fueguito de racha de 16 a 28px y número de 20 a 26px. | Inicio: más limpio |
+| I5 | Diseño | Inicio: el gráfico de ingresos y gastos ya no se sale de la pantalla (sin ancho mínimo por mes, tarjeta que no deja desbordar), arranca en el primer mes con datos y se llama Ingresos y gastos por mes. Te pasaste por pasó a Salió de más. | Inicio: más limpio |
+| I6 | Diseño | Inicio: se sacó el gráfico Por día. | Inicio: más limpio |
+| I8 | Diseño | Inicio: se sacó Tu plata guardada; Completá tu perfil queda solo. Ver I12. | Inicio: más limpio |
+| I9 | Diseño | Inicio: se sacó Mis competencias. | Inicio: más limpio |
+| I10 | Funcionalidad | Inicio: la recomendación ya no se tacha; es un mensaje debajo de los gráficos. | Inicio: más limpio |
+| I11 | Diseño | Inicio: Sumá FINA a tu pantalla de inicio (y el aviso de vencimientos) sin bajada. En el onboarding la explicación queda. | Inicio: más limpio |

@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { COLORS, FONTS, TituloSeccion, fmtMoney, fmtMontoCompacto, vistaGastos, vistaObjetivos } from './shared';
-import { diaAnterior, diaArgentina } from '../../api/v2/pasos';
 import { IngresosVsGastos } from './IngresosVsGastos';
 import { IconChevron } from './FinaIcons';
 
@@ -58,34 +57,6 @@ function Barras({ filas }: { filas: { label: string; valor: number }[] }) {
   );
 }
 
-// ── Columnas por día ─────────────────────────────────────────────────────
-// El eje X es tiempo, así que la forma es columna y no barra horizontal.
-function Columnas({ dias }: { dias: { etiqueta: string; valor: number }[] }) {
-  const max = Math.max(...dias.map((d) => d.valor), 1);
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-end gap-1.5" style={{ height: 130 }}>
-        {dias.map((d, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 h-full">
-            {d.valor > 0 && (
-              <span className="text-[10px] font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>{fmtMontoCompacto(d.valor)}</span>
-            )}
-            <div
-              className="w-full rounded-t-md"
-              style={{ height: `${(d.valor / max) * 100}%`, minHeight: d.valor > 0 ? 4 : 2, background: d.valor > 0 ? COLORS.brand : COLORS.line }}
-            />
-          </div>
-        ))}
-      </div>
-      <div className="flex gap-1.5">
-        {dias.map((d, i) => (
-          <span key={i} className="flex-1 text-center text-[11px]" style={{ color: COLORS.inkFaint, fontFamily: FONTS.mono }}>{d.etiqueta}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Anillos de progreso (objetivos) ──────────────────────────────────────
 // Un anillo por objetivo, no una torta con todos.
 //
@@ -121,7 +92,9 @@ function Anillo({ pct }: { pct: number }) {
 }
 
 // ── Una tarjeta del carrusel ─────────────────────────────────────────────
-function Tarjeta({ titulo, subtitulo, ultima, children }: { titulo: string; subtitulo: string; ultima: boolean; children: React.ReactNode }) {
+// Sin subtítulo: el título tiene que decir solo qué muestra el gráfico
+// (frontend.md §5.4). Si hiciera falta explicarlo, se cambia el título.
+function Tarjeta({ titulo, ultima, children }: { titulo: string; ultima: boolean; children: React.ReactNode }) {
   return (
     <article
       // Un slider en todos los tamaños. En el celular cada tarjeta ocupa 85% del
@@ -131,13 +104,12 @@ function Tarjeta({ titulo, subtitulo, ultima, children }: { titulo: string; subt
       // La última se engancha por el borde derecho: en pantallas anchas no se
       // puede alinear a la izquierda (no hay nada después), y el enganche la
       // devolvía a la anterior.
-      className={`${ultima ? 'snap-end' : 'snap-start'} shrink-0 w-[85%] sm:w-[360px] lg:w-[400px] rounded-2xl p-4 flex flex-col gap-3`}
+      // min-w-0 + overflow-hidden: nada de adentro puede empujar la tarjeta más
+      // allá de su ancho (Entra y sale se salía de la pantalla en celulares).
+      className={`${ultima ? 'snap-end' : 'snap-start'} shrink-0 min-w-0 overflow-hidden w-[85%] sm:w-[360px] lg:w-[400px] rounded-2xl p-4 flex flex-col gap-3`}
       style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
     >
-      <header className="flex flex-col gap-0.5">
-        <h3 className="text-[17px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{subtitulo}</p>
-      </header>
+      <h3 className="text-[18px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
       {children}
     </article>
   );
@@ -163,18 +135,6 @@ export function MisVisualizaciones() {
     .filter((f) => f.valor > 0)
     .sort((a, b) => b.valor - a.valor);
 
-  // ── Por día: los últimos 7, terminando hoy, en días de Argentina ───────
-  const hoy = diaArgentina();
-  const ultimos7 = Array.from({ length: 7 }, (_, k) => {
-    let d = hoy;
-    for (let i = 0; i < 6 - k; i++) d = diaAnterior(d);
-    return d;
-  });
-  const porDia = ultimos7.map((dia) => ({
-    etiqueta: ['do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sá'][new Date(`${dia}T12:00:00Z`).getUTCDay()],
-    valor: gastos.filter((x) => x.ts && diaArgentina(x.ts) === dia).reduce((a, x) => a + x.montoArs, 0),
-  }));
-
   // ── Por tipo ───────────────────────────────────────────────────────────
   const etiquetasTipo: Record<string, string> = { necesario: 'Necesario', urgente: 'Urgente', impulsivo: 'Impulsivo', otro: 'Otro' };
   const porTipo = Object.keys(etiquetasTipo)
@@ -188,11 +148,11 @@ export function MisVisualizaciones() {
 
   const tarjetas = [
     {
-      titulo: 'Entra y sale', subtitulo: 'Lo que te entró contra lo que gastaste',
+      titulo: 'Ingresos y gastos por mes',
       contenido: <IngresosVsGastos explorar />,
     },
     {
-      titulo: 'Por sección', subtitulo: 'En qué se te va la plata',
+      titulo: 'Gastos por sección',
       // Puede haber muchas secciones — se deja scrollear ADENTRO de su propio
       // alto en vez de estirar la tarjeta (y con ella, todas las demás de la
       // fila: antes todas tomaban el alto de la más larga).
@@ -202,20 +162,14 @@ export function MisVisualizaciones() {
         : <div className="max-h-[280px] overflow-y-auto v2-sin-barra pr-0.5"><Barras filas={porSeccion} /></div>,
     },
     {
-      titulo: 'Por día', subtitulo: 'Cuánto gastaste cada día de esta semana',
-      contenido: gastos.length === 0
-        ? <SinDatos>Con un par de gastos registrados vas a ver tu semana día por día.</SinDatos>
-        : <Columnas dias={porDia} />,
-    },
-    {
-      titulo: 'Por tipo', subtitulo: 'Cuánto fue necesario y cuánto impulso',
+      titulo: 'Gastos por tipo',
       contenido: gastos.length === 0
         ? <SinDatos>Cuando registres gastos vas a poder ver cuánto fue necesario y cuánto impulso.</SinDatos>
         : porTipo.length === 0 ? <SinDatos>Todavía no hay gastos clasificados.</SinDatos>
         : <Barras filas={porTipo} />,
     },
     {
-      titulo: 'Objetivos', subtitulo: 'Cuánto juntaste para cada uno',
+      titulo: 'Cuánto juntaste por objetivo',
       contenido: conMonto.length === 0
         ? <SinDatos>Sumá un objetivo con su monto y acá vas a ver cuánto te falta para cada uno.</SinDatos>
         : (
@@ -320,7 +274,7 @@ export function MisVisualizaciones() {
         style={{ scrollbarWidth: 'none' }}
       >
         {tarjetas.map((t, i) => (
-          <Tarjeta key={t.titulo} titulo={t.titulo} subtitulo={t.subtitulo} ultima={i === tarjetas.length - 1}>{t.contenido}</Tarjeta>
+          <Tarjeta key={t.titulo} titulo={t.titulo} ultima={i === tarjetas.length - 1}>{t.contenido}</Tarjeta>
         ))}
       </div>
 
