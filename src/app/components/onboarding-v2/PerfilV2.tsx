@@ -355,7 +355,10 @@ export function PerfilV2() {
           onboarding la persona todavía no tiene motivo para irse a WhatsApp, y
           cortarle el alta para mandarla a otra app es la mejor forma de que no
           termine ninguna de las dos cosas. Acá entra cuando ya está adentro. */}
-      <section ref={verificarRef}>
+      {/* Cada sección de ajustes arranca con una hairline de lado a lado: van
+          planas, sin caja (frontend.md §3.5), y la línea es lo que evita que
+          verificación, avisos y PIN se lean como una sola tira de texto. */}
+      <section ref={verificarRef} className="pt-6 border-t" style={{ borderColor: COLORS.line }}>
         <VerificarTelefono pedirYa={pedirCodigoYa} />
       </section>
 
@@ -366,7 +369,7 @@ export function PerfilV2() {
           esto solo tapa la plata en ESTE celular hasta que se vuelve a probar
           quién sos. Por eso vive en Perfil y no en el onboarding — cualquiera
           que ya tenga cuenta lo puede activar cuando quiera. */}
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-3 pt-6 border-t" style={{ borderColor: COLORS.line }}>
         <TituloSeccion>Pedir PIN al abrir FINA</TituloSeccion>
         {!tienePin && !configurandoPin && (
           <>

@@ -72,8 +72,11 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
     onChange(nuevo);
   };
 
+  // Plano, sin recuadro tintado (§3.5): es una parte más del formulario de
+  // agregar gasto, no lo prioritario. La hairline de arriba lo separa del tipo
+  // de gasto para que no quede todo pegado.
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 pt-3 border-t" style={{ borderColor: COLORS.line }}>
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <p id="fijo-titulo" className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Es un gasto que se repite</p>
@@ -92,14 +95,16 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
       </div>
 
       {valor.activo && (
-        <div className="rounded-xl p-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }}>
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <p className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>¿Ya lo pagaste esta vez?</p>
+            {/* Sobre el papel el riel va en tint, como las demás tabs de la
+                pantalla (antes iba en surface para contrastar con el recuadro). */}
             <SegmentedTab
               options={[{ id: 'si' as const, label: 'Sí, ya lo pagué' }, { id: 'no' as const, label: 'Todavía no' }]}
               value={valor.yaPagado ? 'si' : 'no'}
               onChange={(v) => cambiar({ yaPagado: v === 'si', fechaElegida: false })}
-              trackColor={COLORS.surface}
+              trackColor={COLORS.tint}
             />
           </div>
 
@@ -181,7 +186,7 @@ export function ListaGastosFijos() {
   }
 
   return (
-    <section data-gastos-fijos className="flex flex-col gap-2 lg:col-span-3 scroll-mt-6">
+    <section data-gastos-fijos className="flex flex-col gap-2 pt-4 border-t lg:col-span-3 scroll-mt-6" style={{ borderColor: COLORS.line }}>
       <TituloSeccion>Gastos fijos</TituloSeccion>
       <div className="flex flex-col">
         {recortar(estado.gastosFijos, verTodos).map((g) => {
@@ -269,8 +274,11 @@ export function AvisoVencimientoHome() {
     setPagando(false);
   }
 
+  // Plano, entre dos hairlines (§3.5): en Inicio lo prioritario es el paso del
+  // día; el aviso es una fila más que lleva a Gastos, y los botones ya son el
+  // bloque que pide la acción.
   return (
-    <section className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }} aria-label="Gasto fijo por vencer">
+    <section className="py-4 border-y flex flex-col gap-3" style={{ borderColor: COLORS.line }} aria-label="Gasto fijo por vencer">
       <div className="flex items-start gap-3">
         <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }} aria-hidden>
           <IconCalendario size={20} />

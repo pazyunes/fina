@@ -26,6 +26,17 @@ function Marco({ children }: { children: React.ReactNode }) {
   );
 }
 
+// La frase que explica el ejemplo va abajo, separada del dato por una hairline
+// (CLAUDE.md regla 12): el Marco es el único bloque de la pantalla porque es la
+// feature, y adentro el ejemplo y su explicación no se leen como un párrafo.
+function Bajada({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[14px] pt-3 border-t" style={{ color: COLORS.inkSoft, borderColor: COLORS.line }}>
+      {children}
+    </p>
+  );
+}
+
 function Encabezado({ icono, texto }: { icono: React.ReactNode; texto: string }) {
   return (
     <div className="flex items-center gap-2">
@@ -95,9 +106,7 @@ function PantallazoAhorro() {
             </div>
           ))}
         </div>
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
-          Apartás plata y la ves crecer. Sin tocarla, sin tentarte.
-        </p>
+        <Bajada>Apartás plata y la ves crecer. Sin tocarla, sin tentarte.</Bajada>
       </div>
     </Marco>
   );
@@ -133,10 +142,10 @@ function PantallazoInversiones() {
             <span className="w-3 h-[3px] rounded-full" style={{ background: COLORS.line }} /> Lo que pusiste
           </span>
         </div>
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
-          Te mostramos cuánto podría rendir tu plata según tu perfil, y con qué
-          instrumento — nunca la movemos nosotros.
-        </p>
+        <Bajada>
+          Te mostramos cuánto podría rendir tu plata según tu perfil y con qué
+          instrumento. Nunca la movemos nosotros.
+        </Bajada>
       </div>
     </Marco>
   );
@@ -161,9 +170,7 @@ function PantallazoGastos() {
             </div>
           </div>
         ))}
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
-          Con lo que registrás armamos esto solo. Sin planillas.
-        </p>
+        <Bajada>Con lo que registrás armamos esto solo. Sin planillas.</Bajada>
       </div>
     </Marco>
   );

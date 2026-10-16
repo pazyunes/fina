@@ -82,8 +82,10 @@ export function AvisosFina() {
   // "todavía no disponible" en Perfil no le sirve a nadie.
   if (soporte === 'no-configurado') return null;
 
+  // La hairline de arriba va acá y no en Perfil: cuando no hay avisos la
+  // sección no se muestra, y la línea tiene que irse con ella.
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex flex-col gap-3 pt-6 border-t" style={{ borderColor: COLORS.line }}>
       <TituloSeccion>Avisos</TituloSeccion>
       <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
         Pocos y útiles: como mucho, dos avisos por día.

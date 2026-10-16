@@ -89,11 +89,16 @@ export function InvitacionAvisos({ momento, gastosRegistrados = 0 }: { momento: 
 
   const centrado = momento === 'onboarding';
 
+  // Plana, entre dos hairlines: invitar a los avisos no es lo prioritario de
+  // ninguna de las dos pantallas, y el botón de activar ya es el único relleno
+  // que hace falta. La caja lila competía con el paso de hoy (frontend.md §3.5).
+  // En Inicio sólo lleva la línea de arriba: abajo vienen los gráficos, que
+  // traen la suya, y dos líneas seguidas no separan más que una.
   return (
     <>
       <section
-        className={`rounded-2xl p-4 flex flex-col gap-3 w-full ${centrado ? 'text-left mt-2' : ''}`}
-        style={{ background: COLORS.brandSoft }}
+        className={`flex flex-col gap-3 w-full ${centrado ? 'text-left mt-2 py-4 border-y' : 'pt-4 border-t'}`}
+        style={{ borderColor: COLORS.line }}
         aria-label="Activar avisos"
       >
         <div className="flex items-start gap-2">

@@ -54,7 +54,9 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
   }
 
   return (
-    <div className="mt-2 rounded-xl px-3.5 py-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }} role="group" aria-label="Editar ingreso">
+    // Plano, sin recuadro tintado (§3.5): editar un ingreso no es lo prioritario
+    // de la pantalla. Una hairline lo separa del renglón que se está editando.
+    <div className="mt-2.5 pt-3 border-t flex flex-col gap-3" style={{ borderColor: COLORS.line }} role="group" aria-label="Editar ingreso">
       <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>Editar ingreso</p>
 
       <div className="flex gap-2">

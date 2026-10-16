@@ -813,7 +813,9 @@ export function InversionesV2() {
                 + Registrar un aporte
               </button>
 
-              <div className="flex flex-col gap-2 pt-2">
+              {/* Plano, separado del total y del botón por una hairline
+                  (CLAUDE.md regla 12): las filas ya se dividen entre sí. */}
+              <div className="flex flex-col gap-2 pt-4 border-t" style={{ borderColor: COLORS.line }}>
                 <TituloSeccion>Tus registros</TituloSeccion>
                 {aportes.length === 0 ? (
                   <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>
@@ -1192,7 +1194,10 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
       {montoNum > 0 && (
         <>
           {rinde && (
-            <div className="flex flex-col gap-1.5 pt-1" aria-live="polite">
+            // El resultado se separa de los controles con una hairline. No
+            // suma otra caja: el bloque de la pantalla ya es la recomendación
+            // principal de arriba (CLAUDE.md regla 12).
+            <div className="flex flex-col gap-1.5 pt-4 border-t" style={{ borderColor: COLORS.line }} aria-live="polite">
               <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>A los {meses} meses podrías tener</p>
               <Rango min={loFinal} max={hiFinal} />
               <EstadoConfianza estado="estimado" />
@@ -1240,7 +1245,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
               sin respaldo, y no todos los instrumentos funcionan igual. Va
               cerrado: el resultado es lo que importa, el respaldo se abre si
               se quiere. */}
-          <details className="group flex flex-col gap-1.5 pt-1">
+          <details className="group flex flex-col gap-1.5 pt-1 border-t" style={{ borderColor: COLORS.line }}>
             <summary
               className="v2-focus list-none [&::-webkit-details-marker]:hidden cursor-pointer flex items-center gap-2 min-h-[44px] rounded-lg text-[15px] font-semibold"
               style={{ color: COLORS.ink }}

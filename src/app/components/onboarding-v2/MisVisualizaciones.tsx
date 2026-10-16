@@ -60,6 +60,9 @@ function Barras({ filas }: { filas: { label: string; valor: number }[] }) {
   );
 }
 
+/** Aire entre gráficos, en px. Tiene que coincidir con el `gap-8` de la fila. */
+const GAP_FILA = 32;
+
 // ── Una tarjeta del carrusel ─────────────────────────────────────────────
 // Sin subtítulo: el título tiene que decir solo qué muestra el gráfico
 // (frontend.md §5.4). Si hiciera falta explicarlo, se cambia el título.
@@ -75,8 +78,10 @@ function Tarjeta({ titulo, ultima, children }: { titulo: string; ultima: boolean
       // devolvía a la anterior.
       // min-w-0 + overflow-hidden: nada de adentro puede empujar la tarjeta más
       // allá de su ancho (Entra y sale se salía de la pantalla en celulares).
-      className={`${ultima ? 'snap-end' : 'snap-start'} shrink-0 min-w-0 overflow-hidden w-[85%] sm:w-[360px] lg:w-[400px] rounded-2xl p-4 flex flex-col gap-3`}
-      style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
+      // Sin tarjeta: los gráficos van planos sobre el papel, porque en Inicio el
+      // único bloque es el paso de hoy (frontend.md §3.5). Lo que separa un
+      // gráfico del siguiente es el aire entre ellos (gap de la fila).
+      className={`${ultima ? 'snap-end' : 'snap-start'} shrink-0 min-w-0 overflow-hidden w-[85%] sm:w-[360px] lg:w-[400px] flex flex-col gap-3`}
     >
       <h3 className="text-[16px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
       {children}
@@ -143,7 +148,7 @@ export function MisVisualizaciones() {
     // por ancho la daba como la anteúltima.
     if (fila.scrollLeft >= fila.scrollWidth - fila.clientWidth - 4) { setActual(tarjetas.length - 1); return; }
     const ancho = fila.firstElementChild?.getBoundingClientRect().width ?? fila.clientWidth;
-    setActual(Math.min(tarjetas.length - 1, Math.max(0, Math.round(fila.scrollLeft / (ancho + 12)))));
+    setActual(Math.min(tarjetas.length - 1, Math.max(0, Math.round(fila.scrollLeft / (ancho + GAP_FILA)))));
   }
 
   function irA(i: number) {
@@ -181,7 +186,8 @@ export function MisVisualizaciones() {
   };
 
   return (
-    <section className="flex flex-col gap-3" aria-label="Mis visualizaciones">
+    // La hairline de arriba la separa de lo anterior de Inicio sin ponerla en caja.
+    <section className="flex flex-col gap-3 pt-5 border-t" style={{ borderColor: COLORS.line }} aria-label="Mis visualizaciones">
       <div className="flex items-center justify-between gap-2">
         <TituloSeccion>Mis visualizaciones</TituloSeccion>
         {/* Flechas sólo con mouse: en el celular se desliza con el dedo. */}
@@ -196,7 +202,7 @@ export function MisVisualizaciones() {
         // tabIndex para que se pueda recorrer con el teclado: una fila con
         // scroll horizontal que no toma foco es inaccesible sin mouse.
         tabIndex={0}
-        className="v2-focus flex items-start gap-3 overflow-x-auto snap-x snap-mandatory -mx-[22px] px-[22px] scroll-pl-[22px] pb-1 lg:mx-0 lg:px-0 lg:scroll-pl-0"
+        className="v2-focus flex items-start gap-8 overflow-x-auto snap-x snap-mandatory -mx-[22px] px-[22px] scroll-pl-[22px] pb-1 lg:mx-0 lg:px-0 lg:scroll-pl-0"
         style={{ scrollbarWidth: 'none' }}
       >
         {tarjetas.map((t, i) => (
