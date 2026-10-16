@@ -39,7 +39,7 @@ import { ObjetivosEnInicio } from './ObjetivosEnInicio';
 // use la app.
 export function HomeV2() {
   const navigate = useNavigate();
-  const { estado } = useAlmacen();
+  const { estado, listo } = useAlmacen();
   const gastosRegistrados = estado.gastos.length;
   const nombre = loadV2Nombre();
   const foto = loadV2Foto();
@@ -312,11 +312,16 @@ export function HomeV2() {
       {/* Se fueron Tu plata guardada y Mis competencias (DEBT I8 e I9). La
           reserva sólo vivía acá y en el navegador (loadV2Reserva): deja de verse
           hasta decidir si vuelve, y dónde. */}
-      <Fila
-        icon={<IconPerfil size={18} />}
-        label="Completá tu perfil"
-        onClick={() => navigate('/onboarding-v2/perfil')}
-      />
+      {/* Sólo mientras falte asociar el WhatsApp: con el teléfono verificado
+          el perfil ya no tiene nada pendiente que valga una fila en Inicio.
+          Lleva directo a la verificación. */}
+      {listo && !estado.perfil.telefonoVerificadoEn && (
+        <Fila
+          icon={<IconPerfil size={18} />}
+          label="Completá tu perfil"
+          onClick={() => navigate('/onboarding-v2/perfil', { state: { abrir: 'verificar', from: '/onboarding-v2/home' } })}
+        />
+      )}
     </div>
   );
 }

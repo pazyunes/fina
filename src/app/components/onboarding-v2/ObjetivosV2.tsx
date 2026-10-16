@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import { colorDeTono, datosDelObjetivo } from './ObjetivosEnInicio';
 import { formasDeLlegarAntes, mensajePlazo, textoImpacto, type FormaDeLlegar } from '../../utils/goalStrategies';
-import { llevarA, useAlLlegar } from './alLlegar';
+import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
 import { COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { FiniPresenta } from './FiniDice';
@@ -575,13 +575,14 @@ export function ObjetivosV2() {
   // Desde "Tu paso de hoy" en Home ("Sumarle a mi objetivo"): abre el objetivo
   // con el monto listo para escribir. Si tiene varios en curso, el último al
   // que le sumó — es al que viene aportando —; si nunca le sumó a ninguno, el
-  // primero. El nombre del objetivo queda arriba de todo, así que si no es ese,
-  // se ve enseguida y se vuelve con la flecha.
+  // primero.
   //
   // Si viene de un objetivo puntual (el bloque de objetivos en Home, o un aviso
-  // de plazo con `?objetivo=<id>`), abre ESE.
+  // de plazo con `?objetivo=<id>`), abre ESE. Llegando desde Inicio, "Volver"
+  // lleva de vuelta a Inicio, no a la lista de objetivos.
   const location = useLocation();
   const navigate = useNavigate();
+  const volverAlOrigen = useVolverAlOrigen();
   useAlLlegar('aporte_objetivo', ({ objetivoId, ref }) => {
     const enCurso = db.objetivos.filter((o) => o.estado === 'active');
     if (enCurso.length === 0) return;
@@ -828,7 +829,7 @@ export function ObjetivosV2() {
         {V2_STYLES}
         {confirmarBorrarModal}
         <div className="flex items-center justify-between">
-          <button type="button" className="v2-focus inline-flex items-center gap-1 text-[14px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => setOpenId(null)}>
+          <button type="button" className="v2-focus inline-flex items-center gap-1 text-[14px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => (volverAlOrigen ? volverAlOrigen() : setOpenId(null))}>
             <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} /> Volver
           </button>
           <div className="flex items-center gap-3">
@@ -1086,13 +1087,15 @@ export function ObjetivosV2() {
   }
 
   // ── Modal: crear objetivo — un box flotante sobre Objetivos, no otra
-  // pantalla, para que quede claro que es "agregar uno más" acá mismo.
+  // pantalla, para que quede claro que es "agregar uno más" acá mismo. Si se
+  // abrió desde Inicio, cerrarlo vuelve a Inicio.
+  const cerrarCrear = () => (volverAlOrigen ? volverAlOrigen() : setCreating(false));
   const modalCrear = creating && (
-    <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: `${COLORS.ink}73` }} onClick={() => setCreating(false)}>
+    <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: `${COLORS.ink}73` }} onClick={cerrarCrear}>
       <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto rounded-[24px] p-5 flex flex-col gap-3.5" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <Titulo>Nuevo objetivo</Titulo>
-          <button type="button" onClick={() => setCreating(false)} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
+          <button type="button" onClick={cerrarCrear} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
         <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />

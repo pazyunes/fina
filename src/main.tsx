@@ -9,6 +9,10 @@
 
   createRoot(document.getElementById("root")!).render(<App />);
 
+  // Sin zoom con dos dedos. Safari en iOS ignora `user-scalable=no` del
+  // viewport, así que el gesto se frena acá.
+  document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+
   // Para las notificaciones de la app (public/sw.js).
   registrarServiceWorker();
   

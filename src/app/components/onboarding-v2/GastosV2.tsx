@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { llevarA, useAlLlegar } from './alLlegar';
+import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
 import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
-import { diaArgentina } from '../../api/v2/pasos';
 import { Fini } from './Fini';
 import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
@@ -18,8 +17,7 @@ import { VerTodos, recortar } from './VerTodos';
 // tenés disponible. Ese número va arriba y grande; debajo, las dos acciones
 // (agregar gasto, agregar plata), lo que entra contra lo que sale, la
 // distribución por tipo, las secciones con su tope y el buscador. La torta y
-// las barras por medio de pago se sacaron (DEBT GA2); unir medios vive en
-// Perfil (MediosDePago.tsx).
+// las barras por medio de pago se sacaron (DEBT GA2).
 //
 // Alineado a la guía (src/styles/frontend.md): todo el color sale de COLORS
 // (cero hex/rgba crudo salvo sombras basadas en tinta); los gastos se muestran
@@ -385,96 +383,26 @@ export function GastosV2() {
   const offsetVentana = ventana === 'mes' ? mesOffset : semanaOffset;
 
   const totalGastado = gastosVentana.reduce((s, g) => s + g.montoArs, 0);
-  // Lo que SOBRÓ de los meses anteriores en cada medio de pago, que se suma al
-  // disponible del mes que se mira. Sólo pasa lo que sobra: un mes que cierra
-  // en negativo en un medio no arrastra la deuda, el siguiente arranca en cero.
-  // Se arrastra mes a mes (lo que sobró en agosto entra a septiembre, y lo que
-  // sobre al cierre de septiembre entra a octubre). Los gastos sin medio no se
-  // pueden asignar a ninguno y no arrastran nada. Con "Esta semana" no se
-  // arrastra: la semana se mira sola.
-  const sobranteAnterior = (() => {
-    const sobra = new Map<string, number>();
-    if (ventana !== 'mes') return sobra;
-    const claveVista = mesAtras(mesOffset);
-    const netos = new Map<string, Map<string, number>>(); // mes → medio → neto
-    const sumar = (ts: number, medio: string, delta: number) => {
-      const mes = diaArgentina(ts).slice(0, 7);
-      const deMes = netos.get(mes) ?? new Map<string, number>();
-      deMes.set(medio, (deMes.get(medio) ?? 0) + delta);
-      netos.set(mes, deMes);
-    };
-    for (const i of db.ingresos) if (i.medio) sumar(i.ts, i.medio, i.montoArs);
-    for (const c of db.cargas) sumar(c.ts, c.medio, c.montoArs);
-    for (const g of gastos) {
-      if (g.pagos?.length) for (const p of g.pagos) sumar(g.ts, p.medio, -p.monto);
-      else if (g.metodoPago) sumar(g.ts, g.metodoPago, -g.montoArs);
-    }
-    for (const mes of [...netos.keys()].sort()) {
-      if (mes >= claveVista) break;
-      for (const [medio, neto] of netos.get(mes)!) sobra.set(medio, Math.max(0, (sobra.get(medio) ?? 0) + neto));
-    }
-    return sobra;
-  })();
-
-  // Cuánto queda en cada medio de pago EN EL PERÍODO que se está mirando (el
-  // mes o la semana de la torta): lo que sobró de antes, más lo que entró en
-  // ese medio, menos lo que salió de él en esos días. Un gasto dividido resta
-  // a cada medio lo suyo. Las barras se comparan contra el medio con más
-  // margen; un resultado en cero o negativo queda con la barra vacía y se dice
-  // con el número, sin alerta (regla 3: gastar más de lo que entró por un
-  // medio es un dato, no un error).
-  const mediosVentana = (() => {
-    const mapa = new Map<string, { previo: number; entro: number; salio: number }>();
-    const de = (nombre: string) => {
-      let v = mapa.get(nombre);
-      if (!v) { v = { previo: 0, entro: 0, salio: 0 }; mapa.set(nombre, v); }
-      return v;
-    };
-    for (const [medio, v] of sobranteAnterior) if (v > 0) de(medio).previo = v;
-    let sinMedioEntro = 0;
-    for (const i of db.ingresos) {
-      if (i.ts < desdeVentana || i.ts >= hastaVentana) continue;
-      if (i.medio) de(i.medio).entro += i.montoArs;
-      else sinMedioEntro += i.montoArs;
-    }
-    // Lo cargado como "Ya la tenía" también cuenta en el mes en que se cargó.
-    for (const c of db.cargas) {
-      if (c.ts >= desdeVentana && c.ts < hastaVentana) de(c.medio).entro += c.montoArs;
-    }
-    let sinMedio = 0;
-    for (const g of gastosVentana) {
-      if (g.pagos?.length) for (const p of g.pagos) de(p.medio).salio += p.monto;
-      else if (g.metodoPago) de(g.metodoPago).salio += g.montoArs;
-      else sinMedio += g.montoArs;
-    }
-    const filas = [...mapa.entries()]
-      .map(([nombre, v]) => ({ nombre, previo: v.previo, entro: v.entro, salio: v.salio, quedan: v.previo + v.entro - v.salio }))
-      .sort((x, y) => y.quedan - x.quedan);
-    // Lo que entró o salió sin elegir medio también cuenta en el mes: se
-    // muestra aparte, al final, para que las filas sumen lo mismo que el
-    // número de arriba.
-    if (sinMedio > 0 || sinMedioEntro > 0) {
-      filas.push({ nombre: 'Sin medio elegido', previo: 0, entro: sinMedioEntro, salio: sinMedio, quedan: sinMedioEntro - sinMedio });
-    }
-    return filas;
-  })();
-  // Dinero disponible DEL PERÍODO: lo que sobró de los meses anteriores, más lo
-  // cargado ("Me entró" y "Ya la tenía"), menos lo gastado en el mes (o la
-  // semana) que se está mirando. Es la suma de las filas de abajo. En cero y no
-  // en negativo: gastar más de lo que se cargó suele ser que falta cargar
-  // ingresos, y se ve en cada medio.
-  const previoTotal = mediosVentana.reduce((t, m) => t + m.previo, 0);
-  const disponibleVentana = Math.max(mediosVentana.reduce((t, m) => t + m.quedan, 0), 0);
+  // Lo que entró EN EL PERÍODO que se está mirando, sólo con lo registrado en
+  // esta pantalla ("Me entró" y "Ya la tenía"). No se arrastra lo que sobró del
+  // mes anterior: que haya sobrado no quiere decir que siga estando.
+  const plataDelPeriodo =
+    db.ingresos.filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana).reduce((t, i) => t + i.montoArs, 0)
+    + db.cargas.filter((c) => c.ts >= desdeVentana && c.ts < hastaVentana).reduce((t, c) => t + c.montoArs, 0);
+  // En cero y no en negativo: gastar más de lo que se cargó suele ser que
+  // falta cargar ingresos, y se dice aparte, sin alerta (regla 3).
+  const disponibleVentana = Math.max(plataDelPeriodo - totalGastado, 0);
+  // Un período que ya terminó se cuenta en pasado: "te quedó", no "te queda".
+  const periodoCerrado = offsetVentana > 0;
+  const teQueda = periodoCerrado ? 'Te quedó' : 'Te queda';
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
 
   // ── Gráfico principal: de lo que entró, cuánto se fue en cada sección y
-  // cuánto te queda. "Lo que entró" es lo que sobró del mes anterior más lo
-  // registrado en el período (Me entró y Ya la tenía): el disponible se arma
-  // solo con lo que registrás, sin tener que actualizarlo a mano. Sin nada
-  // registrado como entrada, el anillo muestra sólo cómo se reparten los gastos
-  // entre secciones (no hace falta cargar el ingreso para usar Gastos).
-  const plataDelPeriodo = mediosVentana.reduce((t, m) => t + m.previo + m.entro, 0);
+  // cuánto te queda. "Lo que entró" es sólo lo registrado en el período (Me
+  // entró y Ya la tenía). Sin nada registrado como entrada, el anillo muestra
+  // sólo cómo se reparten los gastos entre secciones (no hace falta cargar el
+  // ingreso para usar Gastos).
   const conIngreso = plataDelPeriodo > 0;
   const porSeccion = [
     ...categorias.map((c) => ({ id: c.id, nombre: c.nombre, color: colorDe(c.id), monto: gastadoEn(c.id) })),
@@ -565,7 +493,12 @@ export function GastosV2() {
   //   "elegí la que más se te va") con el campo del tope listo. Si todavía no
   //   gastó en ninguna, la primera.
   const pantallaRef = useRef<HTMLDivElement>(null);
+  // Si el formulario se abrió al llegar desde Inicio, cancelarlo vuelve a
+  // Inicio; si se abrió acá, se queda en Gastos.
+  const volverAlOrigen = useVolverAlOrigen();
+  const formDesdeOrigen = useRef(false);
   useAlLlegar('gasto', () => {
+    formDesdeOrigen.current = true;
     setChooser(false);
     setAddingGasto(true);
     llevarA(
@@ -682,7 +615,14 @@ export function GastosV2() {
     setAddingGasto(true);
   }
 
+  function cancelarDesdeForm() {
+    const volver = formDesdeOrigen.current ? volverAlOrigen : null;
+    cancelarForm();
+    volver?.();
+  }
+
   function cancelarForm() {
+    formDesdeOrigen.current = false;
     setAddingGasto(false);
     setEditandoId(null);
     setNgFijo(opcionFijoInicial());
@@ -736,7 +676,7 @@ export function GastosV2() {
           cómo se reparten tus gastos. Es la única tarjeta elevada; los medios
           de pago no van acá, van en su propio gráfico más abajo. */}
       <section
-        aria-label={conIngreso ? `Te queda, ${textoPeriodo}` : `Tus gastos, ${textoPeriodo}`}
+        aria-label={conIngreso ? `${teQueda}, ${textoPeriodo}` : `Tus gastos, ${textoPeriodo}`}
         className="rounded-2xl px-5 py-5 flex flex-col gap-4 lg:max-w-xl"
         style={CARD_ELEVADA}
       >
@@ -744,12 +684,12 @@ export function GastosV2() {
           <Donut
             size={150}
             segments={segmentosAnillo}
-            centerLabel={conIngreso ? 'Te queda' : 'Gastaste'}
+            centerLabel={conIngreso ? teQueda : 'Gastaste'}
             centerValue={fmtMoney(conIngreso ? disponibleVentana : totalGastado)}
           />
           <div className="flex-1 min-w-0 flex flex-col gap-1" aria-live="polite">
             <p className="text-[14px] font-medium" style={{ color: COLORS.inkSoft }}>
-              {conIngreso ? 'Te queda' : 'Gastaste'}{ventana === 'mes' && mesOffset === 0 ? ' este mes' : `, ${textoPeriodo.toLowerCase()}`}
+              {conIngreso ? teQueda : 'Gastaste'}{ventana === 'mes' && mesOffset === 0 ? ' este mes' : `, ${textoPeriodo.toLowerCase()}`}
             </p>
             <Monto value={conIngreso ? disponibleVentana : totalGastado} size={26} className="font-bold leading-tight tracking-[-0.01em]" />
             {conIngreso && (
@@ -779,18 +719,13 @@ export function GastosV2() {
             {conIngreso && (
               <li className="flex items-center gap-2.5 text-[14px] font-semibold">
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
-                <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>Te queda</span>
+                <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>{teQueda}</span>
                 <Monto value={disponibleVentana} className="text-[14px] font-semibold" />
               </li>
             )}
           </ul>
         )}
 
-        {previoTotal > 0 && (
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            Incluye <span className="font-mono tabular-nums">{fmtMoney(previoTotal)}</span> que sobró del mes anterior
-          </p>
-        )}
         {gastasteDeMas > 0 && (
           <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
             Salieron <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró
@@ -803,12 +738,14 @@ export function GastosV2() {
             className="v2-focus self-start min-h-[44px] text-[14px] font-semibold"
             style={{ color: COLORS.brand }}
           >
-            Sumá lo que te entró para ver cuánto te queda
+            Sumá lo que te entró para ver cuánto te {periodoCerrado ? 'quedó' : 'queda'}
           </button>
         )}
         {!conIngreso && totalGastado === 0 && (
           <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto te queda.
+            {periodoCerrado
+              ? `No registraste entradas ni gastos en ${textoPeriodo.toLowerCase()}.`
+              : 'Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto te queda.'}
           </p>
         )}
       </section>
@@ -1271,7 +1208,7 @@ export function GastosV2() {
             )}
 
             <div className="flex gap-2 mt-1">
-              <button type="button" onClick={cancelarForm} className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+              <button type="button" onClick={cancelarDesdeForm} className="v2-focus flex-1 rounded-xl py-2.5 text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
                 Cancelar
               </button>
               <button

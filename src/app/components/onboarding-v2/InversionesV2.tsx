@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useAlLlegar } from './alLlegar';
+import { useAlLlegar, useVolverAlOrigen } from './alLlegar';
 import { ArmarGrupoBtn, BotonVolver, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -229,6 +229,7 @@ export function InversionesV2() {
   useAlLlegar('quiz', () => {
     if (paso === 'intro') setPaso(pasos[0]);
   });
+  const volverAlOrigen = useVolverAlOrigen();
   function abrirEdicion(a: Aporte) {
     setEditandoId(a.id);
     setConfirmarBorrar(false);
@@ -868,9 +869,11 @@ export function InversionesV2() {
 
   // ── q1 / q2 / yaInvierte / enQue / bancos comparten el layout del stepper ──
   // Volver: a la pregunta anterior; desde la primera, a donde se entró (la
-  // presentación, o el resultado si ya lo había hecho).
+  // presentación, o el resultado si ya lo había hecho). Si el cuestionario se
+  // abrió desde Inicio, a Inicio.
   const volverDelCuestionario = () => {
     if (stepIndex > 0) { setPaso(pasos[stepIndex - 1]); return; }
+    if (volverAlOrigen) { volverAlOrigen(); return; }
     setPaso(perfilGuardado?.completadoEn ? 'resultado' : 'intro');
   };
   return (
@@ -1234,9 +1237,19 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
           )}
 
           {/* Con qué se hizo la cuenta. Sin esto, "tendrías tanto" es un número
-              sin respaldo, y no todos los instrumentos funcionan igual. */}
-          <div className="flex flex-col gap-1.5 pt-1">
-            <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>Cómo se hizo esta cuenta</p>
+              sin respaldo, y no todos los instrumentos funcionan igual. Va
+              cerrado: el resultado es lo que importa, el respaldo se abre si
+              se quiere. */}
+          <details className="group flex flex-col gap-1.5 pt-1">
+            <summary
+              className="v2-focus list-none [&::-webkit-details-marker]:hidden cursor-pointer flex items-center gap-2 min-h-[44px] rounded-lg text-[15px] font-semibold"
+              style={{ color: COLORS.ink }}
+            >
+              <span className="flex-1">Cómo se hizo esta cuenta</span>
+              <span className="transition-transform rotate-90 group-open:-rotate-90" style={{ color: COLORS.inkFaint }} aria-hidden>
+                <IconChevron size={16} />
+              </span>
+            </summary>
             <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{sup?.comoFunciona}</p>
             {rinde && (
               <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
@@ -1252,7 +1265,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
                 Fuente: {sup.fuente}. Datos de {FECHA_SUPUESTOS}; las tasas cambian.
               </p>
             )}
-          </div>
+          </details>
         </>
       )}
 

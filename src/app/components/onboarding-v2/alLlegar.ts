@@ -32,6 +32,24 @@ export function useAlLlegar(accion: AccionPaso | 'fijos', hacer: (datos: Record<
 }
 
 /**
+ * Si se llegó desde otra pantalla con `from` en el state (los botones de
+ * Inicio), devuelve cómo volver ahí; si no, null. Así el "Volver" de lo que se
+ * abrió al llegar (el detalle de un objetivo, el formulario de un gasto) lleva
+ * de vuelta a Inicio y no a la vista general de la pantalla de destino.
+ */
+export function useVolverAlOrigen(): (() => void) | null {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const from = (location.state as { from?: unknown } | null)?.from;
+  if (typeof from !== 'string') return null;
+  return () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate(from, { replace: true });
+  };
+}
+
+/**
  * Lleva la vista hasta un elemento y le da el foco.
  *
  * Con una espera corta a propósito: el elemento suele aparecer recién en el

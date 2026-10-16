@@ -150,6 +150,8 @@
   html {
     font-size: var(--font-size);
     scroll-behavior: smooth;
+    /* Sin zoom por doble toque: la app se usa como app, no como página. */
+    touch-action: manipulation;
   }
 
   h1 {

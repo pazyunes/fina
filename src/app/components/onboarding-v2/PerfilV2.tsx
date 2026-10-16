@@ -12,7 +12,7 @@ import { cerrarSesion } from '../../api/v2/cuenta';
 import { llevarA, useAlLlegar } from './alLlegar';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 import { IconEditar } from './FinaIcons';
-import { MediosDePago } from './MediosDePago';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
 // (esa idea se descartó a propósito). Se calcula con datos reales ya
@@ -46,6 +46,8 @@ function itemsPerfil() {
 export function PerfilV2() {
   const navigate = useNavigate();
   const volver = useVolver();
+  const { estado } = useAlmacen();
+  const telefonoVerificado = !!estado.perfil.telefonoVerificadoEn;
   const [confirmarSalida, setConfirmarSalida] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
   async function salir() {
@@ -269,7 +271,9 @@ export function PerfilV2() {
         </div>
       )}
 
-      {faltan.length === 0 && !faltaNivel && (
+      {/* "Completo" incluye el WhatsApp: sin el teléfono verificado FINA no
+          puede registrar gastos por chat, y la verificación está más abajo. */}
+      {faltan.length === 0 && !faltaNivel && telefonoVerificado && (
         <section className="flex flex-col items-center gap-2 py-2">
           <Fini state="logro" size={124} />
           <p className="text-[15px] font-bold text-center" style={{ color: COLORS.ink }}>Tu perfil está completo</p>
@@ -356,8 +360,6 @@ export function PerfilV2() {
       </section>
 
       <AvisosFina />
-
-      <MediosDePago />
 
       {/* PIN / Face ID — pensado para que se sienta más seguro al entrar, no
           para reemplazar la cuenta: la sesión sigue siendo la de Supabase,

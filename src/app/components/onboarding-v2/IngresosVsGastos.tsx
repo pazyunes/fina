@@ -194,7 +194,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
         {actual.entro === 0 && actual.salio > 0 && (
           <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
             Registraste gastos {esteTexto}, pero no ingresos.{' '}
-            {explorar ? 'Si los cargás, se ve cuánto te queda.' : 'Si los cargás, se ve cuánto entró.'}
+            {explorar ? `Si los cargás, se ve cuánto te ${(modoSemana ? semana.actual : esEsteMes) ? 'queda' : 'quedó'}.` : 'Si los cargás, se ve cuánto entró.'}
           </p>
         )}
       </div>
