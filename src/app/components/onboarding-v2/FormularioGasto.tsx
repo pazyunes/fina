@@ -1,0 +1,449 @@
+import { useState } from 'react';
+import { COLORS, fmtMoney, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
+import * as acciones from '../../api/v2/acciones';
+import { IconChevron, IconClose } from './FinaIcons';
+import { CamposGastoFijo, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
+import { TIPOS, TIPO_INFO, gastosDeLaBase, recientes, type Categoria, type Gasto, type Moneda, type TipoGasto } from './datosGasto';
+
+// El formulario de un gasto: el mismo para cargar uno nuevo (en Gastos, debajo
+// de "Agregar gasto") y para editar uno (abierto en su propio renglón, en
+// Gastos y en Todos tus gastos). Editar en el lugar evita que la pantalla salte
+// a otra parte justo cuando la persona tocó un gasto puntual.
+
+// Secciones sugeridas. Es la misma lista que ofrecía el onboarding: las que la
+// persona marcó allá ya entran como suyas, y el resto queda acá para no
+// obligarla a tipear "Supermercado" a mano.
+const SECCIONES_SUGERIDAS = [
+  'Delivery', 'Restaurantes', 'Cafeterías', 'Salidas y entretenimiento',
+  'Supermercado', 'Transporte', 'Belleza y cuidado personal', 'Ropa',
+  'Suscripciones', 'Compras online', 'Farmacia', 'Regalos', 'Deporte',
+];
+
+// Medios de pago sugeridos, para la primera vez que no hay ninguno cargado.
+export const METODOS_SUGERIDOS = ['Efectivo', 'Débito', 'Crédito', 'Mercado Pago', 'Transferencia'];
+
+export const INPUT_STYLE: React.CSSProperties = { background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}` };
+const OPCION: React.CSSProperties = { color: COLORS.ink };
+
+// Una fila del editor de "pagado con varios medios". `medio === 'otro'` usa
+// `otro` en vez del nombre, mismo patrón que el desplegable de medio único.
+type FilaPago = { medio: string; otro: string; monto: string };
+function filaPagoVacia(): FilaPago {
+  return { medio: '', otro: '', monto: '' };
+}
+function medioDeFila(f: FilaPago): string {
+  return (f.medio === 'otro' ? f.otro : f.medio).trim();
+}
+
+// Desplegable nativo. En el celular abre el selector del sistema, que es lo más
+// cómodo para elegir de una lista larga con el dedo.
+export function Desplegable({ id, label, value, onChange, children }: {
+  id: string; label: string; value: string; onChange: (v: string) => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>{label}</label>
+      <div className="relative">
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[15px] transition-colors"
+          // Sin nada elegido, el texto va tenue como un placeholder.
+          style={{ ...INPUT_STYLE, color: value ? COLORS.ink : COLORS.inkFaint }}
+        >
+          {children}
+        </select>
+        <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: COLORS.inkSoft }} aria-hidden>
+          <IconChevron size={16} style={{ transform: 'rotate(90deg)' }} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * `gasto`: si viene, se edita ese gasto; si no, se carga uno nuevo (y se ofrece
+ * la opción de gasto fijo, que no aplica a un movimiento que ya pasó).
+ * `onListo` recibe la sección en la que quedó el gasto.
+ */
+export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
+  gasto?: Gasto;
+  categorias: Categoria[];
+  onListo: (seccionId: string | null) => void;
+  onCancelar: () => void;
+}) {
+  const { estado: db } = useAlmacen();
+  const editando = !!gasto;
+
+  const [monto, setMonto] = useState(() => (gasto ? formatMontoInicial(gasto.monto) : ''));
+  const [moneda, setMoneda] = useState<Moneda>(gasto?.moneda ?? 'ARS');
+  const [fechaHora, setFechaHora] = useState(() => aInputFechaHora(gasto?.ts ?? Date.now()));
+  const [desc, setDesc] = useState(gasto?.descripcion ?? '');
+  // Sin sección elegida de entrada: con la primera ya marcada, era fácil
+  // registrar un gasto en la sección equivocada sin darse cuenta.
+  const [catId, setCatId] = useState<string | null>(gasto?.categoriaId || null);
+  const [nuevaCat, setNuevaCat] = useState('');
+  const [creandoCat, setCreandoCat] = useState(false);
+  const [tipo, setTipo] = useState<TipoGasto>(gasto?.tipo ?? 'necesario');
+  const [tipoOtro, setTipoOtro] = useState(gasto?.tipoOtro ?? '');
+  const [metodo, setMetodo] = useState<string | null>(gasto && !gasto.pagos?.length ? gasto.metodoPago ?? null : null);
+  const [metodoOtro, setMetodoOtro] = useState('');
+  // Pagado con más de un medio: cada fila es un medio y su parte del total.
+  // La suma de las filas tiene que dar el monto del gasto.
+  const [dividido, setDividido] = useState(!!gasto?.pagos?.length);
+  const [pagos, setPagos] = useState<FilaPago[]>(() => (gasto?.pagos?.length
+    ? gasto.pagos.map((p) => ({ medio: p.medio, otro: '', monto: formatMontoInicial(p.monto) }))
+    : [filaPagoVacia(), filaPagoVacia()]));
+  const [fijo, setFijo] = useState<OpcionFijo>(opcionFijoInicial);
+  // Errores de conversión (no se pudo traer el dólar). Los de guardado los
+  // reporta el almacén.
+  const [error, setError] = useState<string | null>(null);
+
+  const sugeridasDisponibles = SECCIONES_SUGERIDAS.filter((n) => !categorias.some((c) => slug(c.nombre) === slug(n)));
+  // Medios ofrecidos: los que ya usaste primero; si no hay ninguno, los sugeridos.
+  const mediosUsados = db.mediosPago.map((m) => m.nombre);
+  const metodosOfrecidos = mediosUsados.length ? mediosUsados : METODOS_SUGERIDOS;
+  const tiposOtroRecientes = recientes(gastosDeLaBase(db).map((g) => g.tipoOtro));
+
+  const sumaPagos = pagos.reduce((s, f) => s + parseMoneyInput(f.monto), 0);
+  const pagosValidos = !dividido || (
+    pagos.every((f) => medioDeFila(f) && parseMoneyInput(f.monto) > 0)
+    && Math.abs(sumaPagos - parseMoneyInput(monto)) < 0.01
+  );
+  const puedeGuardar = parseMoneyInput(monto) > 0 && (!!catId || !!nuevaCat.trim()) && (editando || opcionFijoValida(fijo)) && pagosValidos;
+
+  function seccionElegida(): string | null {
+    if (!nuevaCat.trim()) return catId;
+    const ya = categorias.find((c) => slug(c.nombre) === slug(nuevaCat.trim()));
+    return ya ? ya.id : acciones.crearSeccion(nuevaCat.trim()).id;
+  }
+
+  async function guardar() {
+    const n = parseMoneyInput(monto);
+    if (n <= 0) return;
+    const seccionId = seccionElegida();
+    if (!seccionId) return;
+    const medio = (metodo === 'otro' ? metodoOtro.trim() : metodo) || null;
+    const pagosFinal = dividido ? pagos.map((f) => ({ medio: medioDeFila(f), monto: parseMoneyInput(f.monto) })) : undefined;
+    setError(null);
+    const datos = {
+      monto: n,
+      moneda,
+      descripcion: desc.trim() || TIPO_INFO[tipo].label,
+      seccionId,
+      tipo,
+      metodoPago: medio,
+      ts: deInputFechaHora(fechaHora),
+    };
+
+    if (gasto) {
+      const r = await acciones.editarGasto(gasto.id, { ...datos, tipoOtro, metodoPago: dividido ? null : medio, pagos: pagosFinal ?? null });
+      if (r.error !== null) { setError(r.error); return; }
+      onListo(seccionId);
+      return;
+    }
+
+    // En dólares hay que congelar la cotización, y eso puede fallar sin red.
+    // Si falla, el formulario se queda abierto con lo que escribió: perder el
+    // gasto que acaba de tipear sería peor que la espera.
+    // Un gasto fijo que todavía no se pagó no se registra como gasto: sólo
+    // queda anotado para avisar. Si ya se pagó, se registra y queda el próximo.
+    if (!fijo.activo || fijo.yaPagado) {
+      const r = await acciones.registrarGasto({ ...datos, tipoOtro, pagos: pagosFinal, confirmacion: fijo.activo ? 'Gasto fijo guardado con éxito.' : undefined });
+      if (r.error !== null) { setError(r.error); return; }
+    }
+    if (fijo.activo) {
+      const diaAncla = fijo.frecuencia === 'mensual' || fijo.frecuencia === 'anual' ? Number(fijo.proximo.slice(8, 10)) : null;
+      acciones.crearGastoFijo({ ...datos, frecuencia: fijo.frecuencia, proximoPago: fijo.proximo, diaAncla }, !fijo.yaPagado);
+    }
+    onListo(seccionId);
+  }
+
+  const idBase = gasto ? `g-${gasto.id}` : 'ng';
+
+  return (
+    <div data-form-gasto className="py-2 flex flex-col gap-3">
+      <div className="flex gap-2">
+        <div className="relative flex-1 min-w-0">
+          <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{moneda === 'USD' ? 'US$' : '$'}</span>
+          <input
+            autoFocus
+            aria-label="Monto del gasto"
+            className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[15px] transition-colors"
+            style={INPUT_STYLE}
+            placeholder="Monto"
+            inputMode="decimal"
+            value={monto}
+            onChange={(e) => setMonto(formatThousands(e.target.value))}
+          />
+        </div>
+        <div className="flex rounded-xl overflow-hidden shrink-0" style={{ border: `1.5px solid ${COLORS.lineStrong}` }}>
+          {(['ARS', 'USD'] as Moneda[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMoneda(m)}
+              className="v2-focus px-2.5 text-[14px] font-bold transition-colors"
+              style={moneda === m ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink }}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      </div>
+      <input
+        aria-label="Descripción del gasto"
+        className="v2-focus rounded-xl px-3.5 py-2.5 text-[15px] transition-colors"
+        style={INPUT_STYLE}
+        placeholder="Descripción (ej: PedidosYa)"
+        value={desc}
+        onChange={(e) => setDesc(e.target.value)}
+      />
+      {/* Por defecto queda en "ahora": sólo hace falta tocarlo para cargar un
+          gasto de otro momento. */}
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={`${idBase}-fecha-hora`} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha y hora</label>
+        <input
+          id={`${idBase}-fecha-hora`}
+          type="datetime-local"
+          className="v2-focus w-full min-w-0 rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
+          style={INPUT_STYLE}
+          value={fechaHora}
+          max={aInputFechaHora(Date.now())}
+          onChange={(e) => setFechaHora(e.target.value)}
+        />
+      </div>
+
+      {/* Sección y medio en desplegables: con todas las opciones como botones
+          el formulario ocupaba tres pantallas en el celular. */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
+        <div className="flex flex-col gap-2">
+          <Desplegable
+            id={`${idBase}-seccion`}
+            label="Sección"
+            value={catId ? `c:${catId}` : creandoCat ? 'nueva' : nuevaCat ? `s:${nuevaCat}` : ''}
+            onChange={(v) => {
+              setCatId(v.startsWith('c:') ? v.slice(2) : null);
+              setNuevaCat(v.startsWith('s:') ? v.slice(2) : '');
+              setCreandoCat(v === 'nueva');
+            }}
+          >
+            <option value="" disabled style={OPCION}>Elegí una sección</option>
+            {categorias.length > 0 && (
+              <optgroup label="Tus secciones">
+                {categorias.map((c) => <option key={c.id} value={`c:${c.id}`} style={OPCION}>{c.nombre}</option>)}
+              </optgroup>
+            )}
+            {sugeridasDisponibles.length > 0 && (
+              <optgroup label="Otras secciones">
+                {sugeridasDisponibles.map((n) => <option key={n} value={`s:${n}`} style={OPCION}>{n}</option>)}
+              </optgroup>
+            )}
+            <option value="nueva" style={OPCION}>+ Crear otra sección</option>
+          </Desplegable>
+          {creandoCat && (
+            <input
+              autoFocus
+              aria-label="Nombre de la sección nueva"
+              className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
+              style={INPUT_STYLE}
+              placeholder="Ej: Mascota"
+              value={nuevaCat}
+              onChange={(e) => setNuevaCat(e.target.value)}
+            />
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {!dividido ? (
+            <>
+              <Desplegable
+                id={`${idBase}-medio`}
+                label="¿Con qué lo pagaste?"
+                value={metodo ?? ''}
+                onChange={(v) => { setMetodo(v || null); if (v !== 'otro') setMetodoOtro(''); }}
+              >
+                <option value="" style={OPCION}>Elegí un medio (opcional)</option>
+                {metodosOfrecidos.map((m) => <option key={m} value={m} style={OPCION}>{m}</option>)}
+                <option value="otro" style={OPCION}>+ Otro medio</option>
+              </Desplegable>
+              {metodo === 'otro' && (
+                <input
+                  autoFocus
+                  aria-label="Con qué lo pagaste"
+                  className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
+                  style={INPUT_STYLE}
+                  placeholder="Ej: Ualá"
+                  value={metodoOtro}
+                  onChange={(e) => setMetodoOtro(e.target.value)}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => { setDividido(true); setPagos([filaPagoVacia(), filaPagoVacia()]); }}
+                className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
+                style={{ color: COLORS.brand }}
+              >
+                Pagado con más de un medio
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { setDividido(false); setPagos([filaPagoVacia(), filaPagoVacia()]); }}
+              className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
+              style={{ color: COLORS.inkSoft }}
+            >
+              Pagar con un solo medio
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Dividido entre varios medios: una fila por medio, cada una con su
+          monto; la suma tiene que dar el total de arriba. */}
+      {dividido && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>¿Con qué lo pagaste?</p>
+          {pagos.map((f, i) => (
+            <div key={i} className="flex gap-1.5 items-start">
+              <select
+                aria-label={`Medio ${i + 1}`}
+                value={f.medio}
+                onChange={(e) => setPagos((v) => v.map((x, idx) => (idx === i ? { ...x, medio: e.target.value } : x)))}
+                className="v2-focus flex-1 min-w-0 rounded-xl pl-3 pr-2 min-h-[48px] text-[14px] transition-colors"
+                style={{ ...INPUT_STYLE, color: f.medio ? COLORS.ink : COLORS.inkFaint }}
+              >
+                <option value="" style={OPCION}>Medio</option>
+                {metodosOfrecidos.map((m) => <option key={m} value={m} style={OPCION}>{m}</option>)}
+                <option value="otro" style={OPCION}>+ Otro</option>
+              </select>
+              {f.medio === 'otro' && (
+                <input
+                  aria-label={`Medio ${i + 1}, cuál`}
+                  placeholder="Ej: Ualá"
+                  value={f.otro}
+                  onChange={(e) => setPagos((v) => v.map((x, idx) => (idx === i ? { ...x, otro: e.target.value } : x)))}
+                  className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[48px] text-[14px] transition-colors"
+                  style={INPUT_STYLE}
+                />
+              )}
+              <input
+                aria-label={`Monto pagado con el medio ${i + 1}`}
+                placeholder="Monto"
+                inputMode="decimal"
+                value={f.monto}
+                onChange={(e) => setPagos((v) => v.map((x, idx) => (idx === i ? { ...x, monto: formatThousands(e.target.value) } : x)))}
+                className="v2-focus w-[104px] shrink-0 rounded-xl px-2.5 min-h-[48px] text-[14px] transition-colors"
+                style={INPUT_STYLE}
+              />
+              {pagos.length > 2 && (
+                <button
+                  type="button"
+                  aria-label={`Sacar el medio ${i + 1}`}
+                  onClick={() => setPagos((v) => v.filter((_, idx) => idx !== i))}
+                  className="v2-focus w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
+                  style={{ color: COLORS.inkFaint }}
+                >
+                  <IconClose size={14} />
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPagos((v) => [...v, filaPagoVacia()])}
+            className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
+            style={{ color: COLORS.brand }}
+          >
+            + Agregar otro medio
+          </button>
+          <p className="text-[14px] tabular-nums" style={{ color: pagosValidos ? COLORS.inkSoft : COLORS.coralDark }}>
+            Sumado: {fmtMoney(sumaPagos)} de {fmtMoney(parseMoneyInput(monto))}
+          </p>
+        </div>
+      )}
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</legend>
+        <div className="grid grid-cols-4 gap-1.5">
+          {TIPOS.map((t) => {
+            const sel = tipo === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={sel}
+                onClick={() => setTipo(t)}
+                className="v2-focus rounded-xl px-1 min-h-[44px] text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                style={sel ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+              >
+                {TIPO_INFO[t].label}
+              </button>
+            );
+          })}
+        </div>
+        {/* "Otro" se puede escribir: queda con el nombre que le pongas y se
+            ofrece de nuevo la próxima vez, como las secciones. */}
+        {tipo === 'otro' && (
+          <div className="flex flex-col gap-2 mt-1.5">
+            <input
+              autoFocus
+              aria-label="Qué tipo de gasto fue"
+              maxLength={40}
+              className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
+              style={INPUT_STYLE}
+              placeholder="Escribí cuál (ej: Salud, Mascota)"
+              value={tipoOtro}
+              onChange={(e) => setTipoOtro(e.target.value)}
+            />
+            {tiposOtroRecientes.length > 0 && (
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Los que escribiste antes">
+                {tiposOtroRecientes.map((t) => {
+                  const sel = tipoOtro.trim().toLowerCase() === t.toLowerCase();
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      aria-pressed={sel}
+                      onClick={() => setTipoOtro(t)}
+                      className="v2-focus rounded-lg px-2.5 py-1 text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                      style={sel
+                        ? { background: COLORS.brandSoft, color: COLORS.brandDark }
+                        : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </fieldset>
+
+      {/* Un gasto que ya pasó no se puede volver "gasto fijo": esto es para
+          crear uno nuevo, no para editar un movimiento. */}
+      {!editando && <CamposGastoFijo valor={fijo} onChange={setFijo} />}
+
+      {error && <p role="alert" className="text-[14px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{error}</p>}
+
+      <div className="flex gap-2 mt-1">
+        <button type="button" onClick={onCancelar} className="v2-focus flex-1 rounded-xl py-2.5 min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={() => void guardar()}
+          disabled={!puedeGuardar}
+          className="v2-focus flex-[2] rounded-xl py-2.5 min-h-[44px] text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-95"
+          style={{ background: COLORS.brand, color: COLORS.surface }}
+        >
+          {editando ? 'Guardar cambios' : fijo.activo && !fijo.yaPagado ? 'Guardar gasto fijo' : 'Agregar gasto'}
+        </button>
+      </div>
+    </div>
+  );
+}

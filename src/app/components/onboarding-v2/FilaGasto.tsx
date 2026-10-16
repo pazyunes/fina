@@ -1,96 +1,16 @@
-import { COLORS, fechaDisplay, fmtMoney } from './shared';
+import { COLORS, fechaDisplay } from './shared';
 import * as acciones from '../../api/v2/acciones';
 import { IconBasura, IconEditar } from './FinaIcons';
-import type { EstadoV2, PagoMixto } from '../../api/v2/tipos';
+import { FormularioGasto } from './FormularioGasto';
+import { colorDeSeccion, fmtGasto, fmtPagos, type Categoria, type Gasto } from './datosGasto';
 
-// La fila de un gasto y lo que la rodea (editar, borrar, el color de su
-// sección). Vive aparte porque la usan dos pantallas: Gastos, con los últimos
-// del período, y Todos tus gastos, con la lista completa.
-
-export type TipoGasto = 'urgente' | 'impulsivo' | 'necesario' | 'otro';
-export type Moneda = 'ARS' | 'USD';
-export type Categoria = { id: string; nombre: string };
-export type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; tipoOtro?: string; ts: number; metodoPago?: string; pagos?: PagoMixto[]; origen: 'web' | 'whatsapp' | 'manual' };
-
-/**
- * Los gastos del almacén como los muestra la app. Si un gasto llegó sin
- * descripción, o con una variable sin completar del bot
- * ("{{vars.expense_description}}"), se muestra el nombre de la sección: un
- * renglón vacío o con código no dice qué gasto es.
- */
-export function gastosDeLaBase(db: EstadoV2): Gasto[] {
-  return db.gastos.map((g) => ({
-    id: g.id,
-    monto: g.monto,
-    montoArs: g.montoArs,
-    moneda: g.moneda,
-    descripcion: !g.descripcion.trim() || /\{\{.*\}\}/.test(g.descripcion)
-      ? (db.secciones.find((s) => s.id === g.seccionId)?.nombre ?? 'Gasto sin descripción')
-      : g.descripcion,
-    categoriaId: g.seccionId ?? '',
-    tipo: g.tipo,
-    tipoOtro: g.tipoOtro,
-    ts: g.ts,
-    metodoPago: g.metodoPago ?? undefined,
-    pagos: g.pagos,
-    origen: g.origen,
-  }));
-}
-
-// Hues categóricos por sección, para el anillo, la torta de Inicio y el punto
-// de cada gasto. Los montos nunca toman estos colores: siempre tinta neutral.
-// Seis colores bien distintos entre sí: con violetas parecidos, con seis
-// secciones la mitad de la rueda terminaba emparentada.
-const CAT_COLORS = [COLORS.brand, COLORS.naranja, COLORS.star, COLORS.lima, COLORS.azul, COLORS.magenta];
-
-/** El color de una sección, atado al orden en que se creó: no cambia si cambia lo gastado. */
-export function colorDeSeccion(id: string, categorias: Categoria[]): string {
-  const i = categorias.findIndex((c) => c.id === id);
-  return i < 0 ? COLORS.lineStrong : CAT_COLORS[i % CAT_COLORS.length];
-}
-
-// Cada gasto guarda DOS montos: `monto` es lo que la persona tipeó, en su
-// moneda, y `montoArs` su equivalente en pesos congelado a la cotización de
-// ese día. La fila muestra `monto` con su signo (US$20, porque eso es lo que
-// pasó); todo lo que SUMA usa `montoArs`.
-export function fmtGasto(g: { monto: number; moneda: Moneda }): string {
-  return g.moneda === 'USD' ? `US$${g.monto.toLocaleString('es-AR')}` : fmtMoney(g.monto);
-}
-export function fmtPagos(pagos: PagoMixto[]): string {
-  return pagos.map((p) => `${p.medio} (${fmtMoney(p.monto)})`).join(' + ');
-}
+// La fila de un gasto, con editar y borrar. La usan Gastos (los últimos 5) y
+// Todos tus gastos (la lista completa). Editar abre el formulario debajo del
+// mismo renglón: la persona tocó ese gasto y lo sigue viendo mientras lo
+// cambia, en vez de que la pantalla salte al formulario de arriba.
 
 // Borrar pide confirmación en el mismo renglón: no se puede deshacer, y el
 // tachito está al lado del monto, donde un toque de más es fácil.
-function BotonBorrar({ gasto, abierto, onClick }: { gasto: Gasto; abierto: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={`Borrar ${gasto.descripcion}`}
-      aria-expanded={abierto}
-      className="v2-focus w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
-      style={{ color: abierto ? COLORS.ink : COLORS.inkFaint }}
-    >
-      <IconBasura size={18} />
-    </button>
-  );
-}
-
-function BotonEditar({ gasto, onClick }: { gasto: Gasto; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={`Editar ${gasto.descripcion}`}
-      className="v2-focus w-11 h-11 -my-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
-      style={{ color: COLORS.inkFaint }}
-    >
-      <IconEditar size={18} />
-    </button>
-  );
-}
-
 function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () => void }) {
   return (
     <div className="mt-2 mb-1 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
@@ -123,15 +43,16 @@ function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () 
 
 /**
  * Un gasto como renglón: el punto y el nombre de su sección (no el tipo: la
- * sección es lo que dice en qué se fue), la fecha, el monto, editar y borrar.
- * Todos se pueden editar y borrar, también los que llegaron por WhatsApp.
+ * sección es lo que dice en qué se fue), la fecha y el monto. Todos se pueden
+ * editar y borrar, también los que llegaron por WhatsApp. `abierto` dice qué
+ * tiene desplegado: nada, el formulario de edición o la confirmación de borrar.
+ * Uno a la vez en toda la lista: lo controla la pantalla.
  */
-export function FilaGasto({ gasto, categorias, borrando, onBorrar, onEditar }: {
+export function FilaGasto({ gasto, categorias, abierto, onAbrir }: {
   gasto: Gasto;
   categorias: Categoria[];
-  borrando: boolean;
-  onBorrar: () => void;
-  onEditar: () => void;
+  abierto: 'editar' | 'borrar' | null;
+  onAbrir: (que: 'editar' | 'borrar' | null) => void;
 }) {
   const cat = categorias.find((c) => c.id === gasto.categoriaId);
   return (
@@ -145,10 +66,31 @@ export function FilaGasto({ gasto, categorias, borrando, onBorrar, onEditar }: {
           </p>
         </div>
         <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(gasto)}</span>
-        <BotonEditar gasto={gasto} onClick={onEditar} />
-        <BotonBorrar gasto={gasto} abierto={borrando} onClick={onBorrar} />
+        <button
+          type="button"
+          onClick={() => onAbrir(abierto === 'editar' ? null : 'editar')}
+          aria-label={`Editar ${gasto.descripcion}`}
+          aria-expanded={abierto === 'editar'}
+          className="v2-focus w-11 h-11 -my-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+          style={{ color: abierto === 'editar' ? COLORS.brand : COLORS.inkFaint }}
+        >
+          <IconEditar size={18} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onAbrir(abierto === 'borrar' ? null : 'borrar')}
+          aria-label={`Borrar ${gasto.descripcion}`}
+          aria-expanded={abierto === 'borrar'}
+          className="v2-focus w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+          style={{ color: abierto === 'borrar' ? COLORS.ink : COLORS.inkFaint }}
+        >
+          <IconBasura size={18} />
+        </button>
       </div>
-      {borrando && <ConfirmarBorrado gasto={gasto} onCancelar={onBorrar} />}
+      {abierto === 'editar' && (
+        <FormularioGasto gasto={gasto} categorias={categorias} onListo={() => onAbrir(null)} onCancelar={() => onAbrir(null)} />
+      )}
+      {abierto === 'borrar' && <ConfirmarBorrado gasto={gasto} onCancelar={() => onAbrir(null)} />}
     </div>
   );
 }

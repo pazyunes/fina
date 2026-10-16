@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { COLORS, Donut, FONTS, TituloSeccion, fmtMoney, vistaGastos } from './shared';
-import { colorDeSeccion } from './FilaGasto';
+import { colorDeSeccion } from './datosGasto';
 import { IngresosVsGastos } from './IngresosVsGastos';
 import { IconChevron } from './FinaIcons';
 

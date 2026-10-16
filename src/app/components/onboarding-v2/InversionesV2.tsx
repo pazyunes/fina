@@ -367,7 +367,7 @@ export function InversionesV2() {
   // ── intro ──
   if (paso === 'intro') {
     return (
-      <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
+      <div className="px-[22px] pt-4 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
         {/* Banda editorial full-bleed. Sin Fini: la guía §6 dice que el
             personaje NO aparece en inversiones (plata seria). */}
         <header data-franja className="pb-1 mb-2">
@@ -670,7 +670,7 @@ export function InversionesV2() {
       <div className="pb-6">
         {modalDetalle}
         {modalAporte}
-        <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
+        <div className="px-[22px] pt-4 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
           {/* Sin Fini (guía §6): el personaje nunca va cerca de un dato, y
               menos en inversiones. */}
           <header data-franja className="pb-1">
@@ -877,7 +877,7 @@ export function InversionesV2() {
     setPaso(perfilGuardado?.completadoEn ? 'resultado' : 'intro');
   };
   return (
-    <div className="px-[22px] pt-6 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto lg:pt-8">
+    <div className="px-[22px] pt-4 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto lg:pt-6">
       <BotonVolver onClick={volverDelCuestionario} label={stepIndex > 0 ? 'Pregunta anterior' : 'Volver'} />
       <div className="flex justify-center gap-2">
         {pasos.map((p, i) => (

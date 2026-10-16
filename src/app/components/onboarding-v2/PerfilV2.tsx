@@ -176,7 +176,7 @@ export function PerfilV2() {
     // ordena la pantalla solo. Los ítems del checklist eran tarjetas con
     // contorno propio: como lista con hairline se leen como lo que son, una
     // secuencia de cosas pendientes.
-    <div className="px-6 pt-6 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-8">
+    <div className="px-6 pt-4 pb-4 flex flex-col gap-8 lg:max-w-2xl lg:mx-auto lg:pt-6">
       {/* El objetivo de la pantalla es quién sos: la foto y el nombre son lo
           más grande (§3.5). Por eso no hay un título "Tu perfil" de 32px
           compitiendo arriba; queda para lectores de pantalla. */}

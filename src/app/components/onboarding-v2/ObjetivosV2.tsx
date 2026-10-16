@@ -825,7 +825,7 @@ export function ObjetivosV2() {
     const pasoVencido = mensaje !== null && datos?.situacion.tipo === 'vencido';
 
     return (
-      <div className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
+      <div className="px-[22px] pt-4 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
         {V2_STYLES}
         {confirmarBorrarModal}
         <div className="flex items-center justify-between">
@@ -1143,7 +1143,7 @@ export function ObjetivosV2() {
 
   // ── Vista: lista ──
   return (
-    <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto">
+    <div className="px-[22px] pt-4 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto">
       {V2_STYLES}
       {modalCrear}
       {confirmarBorrarModal}

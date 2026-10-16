@@ -110,7 +110,7 @@ export function GruposV2() {
 
   if (!grupo) {
     return (
-      <div className="px-6 pt-6 flex flex-col gap-4">
+      <div className="px-6 pt-4 flex flex-col gap-4">
         {/* <header> y no un div suelto: la franja de color de V2Layout mide
             dónde termina el encabezado para saber hasta dónde llegar, y ésta
             era la única pantalla que no tenía uno — así que se quedaba con la
@@ -233,7 +233,7 @@ export function GruposV2() {
   const max = Math.max(...ordenados.map((m) => m.actividad), 1);
 
   return (
-    <div className="px-6 pt-6 flex flex-col gap-4 pb-4">
+    <div className="px-6 pt-4 flex flex-col gap-4 pb-4">
       <header className="mb-2">
         <Volver />
         <div className="flex items-center justify-between gap-3">
