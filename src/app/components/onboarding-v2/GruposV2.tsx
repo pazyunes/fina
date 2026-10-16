@@ -263,16 +263,13 @@ export function GruposV2() {
         </span>
       </button>
 
-      {/* Ranking en filas planas separadas por hairline (CLAUDE.md regla 12):
-          una tarjeta por persona sumaba tantas cajas como miembras. Quién sos
-          vos lo dicen el "(vos)" y la barra en violeta, no un contorno. */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2.5">
         <p className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>Actividad de la semana</p>
         {ordenados.map((m, i) => (
           <div
             key={m.nombre}
-            className="flex items-center gap-3 py-3 border-b last:border-b-0"
-            style={{ borderColor: COLORS.line }}
+            className="flex items-center gap-3 rounded-2xl p-3.5"
+            style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, ...(m.sosVos ? { outline: `2px solid ${COLORS.brand}` } : null) }}
           >
             {/* Ranking = secuencia real, la numeración sí es válida (§2). El 1º
                 resalta con star + tinta; el resto, hueco + tinta-media. */}

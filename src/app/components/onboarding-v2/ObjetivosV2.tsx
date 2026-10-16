@@ -172,6 +172,9 @@ type Objetivo = {
   contribuciones: Contribucion[];
 };
 
+// Nota Tailwind: la clase completa tiene que aparecer en el archivo (aunque
+// sea dentro de este string) para que el scanner de Tailwind la detecte.
+const CARD_SHADOW = 'border';
 // Borde + foco por CSS (ov2-input, ver V2_STYLES) para que el color salga de
 // COLORS y no de un hex crudo en la clase de Tailwind. v2-focus agrega el
 // anillo de foco de la guía (§11).
@@ -277,9 +280,8 @@ function FormasDeLlegar({ formas }: { formas: FormaDeLlegar[] }) {
 // Plata apartada (la reserva, DEBT I12): un número propio, aparte de los
 // objetivos, que la persona suma o saca. Se guarda en la base
 // (`user_profiles.reserve_ars`) con `acciones.guardarReserva`. Es lo que la
-// persona nos dijo: dato declarado. Va plano, sin bloque (CLAUDE.md regla 12):
-// lo principal de la pantalla es la lista de objetivos, así que esto se separa
-// de ella con aire y una hairline, no con una caja que le compita.
+// persona nos dijo: dato declarado. Va en bloque tintado y no en tarjeta: lo
+// principal de la pantalla es la lista de objetivos.
 function PlataApartada({ monto }: { monto: number }) {
   const [modo, setModo] = useState<'sumar' | 'sacar' | null>(null);
   const [txt, setTxt] = useState('');
@@ -297,7 +299,7 @@ function PlataApartada({ monto }: { monto: number }) {
 
   const botonSecundario = { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` };
   return (
-    <section className="pb-4 border-b flex flex-col gap-3" style={{ borderColor: COLORS.line }} aria-label="Plata apartada">
+    <section className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: COLORS.tint }} aria-label="Plata apartada">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Plata apartada</h2>
         <span className="text-[18px] font-bold font-mono tabular-nums" style={{ color: COLORS.ink }} aria-live="polite">{fmtMoney(monto)}</span>
@@ -997,9 +999,8 @@ export function ObjetivosV2() {
           <PlanDelObjetivo plan={planes.get(abierto.id)!} moneda={abierto.moneda} onMarcar={marcarPlan} />
         )}
 
-        {/* Registrar un pago o un ahorro. Sin caja: la hairline de arriba lo
-            separa de lo que viene antes (CLAUDE.md regla 12). */}
-        <div data-sumar-registro className="flex flex-col gap-2.5 pt-4 border-t" style={{ borderColor: COLORS.line }}>
+        {/* Registrar un pago o un ahorro */}
+        <div data-sumar-registro className="flex flex-col gap-2.5 pt-1">
           <TituloSeccion>Sumar un registro</TituloSeccion>
           {/* PRUEBA — un aporte guardado es un logro chico: Fini salta una vez
               y se va. Se engancha al `celebrar` que ya existía, así no hay otro
@@ -1060,14 +1061,12 @@ export function ObjetivosV2() {
           )}
         </div>
 
-        {/* Historial de registros. Cada registro es una fila plana separada
-            por hairline: una tarjeta por registro llenaba el detalle de cajas
-            que le competían al progreso, que es lo prioritario acá. */}
-        <div className="flex flex-col gap-1 pt-4 border-t" style={{ borderColor: COLORS.line }}>
+        {/* Historial de registros */}
+        <div className="flex flex-col gap-2">
           <TituloSeccion>Registros</TituloSeccion>
           {abierto.contribuciones.length === 0 && <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste nada.</p>}
           {abierto.contribuciones.map((c) => (
-            <div key={c.id} className="flex items-center gap-2.5 py-2.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+            <div key={c.id} className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
               <span
                 className="text-[12px] font-bold rounded-full px-2 py-0.5 shrink-0"
                 style={{ background: c.kind === 'paid' ? COLORS.greenSoft : COLORS.goldSoft, color: COLORS.ink }}
@@ -1301,9 +1300,7 @@ export function ObjetivosV2() {
       {/* Barra lateral */}
       <div className="flex flex-col gap-4 lg:w-[300px] lg:shrink-0">
         {objetivos.length > 0 && (
-          // Plano y no en tarjeta: es una sugerencia secundaria al lado de la
-          // lista, y los chips ya son los botones.
-          <div className="hidden lg:flex flex-col gap-2.5 pt-4 border-t" style={{ borderColor: COLORS.line }}>
+          <div className="hidden lg:flex flex-col gap-2.5 rounded-2xl p-4 border" style={{ background: COLORS.surface, borderColor: COLORS.line }}>
             <TituloSeccion>¿Sumás otro?</TituloSeccion>
             <div className="flex flex-wrap gap-2">
               {SUGERENCIAS_OBJETIVO.slice(0, 4).map((s) => (

@@ -221,14 +221,10 @@ Reglas duras:
   ahí; el detalle vive en su pantalla. Ejemplo: el recordatorio de sumarle a un objetivo
   es una fila que abre Objetivos con ese objetivo, no el plan completo en Inicio. La idea
   es que el recorrido entre pantallas sea fluido, no que Inicio lo cuente todo.
-- **Bloques sólo para botones o para lo prioritario.** Un bloque (fondo tintado, borde o
-  tarjeta) que contiene texto se usa únicamente para un botón o para la feature
-  prioritaria de la pantalla. Todo lo demás va plano, sobre el papel. Lo plano no quiere
-  decir pegado: las secciones y los textos se separan con aire y con líneas planas
-  (hairline de 1px en `--fina-hairline`, de lado a lado, sin caja ni redondeo), para que
-  la pantalla no se lea como un párrafo gigante. Si en una pantalla hay más de tres
-  bloques, algo está mal jerarquizado. Los modales y los paneles que se abren encima no
-  cuentan: son superficies, no bloques dentro de la pantalla.
+- **Alterná contenedores.** El antídoto contra el card grid spam es no usar tarjetas para
+  todo: listas finas separadas por hairline, bloques tintados en `--fina-hueco`, y tarjeta
+  elevada **solo** para lo que de verdad tiene prioridad. Si en una pantalla hay más de
+  tres tarjetas elevadas, algo está mal jerarquizado.
 - Sombras: existe una sola (`--shadow-card`), suave y cálida. Nada de `shadow-lg` genérica.
 
 ---
@@ -580,8 +576,6 @@ diseño antes de que se vuelvan caras de cambiar.
 - [ ] El copy no reta, no ordena y no felicita sin dato.
 - [ ] Se sabe cuál es el objetivo de la pantalla y la vista va ahí primero.
 - [ ] Ningún título necesita un subtítulo que lo explique.
-- [ ] Los bloques con texto son botones o lo prioritario; el resto va plano, separado por
-      aire y hairline (§3.5).
 - [ ] Sin guiones largos, comillas rizadas, emojis ni viñetas decorativas (§5.5).
 - [ ] Fini no está cerca de ningún número.
 

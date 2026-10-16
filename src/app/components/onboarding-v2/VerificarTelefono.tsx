@@ -108,7 +108,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
           {telefono}
         </p>
         <p className="text-[14px]" style={{ color: COLORS.limaText }}>
-          Verificado. Ya podés registrar gastos hablándole a FINA por WhatsApp.
+          Verificado — ya podés registrar gastos hablándole a FINA por WhatsApp.
         </p>
       </div>
     );
@@ -124,7 +124,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
           <TituloSeccion>Verificá tu teléfono</TituloSeccion>
           <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
             Es para que puedas registrar gastos hablándole a FINA por WhatsApp. Le mandás
-            un código desde tu teléfono y listo, no te vamos a mandar ningún SMS.
+            un código desde tu teléfono y listo — no te vamos a mandar ningún SMS.
           </p>
         </>
       )}

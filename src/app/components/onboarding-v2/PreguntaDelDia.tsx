@@ -166,9 +166,7 @@ export function PreguntaDelDia({ onRespondida }: { onRespondida?: () => void } =
       </div>
 
       {hoy && (
-        // La explicación, separada de las opciones por una hairline: es lo que
-        // se lee después de contestar, no una opción más.
-        <div className="flex flex-col gap-1.5 pt-3 border-t" style={{ borderColor: COLORS.line }} aria-live="polite">
+        <div className="flex flex-col gap-1.5" aria-live="polite">
           <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
             <span className="font-semibold" style={{ color: COLORS.ink }}>{hoy.acerto ? 'Bien, es esa. ' : 'Era otra. '}</span>
             {p.explicacion}

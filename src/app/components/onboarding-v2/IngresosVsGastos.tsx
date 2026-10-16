@@ -271,10 +271,8 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
         <span className="text-[13px]" style={{ color: COLORS.inkFaint }}>Según lo que registraste</span>
       </div>
 
-      {/* La lista de ingresos es otra idea que el gráfico: una hairline la
-          separa, sin caja (§3.5). */}
       {conLista && (
-        <div className="flex flex-col pt-3 border-t" style={{ borderColor: COLORS.line }}>
+        <div className="flex flex-col pt-1">
           <p className="text-[15px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
             {modoSemana ? `Ingresos de ${semana.actual ? 'esta semana' : semana.etiqueta === 'Semana pasada' ? 'la semana pasada' : `la semana del ${semana.etiqueta}`}` : `Ingresos de ${esEsteMes ? 'este mes' : nombreMes(elegido, true)}`}
           </p>

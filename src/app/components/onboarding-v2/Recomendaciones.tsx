@@ -185,10 +185,8 @@ export function Recomendaciones() {
     ?? null;
   if (!elegida) return null;
 
-  // Plana, con una hairline arriba que la separa de los gráficos: no es lo
-  // prioritario de Inicio, así que no va en caja (frontend.md §3.5).
   return (
-    <section className="flex flex-col gap-2 pt-5 border-t" style={{ borderColor: COLORS.line }}>
+    <section className="flex flex-col gap-2">
       <Mensaje key={`${elegida.periodo}-${elegida.item.ref}`} item={elegida.item} onUtil={marcarUtilidad} />
       <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
         {elegida.item.tipo === 'ia' ? 'Hecha con IA a partir de tus datos. No es asesoramiento financiero.'
@@ -216,11 +214,8 @@ function Mensaje({ item, onUtil }: {
 
       {(item.tipo === 'ia' || item.tipo === 'calculada') && (
         <>
-          {/* El dato en el que se apoya, con contra qué se compara. Va
-              separado del consejo por una hairline: son dos cosas distintas
-              (qué hacer y en qué número se apoya) y juntas se leían como un
-              solo párrafo. */}
-          <div className="flex flex-col gap-0.5 pt-2 border-t" style={{ borderColor: COLORS.line }}>
+          {/* El dato en el que se apoya, con contra qué se compara. */}
+          <div className="flex flex-col gap-0.5">
             <p className="text-[15px] font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{item.contenido.dato.valor}</p>
             <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{item.contenido.dato.referencia}</p>
             {item.contenido.confianza === 'estimado' && <EstadoConfianza estado="estimado" />}

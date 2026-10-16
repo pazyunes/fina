@@ -22,9 +22,8 @@ import { VerTodos, recortar } from './VerTodos';
 // Alineado a la guía (src/styles/frontend.md): todo el color sale de COLORS
 // (cero hex/rgba crudo salvo sombras basadas en tinta); los gastos se muestran
 // NEUTRALES (montos en tinta, nunca color de alerta); cada dato declara su
-// estado de confianza (§5); y hay un solo bloque (§3.5): la tarjeta elevada
-// del dato central. El resto va plano sobre el papel, con secciones separadas
-// por aire y hairline, para que no se lea como un párrafo gigante.
+// estado de confianza (§5); y se alterna el contenedor (§3.5): elevada solo
+// para el dato central, hairline para las listas, tint para lo agrupado.
 //
 // Las categorías que la persona marcó en el onboarding ("¿en qué se te
 // suele ir la plata?") ya aparecen acá como secciones — ver shared.tsx.
@@ -119,11 +118,10 @@ const METODOS_SUGERIDOS = ['Efectivo', 'Débito', 'Crédito', 'Mercado Pago', 'T
 // violeta) — con seis secciones, la mitad de la rueda terminaba emparentada.
 const CAT_COLORS = [COLORS.brand, COLORS.naranja, COLORS.star, COLORS.lima, COLORS.azul, COLORS.magenta];
 
-// Bloques sólo para botones o para lo prioritario (§3.5): la tarjeta elevada
-// es SOLO para el dato central. Las demás secciones van planas y se separan con
-// SEPARADOR, una hairline de lado a lado sin caja.
+// Tratamiento de contenedores (§3.5): variedad, no card-grid spam. Una sola
+// sombra suave basada en tinta; hairline para listas; tint para bloques
+// agrupados; elevada SOLO para el dato central.
 const CARD_ELEVADA: React.CSSProperties = { background: COLORS.surface, boxShadow: '0 2px 8px rgba(43,33,24,0.08)' };
-const SEPARADOR: React.CSSProperties = { borderColor: COLORS.line };
 const INPUT_STYLE: React.CSSProperties = { background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}` };
 
 // Desplegable nativo. En el celular abre el selector del sistema, que es lo más
@@ -1229,7 +1227,7 @@ export function GastosV2() {
 
       {/* Lo que entra contra lo que sale. Debajo de las dos acciones: es la
           pregunta que sigue a "cuánto tengo" — "¿me alcanza lo que entra?". */}
-      <section className="flex flex-col gap-3 pt-4 border-t lg:col-span-3" style={SEPARADOR}>
+      <section className="flex flex-col gap-3 lg:col-span-3">
         <TituloSeccion>Lo que entra y lo que sale</TituloSeccion>
         <IngresosVsGastos
           conLista
@@ -1240,7 +1238,7 @@ export function GastosV2() {
 
       {/* Distribución por tipo: cuánto fue necesario, urgente, gusto u otro. */}
       {porTipo.length > 0 && (
-        <div className="flex flex-col gap-2 pt-4 border-t lg:col-span-1 lg:h-full" style={SEPARADOR}>
+        <div className="flex flex-col gap-2 lg:col-span-1 lg:h-full">
           <TituloSeccion>¿En qué tipo de gasto se te va?</TituloSeccion>
           <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: COLORS.surface }}>
             {porTipo.map((t) => (
@@ -1262,7 +1260,7 @@ export function GastosV2() {
       {/* Con qué pagaste en el período. Una sola serie (cuánto salió de cada
           medio), así que un solo color; el monto en tinta. */}
       {porMedio.length > 0 && (
-        <section className="flex flex-col gap-2.5 pt-4 border-t lg:col-span-2" style={SEPARADOR} aria-label="Con qué pagaste">
+        <section className="flex flex-col gap-2.5 lg:col-span-2" aria-label="Con qué pagaste">
           <TituloSeccion>Con qué pagaste {ventana === 'mes' ? (mesOffset === 0 ? 'este mes' : `en ${textoPeriodo.toLowerCase()}`) : (semanaOffset === 0 ? 'esta semana' : 'esa semana')}</TituloSeccion>
           {porMedio.map((x) => (
             <div key={x.nombre} className="flex flex-col gap-1">
@@ -1350,10 +1348,8 @@ export function GastosV2() {
         </div>
       )}
 
-      {/* Sobres por categoría: lista con hairline, no card-grid (§3.5). La
-          línea de arriba la separa de la sección anterior; el aire lo ponen
-          las propias filas (py-4). */}
-      <div className="flex flex-col border-t lg:col-span-2" style={SEPARADOR}>
+      {/* Sobres por categoría — lista con hairline, no card-grid (§3.5) */}
+      <div className="flex flex-col lg:col-span-2">
         {categorias.length === 0 && (
           // Vidriera vacía (§10): promesa, no falla. Se muestra qué va a haber
           // (en 'por-descubrir') + la acción (el CTA "+ Agregar gasto" de arriba).
@@ -1592,7 +1588,7 @@ export function GastosV2() {
       <ListaGastosFijos />
 
       {/* Buscador de gastos — colapsado en una lupita, no ocupa lugar hasta que se usa */}
-      <div className="flex flex-col gap-2.5 pt-4 border-t lg:col-span-1" style={SEPARADOR}>
+      <div className="flex flex-col gap-2.5 lg:col-span-1">
         <div className="flex items-center justify-between">
           <TituloSeccion>Tus gastos</TituloSeccion>
           <button

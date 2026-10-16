@@ -31,14 +31,11 @@ export function RecordatorioGastos() {
   const hayGastoHoy = estado.gastos.some((g) => diaArgentina(g.ts) === hoy);
   if (!listo || estado.gastos.length === 0 || hayGastoHoy) return null;
 
-  // Plana, sin caja tintada: un recordatorio no es lo prioritario de Inicio
-  // (eso es el paso de hoy) y los botones ya son lo que se toca. La hairline de
-  // abajo la separa del paso sin sumar otro bloque (frontend.md §3.5).
   return (
     <section
       aria-label="Registro de hoy"
-      className="-mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 pb-2.5 border-b"
-      style={{ borderColor: COLORS.line }}
+      className="-mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl px-4 py-2.5"
+      style={{ background: COLORS.tint }}
     >
       <p className="flex-1 min-w-[140px] text-[14px] font-semibold" style={{ color: COLORS.ink }}>
         ¿Anotaste lo de hoy?
