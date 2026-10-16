@@ -6,6 +6,7 @@ import { EntrarV2 } from "./components/onboarding-v2/EntrarV2";
 import { V2Layout } from "./components/onboarding-v2/V2Layout";
 import { HomeV2 } from "./components/onboarding-v2/HomeV2";
 import { GastosV2 } from "./components/onboarding-v2/GastosV2";
+import { TodosLosGastos } from "./components/onboarding-v2/TodosLosGastos";
 import { ObjetivosV2 } from "./components/onboarding-v2/ObjetivosV2";
 import { InversionesV2 } from "./components/onboarding-v2/InversionesV2";
 import { PerfilV2 } from "./components/onboarding-v2/PerfilV2";
@@ -82,6 +83,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "/onboarding-v2/home", element: <HomeV2 /> },
       { path: "/onboarding-v2/gastos", element: <GastosV2 /> },
+      { path: "/onboarding-v2/gastos/todos", element: <TodosLosGastos /> },
       { path: "/onboarding-v2/objetivos", element: <ObjetivosV2 /> },
       { path: "/onboarding-v2/inversiones", element: <InversionesV2 /> },
       { path: "/onboarding-v2/perfil", element: <PerfilV2 /> },

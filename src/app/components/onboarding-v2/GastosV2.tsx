@@ -1,23 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fmtMoney, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
-import { IconBasura, IconChat, IconChevron, IconEditar, IconLupa } from './FinaIcons';
+import { IconBasura, IconChat, IconChevron, IconEditar } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
-import { IngresosVsGastos, lunesAtras, mesAtras } from './IngresosVsGastos';
+import { lunesAtras } from './IngresosVsGastos';
 import { CamposGastoFijo, ListaGastosFijos, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
-import { FUENTES_INGRESO, type FuenteIngreso, type PagoMixto } from '../../api/v2/tipos';
+import { FUENTES_INGRESO, type FuenteIngreso } from '../../api/v2/tipos';
 import { IconClose } from './FinaIcons';
-import { VerTodos, recortar } from './VerTodos';
+import { FilaGasto, colorDeSeccion, gastosDeLaBase, type Categoria, type Gasto, type Moneda, type TipoGasto } from './FilaGasto';
 
-// REDISEÑO v2 — Mis Gastos. El objetivo de la pantalla es uno: cuánta plata
-// tenés disponible. Ese número va arriba y grande; debajo, las dos acciones
-// (agregar gasto, agregar plata), lo que entra contra lo que sale, la
-// distribución por tipo, las secciones con su tope y el buscador. La torta y
-// las barras por medio de pago se sacaron (DEBT GA2).
+// REDISEÑO v2 — Mis Gastos. Arriba se elige si se mira por mes o por semana, y
+// el anillo muestra ese período: se pasa al anterior con las flechas o
+// deslizando de costado. Debajo, las dos acciones (agregar gasto, agregar
+// plata), cuánto fue de cada tipo, las secciones con su tope y los últimos 7
+// gastos; la lista completa está en Todos tus gastos. Lo que entra contra lo
+// que sale ya está en Inicio y no se repite acá.
 //
 // Alineado a la guía (src/styles/frontend.md): todo el color sale de COLORS
 // (cero hex/rgba crudo salvo sombras basadas en tinta); los gastos se muestran
@@ -34,26 +36,8 @@ import { VerTodos, recortar } from './VerTodos';
 // Antes el estado vivía en un blob de localStorage: se perdía al cambiar de
 // teléfono y el bot de WhatsApp no podía verlo.
 
-type TipoGasto = 'urgente' | 'impulsivo' | 'necesario' | 'otro';
 type Periodo = 'semana' | 'mes';
-type Moneda = 'ARS' | 'USD';
 type Tope = { monto: number; periodo: Periodo };
-type Categoria = { id: string; nombre: string };
-type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; tipoOtro?: string; ts: number; metodoPago?: string; pagos?: PagoMixto[]; origen: 'web' | 'whatsapp' | 'manual' };
-// Cada gasto guarda DOS montos: `monto` es lo que la persona tipeó, en su
-// moneda, y `montoArs` su equivalente en pesos congelado a la cotización de
-// ese día.
-//
-// La fila del gasto muestra `monto` con su signo (US$20, porque eso es lo que
-// pasó). Todo lo que SUMA usa `montoArs`: antes un gasto de US$20 entraba al
-// total como "$20" y hacía que el mes pareciera $30.780 más barato de lo que
-// fue. Ahora entra como $30.800.
-function fmtGasto(g: { monto: number; moneda: Moneda }): string {
-  return g.moneda === 'USD' ? `US$${g.monto.toLocaleString('es-AR')}` : fmtMoney(g.monto);
-}
-function fmtPagos(pagos: PagoMixto[]): string {
-  return pagos.map((p) => `${p.medio} (${fmtMoney(p.monto)})`).join(' + ');
-}
 // Una fila del editor de "pagado con varios medios". `medio === 'otro'` usa
 // `otro` en vez del nombre — mismo patrón que el desplegable de medio único.
 type FilaPago = { medio: string; otro: string; monto: string };
@@ -111,13 +95,6 @@ const SECCIONES_SUGERIDAS = [
 // Medios de pago sugeridos, para la primera vez que no hay ninguno cargado.
 const METODOS_SUGERIDOS = ['Efectivo', 'Débito', 'Crédito', 'Mercado Pago', 'Transferencia'];
 
-// Hues categóricos por sección — identidad para el donut y los puntitos. Los
-// montos nunca toman estos colores: siempre tinta neutral.
-// Seis colores bien distintos entre sí: antes `sky` y `lila` eran las dos
-// variantes de violeta de la guía y quedaban muy cerca de `brand` (también
-// violeta) — con seis secciones, la mitad de la rueda terminaba emparentada.
-const CAT_COLORS = [COLORS.brand, COLORS.naranja, COLORS.star, COLORS.lima, COLORS.azul, COLORS.magenta];
-
 // Tratamiento de contenedores (§3.5): variedad, no card-grid spam. Una sola
 // sombra suave basada en tinta; hairline para listas; tint para bloques
 // agrupados; elevada SOLO para el dato central.
@@ -155,67 +132,6 @@ function Desplegable({ id, label, value, onChange, children }: {
 
 const OPCION: React.CSSProperties = { color: COLORS.ink };
 
-// Borrar pide confirmación en el mismo renglón: no se puede deshacer, y el
-// tachito está al lado del monto, donde un toque de más es fácil.
-function BotonBorrar({ gasto, abierto, onClick }: { gasto: Gasto; abierto: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={`Borrar ${gasto.descripcion}`}
-      aria-expanded={abierto}
-      className="v2-focus w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
-      style={{ color: abierto ? COLORS.ink : COLORS.inkFaint }}
-    >
-      <IconBasura size={18} />
-    </button>
-  );
-}
-
-function BotonEditar({ gasto, onClick }: { gasto: Gasto; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={`Editar ${gasto.descripcion}`}
-      className="v2-focus w-11 h-11 -my-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
-      style={{ color: COLORS.inkFaint }}
-    >
-      <IconEditar size={18} />
-    </button>
-  );
-}
-
-function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () => void }) {
-  return (
-    <div className="mt-2 mb-1 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
-      <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
-        ¿Borrar "{gasto.descripcion}" de <span className="font-mono tabular-nums">{fmtGasto(gasto)}</span>?
-        {gasto.pagos?.length ? ` La plata vuelve a ${fmtPagos(gasto.pagos)}.` : gasto.metodoPago ? ` La plata vuelve a ${gasto.metodoPago}.` : ''}
-      </p>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          autoFocus
-          onClick={onCancelar}
-          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold"
-          style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          onClick={() => { onCancelar(); acciones.borrarGasto(gasto.id); }}
-          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold transition-all duration-100 active:scale-95"
-          style={{ background: COLORS.ink, color: COLORS.paper }}
-        >
-          Sí, borrar
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function GastosV2() {
   const { estado: db } = useAlmacen();
 
@@ -224,25 +140,7 @@ export function GastosV2() {
   // suma de lo que hay en cada medio de pago.
   const estado = useMemo<EstadoGastos>(() => ({
     categorias: db.secciones.map((s) => ({ id: s.id, nombre: s.nombre })),
-    gastos: db.gastos.map((g) => ({
-      id: g.id,
-      monto: g.monto,
-      montoArs: g.montoArs,
-      moneda: g.moneda,
-      // Si llegó sin descripción, o con una variable sin completar del bot
-      // ("{{vars.expense_description}}"), se muestra el nombre de la sección:
-      // un renglón vacío o con código no dice qué gasto es.
-      descripcion: !g.descripcion.trim() || /\{\{.*\}\}/.test(g.descripcion)
-        ? (db.secciones.find((s) => s.id === g.seccionId)?.nombre ?? 'Gasto sin descripción')
-        : g.descripcion,
-      categoriaId: g.seccionId ?? '',
-      tipo: g.tipo,
-      tipoOtro: g.tipoOtro,
-      ts: g.ts,
-      metodoPago: g.metodoPago ?? undefined,
-      pagos: g.pagos,
-      origen: g.origen,
-    })),
+    gastos: gastosDeLaBase(db),
     // Se muestra en cero y no en negativo: un disponible negativo es un dato
     // sobre los medios de pago (gastaste más de lo que cargaste en ese medio),
     // y ese detalle vive en la lista de medios, no en el número de arriba.
@@ -317,20 +215,10 @@ export function GastosV2() {
   // Lo mismo para "Esta semana": 0 es la semana en curso, 1 la pasada, etc.
   const [semanaOffset, setSemanaOffset] = useState(0);
 
-  // Buscador por nombre + orden. Los filtros por sección y por tipo se sacaron:
-  // las secciones ya están separadas arriba, así que filtrar la lista por
-  // sección duplicaba el mismo trabajo, y las dos filas de chips ocupaban más
-  // pantalla que la lista que filtraban.
-  const [busquedaAbierta, setBusquedaAbierta] = useState(false);
-  const [busqueda, setBusqueda] = useState('');
-  const [orden, setOrden] = useState<'recientes' | 'monto'>('recientes');
-  const [filtroDesde, setFiltroDesde] = useState('');
-  const [filtroHasta, setFiltroHasta] = useState('');
-  // Con esto en true, "Tus gastos" deja de truncar en 6. Buscar por nombre o
-  // filtrar por fecha ya implica querer ver la lista completa que matchea.
-  const [verTodos, setVerTodos] = useState(false);
-  // Sección abierta con todos sus gastos a la vista (si no, los primeros 5).
-  const [seccionCompleta, setSeccionCompleta] = useState<string | null>(null);
+  // Hacia dónde se movió el período la última vez, para que el anillo entre
+  // desde ese lado.
+  const [direccion, setDireccion] = useState<'atras' | 'adelante' | null>(null);
+  const navigate = useNavigate();
   // Editar secciones: renombrar o borrar. Una a la vez.
   const [editandoSecciones, setEditandoSecciones] = useState(false);
   const [renombrandoId, setRenombrandoId] = useState<string | null>(null);
@@ -358,9 +246,9 @@ export function GastosV2() {
       ? desdeVentana + 7 * 86_400_000
       : Infinity;
   const gastosVentana = gastos.filter((g) => g.ts >= desdeVentana && g.ts < hastaVentana);
-  // Nombre del mes elegido, para el centro del donut y el selector de arriba.
+  // Nombre del mes elegido, para la esquina del anillo. Siempre el nombre,
+  // también el del mes en curso: es lo que ubica al pasar de un mes a otro.
   const nombreMesOffset = (offset: number) => {
-    if (offset === 0) return 'Este mes';
     const hoy = new Date();
     const objetivo = new Date(hoy.getFullYear(), hoy.getMonth() - offset, 1);
     const nombre = objetivo.toLocaleDateString('es-AR', { month: 'long' });
@@ -368,11 +256,8 @@ export function GastosV2() {
     return conAño.charAt(0).toUpperCase() + conAño.slice(1);
   };
 
-  // Cómo se llama la semana que se mira: "Esta semana", "Semana pasada" o el
-  // rango de lunes a domingo ("10 – 16 sep").
+  // La semana que se mira, como rango de lunes a domingo ("10 – 16 sep").
   const etiquetaSemana = (offset: number) => {
-    if (offset === 0) return 'Esta semana';
-    if (offset === 1) return 'Semana pasada';
     const lunes = new Date(`${lunesAtras(offset)}T12:00:00Z`);
     const domingo = new Date(lunes);
     domingo.setUTCDate(domingo.getUTCDate() + 6);
@@ -396,7 +281,7 @@ export function GastosV2() {
   const periodoCerrado = offsetVentana > 0;
   const teQueda = periodoCerrado ? 'Te quedó' : 'Te queda';
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
-  const colorDe = (catId: string) => CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === catId), 0) % CAT_COLORS.length];
+  const colorDe = (catId: string) => colorDeSeccion(catId, categorias);
 
   // ── Gráfico principal: de lo que entró, cuánto se fue en cada sección y
   // cuánto te queda. "Lo que entró" es sólo lo registrado en el período (Me
@@ -464,26 +349,37 @@ export function GastosV2() {
     && Math.abs(sumaPagos - parseMoneyInput(ngMonto)) < 0.01
   );
 
-  const hayFiltroFecha = !!(filtroDesde || filtroHasta);
-  // Los recientes son los del período que se está mirando (el mes de las
-  // flechas, o la semana): el 1 de un mes nuevo la lista arranca vacía, sin los
-  // del mes anterior. Si la persona pone un rango de fechas es porque quiere
-  // mirar otros días, y ahí el rango manda.
-  const baseLista = hayFiltroFecha ? gastos : gastosVentana;
   const textoPeriodo = ventana === 'mes'
     ? (mesOffset === 0 ? 'este mes' : nombreMesOffset(mesOffset))
     : semanaOffset === 0 ? 'esta semana' : semanaOffset === 1 ? 'la semana pasada' : `la semana del ${etiquetaSemana(semanaOffset)}`;
-  const gastosFiltrados = baseLista
-    .filter((g) => !busqueda.trim() || g.descripcion.toLowerCase().includes(busqueda.trim().toLowerCase()))
-    .filter((g) => !filtroDesde || g.ts >= new Date(`${filtroDesde}T00:00:00`).getTime())
-    .filter((g) => !filtroHasta || g.ts <= new Date(`${filtroHasta}T23:59:59`).getTime())
-    // "Mayor monto" compara en pesos: ordenar por `monto` pondría US$20 abajo
-    // de un gasto de $5.000, que es al revés.
-    .sort((a, b) => (orden === 'monto' ? b.montoArs - a.montoArs : b.ts - a.ts));
-  const hayBusqueda = !!busqueda.trim();
-  // Mostrar todos si están buscando o filtrando (recortar lo que ya filtraron
-  // sería raro), o si tocaron "Ver todos" a mano.
-  const mostrarTodos = hayBusqueda || hayFiltroFecha || verTodos;
+  // Los últimos 7 del período que se mira (el 1 de un mes nuevo la lista
+  // arranca vacía). La lista completa, con buscador, está en Todos tus gastos.
+  const ultimosGastos = [...gastosVentana].sort((a, b) => b.ts - a.ts).slice(0, 7);
+
+  // Mover el período: hacia atrás sin límite, hacia adelante hasta el actual.
+  function moverPeriodo(hacia: 'atras' | 'adelante') {
+    if (hacia === 'adelante' && offsetVentana === 0) return;
+    const delta = hacia === 'atras' ? 1 : -1;
+    setDireccion(hacia);
+    if (ventana === 'mes') setMesOffset((o) => o + delta);
+    else setSemanaOffset((o) => o + delta);
+  }
+  // Deslizar el anillo de costado: hacia la derecha trae el período anterior,
+  // como pasar la hoja de un calendario. Sólo cuenta si el gesto fue más
+  // horizontal que vertical, para no robarle el scroll a la pantalla.
+  const toqueRef = useRef<{ x: number; y: number } | null>(null);
+  function alEmpezarToque(e: React.TouchEvent) {
+    toqueRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  function alTerminarToque(e: React.TouchEvent) {
+    const inicio = toqueRef.current;
+    toqueRef.current = null;
+    if (!inicio) return;
+    const dx = e.changedTouches[0].clientX - inicio.x;
+    const dy = e.changedTouches[0].clientY - inicio.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    moverPeriodo(dx > 0 ? 'atras' : 'adelante');
+  }
 
   // Desde "Tu paso de hoy" en Home:
   // · "Registrar un gasto" abre el formulario de FINA con el monto listo para
@@ -525,6 +421,25 @@ export function GastosV2() {
       () => pantallaRef.current?.querySelector<HTMLElement>(`[data-tope-de="${elegida.id}"]`),
     );
   });
+  // Desde Todos tus gastos, "Editar": abre el formulario con ese gasto. Al
+  // guardar o cancelar se vuelve a la lista completa.
+  const location = useLocation();
+  useEffect(() => {
+    const { editarGasto: id, ...resto } = (location.state as { editarGasto?: unknown } & Record<string, unknown> | null) ?? {};
+    if (typeof id !== 'string') return;
+    // Se limpia para que recargar no lo vuelva a abrir; `from` queda para volver.
+    navigate(location.pathname, { replace: true, state: resto });
+    const g = gastos.find((x) => x.id === id);
+    if (!g) return;
+    formDesdeOrigen.current = true;
+    empezarEdicion(g);
+    llevarA(
+      () => pantallaRef.current?.querySelector<HTMLElement>('[data-form-gasto]'),
+      () => pantallaRef.current?.querySelector<HTMLElement>('[aria-label="Monto del gasto"]'),
+    );
+    // Sólo cuando se llega con una navegación nueva.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
 
   function agregarDinero() {
     const n = parseMoneyInput(addDispVal);
@@ -652,7 +567,8 @@ export function GastosV2() {
       ts: deInputFechaHora(ngFechaHora),
     });
     if (r.error !== null) { setErrorGasto(r.error); return; }
-    cancelarForm();
+    // Si se editó desde Todos tus gastos, se vuelve ahí.
+    cancelarDesdeForm();
   }
 
   function guardarTope(catId: string) {
@@ -664,32 +580,75 @@ export function GastosV2() {
 
   return (
     <div ref={pantallaRef} className="px-[22px] pt-8 flex flex-col gap-4 pb-4 lg:max-w-4xl lg:mx-auto lg:pt-10">
-      {/* Banda editorial full-bleed. Sin Fini: esta pantalla está llena de
-          números y el personaje no va cerca de datos (§6). */}
-      <header data-franja className="pb-1 mb-2">
+      {/* Sin Fini: esta pantalla está llena de números y el personaje no va
+          cerca de datos (§6). Lo primero que se elige es si se mira por mes o
+          por semana: el anillo, los tipos, las secciones y los últimos gastos
+          siguen esa elección. */}
+      <header data-franja className="pb-1 flex flex-col gap-3">
         <Titulo>Mis gastos</Titulo>
+        <SegmentedTab
+          options={[{ id: 'mes' as Periodo, label: 'Por mes' }, { id: 'semana' as Periodo, label: 'Por semana' }]}
+          value={ventana}
+          onChange={(v) => { setVentana(v); setMesOffset(0); setSemanaOffset(0); setDireccion(null); }}
+          trackColor={COLORS.tint}
+        />
       </header>
 
       {/* EL dato de la pantalla (§3.5). Con lo que te entró registrado: de esa
           plata, cuánto se fue en cada sección y cuánto te queda (el
           disponible, en lima, que es el valor). Sin entradas registradas: sólo
-          cómo se reparten tus gastos. Es la única tarjeta elevada; los medios
-          de pago no van acá, van en su propio gráfico más abajo. */}
+          cómo se reparten tus gastos. Es la única tarjeta elevada. Se pasa al
+          período anterior con las flechas de los costados o deslizando el
+          anillo; el período va chiquito en la esquina, para ubicarse. */}
       <section
         aria-label={conIngreso ? `${teQueda}, ${textoPeriodo}` : `Tus gastos, ${textoPeriodo}`}
-        className="rounded-2xl px-5 py-5 flex flex-col gap-4 lg:max-w-xl"
+        className="rounded-2xl px-3 pt-3 pb-5 flex flex-col gap-3 lg:max-w-xl"
         style={CARD_ELEVADA}
+        onTouchStart={alEmpezarToque}
+        onTouchEnd={alTerminarToque}
       >
-        <div className="flex items-center gap-5">
-          <Donut
-            size={150}
-            segments={segmentosAnillo}
-            centerLabel={conIngreso ? teQueda : 'Gastaste'}
-            centerValue={fmtMoney(conIngreso ? disponibleVentana : totalGastado)}
-          />
-          <div className="flex-1 min-w-0 flex flex-col gap-1" aria-live="polite">
+        <p className="px-2 text-[13px] font-semibold" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }} aria-live="polite">
+          {etiquetaVentana}
+        </p>
+        {/* La key cambia con el período: así el contenido vuelve a entrar,
+            desde el lado hacia el que se movió. */}
+        <div
+          key={`${ventana}-${offsetVentana}`}
+          className={`flex flex-col gap-4 ${direccion === 'atras' ? 'v2-entra-izq' : direccion === 'adelante' ? 'v2-entra-der' : ''}`}
+        >
+          <div className="flex items-center justify-between gap-1">
+            <button
+              type="button"
+              onClick={() => moverPeriodo('atras')}
+              aria-label={ventana === 'mes' ? 'Ver mes anterior' : 'Ver semana anterior'}
+              className="v2-focus w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+              style={{ color: COLORS.inkSoft }}
+            >
+              <IconChevron size={18} style={{ transform: 'rotate(180deg)' }} />
+            </button>
+            <Donut
+              size={150}
+              segments={segmentosAnillo}
+              centerLabel={conIngreso ? teQueda : 'Gastaste'}
+              centerValue={fmtMoney(conIngreso ? disponibleVentana : totalGastado)}
+            />
+            {/* En el período actual no hay siguiente: la flecha queda tenue
+                pero ocupa su lugar, así el anillo no se corre. */}
+            <button
+              type="button"
+              onClick={() => moverPeriodo('adelante')}
+              disabled={offsetVentana === 0}
+              aria-label={ventana === 'mes' ? 'Ver mes siguiente' : 'Ver semana siguiente'}
+              className="v2-focus w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+              style={{ color: COLORS.inkSoft, opacity: offsetVentana === 0 ? 0.3 : 1, cursor: offsetVentana === 0 ? 'default' : 'pointer' }}
+            >
+              <IconChevron size={18} />
+            </button>
+          </div>
+
+          <div className="px-2 flex flex-col items-center text-center gap-1" aria-live="polite">
             <p className="text-[14px] font-medium" style={{ color: COLORS.inkSoft }}>
-              {conIngreso ? teQueda : 'Gastaste'}{ventana === 'mes' && mesOffset === 0 ? ' este mes' : `, ${textoPeriodo.toLowerCase()}`}
+              {conIngreso ? teQueda : 'Gastaste'}
             </p>
             <Monto value={conIngreso ? disponibleVentana : totalGastado} size={26} className="font-bold leading-tight tracking-[-0.01em]" />
             {conIngreso && (
@@ -699,92 +658,56 @@ export function GastosV2() {
             )}
             <EstadoConfianza estado="declarado" className="mt-1" />
           </div>
+
+          {/* Leyenda: cada sección con su monto, y lo que queda. */}
+          {(porSeccion.length > 0 || conIngreso) && (
+            <ul className="px-2 flex flex-col gap-1.5">
+              {porSeccion.slice(0, 5).map((s) => (
+                <li key={s.id} className="flex items-center gap-2.5 text-[14px]">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} aria-hidden />
+                  <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{s.nombre}</span>
+                  <Monto value={s.monto} className="text-[14px] font-semibold" />
+                </li>
+              ))}
+              {porSeccion.length > 5 && (
+                <li className="text-[14px] pl-[22px]" style={{ color: COLORS.inkSoft }}>
+                  Y {porSeccion.length - 5} secciones más, abajo
+                </li>
+              )}
+              {conIngreso && (
+                <li className="flex items-center gap-2.5 text-[14px] font-semibold">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
+                  <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>{teQueda}</span>
+                  <Monto value={disponibleVentana} className="text-[14px] font-semibold" />
+                </li>
+              )}
+            </ul>
+          )}
+
+          {gastasteDeMas > 0 && (
+            <p className="px-2 text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              Salieron <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró
+            </p>
+          )}
+          {!conIngreso && totalGastado > 0 && (
+            <button
+              type="button"
+              onClick={() => { setAddDispEsIngreso(true); setAddingDisponible(true); }}
+              className="v2-focus self-center min-h-[44px] text-[14px] font-semibold"
+              style={{ color: COLORS.brand }}
+            >
+              Sumá lo que te entró para ver cuánto te {periodoCerrado ? 'quedó' : 'queda'}
+            </button>
+          )}
+          {!conIngreso && totalGastado === 0 && (
+            <p className="px-2 text-[14px] leading-snug text-center" style={{ color: COLORS.inkSoft }}>
+              {periodoCerrado
+                ? `No registraste entradas ni gastos en ${textoPeriodo.toLowerCase()}.`
+                : 'Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto te queda.'}
+            </p>
+          )}
         </div>
-
-        {/* Leyenda: cada sección con su monto, y lo que queda. */}
-        {(porSeccion.length > 0 || conIngreso) && (
-          <ul className="flex flex-col gap-1.5">
-            {porSeccion.slice(0, 5).map((s) => (
-              <li key={s.id} className="flex items-center gap-2.5 text-[14px]">
-                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} aria-hidden />
-                <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{s.nombre}</span>
-                <Monto value={s.monto} className="text-[14px] font-semibold" />
-              </li>
-            ))}
-            {porSeccion.length > 5 && (
-              <li className="text-[14px] pl-[22px]" style={{ color: COLORS.inkSoft }}>
-                Y {porSeccion.length - 5} secciones más, abajo
-              </li>
-            )}
-            {conIngreso && (
-              <li className="flex items-center gap-2.5 text-[14px] font-semibold">
-                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
-                <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>{teQueda}</span>
-                <Monto value={disponibleVentana} className="text-[14px] font-semibold" />
-              </li>
-            )}
-          </ul>
-        )}
-
-        {gastasteDeMas > 0 && (
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            Salieron <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró
-          </p>
-        )}
-        {!conIngreso && totalGastado > 0 && (
-          <button
-            type="button"
-            onClick={() => { setAddDispEsIngreso(true); setAddingDisponible(true); }}
-            className="v2-focus self-start min-h-[44px] text-[14px] font-semibold"
-            style={{ color: COLORS.brand }}
-          >
-            Sumá lo que te entró para ver cuánto te {periodoCerrado ? 'quedó' : 'queda'}
-          </button>
-        )}
-        {!conIngreso && totalGastado === 0 && (
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            {periodoCerrado
-              ? `No registraste entradas ni gastos en ${textoPeriodo.toLowerCase()}.`
-              : 'Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto te queda.'}
-          </p>
-        )}
       </section>
-
-      {/* "Gastado" sin período no se puede comparar con nada, y los topes son
-          por semana o por mes. Se elige una ventana y el disponible, la lista
-          y la distribución por tipo la respetan. */}
-      <SegmentedTab
-        options={[{ id: 'mes' as Periodo, label: 'Este mes' }, { id: 'semana' as Periodo, label: 'Esta semana' }]}
-        value={ventana}
-        onChange={(v) => { setVentana(v); setMesOffset(0); setSemanaOffset(0); }}
-        trackColor={COLORS.tint}
-      />
-
-      {/* Navegar hacia atrás: meses con "Este mes", semanas con "Esta semana". */}
-      <div className="flex items-center justify-center gap-3 -mt-1">
-        <button
-          type="button"
-          onClick={() => (ventana === 'mes' ? setMesOffset((o) => o + 1) : setSemanaOffset((o) => o + 1))}
-          aria-label={ventana === 'mes' ? 'Ver mes anterior' : 'Ver semana anterior'}
-          className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-          style={{ color: COLORS.inkSoft }}
-        >
-          <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} />
-        </button>
-        <span className="text-[14px] font-semibold min-w-[130px] text-center" style={{ color: COLORS.ink, fontFamily: FONTS.mono }}>
-          {etiquetaVentana}
-        </span>
-        <button
-          type="button"
-          onClick={() => (ventana === 'mes' ? setMesOffset((o) => Math.max(0, o - 1)) : setSemanaOffset((o) => Math.max(0, o - 1)))}
-          disabled={offsetVentana === 0}
-          aria-label={ventana === 'mes' ? 'Ver mes siguiente' : 'Ver semana siguiente'}
-          className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-          style={{ color: COLORS.inkSoft, opacity: offsetVentana === 0 ? 0.3 : 1, cursor: offsetVentana === 0 ? 'default' : 'pointer' }}
-        >
-          <IconChevron size={15} />
-        </button>
-      </div>
 
       {/* En desktop, todo lo de abajo se acomoda en grilla; en mobile sigue
           siendo una sola columna apilada (idéntico a antes). */}
@@ -1225,35 +1148,21 @@ export function GastosV2() {
         )}
       </div>
 
-      {/* Lo que entra contra lo que sale. Debajo de las dos acciones: es la
-          pregunta que sigue a "cuánto tengo" — "¿me alcanza lo que entra?". */}
-      <section className="flex flex-col gap-3 lg:col-span-3">
-        <TituloSeccion>Lo que entra y lo que sale</TituloSeccion>
-        <IngresosVsGastos
-          conLista
-          mesElegido={mesAtras(ventana === 'mes' ? mesOffset : 0)}
-          semana={ventana === 'semana' ? { lunes: lunesAtras(semanaOffset), etiqueta: etiquetaSemana(semanaOffset), actual: semanaOffset === 0 } : undefined}
-        />
-      </section>
+      {/* Lo que entra contra lo que sale ya está en Inicio: no se repite acá. */}
 
-      {/* Distribución por tipo: cuánto fue necesario, urgente, gusto u otro. */}
+      {/* Por tipo: sólo la pregunta y cuánto fue de cada uno en el período. */}
       {porTipo.length > 0 && (
         <div className="flex flex-col gap-2 lg:col-span-1 lg:h-full">
           <TituloSeccion>¿En qué tipo de gasto se te va?</TituloSeccion>
-          <div className="h-2.5 rounded-full overflow-hidden flex" style={{ background: COLORS.surface }}>
+          <ul className="flex flex-col">
             {porTipo.map((t) => (
-              <div key={t.clave} style={{ width: `${(t.monto / totalGastado) * 100}%`, background: TIPO_INFO[t.tipo].color }} />
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-x-3.5 gap-y-1">
-            {porTipo.map((t) => (
-              <span key={t.clave} className="flex items-center gap-1.5 text-[14px]" style={{ color: COLORS.inkSoft }}>
-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: TIPO_INFO[t.tipo].color }} />
-                <span>{t.label}</span>
+              <li key={t.clave} className="flex items-center gap-2.5 py-2 border-b last:border-b-0 text-[14px]" style={{ borderColor: COLORS.line }}>
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[t.tipo].color }} aria-hidden />
+                <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{t.label}</span>
                 <Monto value={t.monto} className="text-[14px] font-semibold" />
-              </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
@@ -1348,7 +1257,8 @@ export function GastosV2() {
         </div>
       )}
 
-      {/* Sobres por categoría — lista con hairline, no card-grid (§3.5) */}
+      {/* Las secciones con lo gastado y su tope. Al abrir una se edita el tope;
+          los gastos no se listan acá, están una sola vez en Tus gastos. */}
       <div className="flex flex-col lg:col-span-2">
         {categorias.length === 0 && (
           // Vidriera vacía (§10): promesa, no falla. Se muestra qué va a haber
@@ -1381,7 +1291,6 @@ export function GastosV2() {
           const open = openCatId === cat.id;
           const gastado = gastadoEn(cat.id);
           const tope = topes[cat.id];
-          const movs = gastosVentana.filter((g) => g.categoriaId === cat.id);
           return (
             // Cada categoría era su propia tarjeta con borde. Con seis
             // secciones eso son seis contornos apilados, que es lo que se lee
@@ -1420,28 +1329,6 @@ export function GastosV2() {
 
               {open && (
                 <div className="mt-3 pt-3 border-t border-dashed flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
-                  {recortar(movs, seccionCompleta === cat.id).map((m) => (
-                    <div key={m.id}>
-                      <div className="flex items-center justify-between text-[14px] gap-2 min-h-[36px]" style={{ color: COLORS.ink }}>
-                        <span className="flex items-center gap-1.5 min-w-0">
-                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TIPO_INFO[m.tipo].color }} />
-                          <span className="truncate">{m.descripcion}</span>
-                          <span className="shrink-0 text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(m.ts)}</span>
-                        </span>
-                        <span className="shrink-0 flex items-center gap-1">
-                          <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtGasto(m)}</span>
-                          <BotonEditar gasto={m} onClick={() => empezarEdicion(m)} />
-                          <BotonBorrar gasto={m} abierto={borrando === m.id} onClick={() => setBorrando(borrando === m.id ? null : m.id)} />
-                        </span>
-                      </div>
-                      {borrando === m.id && <ConfirmarBorrado gasto={m} onCancelar={() => setBorrando(null)} />}
-                    </div>
-                  ))}
-                  <VerTodos
-                    total={movs.length}
-                    abierta={seccionCompleta === cat.id}
-                    onToggle={() => setSeccionCompleta(seccionCompleta === cat.id ? null : cat.id)}
-                  />
                   <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                     <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Tope de la sección</p>
                     <div className="relative">
@@ -1587,115 +1474,38 @@ export function GastosV2() {
 
       <ListaGastosFijos />
 
-      {/* Buscador de gastos — colapsado en una lupita, no ocupa lugar hasta que se usa */}
-      <div className="flex flex-col gap-2.5 lg:col-span-1">
-        <div className="flex items-center justify-between">
-          <TituloSeccion>Tus gastos</TituloSeccion>
+      {/* Tus gastos: una sola lista, con la sección de cada gasto. Los
+          últimos 7 del período; la lista completa, con buscador y filtro de
+          fechas, se abre aparte en Todos tus gastos. */}
+      <section className="flex flex-col gap-1 lg:col-span-1" aria-label="Tus gastos">
+        <TituloSeccion>Tus gastos</TituloSeccion>
+        {gastos.length === 0 && <p className="py-2 text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
+        {gastos.length > 0 && ultimosGastos.length === 0 && (
+          <p className="py-2 text-[14px]" style={{ color: COLORS.inkSoft }}>No hay gastos en {textoPeriodo}.</p>
+        )}
+        <div className="flex flex-col">
+          {ultimosGastos.map((g) => (
+            <FilaGasto
+              key={g.id}
+              gasto={g}
+              categorias={categorias}
+              borrando={borrando === g.id}
+              onBorrar={() => setBorrando(borrando === g.id ? null : g.id)}
+              onEditar={() => empezarEdicion(g)}
+            />
+          ))}
+        </div>
+        {gastos.length > 0 && (
           <button
             type="button"
-            onClick={() => setBusquedaAbierta((v) => !v)}
-            aria-label="Buscar gastos"
-            aria-pressed={busquedaAbierta}
-            className="v2-focus w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
-            style={busquedaAbierta ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.tint, color: COLORS.brand }}
+            onClick={() => navigate('/onboarding-v2/gastos/todos')}
+            className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
+            style={{ color: COLORS.brand }}
           >
-            <IconLupa size={18} />
+            Consultar todos
           </button>
-        </div>
-        {busquedaAbierta && (
-          <div className="flex flex-col gap-2">
-            <input
-              autoFocus
-              aria-label="Buscar gastos por nombre"
-              className="v2-focus rounded-2xl px-4 py-2.5 text-[15px] transition-colors"
-              style={INPUT_STYLE}
-              placeholder="Buscar por nombre (ej: Rappi)"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <div className="flex-1 flex flex-col gap-1">
-                <label htmlFor="filtro-desde" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Desde</label>
-                <input
-                  id="filtro-desde"
-                  type="date"
-                  aria-label="Filtrar gastos desde esta fecha"
-                  className="v2-focus w-full rounded-xl px-3 py-2 text-[14px] transition-colors"
-                  style={INPUT_STYLE}
-                  value={filtroDesde}
-                  max={filtroHasta || undefined}
-                  onChange={(e) => setFiltroDesde(e.target.value)}
-                />
-              </div>
-              <div className="flex-1 flex flex-col gap-1">
-                <label htmlFor="filtro-hasta" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Hasta</label>
-                <input
-                  id="filtro-hasta"
-                  type="date"
-                  aria-label="Filtrar gastos hasta esta fecha"
-                  className="v2-focus w-full rounded-xl px-3 py-2 text-[14px] transition-colors"
-                  style={INPUT_STYLE}
-                  value={filtroHasta}
-                  min={filtroDesde || undefined}
-                  onChange={(e) => setFiltroHasta(e.target.value)}
-                />
-              </div>
-              {hayFiltroFecha && (
-                <button
-                  type="button"
-                  onClick={() => { setFiltroDesde(''); setFiltroHasta(''); }}
-                  aria-label="Sacar el filtro de fecha"
-                  className="v2-focus self-end min-h-[44px] text-[14px] font-semibold underline"
-                  style={{ color: COLORS.inkSoft }}
-                >
-                  Sacar
-                </button>
-              )}
-            </div>
-          </div>
         )}
-        <SegmentedTab
-          options={[{ id: 'recientes' as const, label: 'Más recientes' }, { id: 'monto' as const, label: 'Mayor monto' }]}
-          value={orden}
-          onChange={setOrden}
-          trackColor={COLORS.tint}
-        />
-
-        {gastos.length === 0 && <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
-        {gastos.length > 0 && gastosFiltrados.length === 0 && (
-          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
-            {hayFiltroFecha && hayBusqueda ? 'No encontramos gastos con ese nombre en ese rango de fechas.'
-              : hayFiltroFecha ? 'No encontramos gastos en ese rango de fechas.'
-              : hayBusqueda ? `No encontramos gastos con ese nombre en ${textoPeriodo}.`
-              : `Todavía no hay gastos en ${textoPeriodo}.`}
-          </p>
-        )}
-        {recortar(gastosFiltrados, mostrarTodos).map((g) => {
-          const cat = categorias.find((c) => c.id === g.categoriaId);
-          return (
-            // Idem: un movimiento no es una tarjeta, es un renglón.
-            <div key={g.id} className="py-3 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
-              <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[g.tipo].color }} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
-                  <p className="text-[14px] truncate" style={{ color: COLORS.inkSoft }}>
-                    {[cat?.nombre ?? 'Sin sección', g.tipoOtro, fechaDisplay(g.ts)].filter(Boolean).join(', ')}
-                  </p>
-                </div>
-                <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(g)}</span>
-                {/* Todos se pueden editar y borrar, también los que llegaron por WhatsApp. */}
-                <BotonEditar gasto={g} onClick={() => empezarEdicion(g)} />
-                <BotonBorrar gasto={g} abierto={borrando === g.id} onClick={() => setBorrando(borrando === g.id ? null : g.id)} />
-              </div>
-              {borrando === g.id && <ConfirmarBorrado gasto={g} onCancelar={() => setBorrando(null)} />}
-            </div>
-          );
-        })}
-        {!hayBusqueda && !hayFiltroFecha && (
-          <VerTodos total={gastosFiltrados.length} abierta={verTodos} onToggle={() => setVerTodos((v) => !v)} />
-        )}
-      </div>
+      </section>
 
       <div className="lg:col-span-3">
         <ArmarGrupoBtn />

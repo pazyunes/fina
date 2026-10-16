@@ -94,3 +94,20 @@
   .v2-fab-pulso { animation: none; opacity: 0; }
 }
 
+/* El anillo de Gastos al cambiar de período (GastosV2): entra desde el lado
+   hacia el que se movió, como pasar la hoja de un calendario. Responde a la
+   flecha o al deslizar; nunca se anima solo. */
+.v2-entra-izq { animation: v2_entra_izq 220ms ease-out; }
+.v2-entra-der { animation: v2_entra_der 220ms ease-out; }
+@keyframes v2_entra_izq {
+  from { transform: translateX(-28px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes v2_entra_der {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-entra-izq, .v2-entra-der { animation: none; }
+}
+

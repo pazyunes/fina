@@ -28,7 +28,7 @@ export function SidebarV2() {
 
       <nav className="flex flex-col gap-1">
         {TABS.map((tab) => {
-          const active = pathname === tab.to;
+          const active = pathname === tab.to || pathname.startsWith(`${tab.to}/`);
           const Icon = tab.icon;
           return (
             <button

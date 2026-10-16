@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
-import { COLORS, FONTS, TituloSeccion, fmtMoney, vistaGastos } from './shared';
+import { COLORS, Donut, FONTS, TituloSeccion, fmtMoney, vistaGastos } from './shared';
+import { colorDeSeccion } from './FilaGasto';
 import { IngresosVsGastos } from './IngresosVsGastos';
 import { IconChevron } from './FinaIcons';
 
@@ -16,10 +17,9 @@ import { IconChevron } from './FinaIcons';
 //
 // COLOR. Se siguió la guía de dataviz y se validó con su script, no a ojo:
 //
-// · Las barras van en UN solo color. "Por sección" pintaba cada barra de un
-//   color distinto, pero es una sola serie (cuánto por sección): el color
-//   repetía lo que ya dice el largo, y hacía que cada sección pareciera una
-//   categoría con significado propio. El nombre de cada barra ya está escrito.
+// · Las barras van en UN solo color: es una sola serie y el nombre de cada
+//   barra ya está escrito. "Por sección" es la excepción porque es una torta:
+//   ahí cada sección necesita su color para encontrarla en la leyenda.
 // · La paleta anterior no pasaba la validación: el lima y el amarillo tenían
 //   ΔE 1,1 para daltonismo deuteranope (el mismo color para esa persona) y 13
 //   para visión normal, debajo del mínimo de 15. Y usaba naranja, que en FINA es
@@ -60,6 +60,37 @@ function Barras({ filas }: { filas: { label: string; valor: number }[] }) {
   );
 }
 
+// ── Torta por sección ────────────────────────────────────────────────────
+// Por sección va en torta y no en barras: lo que se quiere ver es qué parte
+// del total se lleva cada una, y una barra escalada contra la más grande no
+// dice contra qué se compara. El total va en el centro y cada sección lleva su
+// porcentaje escrito, así no hace falta comparar ángulos a ojo. Los colores son
+// los mismos que en Gastos, para que una sección se reconozca en las dos.
+function TortaSecciones({ filas, total }: { filas: { id: string; label: string; valor: number; color: string }[]; total: number }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex justify-center">
+        <Donut
+          size={140}
+          segments={filas.map((f) => ({ color: f.color, pct: total > 0 ? (f.valor / total) * 100 : 0 }))}
+          centerLabel="Gastaste"
+          centerValue={fmtMoney(total)}
+        />
+      </div>
+      <ul className="flex flex-col gap-1.5 max-h-[150px] overflow-y-auto v2-sin-barra">
+        {filas.map((f) => (
+          <li key={f.id} className="flex items-center gap-2.5 text-[14px]">
+            <span className="w-3 h-3 rounded-full shrink-0" style={{ background: f.color }} aria-hidden />
+            <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{f.label}</span>
+            <span className="shrink-0 font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>{Math.round((f.valor / total) * 100)}%</span>
+            <span className="shrink-0 font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(f.valor)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // ── Una tarjeta del carrusel ─────────────────────────────────────────────
 // Sin subtítulo: el título tiene que decir solo qué muestra el gráfico
 // (frontend.md §5.4). Si hiciera falta explicarlo, se cambia el título.
@@ -95,7 +126,9 @@ export function MisVisualizaciones() {
   // ── Por sección ────────────────────────────────────────────────────────
   const porSeccion = g.categorias
     .map((c) => ({
+      id: c.id,
       label: c.nombre,
+      color: colorDeSeccion(c.id, g.categorias),
       // En pesos, no en la moneda de cada gasto: sumar US$20 como "20" haría
       // que la barra de esa sección se vea 1.500 veces más chica.
       valor: gastos.filter((x) => x.categoriaId === c.id).reduce((a, x) => a + x.montoArs, 0),
@@ -117,13 +150,13 @@ export function MisVisualizaciones() {
     },
     {
       titulo: 'Gastos por sección',
-      // Puede haber muchas secciones — se deja scrollear ADENTRO de su propio
-      // alto en vez de estirar la tarjeta (y con ella, todas las demás de la
-      // fila: antes todas tomaban el alto de la más larga).
+      // Puede haber muchas secciones: la leyenda se scrollea ADENTRO de su
+      // propio alto en vez de estirar la tarjeta (y con ella, todas las demás
+      // de la fila).
       contenido: gastos.length === 0
         ? <SinDatos>Cuando registres tu primer gasto, acá vas a ver en qué se te va.</SinDatos>
         : porSeccion.length === 0 ? <SinDatos>Todavía no hay gastos con sección.</SinDatos>
-        : <div className="max-h-[280px] overflow-y-auto v2-sin-barra pr-0.5"><Barras filas={porSeccion} /></div>,
+        : <TortaSecciones filas={porSeccion} total={porSeccion.reduce((t, f) => t + f.valor, 0)} />,
     },
     {
       titulo: 'Gastos por tipo',

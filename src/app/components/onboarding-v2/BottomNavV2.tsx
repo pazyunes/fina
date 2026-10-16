@@ -39,7 +39,7 @@ export function BottomNavV2() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', background: COLORS.surface }}
     >
       {TABS.slice(0, 2).map((tab) => {
-        const active = pathname === tab.to;
+        const active = pathname === tab.to || pathname.startsWith(`${tab.to}/`);
         const Icon = tab.icon;
         return (
           <button
@@ -101,7 +101,7 @@ export function BottomNavV2() {
       </div>
 
       {TABS.slice(2).map((tab) => {
-        const active = pathname === tab.to;
+        const active = pathname === tab.to || pathname.startsWith(`${tab.to}/`);
         const Icon = tab.icon;
         return (
           <button
