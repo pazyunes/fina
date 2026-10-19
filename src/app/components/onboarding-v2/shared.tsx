@@ -53,7 +53,7 @@ export const COLORS = {
   ink: '#2B2118',        // tinta — texto y montos (14:1+ sobre papel)
   inkSoft: '#5F5346',    // tinta-media — labels, fechas (6.9:1)
   inkFaint: '#7A6A58',   // tinta-suave — auxiliar (mínimo AA)
-  paper: '#FAF7F1',      // fondo general — casi blanco, apenas cálido
+  paper: '#FFFFFF',      // fondo general: blanco (decisión oct 2026)
   surface: '#FFFFFF',    // superficie elevada — tarjetas
   tint: '#EEE4D2',       // hueco — bloque tintado / hundido
   // Separadores. Se subieron de contraste a propósito: los valores viejos

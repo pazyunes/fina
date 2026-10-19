@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fmtMoney, formatThousands, parseMoneyInput } from './shared';
+import { COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fmtMoney, formatThousands, parseMoneyInput } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
@@ -756,7 +756,6 @@ export function GastosV2() {
         </div>
       )}
 
-      <ArmarGrupoBtn />
     </div>
   );
 }

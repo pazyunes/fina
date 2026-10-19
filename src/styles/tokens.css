@@ -6,7 +6,7 @@
    --background, --font-sans, etc.). */
 :root {
   /* Superficies */
-  --fina-papel: #FAF7F1;          /* fondo general, casi blanco, apenas cálido */
+  --fina-papel: #FFFFFF;          /* fondo general: blanco (decisión oct 2026) */
   --fina-superficie: #FFFFFF;     /* superficie elevada: tarjetas */
   --fina-hueco: #EEE4D2;          /* bloque tintado / hundido */
   --fina-hairline: #D6CBB8;       /* separador decorativo, 1.5:1 sobre papel */

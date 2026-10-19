@@ -55,9 +55,9 @@ que no ve.
 
 > ⚠️ **Riesgo específico nuestro.** "Fondo crema + acento naranja cálido + tipografía
 > geométrica" es *exactamente* el cluster estético que produce hoy cualquier IA por
-> defecto. El crema lo pide el brief y se queda, así que la distinción tiene que venir de
-> otro lado: del trazo fino, del verde lima, de las cifras tabulares y del sistema de
-> confianza (§5). Si sacás eso, queda una landing genérica más.
+> defecto. Desde octubre 2026 el fondo es blanco (decisión de diseño), pero el riesgo
+> sigue: la distinción tiene que venir del trazo fino, del verde lima, de las cifras
+> tabulares y del sistema de confianza (§5). Si sacás eso, queda una landing genérica más.
 
 ### 2.2 Los tells de la categoría fintech
 
@@ -236,7 +236,7 @@ Fuente de verdad de color, tipografía, espacio y forma. **Ningún componente es
 ```css
 :root {
   /* Superficies */
-  --fina-papel:          #FAF7F1;  /* fondo general, casi blanco, apenas cálido */
+  --fina-papel:          #FFFFFF;  /* fondo general: blanco (decisión oct 2026) */
   --fina-superficie:     #FFFFFF;  /* tarjeta elevada */
   --fina-hueco:          #EEE4D2;  /* bloque tintado / hundido */
   --fina-hairline:       #D6CBB8;  /* separador, 1.5:1 sobre papel */
