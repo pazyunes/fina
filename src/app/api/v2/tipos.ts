@@ -142,6 +142,13 @@ export type Objetivo = {
   montoMin: number | null;
   estado: 'active' | 'achieved' | 'cancelled';
   contribuciones: Contribucion[];
+  /**
+   * 'ahorro' = un objetivo de ahorro · 'gasto' = algo que ya se sabe que se va a
+   * pagar (migración 0043). Lo apartado en los dos deja de estar libre.
+   */
+  clase: 'ahorro' | 'gasto';
+  /** Sólo en los gastos: si se repite todos los meses. */
+  repite: 'mensual' | null;
 };
 
 export type PerfilInversor = {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
 import { COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fmtMoney, formatThousands, parseMoneyInput } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
+import { apartadoTotal } from '../../api/v2/apartado';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
@@ -129,12 +130,18 @@ export function GastosV2() {
   const plataDelPeriodo =
     db.ingresos.filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana).reduce((t, i) => t + i.montoArs, 0)
     + db.cargas.filter((c) => c.ts >= desdeVentana && c.ts < hastaVentana).reduce((t, c) => t + c.montoArs, 0);
-  // En cero y no en negativo: gastar más de lo que se cargó suele ser que
-  // falta cargar ingresos, y se dice aparte, sin alerta (regla 3).
-  const disponibleVentana = Math.max(plataDelPeriodo - totalGastado, 0);
   // Un período que ya terminó se cuenta en pasado: "te quedó", no "te queda".
   const periodoCerrado = offsetVentana > 0;
-  const teQueda = periodoCerrado ? 'Te quedó' : 'Te queda';
+  // Lo apartado (para lo que ya sabe que va a gastar y para sus objetivos de
+  // ahorro, migración 0043) ya tiene destino: en el período actual deja de
+  // contar como libre para gastar. En un período pasado no se resta: lo
+  // apartado es de hoy, no de entonces.
+  const apartado = apartadoTotal(db);
+  const apartadoAhora = !periodoCerrado ? apartado.total : 0;
+  // En cero y no en negativo: gastar más de lo que se cargó suele ser que
+  // falta cargar ingresos, y se dice aparte, sin alerta (regla 3).
+  const disponibleVentana = Math.max(plataDelPeriodo - totalGastado - apartadoAhora, 0);
+  const teQueda = periodoCerrado ? 'Te quedó' : apartadoAhora > 0 ? 'Libre para gastar' : 'Te queda';
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => colorDeSeccion(catId, categorias);
 
@@ -146,12 +153,16 @@ export function GastosV2() {
     ...categorias.map((c) => ({ id: c.id, nombre: c.nombre, color: colorDe(c.id), monto: gastadoEn(c.id) })),
     { id: '__sin', nombre: 'Sin sección', color: COLORS.lineStrong, monto: gastosVentana.filter((g) => !g.categoriaId).reduce((s, g) => s + g.montoArs, 0) },
   ].filter((s) => s.monto > 0).sort((a, b) => b.monto - a.monto);
-  const baseAnillo = conIngreso ? Math.max(plataDelPeriodo, totalGastado) : totalGastado;
+  // Lo apartado entra al anillo como su propia porción (lila): ni gastado ni
+  // libre.
+  const conApartado = conIngreso && apartadoAhora > 0;
+  const baseAnillo = conIngreso ? Math.max(plataDelPeriodo, totalGastado + apartadoAhora) : totalGastado;
   const segmentosAnillo = [
     ...porSeccion.map((s) => ({ color: s.color, pct: baseAnillo > 0 ? (s.monto / baseAnillo) * 100 : 0 })),
+    ...(conApartado ? [{ color: COLORS.lila, pct: (apartadoAhora / baseAnillo) * 100 }] : []),
     ...(conIngreso && disponibleVentana > 0 ? [{ color: COLORS.lima, pct: (disponibleVentana / baseAnillo) * 100 }] : []),
   ];
-  const gastasteDeMas = conIngreso && totalGastado > plataDelPeriodo ? totalGastado - plataDelPeriodo : 0;
+  const gastasteDeMas = conIngreso && totalGastado + apartadoAhora > plataDelPeriodo ? totalGastado + apartadoAhora - plataDelPeriodo : 0;
 
   // ── Por tipo. El "otro" se abre por lo que la persona escribió (Salud,
   // Mascota): cada texto es su propia fila. Los "otro" sin texto van juntos.
@@ -383,6 +394,16 @@ export function GastosV2() {
                   Y {porSeccion.length - 3} {porSeccion.length - 3 === 1 ? 'sección más' : 'secciones más'}, abajo
                 </li>
               )}
+              {conApartado && (
+                <li>
+                  {/* Lo apartado lleva a Mis objetivos, donde está para qué es. */}
+                  <button type="button" onClick={() => navigate('/onboarding-v2/objetivos')} className="v2-focus w-full flex items-center gap-2.5 text-[14px] text-left rounded-lg">
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lila }} aria-hidden />
+                    <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>Apartado</span>
+                    <Monto value={apartadoAhora} className="text-[14px] font-semibold" />
+                  </button>
+                </li>
+              )}
               {conIngreso && (
                 <li className="flex items-center gap-2.5 text-[14px] font-semibold">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
@@ -395,7 +416,9 @@ export function GastosV2() {
 
           {gastasteDeMas > 0 && (
             <p className="px-2 text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              Salieron <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró
+              {apartadoAhora > 0
+                ? <>Entre lo gastado y lo apartado, son <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró</>
+                : <>Salieron <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró</>}
             </p>
           )}
           {!conIngreso && totalGastado > 0 && (

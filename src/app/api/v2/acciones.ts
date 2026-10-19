@@ -8,6 +8,7 @@ import type {
 } from './tipos';
 import { esConvertible } from './tipos';
 import { siguienteVencimiento } from './fechasFijos';
+import { parsearHorizonte } from '../../utils/goalStrategies';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Acciones: lo que las pantallas llaman cuando la persona hace algo.
@@ -646,6 +647,7 @@ export function crearObjetivo(o: {
   nombre: string; descripcion?: string; tipo?: 'individual' | 'grupal';
   moneda?: Moneda; horizonte?: string | null; montoTotal: number | null;
   modoMonto?: Objetivo['modoMonto']; montoMin?: number | null;
+  clase?: Objetivo['clase']; repite?: Objetivo['repite'];
 }): Objetivo {
   const objetivo: Objetivo = {
     id: nuevoId(),
@@ -659,6 +661,8 @@ export function crearObjetivo(o: {
     montoMin: o.montoMin ?? null,
     estado: 'active',
     contribuciones: [],
+    clase: o.clase ?? 'ahorro',
+    repite: o.repite ?? null,
   };
   parchearEstado({ objetivos: [...leerEstado().objetivos, objetivo] });
   push(() => api.crearObjetivo({ ...o, id: objetivo.id }), 'Objetivo creado con éxito.', () => {
@@ -710,6 +714,43 @@ export async function sumarContribucion(objetivoId: string, c: {
       : x)),
   }));
   return { contribucion: contrib, error: null };
+}
+
+/**
+ * Pagar algo que ya se sabía que venía (un objetivo con clase 'gasto').
+ *
+ * Tres cosas, en este orden:
+ *   1. se registra el gasto en Gastos, con su sección: es plata que salió;
+ *   2. se libera lo que estaba apartado para eso, con un registro 'paid' por
+ *      ese monto. Lo libre ya había bajado al apartar: si no se liberara, el
+ *      mismo pago contaría dos veces;
+ *   3. si se repite todos los meses, la fecha pasa al mes que viene y vuelve a
+ *      empezar; si no, queda como hecho.
+ */
+export async function pagarGastoQueSeViene(o: Objetivo, p: { monto: number; seccionId: string | null; apartado: number }): Promise<string | null> {
+  // Un gasto se registra en pesos o en dólares, que son las monedas con cotización.
+  const moneda = o.moneda;
+  if (!esConvertible(moneda)) return 'Para registrarlo como gasto, el monto tiene que estar en pesos o en dólares.';
+  const r = await registrarGasto({
+    monto: p.monto, moneda, descripcion: o.nombre, seccionId: p.seccionId,
+    tipo: 'necesario', metodoPago: null, confirmacion: 'Pago registrado con éxito.',
+  });
+  if (r.error !== null) return r.error;
+  const liberar = Math.min(p.apartado, p.monto);
+  if (liberar > 0) {
+    const c = await sumarContribucion(o.id, { monto: liberar, moneda: o.moneda, kind: 'paid', label: 'Pagado' });
+    if (c.error !== null) return c.error;
+  }
+  if (o.repite === 'mensual') {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const fecha = parsearHorizonte(o.horizonte, hoy) ?? hoy;
+    const d = new Date(`${fecha}T12:00:00`);
+    d.setMonth(d.getMonth() + 1);
+    editarObjetivo(o.id, { horizonte: d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) });
+  } else {
+    editarObjetivo(o.id, { estado: 'achieved' });
+  }
+  return null;
 }
 
 export function borrarContribucion(objetivoId: string, id: string) {

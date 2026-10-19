@@ -9,6 +9,9 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { sumarEn } from '../../api/v2/conversion';
+import { apartadoTotal } from '../../api/v2/apartado';
+import { Hoja } from './Hoja';
+import { Desplegable, INPUT_STYLE } from './FormularioGasto';
 import { leerPlanesDeObjetivos, marcarUtil, type PlanObjetivo } from '../../api/v2/recomendaciones';
 import type { Moneda as MonedaV2 } from '../../api/v2/tipos';
 
@@ -21,11 +24,13 @@ import { IconBasura, IconCalendario, IconChevron, IconClose, IconEditar, IconGru
 // Gastos que se ven venir: la pantalla es para cargar lo que ya se sabe que va
 // a llegar y reservar a tiempo (decisión oct 2026).
 const SUGERENCIAS_OBJETIVO = [
-  { nombre: 'Vacaciones' },
-  { nombre: 'Regalo' },
-  { nombre: 'Cuota' },
-  { nombre: 'Decoración' },
-  { nombre: 'Deuda' },
+  // Cada sugerencia abre el alta en la parte que le corresponde: lo que se va
+  // a pagar sí o sí, o algo para lo que se ahorra.
+  { nombre: 'Vacaciones', clase: 'ahorro' as const },
+  { nombre: 'Regalo', clase: 'gasto' as const },
+  { nombre: 'Cuota', clase: 'gasto' as const },
+  { nombre: 'Decoración', clase: 'ahorro' as const },
+  { nombre: 'Deuda', clase: 'gasto' as const },
 ];
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
@@ -170,6 +175,10 @@ type Objetivo = {
   montoTotal: number; // para cálculos: el monto exacto, o el máximo del rango; 0 si desconocido/sin definir
   montoMin?: number; // solo si montoModo === 'rango'
   contribuciones: Contribucion[];
+  /** 'gasto' = algo que ya sabe que va a pagar · 'ahorro' = un objetivo de ahorro (migración 0043). */
+  clase: 'ahorro' | 'gasto';
+  repite: 'mensual' | null;
+  estado: 'active' | 'achieved' | 'cancelled';
 };
 
 // Nota Tailwind: la clase completa tiene que aparecer en el archivo (aunque
@@ -489,6 +498,9 @@ export function ObjetivosV2() {
     montoModo: o.modoMonto,
     montoTotal: o.montoTotal ?? 0,
     montoMin: o.montoMin ?? undefined,
+    clase: o.clase,
+    repite: o.repite,
+    estado: o.estado,
     contribuciones: o.contribuciones.map((c) => ({
       id: c.id,
       monto: c.monto,
@@ -522,6 +534,15 @@ export function ObjetivosV2() {
   const [montoModo, setMontoModo] = useState<MontoModo>('exacto');
   const [montoTotal, setMontoTotal] = useState('');
   const [montoMinTxt, setMontoMinTxt] = useState('');
+  // Qué se está creando: algo que ya sabe que va a pagar o un objetivo de
+  // ahorro. Lo elige el botón de cada parte de la lista, y se puede cambiar.
+  const [claseNueva, setClaseNueva] = useState<'ahorro' | 'gasto'>('ahorro');
+  const [repiteNueva, setRepiteNueva] = useState(false);
+  // El gasto que se está por marcar como pagado (se abre en una hoja).
+  const [pagandoId, setPagandoId] = useState<string | null>(null);
+  const [montoPago, setMontoPago] = useState('');
+  const [seccionPago, setSeccionPago] = useState('');
+  const [errorPago, setErrorPago] = useState<string | null>(null);
 
   const [kind, setKind] = useState<Kind>('paid');
   // "Sumar un registro" arranca cerrado: es un botón que despliega si lo
@@ -633,6 +654,8 @@ export function ObjetivosV2() {
       // 0 no es un monto: si no lo sabe, la base guarda null.
       montoTotal: monto.montoTotal > 0 ? monto.montoTotal : null,
       montoMin: monto.montoMin ?? null,
+      clase: claseNueva,
+      repite: claseNueva === 'gasto' && repiteNueva ? 'mensual' : null,
     });
 
     // Objetivo en conjunto sin grupo todavía → se crea el grupo de verdad, con
@@ -643,7 +666,7 @@ export function ObjetivosV2() {
     }
 
     setNombre(''); setDescripcion(''); setMontoTotal(''); setMontoMinTxt(''); setMontoModo('exacto'); setTipo('individual');
-    setMoneda('ARS'); setInvitarNombre(''); setHorizonte(null); setHorizonteFecha('');
+    setMoneda('ARS'); setInvitarNombre(''); setHorizonte(null); setHorizonteFecha(''); setRepiteNueva(false);
     setCreating(false);
     setOpenId(creado.id);
   }
@@ -1010,14 +1033,32 @@ export function ObjetivosV2() {
 
         {/* Registrar un pago o un ahorro */}
         <div data-sumar-registro className="flex flex-col gap-2.5 pt-1">
+          {/* En un gasto que se viene, pagarlo es otra cosa: se registra en
+              Gastos y libera lo apartado. Por eso "Sumar" ahí sólo aparta. */}
+          {abierto.clase === 'gasto' && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpenId(null);
+                setPagandoId(abierto.id);
+                setMontoPago(abierto.montoTotal > 0 ? formatMontoInicial(abierto.montoTotal) : '');
+                setSeccionPago(db.secciones.find((sec) => sec.nombre.trim().toLowerCase() === abierto.nombre.trim().toLowerCase())?.id ?? '');
+                setErrorPago(null);
+              }}
+              className="v2-focus w-full rounded-2xl min-h-[48px] text-[15px] font-bold transition-all duration-100 active:scale-[0.99]"
+              style={{ background: COLORS.lima, color: COLORS.ink }}
+            >
+              Ya lo pagué
+            </button>
+          )}
           <button
             type="button"
             aria-expanded={sumando}
-            onClick={() => setSumando((v) => !v)}
+            onClick={() => { if (abierto.clase === 'gasto') setKind('saved'); setSumando((v) => !v); }}
             className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl min-h-[48px] text-[15px] font-bold transition-all duration-100 active:scale-[0.99]"
             style={sumando ? { color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` } : { background: COLORS.brand, color: COLORS.surface }}
           >
-            <IconMas size={17} /> Sumar un registro
+            <IconMas size={17} /> {abierto.clase === 'gasto' ? 'Apartar plata' : 'Sumar un registro'}
           </button>
           {/* PRUEBA — un aporte guardado es un logro chico: Fini salta una vez
               y se va. Se engancha al `celebrar` que ya existía, así no hay otro
@@ -1031,6 +1072,7 @@ export function ObjetivosV2() {
           )}
           {sumando && (
             <>
+            {abierto.clase !== 'gasto' && (
             <div className="grid grid-cols-2 gap-2">
               {(['paid', 'saved'] as const).map((k) => {
                 const sel = kind === k;
@@ -1047,6 +1089,7 @@ export function ObjetivosV2() {
                 );
               })}
             </div>
+            )}
             <input
               className={inputClass}
               placeholder={kind === 'paid' ? '¿Qué pagaste? (opcional)' : 'Nota (opcional)'}
@@ -1115,14 +1158,22 @@ export function ObjetivosV2() {
     <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: `${COLORS.ink}73` }} onClick={cerrarCrear}>
       <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto rounded-[24px] p-5 flex flex-col gap-3.5" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <p className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Nuevo objetivo</p>
+          <p className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{claseNueva === 'gasto' ? 'Nuevo gasto que se viene' : 'Nuevo objetivo'}</p>
           <button type="button" onClick={cerrarCrear} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
+        {/* Qué es: cambia lo que se pregunta abajo y en qué parte de la lista
+            queda. Los dos apartan plata que deja de estar libre. */}
+        <SegmentedTab
+          options={[{ id: 'gasto' as const, label: 'Lo voy a gastar' }, { id: 'ahorro' as const, label: 'Quiero ahorrar' }]}
+          value={claseNueva}
+          onChange={(c) => { setClaseNueva(c); if (c === 'gasto') setTipo('individual'); }}
+          trackColor={COLORS.tint}
+        />
         <label htmlFor="nuevo-objetivo-nombre" className="sr-only">Nombre (obligatorio)</label>
         <input id="nuevo-objetivo-nombre" autoFocus required aria-required="true" className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder={ejemploNombre} value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
-        <div className="flex flex-col gap-1.5">
+        {claseNueva === 'ahorro' && <div className="flex flex-col gap-1.5">
           <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Individual o en conjunto?</p>
           <SegmentedTab
             options={[
@@ -1139,15 +1190,21 @@ export function ObjetivosV2() {
               <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Armamos el grupo con este nombre y vas a poder invitar gente apenas lo crees.</p>
             </div>
           )}
-        </div>
+        </div>}
 
         <div className="flex flex-col gap-1.5">
-          <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Para cuándo?</p>
+          <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>{claseNueva === 'gasto' ? '¿Cuándo lo pagás?' : '¿Para cuándo?'}</p>
           <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} />
+          {claseNueva === 'gasto' && (
+            <label className="flex items-center gap-2.5 min-h-[44px] text-[14px] font-semibold cursor-pointer" style={{ color: COLORS.ink }}>
+              <input type="checkbox" checked={repiteNueva} onChange={(e) => setRepiteNueva(e.target.checked)} className="w-5 h-5 accent-[var(--fina-violeta)]" />
+              Se repite todos los meses
+            </label>
+          )}
         </div>
 
         <div className="flex items-center justify-between -mb-1">
-          <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+          <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>{claseNueva === 'gasto' ? '¿Cuánto sale?' : '¿Cuánto necesitás?'}</p>
           <MonedaDropdown value={moneda} onChange={setMoneda} />
         </div>
         <MontoPicker
@@ -1164,17 +1221,34 @@ export function ObjetivosV2() {
   );
 
   // ── Vista: lista ──
-  // Cuánto reservar por mes para cada gasto con monto y fecha, y el total en
-  // pesos. Uno en dólares sin cotización no se puede sumar: queda afuera del
-  // total pero conserva su propia recomendación.
+  // Dos partes que funcionan igual por debajo: plata que se aparta y deja de
+  // estar libre para gastar (api/v2/apartado.ts, migración 0043).
+  //   · Ya sé que lo voy a gastar: la psicóloga, una cuota. Se paga y se
+  //     registra en Gastos, liberando lo apartado.
+  //   · Quiero ahorrar para: los objetivos de ahorro, como siempre.
   const hoyAR = diaArgentina();
   const fechaCorta = (dia: string) => new Date(`${dia}T12:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }).replace('.', '');
+  // Cuánto lleva: en un objetivo de ahorro, todo lo registrado; en un gasto,
+  // lo apartado que todavía no se usó para pagarlo (si se repite, el ciclo de
+  // este mes).
+  const avance = (o: Objetivo) => {
+    if (o.clase !== 'gasto') return saved(o);
+    const separado = sumarEn(o.contribuciones.filter((c) => c.kind === 'saved'), o.moneda, dolar).total;
+    const usado = sumarEn(o.contribuciones.filter((c) => c.kind === 'paid'), o.moneda, dolar).total;
+    return Math.max(separado - usado, 0);
+  };
+  const pctDe = (o: Objetivo) => (o.montoTotal > 0 ? Math.min(Math.round((avance(o) / o.montoTotal) * 100), 100) : 0);
   const reservaDe = (o: Objetivo) => (estadoMonto(o) === 'definido'
-    ? reservaPorMes({ horizonte: o.horizonte, restante: datosDe(o.id)?.restante ?? 0, hoy: hoyAR })
+    ? reservaPorMes({ horizonte: o.horizonte, restante: Math.max(o.montoTotal - avance(o), 0), hoy: hoyAR })
     : null);
+  // Lo que ya se pagó y no se repite, sale de la lista: ya no retiene nada.
+  const enLista = objetivos.filter((o) => o.estado !== 'cancelled' && !(o.clase === 'gasto' && o.estado === 'achieved' && !o.repite));
+  const gastosQueVienen = enLista.filter((o) => o.clase === 'gasto');
+  const deAhorro = enLista.filter((o) => o.clase !== 'gasto');
+  const apartado = apartadoTotal(db);
   const reservaTotal = (() => {
     let min = 0; let max = 0; let cuantos = 0;
-    for (const o of objetivos) {
+    for (const o of enLista) {
       const r = reservaDe(o);
       const aPesos = o.moneda === 'ARS' ? 1 : o.moneda === 'USD' && dolar ? dolar : null;
       if (!r || aPesos === null) continue;
@@ -1183,44 +1257,186 @@ export function ObjetivosV2() {
     return cuantos > 0 ? { min, max, cuantos } : null;
   })();
 
+  function abrirAlta(clase: 'ahorro' | 'gasto', ejemplo: string) {
+    setNombre('');
+    setClaseNueva(clase);
+    setEjemploNombre(ejemplo);
+    setCreating(true);
+  }
+
+  // ── Pagar algo que ya se sabía que venía ──
+  const pagando = pagandoId ? objetivos.find((o) => o.id === pagandoId) ?? null : null;
+  function abrirPago(o: Objetivo) {
+    setPagandoId(o.id);
+    setMontoPago(o.montoTotal > 0 ? formatMontoInicial(o.montoTotal) : '');
+    // La sección: una con el mismo nombre, si existe ("Psicóloga").
+    setSeccionPago(db.secciones.find((sec) => sec.nombre.trim().toLowerCase() === o.nombre.trim().toLowerCase())?.id ?? '');
+    setErrorPago(null);
+  }
+  async function confirmarPago() {
+    const original = db.objetivos.find((o) => o.id === pagandoId);
+    if (!pagando || !original) return;
+    const monto = parseMoneyInput(montoPago);
+    if (monto <= 0) return;
+    setErrorPago(null);
+    const e = await acciones.pagarGastoQueSeViene(original, { monto, seccionId: seccionPago || null, apartado: avance(pagando) });
+    if (e !== null) { setErrorPago(e); return; }
+    setPagandoId(null);
+  }
+
+  // Una fila de la lista: el avance, cuánto lleva y la recomendación de
+  // cuánto reservar por mes. En un gasto, además, "Ya lo pagué".
+  const fila = (o: Objetivo) => {
+    const estado = estadoMonto(o);
+    const reserva = reservaDe(o);
+    const esGasto = o.clase === 'gasto';
+    const fechaGasto = esGasto ? reservaPorMes({ horizonte: o.horizonte, restante: 1, hoy: hoyAR })?.fecha ?? null : null;
+    return (
+      <div key={o.id} className="relative w-full py-3.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
+        <button type="button" onClick={() => setOpenId(o.id)} className="v2-focus w-full flex items-center gap-3.5 text-left">
+          {estado === 'definido' ? (
+            <Donut segments={[{ color: COLORS.lima, pct: pctDe(o) }]} centerLabel="" centerValue={`${pctDe(o)}%`} size={52} />
+          ) : (
+            // Sin monto = "por descubrir": contorno tenue, sin relleno (§5.1).
+            <span className="w-[52px] h-[52px] rounded-full border-2 border-dashed flex items-center justify-center text-[12px] text-center font-semibold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.lineStrong, color: COLORS.inkSoft }}>
+              a<br />definir
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-[16px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
+              {o.tipo === 'grupal' && (
+                <span className="inline-flex items-center rounded-full px-1.5 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
+                  <IconGrupo size={12} />
+                </span>
+              )}
+            </div>
+            {estado === 'definido' ? (
+              <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
+                {esGasto ? 'Apartaste' : 'Llevás'} <MontoObj monto={avance(o)} moneda={o.moneda} className="text-[14px]" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(o)}</span>
+                {esGasto && fechaGasto && <>, {o.repite ? 'cada mes, ' : ''}el {fechaCorta(fechaGasto)}</>}
+              </p>
+            ) : (
+              <EstadoConfianza estado="por-descubrir" className="mt-0.5" />
+            )}
+            {reserva ? (
+              <p className="text-[14px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>
+                Reservá <span className="font-semibold tabular-nums" style={{ color: COLORS.limaText }}>entre {fmtMonto(reserva.porMes.min, o.moneda)} y {fmtMonto(reserva.porMes.max, o.moneda)} por mes</span>
+                <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
+              </p>
+            ) : estado === 'definido' && !o.horizonte && avance(o) < o.montoTotal ? (
+              <p className="text-[14px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>Ponele fecha y te decimos cuánto reservar por mes.</p>
+            ) : estado !== 'definido' ? (
+              <p className="text-[14px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>Cuando sepas cuánto sale, te decimos cuánto reservar.</p>
+            ) : null}
+          </div>
+        </button>
+        <div className="mt-1 flex items-center justify-end gap-1">
+          {esGasto && (
+            <button
+              type="button"
+              onClick={() => abrirPago(o)}
+              className="v2-focus mr-auto inline-flex items-center min-h-[40px] px-3.5 rounded-full text-[14px] font-bold transition-transform active:scale-95"
+              style={{ background: COLORS.limaSoft, color: COLORS.limaText }}
+            >
+              Ya lo pagué
+            </button>
+          )}
+          <button type="button" onClick={() => empezarEdicion(o)} aria-label={`Editar ${o.nombre}`} className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90" style={{ color: COLORS.brand }}>
+            <IconEditar size={18} />
+          </button>
+          <button type="button" onClick={() => setOpenId(o.id)} aria-label={esGasto ? `Apartar plata para ${o.nombre}` : `Sumar un registro a ${o.nombre}`} className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90" style={{ color: COLORS.brand }}>
+            <IconMas size={20} />
+          </button>
+          <button type="button" onClick={() => setConfirmarBorrar(o.id)} aria-label={`Borrar ${o.nombre}`} className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90" style={{ color: COLORS.naranjaText }}>
+            <IconBasura size={15} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const botonAgregar = (label: string, onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed min-h-[48px] text-[15px] font-bold transition-all duration-100 active:scale-[0.99]"
+      style={{ borderColor: COLORS.lineStrong, color: COLORS.ink }}
+    >
+      <IconMas size={16} /> {label}
+    </button>
+  );
+
   return (
-    <div className="px-[22px] pt-4 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto">
+    <div className="px-[22px] pt-4 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
       {V2_STYLES}
       {modalCrear}
       {confirmarBorrarModal}
 
-      {/* Banda editorial full-bleed (desencajonado). Fini acompaña en el
-          encabezado (§6: onboarding/estados vacíos) — sin montos ni progreso
-          al lado, así que no compite con ningún dato. */}
-      {/* Sin bajada (DEBT G2): el título se entiende solo. */}
-      <header data-franja className="pb-1 flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <Titulo>Mis objetivos</Titulo>
-        </div>
+      {pagando && (
+        <Hoja titulo={`Pagaste ${pagando.nombre}`} onCerrar={() => setPagandoId(null)}>
+          <div className="flex flex-col gap-3 pt-1">
+            <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              Lo anotamos en tus gastos y liberamos lo que tenías apartado, así no se descuenta dos veces.
+              {pagando.repite ? ' Como se repite, queda listo para el mes que viene.' : ''}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="pago-monto" className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>¿Cuánto pagaste?</label>
+              <input
+                id="pago-monto"
+                autoFocus
+                inputMode="decimal"
+                className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] tabular-nums"
+                style={INPUT_STYLE}
+                value={montoPago}
+                onChange={(e) => setMontoPago(formatThousands(e.target.value))}
+              />
+            </div>
+            <Desplegable id="pago-seccion" label="Sección" value={seccionPago} onChange={setSeccionPago}>
+              <option value="" style={{ color: COLORS.ink }}>Sin sección</option>
+              {db.secciones.map((sec) => <option key={sec.id} value={sec.id} style={{ color: COLORS.ink }}>{sec.nombre}</option>)}
+            </Desplegable>
+            {errorPago && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorPago}</p>}
+            <button
+              type="button"
+              disabled={parseMoneyInput(montoPago) <= 0}
+              onClick={() => void confirmarPago()}
+              className="v2-focus w-full rounded-2xl min-h-[48px] text-[15px] font-bold v2-disabled transition-transform active:scale-[0.99]"
+              style={{ background: COLORS.lima, color: COLORS.ink }}
+            >
+              Registrar el pago
+            </button>
+          </div>
+        </Hoja>
+      )}
+
+      <header data-franja className="pb-1">
+        <Titulo>Mis objetivos</Titulo>
       </header>
 
-      {/* El cartel de arriba dice para qué es la pantalla: cargar lo que se
-          viene y reservar a tiempo. Si hay gastos con monto y fecha, suma la
-          recomendación: cuánto reservar por mes para cubrirlos (estimado, como
-          rango, regla 4). Compacto: en el celular la lista tiene que verse. */}
+      {/* El cartel de arriba: para qué es la pantalla, cuánto tiene apartado
+          y cuánto conviene reservar por mes (estimado, como rango, regla 4).
+          Las sugerencias abren el alta en la parte que les corresponde. */}
       <div className="mt-2 rounded-2xl px-4 py-3 flex flex-col gap-0.5" style={{ background: COLORS.brandSoft }} aria-live="polite">
         <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>¿Qué se viene?</p>
         <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>Planificá los gastos que ya sabés que se vienen y tus objetivos.</p>
-        {reservaTotal && (
+        {apartado.total > 0 && (
           <p className="text-[14px] leading-snug pt-1.5" style={{ color: COLORS.ink }}>
-            Para eso, reservá <span className="font-bold tabular-nums">entre {fmtMoney(reservaTotal.min)} y {fmtMoney(reservaTotal.max)} por mes</span>
+            Tenés <span className="font-bold tabular-nums">{fmtMoney(apartado.total)}</span> apartados: no cuentan como libres para gastar.
+          </p>
+        )}
+        {reservaTotal && (
+          <p className="text-[14px] leading-snug pt-1" style={{ color: COLORS.ink }}>
+            Para todo, reservá <span className="font-bold tabular-nums">entre {fmtMoney(reservaTotal.min)} y {fmtMoney(reservaTotal.max)} por mes</span>
             <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
           </p>
         )}
-        {/* Las sugerencias van adentro del cartel, siempre, en chips chicos:
-            abren el alta con el nombre puesto. Antes eran una grilla grande
-            sólo con la lista vacía y un recuadro aparte en compu. */}
         <div className="flex flex-wrap gap-1.5 pt-2" role="group" aria-label="Sugerencias para sumar">
           {SUGERENCIAS_OBJETIVO.map((sug) => (
             <button
               key={sug.nombre}
               type="button"
-              onClick={() => { setNombre(''); setEjemploNombre(`Ej: ${sug.nombre}`); setCreating(true); }}
+              onClick={() => abrirAlta(sug.clase, `Ej: ${sug.nombre}`)}
               className="v2-focus inline-flex items-center rounded-full px-3 min-h-[36px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
               style={{ background: COLORS.surface, color: COLORS.ink }}
             >
@@ -1230,126 +1446,32 @@ export function ObjetivosV2() {
         </div>
       </div>
 
-      {/* Desktop: 2 columnas (lista principal + barra lateral). Mobile: apilado. */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:gap-6 lg:items-start">
-      {/* Columna principal */}
-      <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0">
+      {/* Primero lo que ya sabe que va a gastar: tiene fecha y no es opcional. */}
+      <section className="flex flex-col gap-1" aria-label="Ya sé que lo voy a gastar">
+        <TituloSeccion>Ya sé que lo voy a gastar</TituloSeccion>
+        {gastosQueVienen.length === 0 && (
+          <p className="text-[14px] leading-snug py-1" style={{ color: COLORS.inkSoft }}>
+            La psicóloga, una cuota, un regalo. Lo que apartes para eso deja de contar como libre para gastar.
+          </p>
+        )}
+        <div className="flex flex-col">{gastosQueVienen.map(fila)}</div>
+        {botonAgregar('Agregar gasto que se viene', () => abrirAlta('gasto', 'Ej: Psicóloga, la cuota del celular'))}
+      </section>
 
-      {/* Estado vacío con onda: sugerencias para arrancar (abren el modal).
-          Fini acompaña acá y no en la lista con objetivos: §6 lo deja en
-          onboarding y estados vacíos, lejos de los montos y los progresos.
-          UN solo personaje, con el globo saliendo de él: antes había el de la
-          franja y además el centrado que ya estaba, o sea Fini dos veces en la
-          misma pantalla mirándose. */}
-      {objetivos.map((o) => {
-        const estado = estadoMonto(o);
-        // Cuánto reservar por mes para este gasto (estimado, como rango).
-        const reserva = reservaDe(o);
-        return (
-          <div key={o.id} className="relative w-full py-4 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
-            <button
-              type="button"
-              onClick={() => setOpenId(o.id)}
-              className="v2-focus w-full flex items-center gap-3.5 text-left"
-            >
-              {estado === 'definido' ? (
-                <Donut
-                  segments={[{ color: COLORS.lima, pct: pct(o) }]}
-                  centerLabel=""
-                  centerValue={`${pct(o)}%`}
-                  size={56}
-                />
-              ) : (
-                // Sin monto = "por descubrir": contorno tenue, sin relleno,
-                // sin color de alerta (guía §5.1). Mismo trato para "todavía
-                // no sé" y para el que llegó sin completar del onboarding.
-                <span className="w-14 h-14 rounded-full border-2 border-dashed flex items-center justify-center text-[12px] text-center font-semibold shrink-0 px-1 leading-tight" style={{ borderColor: COLORS.lineStrong, color: COLORS.inkSoft }}>
-                  a<br />definir
-                </span>
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-[16px] truncate" style={{ color: COLORS.ink }}>{o.nombre}</p>
-                  {o.tipo === 'grupal' && (
-                    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}>
-                      <IconGrupo size={12} />
-                    </span>
-                  )}
-                </div>
-                {estado === 'definido' ? (
-                  <>
-                    <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Llevás <MontoObj monto={saved(o)} moneda={o.moneda} className="text-[14px]" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(o)}</span></p>
-                    <EstadoConfianza estado="declarado" className="mt-0.5" />
-                  </>
-                ) : (
-                  // Invitación, no error (§5.1).
-                  <EstadoConfianza estado="por-descubrir" className="mt-0.5" />
-                )}
-                {/* La recomendación de cada gasto: cuánto reservar por mes
-                    hasta la fecha. Sin monto o sin fecha, qué falta para
-                    poder decirlo. */}
-                {reserva ? (
-                  <p className="text-[14px] mt-1.5 leading-snug" style={{ color: COLORS.inkSoft }}>
-                    Reservá <span className="font-semibold tabular-nums" style={{ color: COLORS.limaText }}>entre {fmtMonto(reserva.porMes.min, o.moneda)} y {fmtMonto(reserva.porMes.max, o.moneda)} por mes</span> hasta el {fechaCorta(reserva.fecha)}
-                    <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
-                  </p>
-                ) : estado === 'definido' && !o.horizonte && saved(o) < o.montoTotal ? (
-                  <p className="text-[14px] mt-1.5 leading-snug" style={{ color: COLORS.inkSoft }}>Ponele fecha y te decimos cuánto reservar por mes.</p>
-                ) : estado !== 'definido' ? (
-                  <p className="text-[14px] mt-1.5 leading-snug" style={{ color: COLORS.inkSoft }}>Cuando sepas cuánto sale, te decimos cuánto reservar.</p>
-                ) : null}
-              </div>
-            </button>
-            {/* Acciones rápidas del objetivo (editar / sumar registro / borrar).
-                En su propia fila: sobre el texto se pisaban los targets. */}
-            <div className="mt-1 flex items-center justify-end gap-1">
-              <button
-                type="button"
-                onClick={() => empezarEdicion(o)}
-                aria-label="Editar objetivo"
-                className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-                style={{ color: COLORS.brand }}
-              >
-                <IconEditar size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setOpenId(o.id)}
-                aria-label="Sumar un registro"
-                className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-                style={{ color: COLORS.brand }}
-              >
-                <IconMas size={20} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmarBorrar(o.id)}
-                aria-label="Borrar objetivo"
-                className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90"
-                style={{ color: COLORS.naranjaText }}
-              >
-                <IconBasura size={15} />
-              </button>
-            </div>
-          </div>
-        );
-      })}
-      <button
-        type="button"
-        onClick={() => { setEjemploNombre('Ej: Vacaciones, la patente, un regalo'); setCreating(true); }}
-        className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-4 text-[16px] font-bold transition-all duration-100 active:scale-[0.99]"
-        style={{ borderColor: COLORS.lineStrong, color: COLORS.ink }}
-      >
-        <IconMas size={17} /> Agregar nuevo objetivo
-      </button>
+      <section className="flex flex-col gap-1" aria-label="Quiero ahorrar para">
+        <TituloSeccion>Quiero ahorrar para</TituloSeccion>
+        {deAhorro.length === 0 && (
+          <p className="text-[14px] leading-snug py-1" style={{ color: COLORS.inkSoft }}>
+            Un viaje, un colchón para imprevistos, algo que quieras comprarte.
+          </p>
+        )}
+        <div className="flex flex-col">{deAhorro.map(fila)}</div>
+        {botonAgregar('Agregar nuevo objetivo', () => abrirAlta('ahorro', 'Ej: Vacaciones, un colchón'))}
+      </section>
 
-      {/* Plata apartada, debajo de la lista: lo primero son los objetivos y lo
-          que se viene. En el día 1 sin objetivos ni reserva no aparece: la
-          pantalla vacía es la invitación a crear el primero. */}
-      {(objetivos.length > 0 || db.perfil.reserva > 0) && <PlataApartada monto={db.perfil.reserva} />}
-      </div>{/* /columna principal */}
-
-      </div>{/* /2 columnas */}
+      {/* Plata apartada sin un destino puntual (la reserva del perfil). Suma al
+          total de arriba. */}
+      {(enLista.length > 0 || db.perfil.reserva > 0) && <PlataApartada monto={db.perfil.reserva} />}
     </div>
   );
 }

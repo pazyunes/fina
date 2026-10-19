@@ -860,15 +860,25 @@ type FilaObjetivo = {
   id: string; title: string; description: string | null; amount_ars: number | null;
   amount_min_ars: number | null; amount_mode: string | null;
   currency: string; horizon_label: string | null; kind: string; status: string;
+  purpose?: string | null; repeats?: string | null;
   goal_contributions: { id: string; amount: number; currency: string; amount_ars: number; kind: string; label: string | null; occurred_at: string; user_id: string }[] | null;
 };
 
 export async function listarObjetivos(): Promise<Resultado<Objetivo[]>> {
-  const r = await correr<FilaObjetivo[]>('listarObjetivos', () =>
+  const columnas = 'id, title, description, amount_ars, amount_min_ars, amount_mode, currency, horizon_label, kind, status';
+  const registros = 'goal_contributions(id, amount, currency, amount_ars, kind, label, occurred_at, user_id)';
+  let r = await correr<FilaObjetivo[]>('listarObjetivos', () =>
     supabase.from('goals')
-      .select('id, title, description, amount_ars, amount_min_ars, amount_mode, currency, horizon_label, kind, status, goal_contributions(id, amount, currency, amount_ars, kind, label, occurred_at, user_id)')
+      .select(`${columnas}, purpose, repeats, ${registros}`)
       .order('created_at', { ascending: true }),
   );
+  // Sin la migración 0043 las columnas purpose y repeats no existen: se lee
+  // sin ellas y todo queda como objetivo de ahorro, que es lo que había.
+  if (r.error !== null && /purpose|repeats/.test(r.error)) {
+    r = await correr<FilaObjetivo[]>('listarObjetivos', () =>
+      supabase.from('goals').select(`${columnas}, ${registros}`).order('created_at', { ascending: true }),
+    );
+  }
   if (r.error !== null) return falla<Objetivo[]>(r.error, 'listarObjetivos');
   return ok((r.data ?? []).map((f) => ({
     id: f.id,
@@ -881,6 +891,8 @@ export async function listarObjetivos(): Promise<Resultado<Objetivo[]>> {
     montoTotal: f.amount_ars == null ? null : Number(f.amount_ars),
     montoMin: f.amount_min_ars == null ? null : Number(f.amount_min_ars),
     estado: (f.status as Objetivo['estado']) ?? 'active',
+    clase: f.purpose === 'gasto' ? 'gasto' : 'ahorro',
+    repite: f.repeats === 'mensual' ? 'mensual' : null,
     contribuciones: (f.goal_contributions ?? [])
       .map((c): Contribucion => ({
         id: c.id,
@@ -901,6 +913,7 @@ export async function crearObjetivo(o: {
   nombre: string; descripcion?: string; tipo?: 'individual' | 'grupal';
   moneda?: Moneda; horizonte?: string | null; montoTotal: number | null;
   modoMonto?: Objetivo['modoMonto']; montoMin?: number | null;
+  clase?: Objetivo['clase']; repite?: Objetivo['repite'];
 }): Promise<Resultado<Objetivo>> {
   const uid = await idUsuaria();
   if (!uid) return falla<Objetivo>('sin sesión', 'crearObjetivo');
@@ -918,6 +931,10 @@ export async function crearObjetivo(o: {
       horizon_label: o.horizonte ?? null,
       kind: o.tipo ?? 'individual',
       status: 'active',
+      // Sólo si no es el valor por defecto: así un objetivo de ahorro se
+      // puede crear aunque la migración 0043 no se haya corrido.
+      ...(o.clase === 'gasto' ? { purpose: 'gasto' } : {}),
+      ...(o.repite ? { repeats: o.repite } : {}),
     }).select('id'),
   );
   if (r.error !== null || !r.data?.[0]) return falla<Objetivo>(r.error ?? 'sin fila', 'crearObjetivo');
@@ -933,10 +950,12 @@ export async function crearObjetivo(o: {
     montoMin: o.montoMin ?? null,
     estado: 'active',
     contribuciones: [],
+    clase: o.clase ?? 'ahorro',
+    repite: o.repite ?? null,
   });
 }
 
-export async function editarObjetivo(id: string, o: Partial<Pick<Objetivo, 'nombre' | 'descripcion' | 'tipo' | 'moneda' | 'horizonte' | 'montoTotal' | 'montoMin' | 'modoMonto' | 'estado'>>): Promise<Resultado<null>> {
+export async function editarObjetivo(id: string, o: Partial<Pick<Objetivo, 'nombre' | 'descripcion' | 'tipo' | 'moneda' | 'horizonte' | 'montoTotal' | 'montoMin' | 'modoMonto' | 'estado' | 'clase' | 'repite'>>): Promise<Resultado<null>> {
   const fila: Record<string, unknown> = {};
   if (o.nombre !== undefined) fila.title = o.nombre;
   if (o.descripcion !== undefined) fila.description = o.descripcion || null;
@@ -947,6 +966,8 @@ export async function editarObjetivo(id: string, o: Partial<Pick<Objetivo, 'nomb
   if (o.montoMin !== undefined) fila.amount_min_ars = o.montoMin;
   if (o.modoMonto !== undefined) fila.amount_mode = o.modoMonto;
   if (o.estado !== undefined) fila.status = o.estado;
+  if (o.clase !== undefined) fila.purpose = o.clase;
+  if (o.repite !== undefined) fila.repeats = o.repite;
   if (Object.keys(fila).length === 0) return ok(null);
 
   return correr<null>('editarObjetivo', () =>
