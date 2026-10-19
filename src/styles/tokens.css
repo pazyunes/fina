@@ -25,7 +25,7 @@
   --fina-gris: #6B647A;    /* subtítulos, labels */
   --fina-linea: #E9E3F1;   /* separadores, contornos de tarjeta */
   --fina-tinte: #F0E7FA;   /* violeta 100 = superficie de apoyo */
-  --fina-papel: #FBFAF8;   /* fondo app (calidez, evita blanco puro) */
+  --fina-papel: #FFFFFF;   /* fondo general: blanco (decisión oct 2026) */
   --fina-blanco: #FFFFFF;  /* tarjetas / elevación */
 
   /* Semánticos por categoría + versión suave */

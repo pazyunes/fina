@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { llevarA, useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
@@ -1778,10 +1778,6 @@ export function GastosV2() {
             {verTodos ? 'Ver menos' : `Ver todos (${gastosFiltrados.length})`}
           </button>
         )}
-      </div>
-
-      <div className="lg:col-span-3">
-        <ArmarGrupoBtn />
       </div>
       </div>
     </div>
