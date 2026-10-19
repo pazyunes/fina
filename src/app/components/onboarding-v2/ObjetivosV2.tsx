@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import { colorDeTono, datosDelObjetivo } from './ObjetivosEnInicio';
-import { formasDeLlegarAntes, mensajePlazo, textoImpacto, type FormaDeLlegar } from '../../utils/goalStrategies';
+import { diaArgentina, formasDeLlegarAntes, mensajePlazo, reservaPorMes, textoImpacto, type FormaDeLlegar } from '../../utils/goalStrategies';
 import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
 import { COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
@@ -19,13 +19,15 @@ import { IconBasura, IconCalendario, IconChevron, IconClose, IconEditar, IconGru
 
 // Sin emoji (guía §2/§5.4): son chips de TEXTO. La categoría se dice con la
 // palabra, no con un pictograma.
+// Gastos que se ven venir: la pantalla es para cargar lo que ya se sabe que va
+// a llegar y reservar a tiempo (decisión oct 2026).
 const SUGERENCIAS_OBJETIVO = [
-  { nombre: 'Un viaje' },
-  { nombre: 'Fondo de emergencia' },
-  { nombre: 'Una compra grande' },
+  { nombre: 'Vacaciones' },
+  { nombre: 'Un regalo' },
+  { nombre: 'La patente' },
+  { nombre: 'Cambiar el celular' },
   { nombre: 'Mudanza' },
   { nombre: 'Estudios' },
-  { nombre: 'Un regalo' },
 ];
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
@@ -1094,10 +1096,10 @@ export function ObjetivosV2() {
     <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: `${COLORS.ink}73` }} onClick={cerrarCrear}>
       <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto rounded-[24px] p-5 flex flex-col gap-3.5" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <Titulo>Nuevo objetivo</Titulo>
+          <Titulo>Algo que se viene</Titulo>
           <button type="button" onClick={cerrarCrear} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
-        <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Ej: Viaje a Bariloche" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Ej: Vacaciones, la patente, un regalo" value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
         <div className="flex flex-col gap-1.5">
@@ -1133,7 +1135,7 @@ export function ObjetivosV2() {
           montoTxt={montoTotal} setMontoTxt={setMontoTotal}
           minTxt={montoMinTxt} setMinTxt={setMontoMinTxt}
         />
-        <Cta label="Agregar objetivo" disabled={!nombre.trim() || (tipo === 'grupal' && !grupo && !invitarNombre.trim())} onClick={() => void crearObjetivo()} />
+        <Cta label="Agregar" disabled={!nombre.trim() || (tipo === 'grupal' && !grupo && !invitarNombre.trim())} onClick={() => void crearObjetivo()} />
         {tipo === 'grupal' && !grupo && !invitarNombre.trim() && (
           <p className="text-[14px] text-center" style={{ color: COLORS.coralDark }}>Ponele nombre al grupo para poder invitar gente.</p>
         )}
@@ -1142,6 +1144,25 @@ export function ObjetivosV2() {
   );
 
   // ── Vista: lista ──
+  // Cuánto reservar por mes para cada gasto con monto y fecha, y el total en
+  // pesos. Uno en dólares sin cotización no se puede sumar: queda afuera del
+  // total pero conserva su propia recomendación.
+  const hoyAR = diaArgentina();
+  const fechaCorta = (dia: string) => new Date(`${dia}T12:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }).replace('.', '');
+  const reservaDe = (o: Objetivo) => (estadoMonto(o) === 'definido'
+    ? reservaPorMes({ horizonte: o.horizonte, restante: datosDe(o.id)?.restante ?? 0, hoy: hoyAR })
+    : null);
+  const reservaTotal = (() => {
+    let min = 0; let max = 0; let cuantos = 0;
+    for (const o of objetivos) {
+      const r = reservaDe(o);
+      const aPesos = o.moneda === 'ARS' ? 1 : o.moneda === 'USD' && dolar ? dolar : null;
+      if (!r || aPesos === null) continue;
+      min += r.porMes.min * aPesos; max += r.porMes.max * aPesos; cuantos++;
+    }
+    return cuantos > 0 ? { min, max, cuantos } : null;
+  })();
+
   return (
     <div className="px-[22px] pt-4 flex flex-col gap-4 lg:max-w-4xl lg:mx-auto">
       {V2_STYLES}
@@ -1154,16 +1175,33 @@ export function ObjetivosV2() {
       {/* Sin bajada (DEBT G2): el título se entiende solo. */}
       <header data-franja className="pb-1 flex items-center gap-3">
         <div className="flex-1 min-w-0">
-          <Titulo>Tus objetivos</Titulo>
+          <Titulo>Lo que se viene</Titulo>
         </div>
       </header>
 
-      {/* El cartel de arriba dice para qué es la pantalla: mirar lo que se
-          viene y planificarlo. Pedido explícito (oct 2026), por eso lleva una
-          línea abajo aunque la regla general sea títulos sin bajada. */}
-      <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-0.5" style={{ background: COLORS.brandSoft }}>
-        <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>¿Qué se viene?</p>
-        <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>Planificá tus próximos gastos y tus objetivos.</p>
+      {/* El dato de la pantalla: cuánto reservar por mes para cubrir todo lo
+          que se viene con fecha. Es un estimado, así que va como rango (regla
+          4). Sin nada con fecha y monto, el cartel invita a cargar. */}
+      <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-1" style={{ background: COLORS.brandSoft }} aria-live="polite">
+        {reservaTotal ? (
+          <>
+            <p className="text-[14px] font-semibold" style={{ color: COLORS.brandDark }}>Para lo que se viene, reservá</p>
+            <p className="text-[24px] font-bold leading-tight tabular-nums" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+              entre {fmtMoney(reservaTotal.min)} y {fmtMoney(reservaTotal.max)} <span className="text-[16px] font-semibold">por mes</span>
+            </p>
+            <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>
+              Sumando {reservaTotal.cuantos === 1 ? 'lo que cargaste con fecha' : `las ${reservaTotal.cuantos} cosas que cargaste con fecha`}.
+            </p>
+            <EstadoConfianza estado="estimado" />
+          </>
+        ) : (
+          <>
+            <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>¿Qué se viene?</p>
+            <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>
+              Cargá los gastos que ya sabés que vas a tener y te decimos cuánto reservar por mes para llegar.
+            </p>
+          </>
+        )}
       </div>
 
       {/* Desktop: 2 columnas (lista principal + barra lateral). Mobile: apilado. */}
@@ -1180,7 +1218,7 @@ export function ObjetivosV2() {
       {objetivos.length === 0 && (
         <div className="flex flex-col gap-3 pt-1">
           <FiniPresenta
-            dice="¿Qué es eso que querés lograr? Empezá por ponerle nombre, el monto lo vemos después."
+            dice="¿Qué gasto ya sabés que se viene? Empezá por ponerle nombre; el monto y la fecha los vemos después."
             state="vacio"
             size={124}
           />
@@ -1206,8 +1244,8 @@ export function ObjetivosV2() {
 
       {objetivos.map((o) => {
         const estado = estadoMonto(o);
-        // La versión corta de "Formas de llegar antes": sólo la primera.
-        const forma = formasDe(o)[0];
+        // Cuánto reservar por mes para este gasto (estimado, como rango).
+        const reserva = reservaDe(o);
         return (
           <div key={o.id} className="relative w-full py-4 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
             <button
@@ -1248,12 +1286,19 @@ export function ObjetivosV2() {
                   // Invitación, no error (§5.1).
                   <EstadoConfianza estado="por-descubrir" className="mt-0.5" />
                 )}
-                {forma && (
+                {/* La recomendación de cada gasto: cuánto reservar por mes
+                    hasta la fecha. Sin monto o sin fecha, qué falta para
+                    poder decirlo. */}
+                {reserva ? (
                   <p className="text-[14px] mt-1.5 leading-snug" style={{ color: COLORS.inkSoft }}>
-                    {forma.titulo}: <span className="font-semibold tabular-nums" style={{ color: COLORS.limaText }}>{frasesDeImpacto(forma).toLowerCase()}</span>
+                    Reservá <span className="font-semibold tabular-nums" style={{ color: COLORS.limaText }}>entre {fmtMonto(reserva.porMes.min, o.moneda)} y {fmtMonto(reserva.porMes.max, o.moneda)} por mes</span> hasta el {fechaCorta(reserva.fecha)}
                     <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
                   </p>
-                )}
+                ) : estado === 'definido' && !o.horizonte && saved(o) < o.montoTotal ? (
+                  <p className="text-[14px] mt-1.5 leading-snug" style={{ color: COLORS.inkSoft }}>Ponele fecha y te decimos cuánto reservar por mes.</p>
+                ) : estado !== 'definido' ? (
+                  <p className="text-[14px] mt-1.5 leading-snug" style={{ color: COLORS.inkSoft }}>Cuando sepas cuánto sale, te decimos cuánto reservar.</p>
+                ) : null}
               </div>
             </button>
             {/* Acciones rápidas del objetivo (editar / sumar registro / borrar).
@@ -1296,7 +1341,7 @@ export function ObjetivosV2() {
         className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-4 text-[16px] font-bold transition-all duration-100 active:scale-[0.99]"
         style={{ borderColor: COLORS.lineStrong, color: COLORS.ink }}
       >
-        <IconMas size={17} /> Agregar objetivo
+        <IconMas size={17} /> Agregar algo que se viene
       </button>
 
       {/* Plata apartada, debajo de la lista: lo primero son los objetivos y lo
@@ -1309,7 +1354,7 @@ export function ObjetivosV2() {
       <div className="flex flex-col gap-4 lg:w-[300px] lg:shrink-0">
         {objetivos.length > 0 && (
           <div className="hidden lg:flex flex-col gap-2.5 rounded-2xl p-4 border" style={{ background: COLORS.surface, borderColor: COLORS.line }}>
-            <TituloSeccion>¿Sumás otro?</TituloSeccion>
+            <TituloSeccion>¿Qué más se viene?</TituloSeccion>
             <div className="flex flex-wrap gap-2">
               {SUGERENCIAS_OBJETIVO.slice(0, 4).map((s) => (
                 <button

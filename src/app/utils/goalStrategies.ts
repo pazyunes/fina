@@ -231,6 +231,23 @@ export function situacionPlazo(p: {
   return { tipo: 'en-camino', fecha: fechaPlazo, dias };
 }
 
+/**
+ * Cuánto reservar por mes para llegar a la fecha con lo que falta. Misma
+ * cuenta que `porSemana` en `situacionPlazo`, llevada a meses: un rango, con
+ * margen arriba para los meses en que no se puede. Es un ESTIMADO (regla 4).
+ * null si no hay fecha, no falta nada o la fecha ya pasó.
+ */
+export function reservaPorMes(p: { horizonte: string | null | undefined; restante: number; hoy: string }): { porMes: RangoNum; fecha: string } | null {
+  if (p.restante <= 0) return null;
+  const fecha = parsearHorizonte(p.horizonte, p.hoy);
+  if (!fecha) return null;
+  const dias = diasEntre(p.hoy, fecha);
+  if (dias < 0) return null;
+  const meses = Math.max(1, dias / 30.4);
+  const necesario = p.restante / meses;
+  return { porMes: rangoLindo(necesario, necesario * 1.25), fecha };
+}
+
 /** "Quedan 3 meses", "Quedan 5 semanas", "Es hoy": cuánto queda, como lo dice la gente. */
 export function quedan(dias: number): string {
   if (dias <= 0) return 'Es hoy';
