@@ -22,11 +22,10 @@ import { IconBasura, IconCalendario, IconChevron, IconClose, IconEditar, IconGru
 // a llegar y reservar a tiempo (decisión oct 2026).
 const SUGERENCIAS_OBJETIVO = [
   { nombre: 'Vacaciones' },
-  { nombre: 'Un regalo' },
-  { nombre: 'La patente' },
-  { nombre: 'Cambiar el celular' },
-  { nombre: 'Mudanza' },
-  { nombre: 'Estudios' },
+  { nombre: 'Regalo' },
+  { nombre: 'Cuota' },
+  { nombre: 'Decoración' },
+  { nombre: 'Deuda' },
 ];
 
 // REDISEÑO v2 — Objetivos: mantiene la lógica "oficial" de la app real
@@ -1204,7 +1203,7 @@ export function ObjetivosV2() {
           viene y reservar a tiempo. Si hay gastos con monto y fecha, suma la
           recomendación: cuánto reservar por mes para cubrirlos (estimado, como
           rango, regla 4). Compacto: en el celular la lista tiene que verse. */}
-      <div className="rounded-2xl px-4 py-3 flex flex-col gap-0.5" style={{ background: COLORS.brandSoft }} aria-live="polite">
+      <div className="mt-2 rounded-2xl px-4 py-3 flex flex-col gap-0.5" style={{ background: COLORS.brandSoft }} aria-live="polite">
         <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>¿Qué se viene?</p>
         <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>Planificá los gastos que ya sabés que se vienen y tus objetivos.</p>
         {reservaTotal && (
