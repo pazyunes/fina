@@ -36,14 +36,14 @@ export function RecordatorioGastos() {
   return (
     <section
       aria-label="Registro de hoy"
-      className="-mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl px-4 py-2.5"
+      className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl px-4 py-2.5"
       // Un recuadro apenas tintado: está siempre, así que no puede pesar más
       // que el próximo paso. WhatsApp va en verde claro: es el canal que más
       // queremos que use.
       style={{ background: COLORS.brandFaint }}
     >
       <p className="flex-1 min-w-[140px] text-[14px] font-semibold" style={{ color: hayGastoHoy ? COLORS.limaText : COLORS.ink }}>
-        {hayGastoHoy ? 'Ya anotaste lo de hoy' : primero ? 'Anotá tu primer gasto' : '¿Anotaste lo de hoy?'}
+        {hayGastoHoy ? 'Ya anotaste lo de hoy' : primero ? 'Anotá tu primer gasto' : 'Recordá anotar tus gastos de hoy'}
       </p>
       {hayGastoHoy ? (
         <button
