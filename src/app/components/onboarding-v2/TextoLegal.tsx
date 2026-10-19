@@ -192,7 +192,7 @@ export function TextoLegal() {
             'Tus secciones y topes, objetivos y lo que juntaste, gastos fijos y sus vencimientos, perfil inversor y aportes de inversión.',
             'Tus grupos y tu participación, y tu foto de perfil (opcional).',
           ]} />
-          <p><strong>Los que se generan solos:</strong> el paso del día y tu racha, las recomendaciones que te armamos y cuáles marcaste como hechas, tu suscripción a los avisos del navegador y sus preferencias, y los códigos e intentos de verificación del teléfono.</p>
+          <p><strong>Los que se generan solos:</strong> los pasos grandes que marcaste como hechos y tu racha, las recomendaciones que te armamos y cuáles marcaste como hechas, tu suscripción a los avisos del navegador y sus preferencias, y los códigos e intentos de verificación del teléfono.</p>
           <p><strong>Lo que no pedimos:</strong> DNI, domicilio, CBU, claves bancarias ni acceso a tus cuentas.</p>
         </Bloque>
 

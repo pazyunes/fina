@@ -14,6 +14,7 @@ Cosas que el código ya soporta pero que tiene que hacer una persona con acceso.
 | --- | --- | --- |
 | M1 | Cargar `SUPABASE_SERVICE_ROLE_KEY` en Vercel (Production y Preview). Sin eso, cuando se corra 0039 la cotización del dólar deja de guardarse (se sigue mostrando, pero sin id). | pendiente |
 | M2 | Correr a mano en Supabase, en orden: `supabase/migrations/0039_seguridad.sql`, `0040_movimientos_atomicos.sql` y `0041_reserva.sql` (después de M1). La app funciona igual sin ellas: usa el camino viejo hasta que existan. Sin la 0041 no sale el aviso de plazo de objetivos. | pendiente |
+| M5 | Correr a mano en Supabase `supabase/migrations/0042_proximo_paso.sql` (después de las de M2). Crea la tabla del próximo paso y cambia la racha a días con un gasto anotado. Sin ella, "Ya lo hice" no se guarda (vuelve atrás con un aviso) y la racha sigue con la cuenta vieja. | pendiente |
 | M3 | Confirmar en Vercel que `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` están habilitadas para Preview. | hecho (All Environments) |
 | M4 | Subir `juaniBranch` a GitHub (`git push -u origin juaniBranch`) desde una terminal donde GitHub pida login; desde la sesión de Claude no se puede iniciar sesión. Después, cada push actualiza la preview. | hecho |
 

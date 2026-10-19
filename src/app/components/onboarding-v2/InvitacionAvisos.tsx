@@ -85,7 +85,7 @@ export function InvitacionAvisos({ momento, gastosRegistrados = 0 }: { momento: 
   const titulo = iphone ? 'Sumá FINA a tu pantalla de inicio' : '¿Querés que FINA te mande recordatorios y avisos?';
   const texto = momento === 'home' ? null : iphone
     ? 'En iPhone, los avisos llegan sólo con FINA en tu inicio. Son tres toques y te mostramos cómo.'
-    : 'Cuando vence un gasto fijo, el día que cobrás y si tu paso del día quedó pendiente. Como mucho, dos por día.';
+    : 'Cuando vence un gasto fijo, el día que cobrás y si todavía no anotaste lo del día. Como mucho, dos por día.';
 
   const centrado = momento === 'onboarding';
 

@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react';
 import { COLORS, EstadoConfianza, FONTS, fmtMoney } from './shared';
 import { Fini } from './Fini';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
-import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
-import { diaArgentina, pasosPosiblesManana } from '../../api/v2/pasos';
+import { diaArgentina } from '../../api/v2/pasos';
 import type { EstadoV2 } from '../../api/v2/tipos';
 import {
   PERIODOS_RECOMENDACION, clavesDeHoy, leerHechas, leerRecomendaciones, marcarUtil, recomendacionesRecordadas,
   type PeriodoRecomendacion, type Recomendacion, type Recomendaciones as RecomendacionesT,
 } from '../../api/v2/recomendaciones';
 
-// "Para vos": una recomendación para hoy, una para la semana y una para el mes.
+// Un consejo, abajo de todo en Inicio. Sale de una recomendación para hoy, una
+// para la semana y una para el mes.
 //
 // Se muestra como un mensaje, no como una tarea: antes se podía tachar, pero
 // no es algo que se cumple, y la casilla competía con el paso del día (DEBT
@@ -25,7 +25,7 @@ import {
 // · Todo dato lleva su referencia ("contra los mismos días del mes pasado").
 // · Lo estimado se marca como estimado (regla 4).
 // · Sin colores de alerta: una recomendación no es un reto (regla 3).
-// · Sin botones de acción: las tareas las propone el paso del día.
+// · Sin botones de acción: lo que hay que hacer es el próximo paso.
 
 // ── Consejos generales ───────────────────────────────────────────────────
 // Cosas chicas para hacer o mirar, que se pueden tachar. NO son las tareas que
@@ -135,14 +135,13 @@ export function Recomendaciones() {
   const [claves] = useState(() => clavesDeHoy());
   const [hechas, setHechas] = useState<Set<string>>(new Set());
   const { estado } = useAlmacen();
-  const { paso } = usePasoDelDia();
 
   useEffect(() => {
     let vivo = true;
     void leerHechas(claves).then((h) => { if (vivo) setHechas(h); });
-    // Junto con la recomendación del día, la IA elige el paso de mañana entre
-    // los que la persona puede cumplir.
-    void leerRecomendaciones(pasosPosiblesManana(estado, paso?.clave ?? null)).then((r) => {
+    // Ya no se le piden pasos a la IA: el próximo paso es uno grande que elige
+    // la app (proximoPaso.ts). La IA arma el consejo y los planes de objetivos.
+    void leerRecomendaciones().then((r) => {
       if (!vivo) return;
       if (r.error !== null) { if (!recomendacionesRecordadas()) setFallo(true); return; }
       setFallo(false);
@@ -187,7 +186,7 @@ export function Recomendaciones() {
   if (!elegida) return null;
 
   return (
-    <section className="flex flex-col gap-2" aria-label="Recomendación de FINA">
+    <section className="flex flex-col gap-2" aria-label="Un consejo de FINA">
       {/* Fini se asoma desde atrás del cartel: va detrás (z-0) y el cartel lo
           tapa hasta la mitad, así parece que sale de adentro. Es un momento de
           acompañamiento (§6): Fini acompaña el consejo, no reacciona a un
@@ -196,7 +195,10 @@ export function Recomendaciones() {
         <div className="absolute right-5 top-0 z-0 v2-fini-asoma" aria-hidden>
           <Fini state="idle" size={56} />
         </div>
-        <div className="relative z-10 rounded-2xl px-4 py-3.5" style={{ background: COLORS.starSoft }}>
+        <div className="relative z-10 rounded-2xl px-4 py-3.5 flex flex-col gap-1.5" style={{ background: COLORS.starSoft }}>
+          {/* Se presenta como consejo: se lee, no se cumple. Lo que hay que
+              hacer es el próximo paso, arriba. */}
+          <p className="text-[13px] font-semibold" style={{ color: COLORS.starText }}>Un consejo</p>
           <Mensaje key={`${elegida.periodo}-${elegida.item.ref}`} item={elegida.item} onUtil={marcarUtilidad} />
         </div>
       </div>
@@ -210,7 +212,7 @@ export function Recomendaciones() {
 }
 
 // Un mensaje, sin casilla: se lee, no se cumple. Va en un cartel amarillo
-// suave (el color de Fini y de los momentos de marca), debajo del paso del día.
+// suave (el color de Fini y de los momentos de marca), abajo de todo en Inicio.
 function Mensaje({ item, onUtil }: {
   item: Item;
   onUtil: (id: string, util: boolean | null) => void;

@@ -8,18 +8,17 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { useNavigate } from 'react-router';
 import { COLORS, consumirFiniAterriza, FONTS, Fila, Titulo, TituloSeccion, fechaDisplay, loadV2Foto, loadV2Nombre, saludoDelDia } from './shared';
 import { IconFuego, IconPerfil } from './FinaIcons';
-import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
-import { pasoPorClave } from '../../api/v2/pasos';
-import { LinkWhatsApp } from './LinkWhatsApp';
+import { useProximoPaso } from '../../api/v2/ProximoPasoProvider';
 import { RecordatorioGastos } from './RecordatorioGastos';
-import { RevisionDelPaso } from './RevisionDelPaso';
+import { ProximoPasoInicio } from './ProximoPasoInicio';
 import { ObjetivosEnInicio } from './ObjetivosEnInicio';
 
 
-// El paso del día y la racha salen de PasoDelDiaProvider (api/v2). Antes Home
-// calculaba los dos acá: el "próximo paso" era siempre el mismo hasta hacerlo,
-// y la racha contaba días con gastos. Ahora toca un paso distinto cada día, y
-// la racha cuenta los días en que se cumplió.
+// Inicio tiene tres cosas fijas (decisión oct 2026): arriba el recordatorio de
+// anotar lo del día, después tu próximo paso (uno grande, que queda hasta que
+// lo marcás hecho) y abajo de todo un consejo, con Fini asomándose: una mini
+// recompensa para quien llega hasta ahí. El próximo paso y la racha (días con
+// un gasto anotado) salen de ProximoPasoProvider (api/v2).
 
 
 // REDISEÑO v2 — Home, según el boceto: perfil arriba + 3 acciones grandes
@@ -42,11 +41,8 @@ export function HomeV2() {
   const gastosRegistrados = estado.gastos.length;
   const nombre = loadV2Nombre();
   const foto = loadV2Foto();
-  const { paso, cumplido, racha, marcarRevisado } = usePasoDelDia();
+  const { racha } = useProximoPaso();
   const [rachaAbierta, setRachaAbierta] = useState(false);
-  // Los pasos de revisión se hacen acá: el botón abre la comparación debajo.
-  const [revisando, setRevisando] = useState(false);
-  const mostrarRevision = revisando && !!paso?.revision && !cumplido;
 
   // PRUEBA — "Fini aterriza en el avatar", estilo Netflix. La animación la
   // hace Home y no el onboarding, porque el destino es ESTE avatar y solo acá
@@ -154,21 +150,21 @@ export function HomeV2() {
         )}
       </header>
 
-      {/* Registrar lo del día: recordatorio fijo, no paso (DEBT I2). Se va
-          solo cuando hoy hay un gasto. */}
+      {/* 1. Registrar lo del día: un recordatorio fijo arriba. Es lo que
+          sostiene la racha y todo lo demás. */}
       <RecordatorioGastos />
 
       {/* Detalle de la racha: qué sumó cada día. Un número que no se puede
           abrir es un puntaje; abriéndolo es un dato. */}
       {rachaAbierta && racha.dias > 0 && (
-        <section className="flex flex-col gap-2 -mt-4">
+        <section className="flex flex-col gap-2">
           <TituloSeccion>Tu racha, día por día</TituloSeccion>
           {/* El comodín se explica acá y no en un tutorial: es donde la persona
               lo ve funcionar. */}
           <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
             {racha.comodinDisponible
-              ? 'Tenés un comodín esta semana: si se te pasa un día, te lo salva solo.'
-              : 'Ya usaste el comodín de esta semana. El lunes tenés otro.'}
+              ? "Cuenta cada día que anotás un gasto. Tenés un comodín esta semana: si se te pasa un día, te lo salva solo."
+              : "Cuenta cada día que anotás un gasto. Ya usaste el comodín de esta semana; el lunes tenés otro."}
           </p>
           <div className="flex flex-col">
             {racha.detalle.map((d) => (
@@ -176,10 +172,11 @@ export function HomeV2() {
                 <span className="w-16 shrink-0 text-[14px] font-semibold" style={{ color: COLORS.ink }}>
                   {fechaDisplay(Date.parse(`${d.dia}T12:00:00-03:00`))}
                 </span>
-                <span className="flex-1 min-w-0 text-[14px]" style={{ color: d.tipo === 'comodin' ? COLORS.inkFaint : COLORS.inkSoft }}>
-                  {d.tipo === 'paso' && (pasoPorClave(d.paso ?? '', estado)?.titulo ?? 'Cumpliste tu paso')}
-                  {d.tipo === 'whatsapp' && 'Le contaste un gasto a FINA por WhatsApp'}
-                  {d.tipo === 'comodin' && 'El comodín te salvó el día'}
+                <span className="flex-1 min-w-0 text-[14px]" style={{ color: d.tipo === "comodin" ? COLORS.inkFaint : COLORS.inkSoft }}>
+                  {d.tipo === "gasto" && "Anotaste un gasto"}
+                  {d.tipo === "whatsapp" && "Le contaste un gasto a FINA por WhatsApp"}
+                  {d.tipo === "paso" && "Cumpliste tu paso del día"}
+                  {d.tipo === "comodin" && "El comodín te salvó el día"}
                 </span>
               </div>
             ))}
@@ -187,108 +184,9 @@ export function HomeV2() {
         </section>
       )}
 
-      {/* LA tarjeta elevada de la app. Es la única, y por eso funciona: cuando
-          todo era tarjeta, ser tarjeta no significaba nada. */}
-      {/* PRUEBA — el próximo paso lo dice Fini, no una tarjeta. Se saca el
-          contorno y el ícono de chispita: queda el personaje, lo que hay que
-          hacer, y el botón. El CTA va en LIMA, que es el color que la guía
-          reserva para el momento de valor (§3.3) — y como el lima tiene 1.43
-          de contraste sobre el papel, el texto encima va en TINTA, nunca en
-          blanco: sobre relleno de color el texto es tinta (§3.3). */}
-      {/* Fini grande (92 → 132 → 164) y alineado con el globo, no con el botón.
-          A 92 quedaba del tamaño de un ícono al lado de un cartel de 19px: se
-          leía como una decoración pegada al borde y no como el personaje que te
-          está hablando. Es el segundo elemento en peso de la pantalla, después
-          del saludo. Como a este tamaño se lleva casi la mitad del ancho en un
-          celular, el globo se aprieta un poco menos: gap más chico y el
-          personaje sale del margen izquierdo. */}
-      {/* EL PASO DE HOY. Uno por día, distinto cada día. Se cumple solo
-          cuando los datos lo muestran: no hay botón de "listo", porque con uno
-          la racha se inflaría tocándolo. */}
-      <section className="flex items-start gap-1 pt-1">
-        {/* Fini sólo en desktop. En el celular, a 164px, se llevaba casi la
-            mitad del ancho y empujaba el texto del paso a cuatro líneas, sin
-            decir nada que el globo no dijera. */}
-        {/* Con la comparación abierta Fini se va: quedaría al lado de los números. */}
-        <div className={`${mostrarRevision ? 'hidden' : 'hidden lg:block'} shrink-0 -ml-4 -mt-4`}>
-          {/* Fini festeja cuando está cumplido. `logro` es de una pasada: salta
-              una vez y vuelve a quedarse quieto, no queda saltando al lado de
-              algo que ya pasó. */}
-          <Fini state={cumplido ? 'logro' : paso ? 'idle' : 'pensando'} size={164} />
-        </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-3 lg:pt-3">
-          <div
-            className="relative rounded-[20px] lg:rounded-tl-md px-4 py-3.5"
-            style={{ background: cumplido ? COLORS.limaSoft : COLORS.surface, border: `1.5px solid ${cumplido ? COLORS.lima : COLORS.line}` }}
-          >
-            {/* Sin bajada explicativa (frontend.md §5.4): el título del paso y
-                el botón dicen qué hacer. El mensaje de la IA y el texto del
-                catálogo siguen en pasos.ts por si se usan en otro lado. */}
-            <p className="text-[14px] font-semibold" style={{ color: cumplido ? COLORS.limaText : COLORS.inkSoft }}>
-              {cumplido ? 'Paso de hoy listo' : 'Tu paso de hoy'}
-            </p>
-            {!paso ? (
-              <p className="text-[14px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>Preparando tu paso de hoy...</p>
-            ) : cumplido ? (
-              <p className="font-bold text-[18px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Listo por hoy, mañana te toca otro</p>
-            ) : (
-              <>
-                <p className="font-bold text-[18px] leading-tight mt-1" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</p>
-                {/* Un gasto por WhatsApp salva el día aunque el paso sea otro.
-                    Se dice, para que no parezca que la racha depende sólo de
-                    este paso — y sin empujar a no hacerlo. */}
-                {racha.hoyCumplido && (
-                  <p className="text-[14px] leading-snug mt-2 font-semibold" style={{ color: COLORS.limaText }}>
-                    Tu racha de hoy ya está a salvo por WhatsApp.
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-          {paso && !cumplido && (
-            paso.revision ? (
-              // Se compara acá mismo; el botón abre y cierra la comparación.
-              !mostrarRevision && (
-                <button
-                  type="button"
-                  onClick={() => setRevisando(true)}
-                  className="v2-focus w-full rounded-2xl py-3.5 text-[16px] font-bold transition-transform duration-100 active:scale-[0.99]"
-                  style={{ background: COLORS.lima, color: COLORS.ink }}
-                >
-                  {paso.cta}
-                </button>
-              )
-            ) : paso.destino === 'whatsapp' ? (
-              <LinkWhatsApp
-                className="v2-focus w-full rounded-2xl py-3.5 text-[16px] font-bold text-center transition-transform duration-100 active:scale-[0.99]"
-                style={{ background: COLORS.lima, color: COLORS.ink }}
-              >
-                {paso.cta}
-              </LinkWhatsApp>
-            ) : (
-              <button
-                type="button"
-                // `ref`: el id de la sección u objetivo del que habla el paso,
-                // para que la pantalla de destino abra ése.
-                onClick={() => navigate(paso.destino, paso.abrir ? { state: { abrir: paso.abrir, ref: paso.ref, from: '/onboarding-v2/home' } } : undefined)}
-                className="v2-focus w-full rounded-2xl py-3.5 text-[16px] font-bold transition-transform duration-100 active:scale-[0.99]"
-                style={{ background: COLORS.lima, color: COLORS.ink }}
-              >
-                {paso.cta}
-              </button>
-            )
-          )}
-        </div>
-      </section>
-
-      {mostrarRevision && paso && <RevisionDelPaso paso={paso} onRespondida={marcarRevisado} />}
-
-      {/* Arriba quedan sólo el paso de hoy y, pegada debajo, UNA
-          recomendación, con Fini asomándose del cartel. La pregunta del día
-          salió de Inicio (decisión oct 2026). Recomendaciones hace también la
-          llamada diaria a la IA que elige el paso de mañana y arma los planes
-          de objetivos. */}
-      <Recomendaciones />
+      {/* 2. Tu próximo paso: UN paso grande que queda hasta que lo marcás
+          hecho. Es la tarjeta elevada de Inicio. */}
+      <ProximoPasoInicio />
 
       {/* Tus objetivos: el más relevante, cuánto avanzó y qué hacer (DEBT I7). */}
       <ObjetivosEnInicio />
@@ -316,6 +214,11 @@ export function HomeV2() {
           onClick={() => navigate('/onboarding-v2/perfil', { state: { abrir: 'verificar', from: '/onboarding-v2/home' } })}
         />
       )}
+
+      {/* 3. Abajo de todo, el consejo con Fini asomándose del cartel: una mini
+          recompensa para quien llega hasta acá. Hace también la llamada diaria
+          a la IA que arma los planes de los objetivos. */}
+      <Recomendaciones />
     </div>
   );
 }

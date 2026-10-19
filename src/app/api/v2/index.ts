@@ -1141,6 +1141,36 @@ export async function cumplirPasoDelDia(dia: string): Promise<Resultado<null>> {
   );
 }
 
+// ── El próximo paso (migración 0042) ─────────────────────────────────────
+// Los pasos grandes ("Hacé tu primera inversión") pasan afuera de la app, así
+// que la persona marca a mano cuando los hizo. Se guardan las claves marcadas.
+
+/** Las claves de los próximos pasos que la persona marcó como hechos. */
+export async function leerProximosPasosHechos(): Promise<Resultado<string[]>> {
+  const r = await correr<{ step_key: string }[]>('leerProximosPasosHechos', () =>
+    supabase.from('next_steps').select('step_key'),
+  );
+  if (r.error !== null) return falla(r.error, 'leerProximosPasosHechos');
+  return ok((r.data ?? []).map((f) => f.step_key));
+}
+
+export async function marcarProximoPaso(clave: string): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla('sin sesión', 'marcarProximoPaso');
+  return correr<null>('marcarProximoPaso', () =>
+    supabase.from('next_steps')
+      // Marcar dos veces no es un error: queda la primera fecha.
+      .upsert({ user_id: uid, step_key: clave }, { onConflict: 'user_id,step_key', ignoreDuplicates: true })
+      .then(({ error }) => ({ data: null, error })),
+  );
+}
+
+export async function desmarcarProximoPaso(clave: string): Promise<Resultado<null>> {
+  return correr<null>('desmarcarProximoPaso', () =>
+    supabase.from('next_steps').delete().eq('step_key', clave).then(({ error }) => ({ data: null, error })),
+  );
+}
+
 export async function leerRacha(): Promise<Resultado<Racha>> {
   const r = await correr<Racha>('leerRacha', () =>
     supabase.rpc('mi_racha').then(({ data, error }) => ({ data: data as Racha | null, error })),
