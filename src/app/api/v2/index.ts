@@ -1145,13 +1145,13 @@ export async function cumplirPasoDelDia(dia: string): Promise<Resultado<null>> {
 // Los pasos grandes ("Hacé tu primera inversión") pasan afuera de la app, así
 // que la persona marca a mano cuando los hizo. Se guardan las claves marcadas.
 
-/** Las claves de los próximos pasos que la persona marcó como hechos. */
-export async function leerProximosPasosHechos(): Promise<Resultado<string[]>> {
-  const r = await correr<{ step_key: string }[]>('leerProximosPasosHechos', () =>
-    supabase.from('next_steps').select('step_key'),
+/** Los próximos pasos que la persona marcó como hechos, con cuándo. */
+export async function leerProximosPasosHechos(): Promise<Resultado<{ clave: string; completadoEn: string }[]>> {
+  const r = await correr<{ step_key: string; completed_at: string }[]>('leerProximosPasosHechos', () =>
+    supabase.from('next_steps').select('step_key, completed_at'),
   );
   if (r.error !== null) return falla(r.error, 'leerProximosPasosHechos');
-  return ok((r.data ?? []).map((f) => f.step_key));
+  return ok((r.data ?? []).map((f) => ({ clave: f.step_key, completadoEn: f.completed_at })));
 }
 
 export async function marcarProximoPaso(clave: string): Promise<Resultado<null>> {

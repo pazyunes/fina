@@ -8,6 +8,7 @@ import { HomeV2 } from "./components/onboarding-v2/HomeV2";
 import { GastosV2 } from "./components/onboarding-v2/GastosV2";
 import { TodosLosGastos } from "./components/onboarding-v2/TodosLosGastos";
 import { TodasLasSecciones } from "./components/onboarding-v2/TodasLasSecciones";
+import { ProgresoPasos } from "./components/onboarding-v2/ProgresoPasos";
 import { ObjetivosV2 } from "./components/onboarding-v2/ObjetivosV2";
 import { InversionesV2 } from "./components/onboarding-v2/InversionesV2";
 import { PerfilV2 } from "./components/onboarding-v2/PerfilV2";
@@ -86,6 +87,7 @@ export const router = createBrowserRouter([
       { path: "/onboarding-v2/gastos", element: <GastosV2 /> },
       { path: "/onboarding-v2/gastos/todos", element: <TodosLosGastos /> },
       { path: "/onboarding-v2/gastos/secciones", element: <TodasLasSecciones /> },
+      { path: "/onboarding-v2/progreso", element: <ProgresoPasos /> },
       { path: "/onboarding-v2/objetivos", element: <ObjetivosV2 /> },
       { path: "/onboarding-v2/inversiones", element: <InversionesV2 /> },
       { path: "/onboarding-v2/perfil", element: <PerfilV2 /> },

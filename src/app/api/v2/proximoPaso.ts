@@ -170,6 +170,29 @@ export function elegirProximoPaso(e: EstadoV2, marcados: ReadonlySet<string>): P
   return mejor ? { clave: mejor.def.clave, ...mejor.def.armar(e) } : null;
 }
 
+export type PasoEnProgreso = { clave: ClaveProximoPaso; titulo: string; hecho: boolean };
+
+/**
+ * Todos los pasos grandes, para la pantalla de progreso: primero los hechos y
+ * después los que faltan, en el orden en que le van a tocar.
+ */
+export function todosLosPasos(e: EstadoV2, marcados: ReadonlySet<string>): PasoEnProgreso[] {
+  const filas = DEFS.map((d) => ({ clave: d.clave, titulo: d.armar(e).titulo, hecho: estaHecho(e, d.clave, marcados), puntaje: d.puntaje(e, marcados) ?? -1 }));
+  return [...filas.filter((f) => f.hecho), ...filas.filter((f) => !f.hecho).sort((a, b) => b.puntaje - a.puntaje)]
+    .map(({ clave, titulo, hecho }) => ({ clave, titulo, hecho }));
+}
+
+/**
+ * Una frase para la pantalla de progreso, con el dato atrás (frontend.md §2.3:
+ * nada de "felicitaciones" sin un dato). No reta si todavía no hizo ninguno.
+ */
+export function fraseDeProgreso(hechos: number, total: number): string {
+  if (hechos === 0) return 'Todavía no marcaste ningún paso grande. El primero es el que más cuesta, y después cada uno se hace más fácil.';
+  if (hechos >= total) return `Hiciste los ${total} pasos grandes. Tu plata está mucho más ordenada que cuando empezaste.`;
+  if (hechos === 1) return 'Ya hiciste tu primer paso grande. Es el que más cuesta: lo que sigue se apoya en este.';
+  return `Ya hiciste ${hechos} de ${total} pasos grandes. Cada uno deja tu plata un poco más ordenada que antes.`;
+}
+
 /** Cuántos pasos hizo, de los que existen: para decir "Hiciste 2 de 5". */
 export function pasosHechos(e: EstadoV2, marcados: ReadonlySet<string>): { hechos: number; total: number } {
   return { hechos: DEFS.filter((d) => estaHecho(e, d.clave, marcados)).length, total: DEFS.length };

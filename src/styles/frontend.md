@@ -251,6 +251,7 @@ Fuente de verdad de color, tipografía, espacio y forma. **Ningún componente es
   /* Acento de interfaz */
   --fina-violeta:         #7626B3;  /* botones, progreso, foco; 7.28:1 */
   --fina-violeta-suave:   #E4D5F5;  /* bandas y recuadros */
+  --fina-violeta-tenue:   #F6F0FB;  /* recuadro muy claro sobre blanco */
   --fina-violeta-oscuro:  #5C1B8E;  /* texto sobre lila, fondos plenos */
 
   /* Marca: relleno + suave + texto */

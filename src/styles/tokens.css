@@ -21,6 +21,7 @@
   /* Acento de interfaz: botones, progreso, foco, estado elegido */
   --fina-violeta: #7626B3;        /* 7.28:1 sobre papel, texto blanco encima 7.78:1 */
   --fina-violeta-suave: #E4D5F5;  /* bandas y recuadros; violeta encima 7.6:1 */
+  --fina-violeta-tenue: #F6F0FB;  /* recuadro muy claro sobre blanco (recordatorio de Inicio) */
   --fina-violeta-oscuro: #5C1B8E; /* texto sobre lila, fondos plenos */
 
   /* Colores de marca. Son de RELLENO, nunca de texto: cada uno tiene su

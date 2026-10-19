@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAlmacen } from './AlmacenProvider';
 import * as api from './index';
-import { elegirProximoPaso, pasosHechos, type ProximoPaso } from './proximoPaso';
+import { elegirProximoPaso, pasosHechos, todosLosPasos, type PasoEnProgreso, type ProximoPaso } from './proximoPaso';
 import { RACHA_VACIA, type Racha } from './tipos';
 
 // El próximo paso y la racha, para toda la app.
@@ -19,6 +19,11 @@ type Valor = {
   /** false mientras se leen los pasos marcados. */
   listo: boolean;
   hechos: { hechos: number; total: number };
+  /**
+   * Todos los pasos, hechos primero, para la pantalla de progreso.
+   * `completadoEn` es cuándo lo marcó; null si se dio por hecho con los datos.
+   */
+  progreso: (PasoEnProgreso & { completadoEn: string | null })[];
   /** Marca el paso como hecho. Devuelve el error, o null si se guardó. */
   marcarHecho: (clave: string) => Promise<string | null>;
   /** Para "Me equivoqué, todavía no lo hice". */
@@ -27,12 +32,22 @@ type Valor = {
 };
 
 const Ctx = createContext<Valor>({
-  paso: null, listo: false, hechos: { hechos: 0, total: 0 }, marcarHecho: async () => null, deshacer: async () => null, racha: RACHA_VACIA,
+  paso: null, listo: false, hechos: { hechos: 0, total: 0 }, progreso: [],
+  marcarHecho: async () => null, deshacer: async () => null, racha: RACHA_VACIA,
 });
+
+/** Clave del paso, y cuándo se marcó. */
+type Marcados = Map<string, string>;
+
+function sin(m: Marcados | null, clave: string): Marcados {
+  const n = new Map(m ?? []);
+  n.delete(clave);
+  return n;
+}
 
 export function ProximoPasoProvider({ children }: { children: React.ReactNode }) {
   const { estado, listo: almacenListo } = useAlmacen();
-  const [marcados, setMarcados] = useState<Set<string> | null>(null);
+  const [marcados, setMarcados] = useState<Marcados | null>(null);
   const [racha, setRacha] = useState<Racha>(RACHA_VACIA);
 
   const refrescarRacha = useCallback(async () => {
@@ -47,7 +62,7 @@ export function ProximoPasoProvider({ children }: { children: React.ReactNode })
     void api.leerProximosPasosHechos().then((r) => {
       // Sin la migración 0042 la tabla no existe: se sigue con nada marcado,
       // así Inicio muestra el primer paso en vez de quedar vacío.
-      if (vivo) setMarcados(new Set(r.error === null ? r.data : []));
+      if (vivo) setMarcados(new Map(r.error === null ? r.data.map((f) => [f.clave, f.completadoEn]) : []));
     });
     return () => { vivo = false; };
   }, [almacenListo]);
@@ -74,28 +89,31 @@ export function ProximoPasoProvider({ children }: { children: React.ReactNode })
   const marcarHecho = useCallback(async (clave: string) => {
     // Se pinta en el acto; si la base no lo guarda, se vuelve atrás: mostrar
     // un paso hecho que la base no registró es mostrar algo que mañana no está.
-    setMarcados((m) => new Set(m ?? []).add(clave));
+    setMarcados((m) => new Map(m ?? []).set(clave, new Date().toISOString()));
     const r = await api.marcarProximoPaso(clave);
     if (r.error !== null) {
-      setMarcados((m) => { const n = new Set(m ?? []); n.delete(clave); return n; });
+      setMarcados((m) => sin(m, clave));
       return r.error;
     }
     return null;
   }, []);
 
   const deshacer = useCallback(async (clave: string) => {
-    setMarcados((m) => { const n = new Set(m ?? []); n.delete(clave); return n; });
+    const antes = marcados?.get(clave) ?? new Date().toISOString();
+    setMarcados((m) => sin(m, clave));
     const r = await api.desmarcarProximoPaso(clave);
-    if (r.error !== null) { setMarcados((m) => new Set(m ?? []).add(clave)); return r.error; }
+    if (r.error !== null) { setMarcados((m) => new Map(m ?? []).set(clave, antes)); return r.error; }
     return null;
-  }, []);
+  }, [marcados]);
 
   const valor = useMemo<Valor>(() => {
-    const m = marcados ?? new Set<string>();
+    const m = marcados ?? new Map<string, string>();
+    const claves = new Set(m.keys());
     return {
-      paso: marcados ? elegirProximoPaso(estado, m) : null,
+      paso: marcados ? elegirProximoPaso(estado, claves) : null,
       listo: marcados !== null,
-      hechos: pasosHechos(estado, m),
+      hechos: pasosHechos(estado, claves),
+      progreso: todosLosPasos(estado, claves).map((p) => ({ ...p, completadoEn: m.get(p.clave) ?? null })),
       marcarHecho,
       deshacer,
       racha,
