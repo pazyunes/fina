@@ -511,6 +511,9 @@ export function ObjetivosV2() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [nombre, setNombre] = useState('');
+  // El nombre se escribe siempre (no viene puesto): una sugerencia sólo cambia
+  // el ejemplo gris del campo, para que la persona lo diga con sus palabras.
+  const [ejemploNombre, setEjemploNombre] = useState('Ej: Vacaciones, la patente, un regalo');
   const [descripcion, setDescripcion] = useState('');
   const [tipo, setTipo] = useState<TipoObjetivo>('individual');
   const [moneda, setMoneda] = useState<Moneda>('ARS');
@@ -1116,7 +1119,8 @@ export function ObjetivosV2() {
           <Titulo>Algo que se viene</Titulo>
           <button type="button" onClick={cerrarCrear} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
-        <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Ej: Vacaciones, la patente, un regalo" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        <label htmlFor="nuevo-objetivo-nombre" className="sr-only">Nombre (obligatorio)</label>
+        <input id="nuevo-objetivo-nombre" autoFocus required aria-required="true" className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder={ejemploNombre} value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
         <div className="flex flex-col gap-1.5">
@@ -1217,7 +1221,7 @@ export function ObjetivosV2() {
             <button
               key={sug.nombre}
               type="button"
-              onClick={() => { setNombre(sug.nombre); setCreating(true); }}
+              onClick={() => { setNombre(''); setEjemploNombre(`Ej: ${sug.nombre}`); setCreating(true); }}
               className="v2-focus inline-flex items-center rounded-full px-3 min-h-[36px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
               style={{ background: COLORS.surface, color: COLORS.ink }}
             >
@@ -1333,7 +1337,7 @@ export function ObjetivosV2() {
       })}
       <button
         type="button"
-        onClick={() => setCreating(true)}
+        onClick={() => { setEjemploNombre('Ej: Vacaciones, la patente, un regalo'); setCreating(true); }}
         className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-4 text-[16px] font-bold transition-all duration-100 active:scale-[0.99]"
         style={{ borderColor: COLORS.lineStrong, color: COLORS.ink }}
       >
