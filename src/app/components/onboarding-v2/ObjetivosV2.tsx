@@ -6,7 +6,6 @@ import { diaArgentina, formasDeLlegarAntes, mensajePlazo, reservaPorMes, textoIm
 import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
 import { COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
-import { FiniPresenta } from './FiniDice';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { sumarEn } from '../../api/v2/conversion';
@@ -1210,6 +1209,22 @@ export function ObjetivosV2() {
             <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
           </p>
         )}
+        {/* Las sugerencias van adentro del cartel, siempre, en chips chicos:
+            abren el alta con el nombre puesto. Antes eran una grilla grande
+            sólo con la lista vacía y un recuadro aparte en compu. */}
+        <div className="flex flex-wrap gap-1.5 pt-2" role="group" aria-label="Sugerencias para sumar">
+          {SUGERENCIAS_OBJETIVO.map((sug) => (
+            <button
+              key={sug.nombre}
+              type="button"
+              onClick={() => { setNombre(sug.nombre); setCreating(true); }}
+              className="v2-focus inline-flex items-center rounded-full px-3 min-h-[36px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
+              style={{ background: COLORS.surface, color: COLORS.ink }}
+            >
+              {sug.nombre}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Desktop: 2 columnas (lista principal + barra lateral). Mobile: apilado. */}
@@ -1223,39 +1238,6 @@ export function ObjetivosV2() {
           UN solo personaje, con el globo saliendo de él: antes había el de la
           franja y además el centrado que ya estaba, o sea Fini dos veces en la
           misma pantalla mirándose. */}
-      {/* Fini queda fija arriba de la lista, haya o no objetivos (pedido oct
-          2026): acompaña la idea de la pantalla. Con objetivos va más chica,
-          para que la lista entre en el celular. */}
-      <FiniPresenta
-        dice={objetivos.length === 0
-          ? "¿Qué gasto ya sabés que se viene? Empezá por ponerle nombre; el monto y la fecha los vemos después."
-          : "¿Se viene otro gasto? Sumalo y te decimos cuánto reservar."}
-        state={objetivos.length === 0 ? "vacio" : "idle"}
-        size={objetivos.length === 0 ? 124 : 84}
-      />
-
-      {objetivos.length === 0 && (
-        <div className="flex flex-col gap-3">
-          <TituloSeccion>¿Con qué arrancás?</TituloSeccion>
-          {/* Grilla en vez de chips que envuelven: seis sugerencias de largos
-              distintos quedaban en escalera (2 + 3 + 1). En dos columnas se
-              llenan tres filas exactas. */}
-          <div className="grid grid-cols-2 gap-2.5">
-            {SUGERENCIAS_OBJETIVO.map((s) => (
-              <button
-                key={s.nombre}
-                type="button"
-                onClick={() => { setNombre(s.nombre); setCreating(true); }}
-                className="v2-focus min-h-[52px] rounded-2xl px-3 py-3 text-[15px] font-semibold leading-snug transition-all duration-100 active:scale-[0.97]"
-                style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-              >
-                {s.nombre}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {objetivos.map((o) => {
         const estado = estadoMonto(o);
         // Cuánto reservar por mes para este gasto (estimado, como rango).
@@ -1364,27 +1346,6 @@ export function ObjetivosV2() {
       {(objetivos.length > 0 || db.perfil.reserva > 0) && <PlataApartada monto={db.perfil.reserva} />}
       </div>{/* /columna principal */}
 
-      {/* Barra lateral */}
-      <div className="flex flex-col gap-4 lg:w-[300px] lg:shrink-0">
-        {objetivos.length > 0 && (
-          <div className="hidden lg:flex flex-col gap-2.5 rounded-2xl p-4 border" style={{ background: COLORS.surface, borderColor: COLORS.line }}>
-            <TituloSeccion>¿Qué más se viene?</TituloSeccion>
-            <div className="flex flex-wrap gap-2">
-              {SUGERENCIAS_OBJETIVO.slice(0, 4).map((s) => (
-                <button
-                  key={s.nombre}
-                  type="button"
-                  onClick={() => { setNombre(s.nombre); setCreating(true); }}
-                  className="v2-focus rounded-full px-3 py-1.5 text-[14px] font-semibold transition-all duration-100 active:scale-95"
-                  style={{ background: COLORS.tint, color: COLORS.ink }}
-                >
-                  {s.nombre}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
       </div>{/* /2 columnas */}
     </div>
   );
