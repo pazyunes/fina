@@ -11,8 +11,8 @@ import { FestejoPaso } from './FestejoPaso';
 // situación.
 //
 // Tocar el paso lleva a Tu progreso (los que ya hizo y los que vienen). Arriba
-// a la derecha está "Marcar como completado", porque estos pasos pasan afuera
-// de la app y FINA no los ve; al marcarlo se festeja con confeti, y si fue sin
+// a la derecha hay un casillero vacío para marcarlo completado, porque estos
+// pasos pasan afuera de la app y FINA no los ve; al marcarlo se festeja con confeti, y si fue sin
 // querer se deshace ahí mismo. Cómo se hace se abre si lo pide.
 
 const CARD_ELEVADA: React.CSSProperties = { background: COLORS.surface, boxShadow: '0 2px 8px rgba(43,33,24,0.08)' };
@@ -24,6 +24,9 @@ export function ProximoPasoInicio() {
   const [comoAbierto, setComoAbierto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [festejando, setFestejando] = useState(false);
+  // El círculo se llena apenas se toca; el festejo sale un instante después,
+  // para que se vea el tilde.
+  const [llenando, setLlenando] = useState(false);
   // El último que marcó: para festejarlo con su nombre y poder deshacerlo.
   const [recien, setRecien] = useState<{ clave: string; titulo: string } | null>(null);
 
@@ -39,10 +42,13 @@ export function ProximoPasoInicio() {
     const clave = paso.clave;
     // El festejo sale en el acto, como el paso marcado. Si la base no lo
     // guarda, se cierra y se avisa.
+    setLlenando(true);
+    await new Promise((r) => window.setTimeout(r, 450));
     setRecien({ clave, titulo });
     setFestejando(true);
     setComoAbierto(false);
     const e = await marcarHecho(clave);
+    setLlenando(false);
     if (e !== null) { setFestejando(false); setRecien(null); setError('No pudimos guardarlo. Probá de nuevo.'); }
   }
 
@@ -92,17 +98,25 @@ export function ProximoPasoInicio() {
           <>
             <div className="flex items-start justify-between gap-2">
               <p className="text-[14px] font-semibold pt-2.5" style={{ color: COLORS.inkSoft }}>Tu próximo paso</p>
-              {/* En lugar del "2 de 5": la acción. El número está en Tu progreso. */}
+              {/* Un casillero vacío: se toca y se llena con el tilde. El área
+                  táctil es de 44px aunque el círculo se vea de 30. */}
               <button
                 type="button"
                 onClick={() => void completar()}
-                className="v2-focus shrink-0 inline-flex items-center gap-1.5 min-h-[44px] pl-2 pr-3 rounded-full text-[13px] font-bold transition-transform active:scale-95"
-                style={{ background: COLORS.limaSoft, color: COLORS.limaText }}
+                disabled={llenando}
+                aria-label={`Marcar "${paso.titulo}" como completado`}
+                aria-pressed={llenando}
+                className="v2-focus shrink-0 w-11 h-11 -mr-1.5 -mt-1 rounded-full flex items-center justify-center"
               >
-                <span className="w-5 h-5 rounded-full flex items-center justify-center" style={{ border: `2px solid ${COLORS.limaText}` }} aria-hidden>
-                  <svg width={10} height={8} viewBox="0 0 14 11" fill="none"><path d="M1 5.5L5 9.5L13 1.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <span
+                  className="w-[30px] h-[30px] rounded-full flex items-center justify-center transition-all duration-200"
+                  style={llenando
+                    ? { background: COLORS.lima, color: COLORS.ink, border: `2px solid ${COLORS.lima}`, transform: 'scale(1.12)' }
+                    : { border: `2px solid ${COLORS.lineStrong}`, color: 'transparent' }}
+                  aria-hidden
+                >
+                  <svg width={13} height={10} viewBox="0 0 14 11" fill="none"><path d="M1 5.5L5 9.5L13 1.5" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </span>
-                Marcar como completado
               </button>
             </div>
 
