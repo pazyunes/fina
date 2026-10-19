@@ -64,7 +64,7 @@ function Barras({ filas }: { filas: { label: string; valor: number }[] }) {
 // Por sección va en torta y no en barras: lo que se quiere ver es qué parte
 // del total se lleva cada una, y una barra escalada contra la más grande no
 // dice contra qué se compara. El total va en el centro y cada sección lleva su
-// porcentaje escrito, así no hace falta comparar ángulos a ojo. Los colores son
+// monto (sin porcentaje, decisión oct 2026). Los colores son
 // los mismos que en Gastos, para que una sección se reconozca en las dos.
 function TortaSecciones({ filas, total }: { filas: { id: string; label: string; valor: number; color: string }[]; total: number }) {
   return (
@@ -82,7 +82,6 @@ function TortaSecciones({ filas, total }: { filas: { id: string; label: string; 
           <li key={f.id} className="flex items-center gap-2.5 text-[14px]">
             <span className="w-3 h-3 rounded-full shrink-0" style={{ background: f.color }} aria-hidden />
             <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{f.label}</span>
-            <span className="shrink-0 font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>{Math.round((f.valor / total) * 100)}%</span>
             <span className="shrink-0 font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(f.valor)}</span>
           </li>
         ))}
