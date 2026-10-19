@@ -10,7 +10,9 @@ import { FestejoPaso } from './FestejoPaso';
 // completado. Es la tarjeta elevada de Inicio: lo que más hace avanzar su
 // situación.
 //
-// Tocar el paso lleva a Tu progreso (los que ya hizo y los que vienen). Arriba
+// Cerrada es sólo "Tu próximo paso", el título y "Cómo hacerlo": prioridad al
+// celular. Tocar el título despliega por qué le toca y el link a Tu progreso
+// (los que ya hizo y los que vienen). Arriba
 // a la derecha hay un casillero vacío para marcarlo completado, porque estos
 // pasos pasan afuera de la app y FINA no los ve; al marcarlo se festeja con confeti, y si fue sin
 // querer se deshace ahí mismo. Cómo se hace se abre si lo pide.
@@ -22,6 +24,9 @@ export function ProximoPasoInicio() {
   const navigate = useNavigate();
   const { paso, listo, hechos, marcarHecho, deshacer } = useProximoPaso();
   const [comoAbierto, setComoAbierto] = useState(false);
+  // Por qué le toca: se abre tocando el título. Cerrado, la tarjeta es sólo
+  // el título y entra entera en el celular.
+  const [porQueAbierto, setPorQueAbierto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [festejando, setFestejando] = useState(false);
   // El círculo se llena apenas se toca; el festejo sale un instante después,
@@ -83,7 +88,7 @@ export function ProximoPasoInicio() {
         </div>
       )}
 
-      <div className="rounded-2xl px-4 py-4 flex flex-col gap-3" style={CARD_ELEVADA}>
+      <div className="rounded-2xl px-4 py-3 flex flex-col gap-2.5" style={CARD_ELEVADA}>
         {!paso ? (
           <button type="button" onClick={() => navigate(PROGRESO)} className="v2-focus text-left flex flex-col gap-1.5 rounded-xl">
             <span className="text-[14px] font-semibold" style={{ color: COLORS.limaText }}>Tu próximo paso</span>
@@ -120,20 +125,33 @@ export function ProximoPasoInicio() {
               </button>
             </div>
 
-            {/* El paso se toca: lleva a Tu progreso. */}
-            <button type="button" onClick={() => navigate(PROGRESO)} className="v2-focus text-left flex flex-col gap-1.5 rounded-xl -mt-1" aria-label={`${paso.titulo}. Ver tu progreso`}>
-              <span className="flex items-start gap-2">
-                <span className="flex-1 font-bold text-[18px] leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</span>
-                <span className="shrink-0 pt-0.5" style={{ color: COLORS.inkFaint }} aria-hidden><IconChevron size={18} /></span>
+            {/* El título se toca: despliega por qué le toca (con sus datos,
+                por ejemplo la plata que tiene apartada) y el link a Tu progreso. */}
+            <button
+              type="button"
+              aria-expanded={porQueAbierto}
+              onClick={() => setPorQueAbierto((v) => !v)}
+              className="v2-focus text-left flex items-start gap-2 rounded-xl -mt-2"
+            >
+              <span className="flex-1 font-bold text-[18px] leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</span>
+              <span className="shrink-0 pt-0.5" style={{ color: COLORS.inkFaint }} aria-hidden>
+                <IconChevron size={18} style={{ transform: porQueAbierto ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 120ms' }} />
               </span>
-              <span className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{paso.porQue}</span>
             </button>
+            {porQueAbierto && (
+              <div className="flex flex-col gap-1 -mt-1">
+                <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{paso.porQue}</p>
+                <button type="button" onClick={() => navigate(PROGRESO)} className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.brand }}>
+                  Ver tu progreso <IconChevron size={14} />
+                </button>
+              </div>
+            )}
 
             <button
               type="button"
               aria-expanded={comoAbierto}
               onClick={() => setComoAbierto((v) => !v)}
-              className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] text-[14px] font-semibold"
+              className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] -my-1.5 text-[14px] font-semibold"
               style={{ color: COLORS.brand }}
             >
               Cómo hacerlo
@@ -154,7 +172,9 @@ export function ProximoPasoInicio() {
 
             {/* Si una parte se hace en la app, el botón lleva ahí. En lima con
                 texto en tinta (§3.3). */}
-            {paso.enLaApp && (
+            {/* Si una parte se hace en la app, el botón aparece con Cómo
+                hacerlo abierto: cerrado, la tarjeta queda sólo con el título. */}
+            {comoAbierto && paso.enLaApp && (
               <button
                 type="button"
                 onClick={() => navigate(paso.enLaApp?.destino ?? PROGRESO, { state: { abrir: paso.enLaApp?.abrir, from: '/onboarding-v2/home' } })}

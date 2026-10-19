@@ -523,6 +523,9 @@ export function ObjetivosV2() {
   const [montoMinTxt, setMontoMinTxt] = useState('');
 
   const [kind, setKind] = useState<Kind>('paid');
+  // "Sumar un registro" arranca cerrado: es un botón que despliega si lo
+  // pagaste o lo separaste y el monto. Así el detalle entra más en el celular.
+  const [sumando, setSumando] = useState(false);
   const [regLabel, setRegLabel] = useState('');
   const [regMonto, setRegMonto] = useState('');
   const [regMoneda, setRegMoneda] = useState<Moneda>('ARS');
@@ -595,6 +598,7 @@ export function ObjetivosV2() {
     const elegido = db.objetivos.find((o) => o.id === pedido)
       ?? [...enCurso].sort((a, b) => ultimoAporte(b) - ultimoAporte(a))[0];
     setOpenId(elegido.id);
+    setSumando(true);
     llevarA(
       () => document.querySelector<HTMLElement>('[data-sumar-registro]'),
       () => document.querySelector<HTMLElement>('[data-monto-registro]'),
@@ -697,6 +701,7 @@ export function ObjetivosV2() {
     });
     if (r.error !== null) { setErrorRegistro(r.error); return; }
     setRegLabel(''); setRegMonto('');
+    setSumando(false);
     // Celebración: burst normal, o grande si con este registro llegás a la meta.
     const prevSaved = saved(abierto);
     const total = abierto.montoTotal;
@@ -753,6 +758,7 @@ export function ObjetivosV2() {
   // por semana precargado si hay uno sugerido.
   function irASumar(montoSugerido: number | null) {
     if (montoSugerido && montoSugerido > 0) { setRegMonto(formatMontoInicial(Math.round(montoSugerido))); setKind('saved'); }
+    setSumando(true);
     llevarA(
       () => document.querySelector<HTMLElement>('[data-sumar-registro]'),
       () => document.querySelector<HTMLElement>('[data-monto-registro]'),
@@ -1003,7 +1009,15 @@ export function ObjetivosV2() {
 
         {/* Registrar un pago o un ahorro */}
         <div data-sumar-registro className="flex flex-col gap-2.5 pt-1">
-          <TituloSeccion>Sumar un registro</TituloSeccion>
+          <button
+            type="button"
+            aria-expanded={sumando}
+            onClick={() => setSumando((v) => !v)}
+            className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl min-h-[48px] text-[15px] font-bold transition-all duration-100 active:scale-[0.99]"
+            style={sumando ? { color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` } : { background: COLORS.brand, color: COLORS.surface }}
+          >
+            <IconMas size={17} /> Sumar un registro
+          </button>
           {/* PRUEBA — un aporte guardado es un logro chico: Fini salta una vez
               y se va. Se engancha al `celebrar` que ya existía, así no hay otro
               temporizador. `key` fuerza el remontaje para que se vuelva a
@@ -1014,50 +1028,54 @@ export function ObjetivosV2() {
               <Fini key={`prog-${abierto.contribuciones.length}`} state="progreso" size={96} once />
             </div>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            {(['paid', 'saved'] as const).map((k) => {
-              const sel = kind === k;
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setKind(k)}
-                  className="v2-focus py-2 rounded-xl text-[14px] font-semibold transition-all duration-100 active:scale-95"
-                  style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-                >
-                  {k === 'paid' ? 'Ya lo pagué' : 'Lo separé'}
-                </button>
-              );
-            })}
-          </div>
-          <input
-            className={inputClass}
-            placeholder={kind === 'paid' ? '¿Qué pagaste? (opcional)' : 'Nota (opcional)'}
-            value={regLabel}
-            onChange={(e) => setRegLabel(e.target.value)}
-          />
-          <div className="flex gap-2">
+          {sumando && (
+            <>
+            <div className="grid grid-cols-2 gap-2">
+              {(['paid', 'saved'] as const).map((k) => {
+                const sel = kind === k;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setKind(k)}
+                    className="v2-focus py-2 rounded-xl text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                    style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                  >
+                    {k === 'paid' ? 'Ya lo pagué' : 'Lo separé'}
+                  </button>
+                );
+              })}
+            </div>
             <input
-              className={`flex-1 min-w-0 ${inputClass}`}
-              data-monto-registro
-              aria-label="Monto del registro"
-              placeholder="Monto"
-              inputMode="decimal"
-              value={regMonto}
-              onChange={(e) => setRegMonto(formatThousands(e.target.value))}
+              className={inputClass}
+              placeholder={kind === 'paid' ? '¿Qué pagaste? (opcional)' : 'Nota (opcional)'}
+              value={regLabel}
+              onChange={(e) => setRegLabel(e.target.value)}
             />
-            <div className="shrink-0"><MonedaDropdown value={regMoneda} onChange={setRegMoneda} /></div>
-            <button
-              type="button"
-              onClick={() => void agregarRegistro()}
-              disabled={parseMoneyInput(regMonto) <= 0}
-              aria-label="Sumar registro"
-              className="v2-focus rounded-xl px-4 flex items-center justify-center font-bold v2-disabled transition-all duration-100 active:scale-95 shrink-0"
-              style={{ background: COLORS.brand, color: COLORS.surface }}
-            >
-              <IconMas size={18} />
-            </button>
-          </div>
+            <div className="flex gap-2">
+              <input
+                className={`flex-1 min-w-0 ${inputClass}`}
+                data-monto-registro
+                aria-label="Monto del registro"
+                placeholder="Monto"
+                inputMode="decimal"
+                value={regMonto}
+                onChange={(e) => setRegMonto(formatThousands(e.target.value))}
+              />
+              <div className="shrink-0"><MonedaDropdown value={regMoneda} onChange={setRegMoneda} /></div>
+              <button
+                type="button"
+                onClick={() => void agregarRegistro()}
+                disabled={parseMoneyInput(regMonto) <= 0}
+                aria-label="Sumar registro"
+                className="v2-focus rounded-xl px-4 flex items-center justify-center font-bold v2-disabled transition-all duration-100 active:scale-95 shrink-0"
+                style={{ background: COLORS.brand, color: COLORS.surface }}
+              >
+                <IconMas size={18} />
+              </button>
+            </div>
+            </>
+          )}
           {errorRegistro && (
             <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorRegistro}</p>
           )}
@@ -1175,32 +1193,22 @@ export function ObjetivosV2() {
       {/* Sin bajada (DEBT G2): el título se entiende solo. */}
       <header data-franja className="pb-1 flex items-center gap-3">
         <div className="flex-1 min-w-0">
-          <Titulo>Lo que se viene</Titulo>
+          <Titulo>Mis objetivos</Titulo>
         </div>
       </header>
 
-      {/* El dato de la pantalla: cuánto reservar por mes para cubrir todo lo
-          que se viene con fecha. Es un estimado, así que va como rango (regla
-          4). Sin nada con fecha y monto, el cartel invita a cargar. */}
-      <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-1" style={{ background: COLORS.brandSoft }} aria-live="polite">
-        {reservaTotal ? (
-          <>
-            <p className="text-[14px] font-semibold" style={{ color: COLORS.brandDark }}>Para lo que se viene, reservá</p>
-            <p className="text-[24px] font-bold leading-tight tabular-nums" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
-              entre {fmtMoney(reservaTotal.min)} y {fmtMoney(reservaTotal.max)} <span className="text-[16px] font-semibold">por mes</span>
-            </p>
-            <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>
-              Sumando {reservaTotal.cuantos === 1 ? 'lo que cargaste con fecha' : `las ${reservaTotal.cuantos} cosas que cargaste con fecha`}.
-            </p>
-            <EstadoConfianza estado="estimado" />
-          </>
-        ) : (
-          <>
-            <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>¿Qué se viene?</p>
-            <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>
-              Cargá los gastos que ya sabés que vas a tener y te decimos cuánto reservar por mes para llegar.
-            </p>
-          </>
+      {/* El cartel de arriba dice para qué es la pantalla: cargar lo que se
+          viene y reservar a tiempo. Si hay gastos con monto y fecha, suma la
+          recomendación: cuánto reservar por mes para cubrirlos (estimado, como
+          rango, regla 4). Compacto: en el celular la lista tiene que verse. */}
+      <div className="rounded-2xl px-4 py-3 flex flex-col gap-0.5" style={{ background: COLORS.brandSoft }} aria-live="polite">
+        <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>¿Qué se viene?</p>
+        <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>Planificá los gastos que ya sabés que se vienen y tus objetivos.</p>
+        {reservaTotal && (
+          <p className="text-[14px] leading-snug pt-1.5" style={{ color: COLORS.ink }}>
+            Para eso, reservá <span className="font-bold tabular-nums">entre {fmtMoney(reservaTotal.min)} y {fmtMoney(reservaTotal.max)} por mes</span>
+            <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
+          </p>
         )}
       </div>
 
@@ -1215,13 +1223,19 @@ export function ObjetivosV2() {
           UN solo personaje, con el globo saliendo de él: antes había el de la
           franja y además el centrado que ya estaba, o sea Fini dos veces en la
           misma pantalla mirándose. */}
+      {/* Fini queda fija arriba de la lista, haya o no objetivos (pedido oct
+          2026): acompaña la idea de la pantalla. Con objetivos va más chica,
+          para que la lista entre en el celular. */}
+      <FiniPresenta
+        dice={objetivos.length === 0
+          ? "¿Qué gasto ya sabés que se viene? Empezá por ponerle nombre; el monto y la fecha los vemos después."
+          : "¿Se viene otro gasto? Sumalo y te decimos cuánto reservar."}
+        state={objetivos.length === 0 ? "vacio" : "idle"}
+        size={objetivos.length === 0 ? 124 : 84}
+      />
+
       {objetivos.length === 0 && (
-        <div className="flex flex-col gap-3 pt-1">
-          <FiniPresenta
-            dice="¿Qué gasto ya sabés que se viene? Empezá por ponerle nombre; el monto y la fecha los vemos después."
-            state="vacio"
-            size={124}
-          />
+        <div className="flex flex-col gap-3">
           <TituloSeccion>¿Con qué arrancás?</TituloSeccion>
           {/* Grilla en vez de chips que envuelven: seis sugerencias de largos
               distintos quedaban en escalera (2 + 3 + 1). En dos columnas se
