@@ -11,11 +11,9 @@ export type Tope = { monto: number; periodo: Periodo };
 export type Categoria = { id: string; nombre: string };
 export type Gasto = { id: string; monto: number; montoArs: number; moneda: Moneda; descripcion: string; categoriaId: string; tipo: TipoGasto; tipoOtro?: string; ts: number; metodoPago?: string; pagos?: PagoMixto[]; origen: 'web' | 'whatsapp' | 'manual' };
 
-// El "tipo de gasto" es una CLASIFICACIÓN que eligió la persona, no un juicio:
-// las etiquetas son hues categóricos de identidad, no estados de alerta. El
-// monto siempre va en tinta neutral, así ningún gasto queda pintado como error
-// (§3.3). Se evita el naranja acá, reservado a atención accionable, para que
-// "urgente" no lea como reto.
+// El "tipo de gasto" es una CLASIFICACIÓN que eligió la persona, no un juicio.
+// En pantalla va sin color (decisión oct 2026: los colores son sólo de las
+// secciones); el color de abajo queda por si se vuelve a usar.
 export const TIPO_INFO: Record<TipoGasto, { label: string; color: string }> = {
   urgente: { label: 'Urgente', color: COLORS.lila },
   // Se guarda 'impulsivo' (el dato no cambia), pero se dice "Gusto":

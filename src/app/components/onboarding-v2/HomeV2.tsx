@@ -10,6 +10,7 @@ import { COLORS, consumirFiniAterriza, FONTS, Fila, Titulo, TituloSeccion, fecha
 import { IconFuego, IconPerfil } from './FinaIcons';
 import { useProximoPaso } from '../../api/v2/ProximoPasoProvider';
 import { RecordatorioGastos } from './RecordatorioGastos';
+import { PlanesDeHoy } from './PlanesDeHoy';
 import { ProximoPasoInicio } from './ProximoPasoInicio';
 import { ObjetivosEnInicio } from './ObjetivosEnInicio';
 
@@ -153,6 +154,8 @@ export function HomeV2() {
       {/* 1. Registrar lo del día: un recordatorio fijo arriba. Es lo que
           sostiene la racha y todo lo demás. */}
       <RecordatorioGastos />
+      {/* El día que toca un gasto planificado, la pregunta de si se usó. */}
+      <PlanesDeHoy />
 
       {/* Detalle de la racha: qué sumó cada día. Un número que no se puede
           abrir es un puntaje; abriéndolo es un dato. */}

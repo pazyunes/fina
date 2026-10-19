@@ -141,7 +141,7 @@ export function GastosV2() {
   // En cero y no en negativo: gastar más de lo que se cargó suele ser que
   // falta cargar ingresos, y se dice aparte, sin alerta (regla 3).
   const disponibleVentana = Math.max(plataDelPeriodo - totalGastado - apartadoAhora, 0);
-  const teQueda = periodoCerrado ? 'Te quedó' : apartadoAhora > 0 ? 'Libre para gastar' : 'Te queda';
+  const teQueda = periodoCerrado ? 'Te quedó' : 'Disponible';
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => colorDeSeccion(catId, categorias);
 
@@ -378,10 +378,18 @@ export function GastosV2() {
             <EstadoConfianza estado="declarado" className="mt-1" />
           </div>
 
-          {/* Leyenda: las 3 secciones que más se llevaron y lo que queda. El
-              resto está en Tus secciones, más abajo. */}
+          {/* Leyenda: primero lo disponible, después las 3 secciones que más se
+              llevaron y lo apartado. El resto de las secciones está en Tus
+              secciones, más abajo. */}
           {(porSeccion.length > 0 || conIngreso) && (
             <ul className="px-2 flex flex-col gap-1.5">
+              {conIngreso && (
+                <li className="flex items-center gap-2.5 text-[14px] font-semibold">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
+                  <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>{teQueda}</span>
+                  <Monto value={disponibleVentana} className="text-[14px] font-semibold" />
+                </li>
+              )}
               {porSeccion.slice(0, 3).map((s) => (
                 <li key={s.id} className="flex items-center gap-2.5 text-[14px]">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} aria-hidden />
@@ -396,19 +404,12 @@ export function GastosV2() {
               )}
               {conApartado && (
                 <li>
-                  {/* Lo apartado lleva a Mis objetivos, donde está para qué es. */}
+                  {/* Lo apartado lleva a Mis planes, donde está para qué es. */}
                   <button type="button" onClick={() => navigate('/onboarding-v2/objetivos')} className="v2-focus w-full flex items-center gap-2.5 text-[14px] text-left rounded-lg">
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lila }} aria-hidden />
-                    <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>Apartado</span>
+                    <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>Apartado para tus planes</span>
                     <Monto value={apartadoAhora} className="text-[14px] font-semibold" />
                   </button>
-                </li>
-              )}
-              {conIngreso && (
-                <li className="flex items-center gap-2.5 text-[14px] font-semibold">
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
-                  <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>{teQueda}</span>
-                  <Monto value={disponibleVentana} className="text-[14px] font-semibold" />
                 </li>
               )}
             </ul>
@@ -607,7 +608,6 @@ export function GastosV2() {
           <ul className="flex flex-col">
             {porTipo.map((t) => (
               <li key={t.clave} className="flex items-center gap-2.5 py-2 border-b last:border-b-0 text-[14px]" style={{ borderColor: COLORS.line }}>
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: TIPO_INFO[t.tipo].color }} aria-hidden />
                 <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{t.label}</span>
                 <Monto value={t.monto} className="text-[14px] font-semibold" />
               </li>

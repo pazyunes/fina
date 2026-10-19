@@ -16,7 +16,7 @@ import { IconChat, IconClose, IconGastos, IconHome, IconInversiones, IconObjetiv
 const TABS = [
   { to: '/onboarding-v2/home', label: 'Home', icon: IconHome },
   { to: '/onboarding-v2/gastos', label: 'Gastos', icon: IconGastos },
-  { to: '/onboarding-v2/objetivos', label: 'Objetivos', icon: IconObjetivos },
+  { to: '/onboarding-v2/objetivos', label: 'Planes', icon: IconObjetivos },
   { to: '/onboarding-v2/inversiones', label: 'Inversiones', icon: IconInversiones },
 ];
 

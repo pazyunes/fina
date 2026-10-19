@@ -378,7 +378,8 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
                 aria-pressed={sel}
                 onClick={() => setTipo(t)}
                 className="v2-focus rounded-xl px-1 min-h-[44px] text-[14px] font-semibold transition-all duration-100 active:scale-95"
-                style={sel ? { background: TIPO_INFO[t].color, color: COLORS.ink } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                // Sin color propio por tipo: los colores son de las secciones.
+                style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
               >
                 {TIPO_INFO[t].label}
               </button>

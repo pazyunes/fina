@@ -892,7 +892,7 @@ export async function listarObjetivos(): Promise<Resultado<Objetivo[]>> {
     montoMin: f.amount_min_ars == null ? null : Number(f.amount_min_ars),
     estado: (f.status as Objetivo['estado']) ?? 'active',
     clase: f.purpose === 'gasto' ? 'gasto' : 'ahorro',
-    repite: f.repeats === 'mensual' ? 'mensual' : null,
+    repite: f.repeats === 'mensual' || f.repeats === 'semanal' ? f.repeats : null,
     contribuciones: (f.goal_contributions ?? [])
       .map((c): Contribucion => ({
         id: c.id,

@@ -147,8 +147,8 @@ export type Objetivo = {
    * pagar (migración 0043). Lo apartado en los dos deja de estar libre.
    */
   clase: 'ahorro' | 'gasto';
-  /** Sólo en los gastos: si se repite todos los meses. */
-  repite: 'mensual' | null;
+  /** Sólo en los gastos: si se repite cada semana o cada mes. */
+  repite: 'mensual' | 'semanal' | null;
 };
 
 export type PerfilInversor = {

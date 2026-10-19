@@ -12,8 +12,9 @@ import type { EstadoV2, Objetivo } from './tipos';
 //     ('paid'). Al pagar se registra un 'paid' por lo que estaba apartado, así
 //     lo libre no baja dos veces: bajó al apartar, y el gasto lo reemplaza.
 //
-// Más la "plata apartada" suelta del perfil (la reserva), que es plata
-// apartada sin un destino puntual.
+// La "plata apartada" suelta del perfil (la reserva) se informa aparte pero no
+// entra al total: dejó de verse en Mis planes (oct 2026), y restar del
+// disponible algo que no se ve en ningún lado sería un número sin explicación.
 //
 // Todo en pesos, con el equivalente congelado de cada registro.
 // ─────────────────────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ export type Apartado = {
   paraGastos: number;
   /** Para sus objetivos de ahorro. */
   paraAhorro: number;
-  /** La reserva suelta del perfil, sin destino puntual. */
+  /** La reserva suelta del perfil, sin destino puntual. No entra en `total`. */
   sinDestino: number;
 };
 
@@ -50,5 +51,5 @@ export function apartadoTotal(e: EstadoV2): Apartado {
     if (o.clase === 'gasto') paraGastos += a; else paraAhorro += a;
   }
   const sinDestino = Math.max(e.perfil.reserva, 0);
-  return { total: paraGastos + paraAhorro + sinDestino, paraGastos, paraAhorro, sinDestino };
+  return { total: paraGastos + paraAhorro, paraGastos, paraAhorro, sinDestino };
 }

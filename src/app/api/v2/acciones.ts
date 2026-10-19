@@ -724,7 +724,7 @@ export async function sumarContribucion(objetivoId: string, c: {
  *   2. se libera lo que estaba apartado para eso, con un registro 'paid' por
  *      ese monto. Lo libre ya había bajado al apartar: si no se liberara, el
  *      mismo pago contaría dos veces;
- *   3. si se repite todos los meses, la fecha pasa al mes que viene y vuelve a
+ *   3. si se repite, la fecha pasa a la semana o al mes que viene y vuelve a
  *      empezar; si no, queda como hecho.
  */
 export async function pagarGastoQueSeViene(o: Objetivo, p: { monto: number; seccionId: string | null; apartado: number }): Promise<string | null> {
@@ -741,11 +741,11 @@ export async function pagarGastoQueSeViene(o: Objetivo, p: { monto: number; secc
     const c = await sumarContribucion(o.id, { monto: liberar, moneda: o.moneda, kind: 'paid', label: 'Pagado' });
     if (c.error !== null) return c.error;
   }
-  if (o.repite === 'mensual') {
+  if (o.repite) {
     const hoy = new Date().toISOString().slice(0, 10);
     const fecha = parsearHorizonte(o.horizonte, hoy) ?? hoy;
     const d = new Date(`${fecha}T12:00:00`);
-    d.setMonth(d.getMonth() + 1);
+    if (o.repite === 'semanal') d.setDate(d.getDate() + 7); else d.setMonth(d.getMonth() + 1);
     editarObjetivo(o.id, { horizonte: d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) });
   } else {
     editarObjetivo(o.id, { estado: 'achieved' });
