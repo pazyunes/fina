@@ -14,6 +14,7 @@ import { FUENTES_INGRESO, type FuenteIngreso } from '../../api/v2/tipos';
 import { FilaGasto } from './FilaGasto';
 import { FilaSeccion } from './FilaSeccion';
 import { FormularioGasto, INPUT_STYLE, METODOS_SUGERIDOS } from './FormularioGasto';
+import { Hoja } from './Hoja';
 import { TIPOS, TIPO_INFO, colorDeSeccion, gastosDeLaBase, recientes, seccionesDeLaBase, type Periodo, type TipoGasto } from './datosGasto';
 
 // REDISEÑO v2. Mis Gastos. Lo principal es el anillo del período: arriba se
@@ -235,10 +236,6 @@ export function GastosV2() {
     formDesdeOrigen.current = true;
     setChooser(false);
     setAddingGasto(true);
-    llevarA(
-      () => pantallaRef.current?.querySelector<HTMLElement>('[data-form-gasto]'),
-      () => pantallaRef.current?.querySelector<HTMLElement>('[aria-label="Monto del gasto"]'),
-    );
   });
   // Desde el aviso de vencimiento o la tarjeta de Home.
   useAlLlegar('fijos', () => {
@@ -425,7 +422,7 @@ export function GastosV2() {
           el tiempo, lado a lado y con el mismo peso. El de ingreso va en un
           violeta más claro para que se lean como dos acciones distintas. */}
       <div className="flex flex-col gap-3">
-        {!addingGasto && !addingDisponible && (
+        {!addingDisponible && (
           <div className="flex gap-2.5">
             <button
               type="button"
@@ -564,12 +561,17 @@ export function GastosV2() {
           </div>
         )}
 
+        {/* Registrar un gasto se abre aparte, en una hoja encima de la
+            pantalla: mezclado con el resto de Gastos no se distinguía dónde
+            terminaba el formulario. */}
         {addingGasto && (
-          <FormularioGasto
-            categorias={categorias}
-            onListo={() => { formDesdeOrigen.current = false; setAddingGasto(false); }}
-            onCancelar={cerrarFormGasto}
-          />
+          <Hoja titulo="Nuevo gasto" onCerrar={cerrarFormGasto}>
+            <FormularioGasto
+              categorias={categorias}
+              onListo={() => { formDesdeOrigen.current = false; setAddingGasto(false); }}
+              onCancelar={cerrarFormGasto}
+            />
+          </Hoja>
         )}
       </div>
 
