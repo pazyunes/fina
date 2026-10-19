@@ -1116,7 +1116,7 @@ export function ObjetivosV2() {
     <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: `${COLORS.ink}73` }} onClick={cerrarCrear}>
       <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto rounded-[24px] p-5 flex flex-col gap-3.5" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <Titulo>Algo que se viene</Titulo>
+          <p className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Nuevo objetivo</p>
           <button type="button" onClick={cerrarCrear} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
         <label htmlFor="nuevo-objetivo-nombre" className="sr-only">Nombre (obligatorio)</label>
@@ -1341,7 +1341,7 @@ export function ObjetivosV2() {
         className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-4 text-[16px] font-bold transition-all duration-100 active:scale-[0.99]"
         style={{ borderColor: COLORS.lineStrong, color: COLORS.ink }}
       >
-        <IconMas size={17} /> Agregar algo que se viene
+        <IconMas size={17} /> Agregar nuevo objetivo
       </button>
 
       {/* Plata apartada, debajo de la lista: lo primero son los objetivos y lo

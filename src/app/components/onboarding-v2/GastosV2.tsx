@@ -422,8 +422,9 @@ export function GastosV2() {
           el tiempo, lado a lado y con el mismo peso. El de ingreso va en un
           violeta más claro para que se lean como dos acciones distintas. */}
       <div className="flex flex-col gap-3">
-        {!addingDisponible && (
-          <div className="flex gap-2.5">
+        {/* Los dos formularios se abren aparte, en una hoja (CLAUDE.md regla
+            12): los botones quedan siempre a la vista. */}
+        <div className="flex gap-2.5">
             <button
               type="button"
               onClick={() => { setChooser(true); setWaStep(false); }}
@@ -441,10 +442,10 @@ export function GastosV2() {
               + Agregar ingreso
             </button>
           </div>
-        )}
 
         {addingDisponible && (
-          <div className="flex flex-col gap-2">
+          <Hoja titulo="Nuevo ingreso" onCerrar={cerrarIngreso}>
+          <div className="flex flex-col gap-2 pt-1">
             <SegmentedTab
               options={[{ id: 'ingreso' as const, label: 'Me entró' }, { id: 'tenia' as const, label: 'Ya la tenía' }]}
               value={addDispEsIngreso ? 'ingreso' : 'tenia'}
@@ -559,6 +560,7 @@ export function GastosV2() {
               </button>
             </div>
           </div>
+          </Hoja>
         )}
 
         {/* Registrar un gasto se abre aparte, en una hoja encima de la

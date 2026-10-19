@@ -216,6 +216,13 @@ Reglas duras:
   se ve completo al abrirla. Tamaños de referencia: título de pantalla 26px, título de
   sección 18px, texto 14 a 15px, dato principal 26 a 32px. Si algo no entra, se achica o
   se va otra cosa, no se agranda la pantalla.
+- **Los botones abren pantallas, no despliegan hacia abajo** (CLAUDE.md regla 12). Un
+  botón de acción (registrar un gasto o un ingreso, crear un objetivo) abre una pantalla
+  nueva o una hoja aparte, `onboarding-v2/Hoja.tsx`: en el celular sube desde abajo con un
+  velo detrás, y se cierra con la X, con Esc o tocando el velo. Un formulario desplegado
+  en el medio de la pantalla se mezcla con lo que hay alrededor y no se sabe dónde
+  termina. En el lugar sólo se despliega texto de lectura: una explicación, los pasos de
+  "Cómo hacerlo".
 - **Inicio es un tablero de entradas.** Lo que tiene su propia pantalla aparece en Inicio
   como un botón o una fila compacta (título, una línea, a lo sumo una barrita) que lleva
   ahí; el detalle vive en su pantalla. Ejemplo: el recordatorio de sumarle a un objetivo
