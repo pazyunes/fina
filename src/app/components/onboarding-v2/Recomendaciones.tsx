@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { COLORS, EstadoConfianza, FONTS, fmtMoney } from './shared';
+import { Fini } from './Fini';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
 import { diaArgentina, pasosPosiblesManana } from '../../api/v2/pasos';
@@ -186,8 +187,19 @@ export function Recomendaciones() {
   if (!elegida) return null;
 
   return (
-    <section className="flex flex-col gap-2">
-      <Mensaje key={`${elegida.periodo}-${elegida.item.ref}`} item={elegida.item} onUtil={marcarUtilidad} />
+    <section className="flex flex-col gap-2" aria-label="Recomendación de FINA">
+      {/* Fini se asoma desde atrás del cartel: va detrás (z-0) y el cartel lo
+          tapa hasta la mitad, así parece que sale de adentro. Es un momento de
+          acompañamiento (§6): Fini acompaña el consejo, no reacciona a un
+          gasto. Sube una vez al aparecer y se queda quieta. */}
+      <div className="relative pt-9">
+        <div className="absolute right-5 top-0 z-0 v2-fini-asoma" aria-hidden>
+          <Fini state="idle" size={56} />
+        </div>
+        <div className="relative z-10 rounded-2xl px-4 py-3.5" style={{ background: COLORS.starSoft }}>
+          <Mensaje key={`${elegida.periodo}-${elegida.item.ref}`} item={elegida.item} onUtil={marcarUtilidad} />
+        </div>
+      </div>
       <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
         {elegida.item.tipo === 'ia' ? 'Hecha con IA a partir de tus datos. No es asesoramiento financiero.'
           : elegida.item.tipo === 'calculada' ? 'Calculada con tus gastos de los últimos 30 días. No es asesoramiento financiero.'
@@ -197,16 +209,15 @@ export function Recomendaciones() {
   );
 }
 
-// Un mensaje, sin casilla: se lee, no se cumple. Va apoyado en el papel con
-// una línea a la izquierda, sin tarjeta, para no pelearle la mirada al paso del
-// día ni a los gráficos.
+// Un mensaje, sin casilla: se lee, no se cumple. Va en un cartel amarillo
+// suave (el color de Fini y de los momentos de marca), debajo del paso del día.
 function Mensaje({ item, onUtil }: {
   item: Item;
   onUtil: (id: string, util: boolean | null) => void;
 }) {
   const r = item.contenido;
   return (
-    <article className="flex flex-col gap-2 pl-3.5 border-l-2" style={{ borderColor: COLORS.brandSoft }}>
+    <article className="flex flex-col gap-2">
       <h3 className="text-[15px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
         {r.titulo}
       </h3>

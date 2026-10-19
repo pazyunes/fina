@@ -13,7 +13,6 @@ import { pasoPorClave } from '../../api/v2/pasos';
 import { LinkWhatsApp } from './LinkWhatsApp';
 import { RecordatorioGastos } from './RecordatorioGastos';
 import { RevisionDelPaso } from './RevisionDelPaso';
-import { EntradaPreguntaDelDia } from './PreguntaDelDia';
 import { ObjetivosEnInicio } from './ObjetivosEnInicio';
 
 
@@ -282,13 +281,14 @@ export function HomeV2() {
         </div>
       </section>
 
-      {/* La pregunta del día, opcional, pegada al paso: se abre en un panel
-          (sola la primera vez del día) en vez de ocupar Inicio (DEBT R1). */}
-      <div className="-mt-2">
-        <EntradaPreguntaDelDia />
-      </div>
-
       {mostrarRevision && paso && <RevisionDelPaso paso={paso} onRespondida={marcarRevisado} />}
+
+      {/* Arriba quedan sólo el paso de hoy y, pegada debajo, UNA
+          recomendación, con Fini asomándose del cartel. La pregunta del día
+          salió de Inicio (decisión oct 2026). Recomendaciones hace también la
+          llamada diaria a la IA que elige el paso de mañana y arma los planes
+          de objetivos. */}
+      <Recomendaciones />
 
       {/* Tus objetivos: el más relevante, cuánto avanzó y qué hacer (DEBT I7). */}
       <ObjetivosEnInicio />
@@ -302,12 +302,6 @@ export function HomeV2() {
 
 
       <MisVisualizaciones />
-
-      {/* UNA recomendación, como mensaje y debajo de los gráficos: no es una
-          tarea ni lo central de la pantalla (DEBT I10). Hace también la llamada
-          diaria a la IA que elige el paso de mañana y arma los planes de
-          objetivos. */}
-      <Recomendaciones />
 
       {/* Se fueron Tu plata guardada y Mis competencias (DEBT I8 e I9). La
           reserva sólo vivía acá y en el navegador (loadV2Reserva): deja de verse
