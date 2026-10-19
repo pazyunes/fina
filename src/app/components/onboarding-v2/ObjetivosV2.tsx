@@ -1152,21 +1152,24 @@ export function ObjetivosV2() {
           encabezado (§6: onboarding/estados vacíos) — sin montos ni progreso
           al lado, así que no compite con ningún dato. */}
       {/* Sin bajada (DEBT G2): el título se entiende solo. */}
-      <header data-franja className="pb-1 mb-2 flex items-center gap-3">
+      <header data-franja className="pb-1 flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <Titulo>Tus objetivos</Titulo>
         </div>
       </header>
 
+      {/* El cartel de arriba dice para qué es la pantalla: mirar lo que se
+          viene y planificarlo. Pedido explícito (oct 2026), por eso lleva una
+          línea abajo aunque la regla general sea títulos sin bajada. */}
+      <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-0.5" style={{ background: COLORS.brandSoft }}>
+        <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>¿Qué se viene?</p>
+        <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>Planificá tus próximos gastos y tus objetivos.</p>
+      </div>
+
       {/* Desktop: 2 columnas (lista principal + barra lateral). Mobile: apilado. */}
       <div className="flex flex-col gap-4 lg:flex-row lg:gap-6 lg:items-start">
       {/* Columna principal */}
       <div className="flex flex-col gap-4 lg:flex-1 lg:min-w-0">
-
-      {/* Plata apartada arriba de la lista (DEBT I12). En el día 1 sin
-          objetivos ni reserva no aparece: la pantalla vacía es la invitación a
-          crear el primero. */}
-      {(objetivos.length > 0 || db.perfil.reserva > 0) && <PlataApartada monto={db.perfil.reserva} />}
 
       {/* Estado vacío con onda: sugerencias para arrancar (abren el modal).
           Fini acompaña acá y no en la lista con objetivos: §6 lo deja en
@@ -1295,6 +1298,11 @@ export function ObjetivosV2() {
       >
         <IconMas size={17} /> Agregar objetivo
       </button>
+
+      {/* Plata apartada, debajo de la lista: lo primero son los objetivos y lo
+          que se viene. En el día 1 sin objetivos ni reserva no aparece: la
+          pantalla vacía es la invitación a crear el primero. */}
+      {(objetivos.length > 0 || db.perfil.reserva > 0) && <PlataApartada monto={db.perfil.reserva} />}
       </div>{/* /columna principal */}
 
       {/* Barra lateral */}
