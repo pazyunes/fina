@@ -228,7 +228,10 @@ export function MisVisualizaciones() {
         // tabIndex para que se pueda recorrer con el teclado: una fila con
         // scroll horizontal que no toma foco es inaccesible sin mouse.
         tabIndex={0}
-        className="v2-focus flex items-start gap-3 overflow-x-auto snap-x snap-mandatory -mx-[22px] px-[22px] scroll-pl-[22px] pb-1 lg:mx-0 lg:px-0 lg:scroll-pl-0"
+        // items-stretch: todas las tarjetas miden lo mismo (la más alta), aunque
+        // a alguna le sobre espacio. Con alturas distintas la fila se veía
+        // despareja al deslizar (pedido oct 2026).
+        className="v2-focus flex items-stretch gap-3 overflow-x-auto snap-x snap-mandatory -mx-[22px] px-[22px] scroll-pl-[22px] pb-1 lg:mx-0 lg:px-0 lg:scroll-pl-0"
         style={{ scrollbarWidth: 'none' }}
       >
         {tarjetas.map((t, i) => (
