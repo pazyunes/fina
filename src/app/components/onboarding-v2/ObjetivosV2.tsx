@@ -1412,7 +1412,7 @@ export function ObjetivosV2() {
 
       {/* Primero los objetivos de ahorro: son las aspiraciones de la persona.
           Sin descripción: el título y el ejemplo ya dicen qué va acá. */}
-      <section className="flex flex-col gap-2" aria-label="Objetivos de ahorro">
+      <section className="mt-3 flex flex-col gap-2" aria-label="Objetivos de ahorro">
         <TituloSeccion>Objetivos de ahorro</TituloSeccion>
         {deAhorro.length === 0
           ? vacio('ahorro', { nombre: 'Vacaciones', monto: '$0 de $500.000', cuando: 'para marzo' })
