@@ -33,7 +33,7 @@ export function Hoja({ titulo, onCerrar, children }: { titulo: string; onCerrar:
         {/* La rayita de arriba avisa que es una hoja, como en el celular. */}
         <span className="sm:hidden self-center w-10 h-1 rounded-full mb-1" style={{ background: COLORS.line }} aria-hidden />
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[18px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</p>
+          <p className="text-[17px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</p>
           <button
             type="button"
             onClick={onCerrar}

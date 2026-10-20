@@ -21,13 +21,13 @@ function CampoFecha({ id, label, value, min, max, onChange }: {
 }) {
   return (
     <div className="flex-1 min-w-0 flex flex-col gap-1">
-      <label htmlFor={id} className="flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>
+      <label htmlFor={id} className="flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
         <IconCalendario size={16} /> {label}
       </label>
       <input
         id={id}
         type="date"
-        className="v2-focus w-full min-w-0 rounded-xl px-3 min-h-[44px] text-[14px] transition-colors"
+        className="v2-focus w-full min-w-0 rounded-xl px-3 min-h-[44px] text-[13px] transition-colors"
         style={{ ...INPUT_STYLE, color: value ? COLORS.ink : COLORS.inkFaint }}
         value={value}
         min={min}
@@ -93,7 +93,7 @@ export function TodosLosGastos() {
           <input
             autoFocus
             aria-label="Buscar gastos por nombre"
-            className="v2-focus rounded-xl px-4 min-h-[44px] text-[15px] transition-colors"
+            className="v2-focus rounded-xl px-4 min-h-[44px] text-[14px] transition-colors"
             style={INPUT_STYLE}
             placeholder="Buscar por nombre (ej: Rappi)"
             value={busqueda}
@@ -109,7 +109,7 @@ export function TodosLosGastos() {
             <CampoFecha id="filtro-hasta" label="Hasta" value={filtroHasta} min={filtroDesde || undefined} onChange={setFiltroHasta} />
           </div>
           {hayFiltro && (
-            <button type="button" onClick={limpiar} className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline" style={{ color: COLORS.inkSoft }}>
+            <button type="button" onClick={limpiar} className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline" style={{ color: COLORS.inkSoft }}>
               Sacar los filtros
             </button>
           )}
@@ -124,9 +124,9 @@ export function TodosLosGastos() {
       />
 
       <div className="flex flex-col">
-        {gastos.length === 0 && <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
+        {gastos.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
         {gastos.length > 0 && filtrados.length === 0 && (
-          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>No encontramos gastos con esos filtros.</p>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>No encontramos gastos con esos filtros.</p>
         )}
         {filtrados.map((g) => (
           <FilaGasto

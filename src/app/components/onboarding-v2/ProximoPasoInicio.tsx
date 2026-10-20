@@ -78,11 +78,11 @@ export function ProximoPasoInicio() {
 
       {/* Lo que acaba de hacer, en lima: el momento de valor (§3.3, §5.3). */}
       {recien && !festejando && (
-        <div className="flex items-center gap-2 text-[14px]" role="status">
+        <div className="flex items-center gap-2 text-[13px]" role="status">
           <p className="flex-1 min-w-0 font-semibold" style={{ color: COLORS.limaText }}>
             Completaste "{recien.titulo}".
           </p>
-          <button type="button" onClick={() => void volverAtras()} className="v2-focus shrink-0 min-h-[44px] px-1 text-[14px] font-semibold underline" style={{ color: COLORS.inkSoft }}>
+          <button type="button" onClick={() => void volverAtras()} className="v2-focus shrink-0 min-h-[44px] px-1 text-[13px] font-semibold underline" style={{ color: COLORS.inkSoft }}>
             Deshacer
           </button>
         </div>
@@ -91,18 +91,18 @@ export function ProximoPasoInicio() {
       <div className="rounded-2xl px-4 py-3 flex flex-col gap-2.5" style={CARD_ELEVADA}>
         {!paso ? (
           <button type="button" onClick={() => navigate(PROGRESO)} className="v2-focus text-left flex flex-col gap-1.5 rounded-xl">
-            <span className="text-[14px] font-semibold" style={{ color: COLORS.limaText }}>Tu próximo paso</span>
-            <span className="font-bold text-[18px] leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+            <span className="text-[13px] font-semibold" style={{ color: COLORS.limaText }}>Tu próximo paso</span>
+            <span className="font-bold text-[17px] leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
               Completaste todos los pasos grandes que te tocaban
             </span>
-            <span className="inline-flex items-center gap-1 text-[14px] font-semibold" style={{ color: COLORS.brand }}>
+            <span className="inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: COLORS.brand }}>
               Ver tu progreso <IconChevron size={14} />
             </span>
           </button>
         ) : (
           <>
             <div className="flex items-start justify-between gap-2">
-              <p className="text-[14px] font-semibold pt-2.5" style={{ color: COLORS.inkSoft }}>Tu próximo paso</p>
+              <p className="text-[13px] font-semibold pt-2.5" style={{ color: COLORS.inkSoft }}>Tu próximo paso</p>
               {/* Un casillero vacío: se toca y se llena con el tilde. El área
                   táctil es de 44px aunque el círculo se vea de 30. */}
               <button
@@ -133,15 +133,15 @@ export function ProximoPasoInicio() {
               onClick={() => setPorQueAbierto((v) => !v)}
               className="v2-focus text-left flex items-start gap-2 rounded-xl -mt-2"
             >
-              <span className="flex-1 font-bold text-[18px] leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</span>
+              <span className="flex-1 font-bold text-[17px] leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{paso.titulo}</span>
               <span className="shrink-0 pt-0.5" style={{ color: COLORS.inkFaint }} aria-hidden>
                 <IconChevron size={18} style={{ transform: porQueAbierto ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 120ms' }} />
               </span>
             </button>
             {porQueAbierto && (
               <div className="flex flex-col gap-1 -mt-1">
-                <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{paso.porQue}</p>
-                <button type="button" onClick={() => navigate(PROGRESO)} className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.brand }}>
+                <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{paso.porQue}</p>
+                <button type="button" onClick={() => navigate(PROGRESO)} className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.brand }}>
                   Ver tu progreso <IconChevron size={14} />
                 </button>
               </div>
@@ -151,7 +151,7 @@ export function ProximoPasoInicio() {
               type="button"
               aria-expanded={comoAbierto}
               onClick={() => setComoAbierto((v) => !v)}
-              className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] -my-1.5 text-[14px] font-semibold"
+              className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] -my-1.5 text-[13px] font-semibold"
               style={{ color: COLORS.brand }}
             >
               Cómo hacerlo
@@ -160,7 +160,7 @@ export function ProximoPasoInicio() {
             {comoAbierto && (
               <ol className="flex flex-col gap-2 -mt-1">
                 {paso.comoHacerlo.map((t, i) => (
-                  <li key={t} className="flex gap-2.5 items-start text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+                  <li key={t} className="flex gap-2.5 items-start text-[13px] leading-snug" style={{ color: COLORS.ink }}>
                     <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold" style={{ background: COLORS.tint, color: COLORS.ink }}>{i + 1}</span>
                     <span className="flex-1 pt-0.5">{t}</span>
                   </li>
@@ -168,7 +168,7 @@ export function ProximoPasoInicio() {
               </ol>
             )}
 
-            {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
+            {error && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
 
             {/* Si una parte se hace en la app, el botón lleva ahí. En lima con
                 texto en tinta (§3.3). */}
@@ -178,7 +178,7 @@ export function ProximoPasoInicio() {
               <button
                 type="button"
                 onClick={() => navigate(paso.enLaApp?.destino ?? PROGRESO, { state: { abrir: paso.enLaApp?.abrir, from: '/onboarding-v2/home' } })}
-                className="v2-focus w-full rounded-2xl min-h-[48px] px-3 text-[15px] font-bold transition-transform duration-100 active:scale-[0.99]"
+                className="v2-focus w-full rounded-2xl min-h-[48px] px-3 text-[14px] font-bold transition-transform duration-100 active:scale-[0.99]"
                 style={{ background: COLORS.lima, color: COLORS.ink }}
               >
                 {paso.enLaApp.cta}

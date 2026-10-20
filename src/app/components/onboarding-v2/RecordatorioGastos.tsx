@@ -42,14 +42,14 @@ export function RecordatorioGastos() {
       // queremos que use.
       style={{ background: COLORS.brandFaint }}
     >
-      <p className="flex-1 min-w-[140px] text-[14px] font-semibold" style={{ color: hayGastoHoy ? COLORS.limaText : COLORS.ink }}>
+      <p className="flex-1 min-w-[140px] text-[13px] font-semibold" style={{ color: hayGastoHoy ? COLORS.limaText : COLORS.ink }}>
         {hayGastoHoy ? 'Ya anotaste lo de hoy' : primero ? 'Anotá tu primer gasto' : 'Recordá anotar tus gastos de hoy'}
       </p>
       {hayGastoHoy ? (
         <button
           type="button"
           onClick={irAGastos}
-          className="v2-focus min-h-[44px] px-3 rounded-full text-[14px] font-semibold"
+          className="v2-focus min-h-[44px] px-3 rounded-full text-[13px] font-semibold"
           style={{ color: COLORS.brand }}
         >
           Sumar otro
@@ -58,7 +58,7 @@ export function RecordatorioGastos() {
         <div className="flex items-center gap-1">
           <LinkWhatsApp
             onClick={() => { fueAWhatsApp.current = true; }}
-            className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[14px] font-semibold"
+            className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[13px] font-semibold"
             style={{ background: COLORS.limaSoft, color: COLORS.limaText }}
           >
             Por WhatsApp
@@ -66,7 +66,7 @@ export function RecordatorioGastos() {
           <button
             type="button"
             onClick={irAGastos}
-            className="v2-focus min-h-[44px] px-3 rounded-full text-[14px] font-semibold"
+            className="v2-focus min-h-[44px] px-3 rounded-full text-[13px] font-semibold"
             style={{ color: COLORS.brand }}
           >
             Acá

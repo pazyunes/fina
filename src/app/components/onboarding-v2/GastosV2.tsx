@@ -366,12 +366,12 @@ export function GastosV2() {
           </div>
 
           <div className="px-2 flex flex-col items-center text-center gap-1" aria-live="polite">
-            <p className="text-[14px] font-medium" style={{ color: COLORS.inkSoft }}>
+            <p className="text-[13px] font-medium" style={{ color: COLORS.inkSoft }}>
               {conIngreso ? teQueda : 'Gastaste'}
             </p>
-            <Monto value={conIngreso ? disponibleVentana : totalGastado} size={26} className="font-bold leading-tight tracking-[-0.01em]" />
+            <Monto value={conIngreso ? disponibleVentana : totalGastado} size={24} className="font-bold leading-tight tracking-[-0.01em]" />
             {conIngreso && (
-              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
                 De <span className="font-mono tabular-nums">{fmtMoney(plataDelPeriodo)}</span> que te entraron
               </p>
             )}
@@ -384,31 +384,31 @@ export function GastosV2() {
           {(porSeccion.length > 0 || conIngreso) && (
             <ul className="px-2 flex flex-col gap-1.5">
               {conIngreso && (
-                <li className="flex items-center gap-2.5 text-[14px] font-semibold">
+                <li className="flex items-center gap-2.5 text-[13px] font-semibold">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
                   <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>{teQueda}</span>
-                  <Monto value={disponibleVentana} className="text-[14px] font-semibold" />
+                  <Monto value={disponibleVentana} className="text-[13px] font-semibold" />
                 </li>
               )}
               {porSeccion.slice(0, 3).map((s) => (
-                <li key={s.id} className="flex items-center gap-2.5 text-[14px]">
+                <li key={s.id} className="flex items-center gap-2.5 text-[13px]">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: s.color }} aria-hidden />
                   <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{s.nombre}</span>
-                  <Monto value={s.monto} className="text-[14px] font-semibold" />
+                  <Monto value={s.monto} className="text-[13px] font-semibold" />
                 </li>
               ))}
               {porSeccion.length > 3 && (
-                <li className="text-[14px] pl-[22px]" style={{ color: COLORS.inkSoft }}>
+                <li className="text-[13px] pl-[22px]" style={{ color: COLORS.inkSoft }}>
                   Y {porSeccion.length - 3} {porSeccion.length - 3 === 1 ? 'sección más' : 'secciones más'}, abajo
                 </li>
               )}
               {conApartado && (
                 <li>
                   {/* Lo apartado lleva a Mis planes, donde está para qué es. */}
-                  <button type="button" onClick={() => navigate('/onboarding-v2/objetivos')} className="v2-focus w-full flex items-center gap-2.5 text-[14px] text-left rounded-lg">
+                  <button type="button" onClick={() => navigate('/onboarding-v2/objetivos')} className="v2-focus w-full flex items-center gap-2.5 text-[13px] text-left rounded-lg">
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lila }} aria-hidden />
                     <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>Apartado para tus planes</span>
-                    <Monto value={apartadoAhora} className="text-[14px] font-semibold" />
+                    <Monto value={apartadoAhora} className="text-[13px] font-semibold" />
                   </button>
                 </li>
               )}
@@ -416,7 +416,7 @@ export function GastosV2() {
           )}
 
           {gastasteDeMas > 0 && (
-            <p className="px-2 text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            <p className="px-2 text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
               {apartadoAhora > 0
                 ? <>Entre lo gastado y lo apartado, son <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró</>
                 : <>Salieron <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró</>}
@@ -426,14 +426,14 @@ export function GastosV2() {
             <button
               type="button"
               onClick={() => { setAddDispEsIngreso(true); setAddingDisponible(true); setAddingGasto(false); }}
-              className="v2-focus self-center min-h-[44px] text-[14px] font-semibold"
+              className="v2-focus self-center min-h-[44px] text-[13px] font-semibold"
               style={{ color: COLORS.brand }}
             >
               Sumá lo que te entró para ver cuánto te {periodoCerrado ? 'quedó' : 'queda'}
             </button>
           )}
           {!conIngreso && totalGastado === 0 && (
-            <p className="px-2 text-[14px] leading-snug text-center" style={{ color: COLORS.inkSoft }}>
+            <p className="px-2 text-[13px] leading-snug text-center" style={{ color: COLORS.inkSoft }}>
               {periodoCerrado
                 ? `No registraste entradas ni gastos en ${textoPeriodo.toLowerCase()}.`
                 : 'Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto te queda.'}
@@ -452,7 +452,7 @@ export function GastosV2() {
             <button
               type="button"
               onClick={() => { setChooser(true); setWaStep(false); }}
-              className="v2-focus flex-1 rounded-2xl py-4 text-[15px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
+              className="v2-focus flex-1 rounded-2xl py-4 text-[14px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               + Agregar gasto
@@ -460,7 +460,7 @@ export function GastosV2() {
             <button
               type="button"
               onClick={() => setAddingDisponible(true)}
-              className="v2-focus flex-1 rounded-2xl py-4 text-[15px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
+              className="v2-focus flex-1 rounded-2xl py-4 text-[14px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
               style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
             >
               + Agregar ingreso
@@ -476,7 +476,7 @@ export function GastosV2() {
               onChange={(v) => setAddDispEsIngreso(v === 'ingreso')}
               trackColor={COLORS.tint}
             />
-            <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
               {addDispEsIngreso
                 ? 'Cuenta como ingreso: se suma a lo que entró este mes.'
                 : 'Sólo suma a tu dinero disponible, sin contar como ingreso.'}
@@ -484,7 +484,7 @@ export function GastosV2() {
             <input
               autoFocus
               aria-label="Monto que te entró"
-              className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[15px] transition-colors"
+              className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[14px] transition-colors"
               style={INPUT_STYLE}
               placeholder="Monto"
               inputMode="decimal"
@@ -496,7 +496,7 @@ export function GastosV2() {
                 aria-label="De dónde vino la plata"
                 value={addDispFuente}
                 onChange={(e) => setAddDispFuente(e.target.value as FuenteIngreso | '')}
-                className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[15px]"
+                className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[14px]"
                 style={{ ...INPUT_STYLE, color: addDispFuente ? COLORS.ink : COLORS.inkFaint }}
               >
                 <option value="" style={{ color: COLORS.ink }}>¿De dónde vino? (opcional)</option>
@@ -509,7 +509,7 @@ export function GastosV2() {
                   autoFocus
                   aria-label="De dónde vino la plata, cuál"
                   maxLength={40}
-                  className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[15px] transition-colors"
+                  className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[14px] transition-colors"
                   style={INPUT_STYLE}
                   placeholder="Escribí de dónde (ej: Beca, Alquiler)"
                   value={addDispFuenteOtra}
@@ -525,7 +525,7 @@ export function GastosV2() {
                           type="button"
                           aria-pressed={sel}
                           onClick={() => setAddDispFuenteOtra(t)}
-                          className="v2-focus rounded-lg px-2.5 py-1 text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                          className="v2-focus rounded-lg px-2.5 py-1 text-[13px] font-semibold transition-all duration-100 active:scale-95"
                           style={sel
                             ? { background: COLORS.brandSoft, color: COLORS.brandDark }
                             : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
@@ -540,14 +540,14 @@ export function GastosV2() {
             )}
             {/* Se pregunta el medio acá para que después, al registrar un
                 gasto, se puedan ofrecer los que de verdad tenés. */}
-            <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>{addDispEsIngreso ? '¿Dónde entró?' : '¿En qué lo tenés?'}</p>
+            <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{addDispEsIngreso ? '¿Dónde entró?' : '¿En qué lo tenés?'}</p>
             <div className="flex flex-wrap gap-1.5">
               {metodosOfrecidos.map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setAddDispMetodo(m)}
-                  className="v2-focus rounded-lg px-2.5 py-1 min-h-[36px] text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                  className="v2-focus rounded-lg px-2.5 py-1 min-h-[36px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
                   style={addDispMetodo === m
                     ? { background: COLORS.brand, color: COLORS.surface }
                     : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
@@ -558,7 +558,7 @@ export function GastosV2() {
               <button
                 type="button"
                 onClick={() => setAddDispMetodo('otro')}
-                className="v2-focus rounded-lg px-2.5 py-1 min-h-[36px] text-[14px] font-semibold border border-dashed transition-all duration-100 active:scale-95"
+                className="v2-focus rounded-lg px-2.5 py-1 min-h-[36px] text-[13px] font-semibold border border-dashed transition-all duration-100 active:scale-95"
                 style={{ background: addDispMetodo === 'otro' ? COLORS.brandSoft : COLORS.surface, color: addDispMetodo === 'otro' ? COLORS.brandDark : COLORS.ink, borderColor: COLORS.lineStrong }}
               >
                 + Otro
@@ -568,7 +568,7 @@ export function GastosV2() {
               <input
                 autoFocus
                 aria-label="En qué tenés esa plata"
-                className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[15px] transition-colors"
+                className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[14px] transition-colors"
                 style={INPUT_STYLE}
                 placeholder="Ej: Ualá"
                 value={addDispMetodoOtro}
@@ -576,10 +576,10 @@ export function GastosV2() {
               />
             )}
             <div className="flex gap-2">
-              <button type="button" onClick={cerrarIngreso} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+              <button type="button" onClick={cerrarIngreso} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
                 Cancelar
               </button>
-              <button type="button" onClick={agregarDinero} disabled={parseMoneyInput(addDispVal) <= 0} className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
+              <button type="button" onClick={agregarDinero} disabled={parseMoneyInput(addDispVal) <= 0} className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[13px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
                 Agregar
               </button>
             </div>
@@ -607,9 +607,9 @@ export function GastosV2() {
           <TituloSeccion>¿En qué tipo de gasto se te va?</TituloSeccion>
           <ul className="flex flex-col">
             {porTipo.map((t) => (
-              <li key={t.clave} className="flex items-center gap-2.5 py-2 border-b last:border-b-0 text-[14px]" style={{ borderColor: COLORS.line }}>
+              <li key={t.clave} className="flex items-center gap-2.5 py-2 border-b last:border-b-0 text-[13px]" style={{ borderColor: COLORS.line }}>
                 <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{t.label}</span>
-                <Monto value={t.monto} className="text-[14px] font-semibold" />
+                <Monto value={t.monto} className="text-[13px] font-semibold" />
               </li>
             ))}
           </ul>
@@ -625,7 +625,7 @@ export function GastosV2() {
           // pantalla donde Fini puede aparecer (§6).
           <div className="py-4 flex flex-col items-center text-center gap-3">
             <Fini state="vacio" size={104} />
-            <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
               Cuando registres tu primer gasto, cada sección aparece sola acá y le podés poner un tope.
             </p>
             <EstadoConfianza estado="por-descubrir" />
@@ -650,7 +650,7 @@ export function GastosV2() {
             <button
               type="button"
               onClick={() => navigate('/onboarding-v2/gastos/secciones')}
-              className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
+              className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
               style={{ color: COLORS.brand }}
             >
               Consultar todas
@@ -664,9 +664,9 @@ export function GastosV2() {
           filtros, está en Todos tus gastos. */}
       <section className="flex flex-col gap-1" aria-label="Tus gastos">
         <TituloSeccion>Tus gastos</TituloSeccion>
-        {gastos.length === 0 && <p className="py-2 text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
+        {gastos.length === 0 && <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
         {gastos.length > 0 && ultimosGastos.length === 0 && (
-          <p className="py-2 text-[14px]" style={{ color: COLORS.inkSoft }}>No hay gastos en {textoPeriodo}.</p>
+          <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>No hay gastos en {textoPeriodo}.</p>
         )}
         <div className="flex flex-col">
           {ultimosGastos.map((g) => (
@@ -683,7 +683,7 @@ export function GastosV2() {
           <button
             type="button"
             onClick={() => navigate('/onboarding-v2/gastos/todos')}
-            className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
+            className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
             style={{ color: COLORS.brand }}
           >
             Consultar todos
@@ -699,8 +699,8 @@ export function GastosV2() {
           {porMedio.map((x) => (
             <div key={x.nombre} className="flex flex-col gap-1">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[14px] truncate" style={{ color: COLORS.ink }}>{x.nombre}</span>
-                <Monto value={x.monto} className="text-[14px] font-semibold shrink-0" />
+                <span className="text-[13px] truncate" style={{ color: COLORS.ink }}>{x.nombre}</span>
+                <Monto value={x.monto} className="text-[13px] font-semibold shrink-0" />
               </div>
               <div className="h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.line }}>
                 <div className="h-full rounded-full" style={{ width: `${(x.monto / maxMedio) * 100}%`, background: COLORS.brand }} />
@@ -722,7 +722,7 @@ export function GastosV2() {
           <div className="w-full max-w-md rounded-2xl p-5 flex flex-col gap-3" style={{ background: COLORS.surface, boxShadow: '0 12px 40px -8px rgba(43,33,24,0.35)' }} onClick={(e) => e.stopPropagation()}>
             {!waStep ? (
               <>
-                <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>¿Cómo querés registrar el gasto?</p>
+                <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>¿Cómo querés registrar el gasto?</p>
                 <button
                   type="button"
                   onClick={() => { setChooser(false); setAddingDisponible(false); setAddingGasto(true); }}
@@ -731,8 +731,8 @@ export function GastosV2() {
                 >
                   <span className="shrink-0" style={{ color: COLORS.brand }}><IconEditar size={22} /></span>
                   <span className="flex flex-col">
-                    <span className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Desde FINA</span>
-                    <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>Lo cargás acá, a mano, en un toque.</span>
+                    <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde FINA</span>
+                    <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>Lo cargás acá, a mano, en un toque.</span>
                   </span>
                 </button>
                 {/* Relleno lima: registrar hablando es la funcionalidad más
@@ -746,15 +746,15 @@ export function GastosV2() {
                 >
                   <span className="shrink-0" style={{ color: COLORS.ink }}><IconChat size={22} /></span>
                   <span className="flex flex-col">
-                    <span className="text-[16px] font-bold" style={{ color: COLORS.ink }}>Desde WhatsApp</span>
-                    <span className="text-[14px]" style={{ color: COLORS.limaText }}>Se lo contás a FINA hablando, sin cargar nada.</span>
+                    <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde WhatsApp</span>
+                    <span className="text-[13px]" style={{ color: COLORS.limaText }}>Se lo contás a FINA hablando, sin cargar nada.</span>
                   </span>
                 </button>
-                <button type="button" onClick={() => setChooser(false)} className="v2-focus text-[14px] font-semibold py-1 min-h-[44px]" style={{ color: COLORS.inkSoft }}>Cancelar</button>
+                <button type="button" onClick={() => setChooser(false)} className="v2-focus text-[13px] font-semibold py-1 min-h-[44px]" style={{ color: COLORS.inkSoft }}>Cancelar</button>
               </>
             ) : (
               <>
-                <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Registrá tu gasto por WhatsApp</p>
+                <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>Registrá tu gasto por WhatsApp</p>
                 <div className="flex flex-col gap-2.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }}>
                   {[
                     'Abrí el chat de FINA en WhatsApp.',
@@ -762,19 +762,19 @@ export function GastosV2() {
                     'FINA lo registra solo y lo ves acá en tus gastos.',
                   ].map((t, i) => (
                     <div key={t} className="flex gap-2.5 items-start">
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[14px] font-bold" style={{ background: COLORS.lima, color: COLORS.ink }}>{i + 1}</span>
-                      <span className="flex-1 text-[14px]" style={{ color: COLORS.ink }}>{t}</span>
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold" style={{ background: COLORS.lima, color: COLORS.ink }}>{i + 1}</span>
+                      <span className="flex-1 text-[13px]" style={{ color: COLORS.ink }}>{t}</span>
                     </div>
                   ))}
                 </div>
                 <LinkWhatsApp
                   onClick={() => setChooser(false)}
-                  className="v2-focus w-full rounded-2xl py-3.5 text-center text-[16px] font-bold transition-transform active:scale-[0.99]"
+                  className="v2-focus w-full rounded-2xl py-3.5 text-center text-[15px] font-bold transition-transform active:scale-[0.99]"
                   style={{ background: COLORS.lima, color: COLORS.ink }}
                 >
                   Ir a WhatsApp
                 </LinkWhatsApp>
-                <button type="button" onClick={() => setWaStep(false)} className="v2-focus inline-flex items-center justify-center gap-1 text-[14px] font-semibold py-1 min-h-[44px]" style={{ color: COLORS.inkSoft }}>
+                <button type="button" onClick={() => setWaStep(false)} className="v2-focus inline-flex items-center justify-center gap-1 text-[13px] font-semibold py-1 min-h-[44px]" style={{ color: COLORS.inkSoft }}>
                   <IconChevron size={14} style={{ transform: 'rotate(180deg)' }} /> Volver
                 </button>
               </>

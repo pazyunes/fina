@@ -21,7 +21,7 @@ export function VerTodos({ total, abierta, onToggle }: { total: number; abierta:
       type="button"
       onClick={onToggle}
       aria-expanded={abierta}
-      className="v2-focus w-full flex items-center justify-between min-h-[48px] py-2 text-[14px] font-semibold rounded-xl"
+      className="v2-focus w-full flex items-center justify-between min-h-[48px] py-2 text-[13px] font-semibold rounded-xl"
       style={{ color: COLORS.brand }}
     >
       <span>{abierta ? 'Ver menos' : `Ver todos (${total})`}</span>

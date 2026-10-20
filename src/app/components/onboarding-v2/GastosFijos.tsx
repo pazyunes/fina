@@ -76,7 +76,7 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">
-          <p id="fijo-titulo" className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Es un gasto que se repite</p>
+          <p id="fijo-titulo" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>Es un gasto que se repite</p>
         </div>
         <button
           type="button"
@@ -94,7 +94,7 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
       {valor.activo && (
         <div className="rounded-xl p-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }}>
           <div className="flex flex-col gap-1.5">
-            <p className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>¿Ya lo pagaste esta vez?</p>
+            <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Ya lo pagaste esta vez?</p>
             <SegmentedTab
               options={[{ id: 'si' as const, label: 'Sí, ya lo pagué' }, { id: 'no' as const, label: 'Todavía no' }]}
               value={valor.yaPagado ? 'si' : 'no'}
@@ -104,13 +104,13 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="fijo-frecuencia" className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>¿Cada cuánto se paga?</label>
+            <label htmlFor="fijo-frecuencia" className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Cada cuánto se paga?</label>
             <div className="relative">
               <select
                 id="fijo-frecuencia"
                 value={valor.frecuencia}
                 onChange={(e) => cambiar({ frecuencia: e.target.value as FrecuenciaFija })}
-                className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[15px]"
+                className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[14px]"
                 style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
               >
                 {FRECUENCIAS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -122,7 +122,7 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="fijo-fecha" className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>
+            <label htmlFor="fijo-fecha" className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>
               {valor.yaPagado ? '¿Cuándo es el próximo pago?' : '¿Cuándo vence?'}
             </label>
             <input
@@ -131,17 +131,17 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
               min={valor.yaPagado ? manana : hoy}
               value={valor.proximo}
               onChange={(e) => onChange({ ...valor, proximo: e.target.value, fechaElegida: true })}
-              className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px]"
+              className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px]"
               style={{ background: COLORS.surface, color: valor.proximo ? COLORS.ink : COLORS.inkFaint, border: `1.5px solid ${COLORS.lineStrong}` }}
             />
             {valor.proximo && !opcionFijoValida(valor) && (
-              <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
                 {valor.yaPagado ? 'Elegí una fecha a partir de mañana.' : 'Elegí una fecha a partir de hoy.'}
               </p>
             )}
           </div>
 
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
             {valor.yaPagado
               ? 'Lo registramos hoy como un gasto y te avisamos antes del próximo pago.'
               : 'No cuenta como gasto hasta que lo pagues. Te avisamos antes de que venza.'}
@@ -192,12 +192,12 @@ export function ListaGastosFijos() {
               <div className="flex items-center gap-2.5">
                 <span className="shrink-0" style={{ color: COLORS.brand }} aria-hidden><IconCalendario size={18} /></span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
-                  <p className="text-[14px] truncate" style={{ color: COLORS.inkSoft }}>
+                  <p className="text-[14px] truncate" style={{ color: COLORS.ink }}>{g.descripcion}</p>
+                  <p className="text-[13px] truncate" style={{ color: COLORS.inkSoft }}>
                     {[textoVencimiento(hoy, g.proximoPago), etiquetaFrecuencia(g.frecuencia), nombreSeccion(g.seccionId)].filter(Boolean).join(', ')}
                   </p>
                 </div>
-                <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{MONTO(g)}</span>
+                <span className="font-mono tabular-nums text-[14px] shrink-0" style={{ color: COLORS.ink }}>{MONTO(g)}</span>
                 <button
                   type="button"
                   onClick={() => setBorrando(borrando === g.id ? null : g.id)}
@@ -215,7 +215,7 @@ export function ListaGastosFijos() {
                   type="button"
                   onClick={() => void pagar(g.id)}
                   disabled={pagando === g.id}
-                  className="v2-focus mt-2 ml-7 min-h-[40px] px-4 rounded-full text-[14px] font-bold v2-disabled transition-transform active:scale-95"
+                  className="v2-focus mt-2 ml-7 min-h-[40px] px-4 rounded-full text-[13px] font-bold v2-disabled transition-transform active:scale-95"
                   style={{ background: COLORS.brand, color: COLORS.surface }}
                 >
                   {pagando === g.id ? 'Registrando…' : 'Ya lo pagué'}
@@ -224,14 +224,14 @@ export function ListaGastosFijos() {
 
               {borrando === g.id && (
                 <div className="mt-2 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
-                  <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+                  <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
                     ¿Borrar este gasto fijo? Dejamos de avisarte. Los pagos que ya registraste quedan en tus gastos.
                   </p>
                   <div className="flex gap-2">
-                    <button type="button" autoFocus onClick={() => setBorrando(null)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+                    <button type="button" autoFocus onClick={() => setBorrando(null)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
                       Cancelar
                     </button>
-                    <button type="button" onClick={() => { setBorrando(null); acciones.borrarGastoFijo(g.id); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
+                    <button type="button" onClick={() => { setBorrando(null); acciones.borrarGastoFijo(g.id); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
                       Sí, borrar
                     </button>
                   </div>
@@ -242,7 +242,7 @@ export function ListaGastosFijos() {
         })}
       </div>
       <VerTodos total={estado.gastosFijos.length} abierta={verTodos} onToggle={() => setVerTodos((v) => !v)} />
-      {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>{error}</p>}
+      {error && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{error}</p>}
     </section>
   );
 }
@@ -276,13 +276,13 @@ export function AvisoVencimientoHome() {
           <IconCalendario size={20} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
             {proximos.length === 1 ? 'Gasto fijo' : `${proximos.length} gastos fijos`}
           </p>
-          <p className="text-[15px] font-bold leading-snug" style={{ color: COLORS.ink }}>
+          <p className="text-[14px] font-bold leading-snug" style={{ color: COLORS.ink }}>
             {g.descripcion}: <span className="font-mono tabular-nums">{MONTO(g)}</span>
           </p>
-          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{textoVencimiento(hoy, g.proximoPago)}</p>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>{textoVencimiento(hoy, g.proximoPago)}</p>
         </div>
       </div>
       <div className="flex gap-2">
@@ -290,7 +290,7 @@ export function AvisoVencimientoHome() {
           type="button"
           onClick={() => void pagar()}
           disabled={pagando}
-          className="v2-focus flex-1 min-h-[44px] rounded-xl text-[14px] font-bold v2-disabled transition-transform active:scale-95"
+          className="v2-focus flex-1 min-h-[44px] rounded-xl text-[13px] font-bold v2-disabled transition-transform active:scale-95"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           {pagando ? 'Registrando…' : 'Ya lo pagué'}
@@ -298,7 +298,7 @@ export function AvisoVencimientoHome() {
         <button
           type="button"
           onClick={() => navigate('/onboarding-v2/gastos', { state: { abrir: 'fijos' } })}
-          className="v2-focus flex-1 min-h-[44px] rounded-xl text-[14px] font-semibold"
+          className="v2-focus flex-1 min-h-[44px] rounded-xl text-[13px] font-semibold"
           style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
         >
           {proximos.length === 1 ? 'Ver' : 'Ver todos'}

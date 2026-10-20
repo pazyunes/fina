@@ -28,7 +28,7 @@ export function PlanesDeHoy() {
       className="v2-focus w-full flex items-center gap-2 rounded-2xl px-4 min-h-[48px] text-left -mt-2"
       style={{ background: COLORS.limaSoft }}
     >
-      <span className="flex-1 min-w-0 text-[14px] font-semibold" style={{ color: COLORS.ink }}>{texto}</span>
+      <span className="flex-1 min-w-0 text-[13px] font-semibold" style={{ color: COLORS.ink }}>{texto}</span>
       <span style={{ color: COLORS.limaText }} aria-hidden><IconChevron size={16} /></span>
     </button>
   );

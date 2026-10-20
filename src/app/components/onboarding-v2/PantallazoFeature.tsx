@@ -32,7 +32,7 @@ function Encabezado({ icono, texto }: { icono: React.ReactNode; texto: string })
       <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}>
         {icono}
       </span>
-      <span className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>
+      <span className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
         {texto}
       </span>
     </div>
@@ -49,13 +49,13 @@ function PantallazoObjetivo({ nombre }: { nombre: string }) {
       <Encabezado icono={<IconObjetivos size={15} />} texto="Tu objetivo" />
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[17px] font-bold truncate" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{nombre}</span>
-          <span className="text-[17px] font-bold shrink-0 tabular-nums" style={{ color: COLORS.limaText, fontFamily: FONTS.mono }}>{pct}%</span>
+          <span className="text-[16px] font-bold truncate" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{nombre}</span>
+          <span className="text-[16px] font-bold shrink-0 tabular-nums" style={{ color: COLORS.limaText, fontFamily: FONTS.mono }}>{pct}%</span>
         </div>
         <div className="h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.tint }}>
           <div className="h-full rounded-full" style={{ width: `${pct}%`, background: COLORS.lima }} />
         </div>
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
+        <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
           Llevás <span className="font-semibold tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(juntado)}</span> de{' '}
           <span className="tabular-nums">{fmtMoney(total)}</span>, te falta{' '}
           <span className="font-semibold tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(total - juntado)}</span>.
@@ -78,7 +78,7 @@ function PantallazoAhorro() {
     <Marco>
       <Encabezado icono={<IconReserva size={15} />} texto="Tu reserva" />
       <div className="flex flex-col gap-2">
-        <span className="text-[22px] font-bold tabular-nums" style={{ color: COLORS.ink, fontFamily: FONTS.mono }}>
+        <span className="text-[21px] font-bold tabular-nums" style={{ color: COLORS.ink, fontFamily: FONTS.mono }}>
           {fmtMoney(325000)}
         </span>
         {/* Columnas, no una línea: cinco meses en 300px de ancho se leen mejor
@@ -95,7 +95,7 @@ function PantallazoAhorro() {
             </div>
           ))}
         </div>
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
+        <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
           Apartás plata y la ves crecer. Sin tocarla, sin tentarte.
         </p>
       </div>
@@ -133,7 +133,7 @@ function PantallazoInversiones() {
             <span className="w-3 h-[3px] rounded-full" style={{ background: COLORS.line }} /> Lo que pusiste
           </span>
         </div>
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
+        <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
           Te mostramos cuánto podría rendir tu plata según tu perfil, y con qué
           instrumento — nunca la movemos nosotros.
         </p>
@@ -155,13 +155,13 @@ function PantallazoGastos() {
       <div className="flex flex-col gap-2.5">
         {filas.map((f) => (
           <div key={f.label} className="flex flex-col gap-1">
-            <span className="text-[14px] font-semibold" style={{ color: COLORS.ink }}>{f.label}</span>
+            <span className="text-[13px] font-semibold" style={{ color: COLORS.ink }}>{f.label}</span>
             <div className="h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.tint }}>
               <div className="h-full rounded-full" style={{ width: `${f.pct}%`, background: f.color }} />
             </div>
           </div>
         ))}
-        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
+        <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
           Con lo que registrás armamos esto solo. Sin planillas.
         </p>
       </div>

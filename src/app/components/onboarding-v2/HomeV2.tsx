@@ -125,7 +125,7 @@ export function HomeV2() {
           {/* Saludo y nombre en una sola línea. "Tu FINA" era el fallback sin
               nombre y terminaba siendo lo que veías: genérico donde tendría
               que estar lo personal. */}
-          <Titulo className="!text-[20px] lg:!text-[24px]">
+          <Titulo className="!text-[19px] lg:!text-[22px]">
             {saludoDelDia()}{nombre ? `, ${nombre}` : ''}
           </Titulo>
         </div>
@@ -140,7 +140,7 @@ export function HomeV2() {
             className="v2-focus flex flex-col items-center shrink-0 min-h-[44px] px-1 rounded-xl"
             style={{ color: COLORS.brand }}
           >
-            <span data-racha-numero className="flex items-center gap-1.5 text-[22px] font-bold leading-none"><IconFuego size={28} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
+            <span data-racha-numero className="flex items-center gap-1.5 text-[21px] font-bold leading-none"><IconFuego size={28} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
             <span className="text-[13px] font-semibold mt-0.5" style={{ color: COLORS.inkSoft }}>{racha.dias === 1 ? 'día' : 'días'}</span>
           </button>
         ) : (
@@ -164,7 +164,7 @@ export function HomeV2() {
           <TituloSeccion>Tu racha, día por día</TituloSeccion>
           {/* El comodín se explica acá y no en un tutorial: es donde la persona
               lo ve funcionar. */}
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
             {racha.comodinDisponible
               ? "Cuenta cada día que anotás un gasto. Tenés un comodín esta semana: si se te pasa un día, te lo salva solo."
               : "Cuenta cada día que anotás un gasto. Ya usaste el comodín de esta semana; el lunes tenés otro."}
@@ -172,10 +172,10 @@ export function HomeV2() {
           <div className="flex flex-col">
             {racha.detalle.map((d) => (
               <div key={d.dia} className="flex items-baseline gap-3 py-2.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
-                <span className="w-16 shrink-0 text-[14px] font-semibold" style={{ color: COLORS.ink }}>
+                <span className="w-16 shrink-0 text-[13px] font-semibold" style={{ color: COLORS.ink }}>
                   {fechaDisplay(Date.parse(`${d.dia}T12:00:00-03:00`))}
                 </span>
-                <span className="flex-1 min-w-0 text-[14px]" style={{ color: d.tipo === "comodin" ? COLORS.inkFaint : COLORS.inkSoft }}>
+                <span className="flex-1 min-w-0 text-[13px]" style={{ color: d.tipo === "comodin" ? COLORS.inkFaint : COLORS.inkSoft }}>
                   {d.tipo === "gasto" && "Anotaste un gasto"}
                   {d.tipo === "whatsapp" && "Le contaste un gasto a FINA por WhatsApp"}
                   {d.tipo === "paso" && "Cumpliste tu paso del día"}

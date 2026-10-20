@@ -29,7 +29,7 @@ import { IconChevron } from './FinaIcons';
 
 function SinDatos({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[14px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+    <p className="text-[13px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
       {children}
     </p>
   );
@@ -45,8 +45,8 @@ function Barras({ filas }: { filas: { label: string; valor: number }[] }) {
       {filas.map((f) => (
         <div key={f.label} className="flex flex-col gap-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[14.5px] truncate" style={{ color: COLORS.ink }}>{f.label}</span>
-            <span className="text-[14px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(f.valor)}</span>
+            <span className="text-[13.5px] truncate" style={{ color: COLORS.ink }}>{f.label}</span>
+            <span className="text-[13px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(f.valor)}</span>
           </div>
           {/* La barra se escala contra la más grande, no contra el total:
               contra el total, en cuanto hay varias secciones todas quedan cortas
@@ -79,7 +79,7 @@ function TortaSecciones({ filas, total }: { filas: { id: string; label: string; 
       </div>
       <ul className="flex flex-col gap-1.5 max-h-[150px] overflow-y-auto v2-sin-barra">
         {filas.map((f) => (
-          <li key={f.id} className="flex items-center gap-2.5 text-[14px]">
+          <li key={f.id} className="flex items-center gap-2.5 text-[13px]">
             <span className="w-3 h-3 rounded-full shrink-0" style={{ background: f.color }} aria-hidden />
             <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{f.label}</span>
             <span className="shrink-0 font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtMoney(f.valor)}</span>
@@ -108,7 +108,7 @@ function Tarjeta({ titulo, ultima, children }: { titulo: string; ultima: boolean
       className={`${ultima ? 'snap-end' : 'snap-start'} shrink-0 min-w-0 overflow-hidden w-[85%] sm:w-[360px] lg:w-[400px] rounded-2xl p-4 flex flex-col gap-3`}
       style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
     >
-      <h3 className="text-[16px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
+      <h3 className="text-[15px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
       {children}
     </article>
   );

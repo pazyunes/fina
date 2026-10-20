@@ -60,13 +60,13 @@ export function Desplegable({ id, label, value, onChange, children }: {
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>{label}</label>
+      <label htmlFor={id} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>{label}</label>
       <div className="relative">
         <select
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[15px] transition-colors"
+          className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[14px] transition-colors"
           // Sin nada elegido, el texto va tenue como un placeholder.
           style={{ ...INPUT_STYLE, color: value ? COLORS.ink : COLORS.inkFaint }}
         >
@@ -188,7 +188,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
           <input
             autoFocus
             aria-label="Monto del gasto"
-            className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[15px] transition-colors"
+            className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[14px] transition-colors"
             style={INPUT_STYLE}
             placeholder="Monto"
             inputMode="decimal"
@@ -202,7 +202,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
               key={m}
               type="button"
               onClick={() => setMoneda(m)}
-              className="v2-focus px-2.5 text-[14px] font-bold transition-colors"
+              className="v2-focus px-2.5 text-[13px] font-bold transition-colors"
               style={moneda === m ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink }}
             >
               {m}
@@ -212,7 +212,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
       </div>
       <input
         aria-label="Descripción del gasto"
-        className="v2-focus rounded-xl px-3.5 py-2.5 text-[15px] transition-colors"
+        className="v2-focus rounded-xl px-3.5 py-2.5 text-[14px] transition-colors"
         style={INPUT_STYLE}
         placeholder="Descripción (ej: PedidosYa)"
         value={desc}
@@ -221,11 +221,11 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
       {/* Por defecto queda en hoy: sólo hace falta tocarlo para cargar un
           gasto de otro día. Sin hora: con el día alcanza. */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${idBase}-fecha`} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha</label>
+        <label htmlFor={`${idBase}-fecha`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha</label>
         <input
           id={`${idBase}-fecha`}
           type="date"
-          className="v2-focus w-full min-w-0 rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
+          className="v2-focus w-full min-w-0 rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
           style={INPUT_STYLE}
           value={fecha}
           max={aInputFecha(Date.now())}
@@ -264,7 +264,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
             <input
               autoFocus
               aria-label="Nombre de la sección nueva"
-              className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
+              className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
               style={INPUT_STYLE}
               placeholder="Ej: Mascota"
               value={nuevaCat}
@@ -290,7 +290,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
                 <input
                   autoFocus
                   aria-label="Con qué lo pagaste"
-                  className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
+                  className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
                   style={INPUT_STYLE}
                   placeholder="Ej: Ualá"
                   value={metodoOtro}
@@ -300,7 +300,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
               <button
                 type="button"
                 onClick={() => { setDividido(true); setPagos([filaPagoVacia(), filaPagoVacia()]); }}
-                className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
+                className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
                 style={{ color: COLORS.brand }}
               >
                 Pagado con más de un medio
@@ -310,7 +310,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
             <button
               type="button"
               onClick={() => { setDividido(false); setPagos([filaPagoVacia(), filaPagoVacia()]); }}
-              className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
+              className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
               style={{ color: COLORS.inkSoft }}
             >
               Pagar con un solo medio
@@ -323,14 +323,14 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
           monto; la suma tiene que dar el total de arriba. */}
       {dividido && (
         <div className="flex flex-col gap-2">
-          <p className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>¿Con qué lo pagaste?</p>
+          <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Con qué lo pagaste?</p>
           {pagos.map((f, i) => (
             <div key={i} className="flex gap-1.5 items-start">
               <select
                 aria-label={`Medio ${i + 1}`}
                 value={f.medio}
                 onChange={(e) => setPagos((v) => v.map((x, idx) => (idx === i ? { ...x, medio: e.target.value } : x)))}
-                className="v2-focus flex-1 min-w-0 rounded-xl pl-3 pr-2 min-h-[48px] text-[14px] transition-colors"
+                className="v2-focus flex-1 min-w-0 rounded-xl pl-3 pr-2 min-h-[48px] text-[13px] transition-colors"
                 style={{ ...INPUT_STYLE, color: f.medio ? COLORS.ink : COLORS.inkFaint }}
               >
                 <option value="" style={OPCION}>Medio</option>
@@ -343,7 +343,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
                   placeholder="Ej: Ualá"
                   value={f.otro}
                   onChange={(e) => setPagos((v) => v.map((x, idx) => (idx === i ? { ...x, otro: e.target.value } : x)))}
-                  className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[48px] text-[14px] transition-colors"
+                  className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[48px] text-[13px] transition-colors"
                   style={INPUT_STYLE}
                 />
               )}
@@ -353,7 +353,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
                 inputMode="decimal"
                 value={f.monto}
                 onChange={(e) => setPagos((v) => v.map((x, idx) => (idx === i ? { ...x, monto: formatThousands(e.target.value) } : x)))}
-                className="v2-focus w-[104px] shrink-0 rounded-xl px-2.5 min-h-[48px] text-[14px] transition-colors"
+                className="v2-focus w-[104px] shrink-0 rounded-xl px-2.5 min-h-[48px] text-[13px] transition-colors"
                 style={INPUT_STYLE}
               />
               {pagos.length > 2 && (
@@ -372,19 +372,19 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
           <button
             type="button"
             onClick={() => setPagos((v) => [...v, filaPagoVacia()])}
-            className="v2-focus self-start min-h-[44px] text-[14px] font-semibold underline"
+            className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
             style={{ color: COLORS.brand }}
           >
             + Agregar otro medio
           </button>
-          <p className="text-[14px] tabular-nums" style={{ color: pagosValidos ? COLORS.inkSoft : COLORS.coralDark }}>
+          <p className="text-[13px] tabular-nums" style={{ color: pagosValidos ? COLORS.inkSoft : COLORS.coralDark }}>
             Sumado: {fmtMoney(sumaPagos)} de {fmtMoney(parseMoneyInput(monto))}
           </p>
         </div>
       )}
 
       <fieldset className="flex flex-col gap-1.5">
-        <legend className="text-[14px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</legend>
+        <legend className="text-[13px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</legend>
         <div className="grid grid-cols-4 gap-1.5">
           {TIPOS.map((t) => {
             const sel = tipo === t;
@@ -394,7 +394,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
                 type="button"
                 aria-pressed={sel}
                 onClick={() => setTipo(t)}
-                className="v2-focus rounded-xl px-1 min-h-[44px] text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                className="v2-focus rounded-xl px-1 min-h-[44px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
                 // Sin color propio por tipo: los colores son de las secciones.
                 style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
               >
@@ -411,7 +411,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
               autoFocus
               aria-label="Qué tipo de gasto fue"
               maxLength={40}
-              className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
+              className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
               style={INPUT_STYLE}
               placeholder="Escribí cuál (ej: Salud, Mascota)"
               value={tipoOtro}
@@ -427,7 +427,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
                       type="button"
                       aria-pressed={sel}
                       onClick={() => setTipoOtro(t)}
-                      className="v2-focus rounded-lg px-2.5 py-1 text-[14px] font-semibold transition-all duration-100 active:scale-95"
+                      className="v2-focus rounded-lg px-2.5 py-1 text-[13px] font-semibold transition-all duration-100 active:scale-95"
                       style={sel
                         ? { background: COLORS.brandSoft, color: COLORS.brandDark }
                         : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
@@ -446,17 +446,17 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
           crear uno nuevo, no para editar un movimiento. */}
       {!editando && <CamposGastoFijo valor={fijo} onChange={setFijo} />}
 
-      {error && <p role="alert" className="text-[14px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{error}</p>}
+      {error && <p role="alert" className="text-[13px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{error}</p>}
 
       <div className="flex gap-2 mt-1">
-        <button type="button" onClick={onCancelar} className="v2-focus flex-1 rounded-xl py-2.5 min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+        <button type="button" onClick={onCancelar} className="v2-focus flex-1 rounded-xl py-2.5 min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
           Cancelar
         </button>
         <button
           type="button"
           onClick={() => void guardar()}
           disabled={!puedeGuardar}
-          className="v2-focus flex-[2] rounded-xl py-2.5 min-h-[44px] text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-95"
+          className="v2-focus flex-[2] rounded-xl py-2.5 min-h-[44px] text-[13px] font-bold v2-disabled transition-all duration-100 active:scale-95"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           {editando ? 'Guardar cambios' : fijo.activo && !fijo.yaPagado ? 'Guardar gasto fijo' : 'Agregar gasto'}

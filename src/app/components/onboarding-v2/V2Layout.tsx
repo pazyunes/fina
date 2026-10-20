@@ -86,13 +86,13 @@ function AvisoGuardado() {
       className="px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap"
       style={{ background: COLORS.coralSoft, color: COLORS.coralDark }}
     >
-      <span className="text-[14px] font-semibold">
+      <span className="text-[13px] font-semibold">
         Algo no se guardó: {guardado.mensaje}
       </span>
       <button
         type="button"
         onClick={() => void recargar()}
-        className="v2-focus text-[14px] font-bold underline shrink-0"
+        className="v2-focus text-[13px] font-bold underline shrink-0"
       >
         Volver a cargar
       </button>
@@ -107,7 +107,7 @@ function Cargando() {
     <div className="min-h-full grid place-items-center px-6 py-16">
       <div className="flex flex-col items-center gap-3">
         <Fini state="pensando" size={120} />
-        <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Trayendo tus datos…</p>
+        <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Trayendo tus datos…</p>
       </div>
     </div>
   );

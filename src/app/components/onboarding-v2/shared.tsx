@@ -243,7 +243,7 @@ export function EstadoConfianza({ estado, className = '' }: { estado: Confianza;
   if (estado === 'confirmado' || estado === 'declarado') return null;
   const m = CONFIANZA_META[estado];
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[14px] font-medium ${className}`} style={{ color: COLORS.inkSoft }}>
+    <span className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${className}`} style={{ color: COLORS.inkSoft }}>
       <svg width="18" height="6" viewBox="0 0 18 6" fill="none" aria-hidden style={{ opacity: m.op }}>
         <line x1="1" y1="3" x2="17" y2="3" stroke="currentColor" strokeWidth={m.w} strokeDasharray={m.dash} strokeLinecap="round" />
       </svg>
@@ -258,7 +258,7 @@ export function EstadoConfianza({ estado, className = '' }: { estado: Confianza;
 export function Rango({ min, max, nota, className = '' }: { min: number; max: number; nota?: string; className?: string }) {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
-      <p className="font-mono tabular-nums text-[16px] font-semibold" style={{ color: COLORS.ink }}>
+      <p className="font-mono tabular-nums text-[15px] font-semibold" style={{ color: COLORS.ink }}>
         entre {fmtMoney(min)} y {fmtMoney(max)}
       </p>
       <div className="relative h-1.5 rounded-full" style={{ background: COLORS.tint }}>
@@ -266,7 +266,7 @@ export function Rango({ min, max, nota, className = '' }: { min: number; max: nu
         <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ background: COLORS.lineStrong }} />
         <span className="absolute left-1 right-1 top-1/2 -translate-y-1/2 h-[3px] rounded-full" style={{ background: COLORS.lineStrong, opacity: 0.5 }} />
       </div>
-      {nota && <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{nota}</p>}
+      {nota && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>{nota}</p>}
     </div>
   );
 }
@@ -578,8 +578,8 @@ export function ArmarGrupoBtn() {
     >
       <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}><IconGrupo size={18} /></span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[16px] font-semibold" style={{ color: COLORS.ink }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
-        <span className="block text-[14px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
+        <span className="block text-[15px] font-semibold" style={{ color: COLORS.ink }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
+        <span className="block text-[13px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
       </span>
       <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
     </button>
@@ -863,7 +863,7 @@ export function Chip({ on, warm: _warm, muted, onClick, children }: { on: boolea
       type="button"
       onClick={onClick}
       style={style}
-      className="v2-focus inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[15px] font-semibold select-none
+      className="v2-focus inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-semibold select-none
         transition-all duration-100 ease-out active:scale-[0.96]"
     >
       {children}
@@ -879,7 +879,7 @@ export function OtroChip({ abierto, onClick }: { abierto: boolean; onClick: () =
     <button
       type="button"
       onClick={onClick}
-      className="v2-focus inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[15px] font-semibold select-none
+      className="v2-focus inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[14px] font-semibold select-none
         border border-dashed transition-all duration-100 ease-out active:scale-[0.96]"
       style={{ borderColor: COLORS.lilaBorde, color: COLORS.brandDark, background: abierto ? COLORS.brandSoft : COLORS.surface }}
     >
@@ -909,7 +909,7 @@ export function LinkLegal({ url, children }: { url: string | null; children: Rea
 export function Nota({ children }: { children: React.ReactNode }) {
   return (
     <p
-      className="text-[14px] leading-snug pl-3.5 border-l-2"
+      className="text-[13px] leading-snug pl-3.5 border-l-2"
       style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}
     >
       {children}
@@ -943,7 +943,7 @@ export function OpcionesMulti({
               ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
               : { background: COLORS.surface, color: o.muted ? COLORS.inkSoft : COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
             className="v2-focus w-full flex items-center gap-3 text-left min-h-[52px] px-4 py-3
-              rounded-2xl text-[15px] font-semibold leading-snug
+              rounded-2xl text-[14px] font-semibold leading-snug
               transition-all duration-100 ease-out active:scale-[0.99]"
           >
             <span
@@ -981,7 +981,7 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
       style={disabled
         ? { background: COLORS.tint, color: COLORS.inkSoft, border: `1.5px solid ${COLORS.lineStrong}` }
         : { background: COLORS.brand, color: COLORS.surface, boxShadow: '0 10px 24px -8px rgba(118,38,179,0.45)' }}
-      className={`v2-focus w-full rounded-2xl py-4 text-[16px] font-bold select-none
+      className={`v2-focus w-full rounded-2xl py-4 text-[15px] font-bold select-none
         transition-all duration-100 ease-out
         ${disabled ? 'cursor-not-allowed' : 'active:scale-[0.98]'}`}
     >
@@ -992,7 +992,7 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
 
 // ── Primitivos de la dirección C ────────────────────────────────────────
 // Todo lo de acá abajo existe para que la jerarquía viva en UN lugar. Antes
-// cada pantalla repetía `text-[22px] font-bold` a mano, y por eso la pantalla
+// cada pantalla repetía `text-[21px] font-bold` a mano, y por eso la pantalla
 // de género terminaba con dos preguntas del mismo tamaño y sin jerarquía.
 
 // El ÚNICO <h1> de la pantalla. Poppins, como todo el resto
@@ -1000,7 +1000,7 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
 export function Titulo({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <h1
-      className={`font-extrabold leading-[1.1] tracking-[-0.01em] text-[26px] lg:text-[32px] text-balance ${className}`}
+      className={`font-extrabold leading-[1.1] tracking-[-0.01em] text-[24px] lg:text-[30px] text-balance ${className}`}
       style={{ color: COLORS.ink, fontFamily: FONTS.display }}
     >
       {children}
@@ -1010,7 +1010,7 @@ export function Titulo({ children, className = '' }: { children: React.ReactNode
 
 // Línea de apoyo debajo del título. Nunca compite con él.
 export function Apoyo({ children }: { children: React.ReactNode }) {
-  return <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{children}</p>;
+  return <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{children}</p>;
 }
 
 // "Pregunta 3 de 8". Reemplaza la barra segmentada por sección, que mostraba
@@ -1055,7 +1055,7 @@ export function OpcionesGrid<T extends string>({
             style={on
               ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
               : { background: COLORS.surface, color: o.muted ? COLORS.inkSoft : COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-            className={`v2-focus min-h-[56px] rounded-2xl px-3 py-3.5 text-[15px] font-semibold leading-snug
+            className={`v2-focus min-h-[56px] rounded-2xl px-3 py-3.5 text-[14px] font-semibold leading-snug
               transition-all duration-100 ease-out active:scale-[0.97]
               ${ultima ? (columnas === 3 ? 'col-span-3' : 'col-span-2') : ''}`}
           >
@@ -1091,7 +1091,7 @@ export function OpcionesLista<T extends string>({
               ? { background: COLORS.brand, color: COLORS.surface, borderColor: COLORS.brand }
               : { color: o.muted ? COLORS.inkSoft : COLORS.ink, borderColor: COLORS.line }}
             className="v2-focus flex items-center justify-between gap-3 text-left min-h-[56px] px-4 py-3.5
-              rounded-2xl border-b last:border-b-0 text-[16px] font-semibold leading-snug
+              rounded-2xl border-b last:border-b-0 text-[15px] font-semibold leading-snug
               transition-all duration-100 ease-out active:scale-[0.99]"
           >
             {o.label}
@@ -1105,12 +1105,12 @@ export function OpcionesLista<T extends string>({
 
 // Título de sección dentro de una pantalla. Poppins más chico: se distingue del
 // título de pantalla por tamaño, no por color ni por una caja alrededor.
-// Reemplaza los `text-[14px] font-bold` en gris que se usaban como encabezado,
+// Reemplaza los `text-[13px] font-bold` en gris que se usaban como encabezado,
 // que competían en peso con el cuerpo y no leían como jerarquía.
 export function TituloSeccion({ children }: { children: React.ReactNode }) {
   return (
     <h2
-      className="text-[18px] font-bold leading-tight tracking-[-0.01em]"
+      className="text-[17px] font-bold leading-tight tracking-[-0.01em]"
       style={{ color: COLORS.ink, fontFamily: FONTS.display }}
     >
       {children}
@@ -1139,10 +1139,10 @@ export function Fila({
         </span>
       )}
       <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-        <span className="text-[16px] font-semibold" style={{ color: COLORS.ink }}>{label}</span>
-        {detalle && <span className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{detalle}</span>}
+        <span className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>{label}</span>
+        {detalle && <span className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{detalle}</span>}
       </span>
-      {valor && <span className="shrink-0 text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>{valor}</span>}
+      {valor && <span className="shrink-0 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{valor}</span>}
       {onClick && <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>}
     </>
   );
@@ -1171,7 +1171,7 @@ export function BotonFantasma({ label, onClick }: { label: string; onClick: () =
       type="button"
       onClick={onClick}
       style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}
-      className="v2-focus w-full rounded-2xl py-3.5 text-[15px] font-semibold
+      className="v2-focus w-full rounded-2xl py-3.5 text-[14px] font-semibold
         transition-all duration-100 ease-out active:scale-[0.98]"
     >
       {label}
@@ -1192,7 +1192,7 @@ export function ActionRow({ icon, label, onClick }: { icon: React.ReactNode; lab
       <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}>
         {icon}
       </span>
-      <span className="flex-1 font-semibold text-[16px]" style={{ color: COLORS.ink }}>{label}</span>
+      <span className="flex-1 font-semibold text-[15px]" style={{ color: COLORS.ink }}>{label}</span>
       <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
     </button>
   );
@@ -1222,17 +1222,17 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
       >
         <LogoFina blanco alto={48} className="self-start" />
         <div className="flex flex-col gap-7">
-          <p className="text-[28px] font-bold leading-[1.15]">Ordená tu plata,<br />a tu ritmo.</p>
+          <p className="text-[26px] font-bold leading-[1.15]">Ordená tu plata,<br />a tu ritmo.</p>
           <ul className="flex flex-col gap-4">
             {PILARES.map((p) => (
-              <li key={p.t} className="flex items-center gap-3 text-[16px] font-semibold">
+              <li key={p.t} className="flex items-center gap-3 text-[15px] font-semibold">
                 <span className="w-9 h-9 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: 'rgba(255,255,255,0.18)' }}><p.Icon size={18} /></span>
                 {p.t}
               </li>
             ))}
           </ul>
         </div>
-        <p className="text-[14px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu información es privada, no la compartimos con nadie.</p>
+        <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu información es privada, no la compartimos con nadie.</p>
       </aside>
 
       {/* Flujo de preguntas */}
@@ -1261,7 +1261,7 @@ export function Coachmark({ id, children }: { id: string; children: React.ReactN
   if (visto) return null;
   return (
     <div className="flex items-start gap-2.5 rounded-2xl p-3.5" style={{ background: COLORS.brandSoft }}>
-      <p className="flex-1 text-[14px] font-medium leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
+      <p className="flex-1 text-[13px] font-medium leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
       <button
         type="button"
         aria-label="Cerrar"
@@ -1306,7 +1306,7 @@ export function Tabs<T extends string>({
             role="tab"
             aria-selected={sel}
             onClick={() => onChange(o.id)}
-            className="v2-focus flex-1 min-h-[48px] px-1 pb-2.5 pt-2 text-[14px] font-bold leading-tight transition-colors duration-150 border-b-[3px] -mb-px"
+            className="v2-focus flex-1 min-h-[48px] px-1 pb-2.5 pt-2 text-[13px] font-bold leading-tight transition-colors duration-150 border-b-[3px] -mb-px"
             style={sel
               ? { color: COLORS.brand, borderColor: COLORS.brand }
               : { color: COLORS.inkSoft, borderColor: 'transparent' }}
@@ -1336,7 +1336,7 @@ export function SegmentedTab<T extends string>({
             key={o.id}
             type="button"
             onClick={() => onChange(o.id)}
-            className="flex-1 rounded-xl py-2.5 text-[15px] font-bold transition-all duration-150"
+            className="flex-1 rounded-xl py-2.5 text-[14px] font-bold transition-all duration-150"
             style={sel
               ? { background: COLORS.surface, color: COLORS.ink, boxShadow: '0 2px 8px rgba(43,33,24,0.12)' }
               : { background: 'transparent', color: COLORS.ink, opacity: 0.75 }}
@@ -1581,7 +1581,7 @@ export function BotonVolver({ onClick, label = 'Volver' }: { onClick: () => void
     <button
       type="button"
       onClick={onClick}
-      className="v2-focus inline-flex items-center gap-1.5 self-start min-h-[44px] text-[14px] font-semibold rounded-full py-2 pr-3 pl-1 -ml-1"
+      className="v2-focus inline-flex items-center gap-1.5 self-start min-h-[44px] text-[13px] font-semibold rounded-full py-2 pr-3 pl-1 -ml-1"
       style={{ color: COLORS.inkSoft }}
     >
       <IconChevron size={18} style={{ transform: 'rotate(180deg)' }} />

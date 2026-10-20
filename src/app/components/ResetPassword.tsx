@@ -156,7 +156,7 @@ export function ResetPassword() {
                     onKeyDown={(e) => { if (e.key === 'Enter') void guardar(); }}
                   />
                 </Campo>
-                {error && <p role="alert" className="text-[15px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
+                {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
               </>
             )}
 
@@ -186,7 +186,7 @@ export function ResetPassword() {
                     onKeyDown={(e) => { if (e.key === 'Enter') void pedirOtro(); }}
                   />
                 </Campo>
-                {error && <p role="alert" className="text-[15px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
+                {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
               </>
             ))}
 

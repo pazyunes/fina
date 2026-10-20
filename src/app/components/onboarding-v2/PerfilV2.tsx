@@ -203,7 +203,7 @@ export function PerfilV2() {
           {/* Scrim de tinta sobre la foto para que la etiqueta se lea (media
               overlay, no decoración de color). */}
           <span
-            className="absolute bottom-0 left-0 right-0 text-center text-[14px] font-bold py-1"
+            className="absolute bottom-0 left-0 right-0 text-center text-[13px] font-bold py-1"
             style={{ background: 'rgba(43,33,24,0.6)', color: COLORS.surface }}
           >
             Cambiar
@@ -211,21 +211,21 @@ export function PerfilV2() {
         </button>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" aria-label="Elegir foto de perfil" onChange={(e) => void onFotoElegida(e)} />
         {subiendoFoto && (
-          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Subiendo tu foto…</p>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Subiendo tu foto…</p>
         )}
         {errorFoto && (
-          <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorFoto}</p>
+          <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{errorFoto}</p>
         )}
       </div>
 
       {editandoNombre ? (
         <div className="flex flex-col gap-2">
-          <label htmlFor="perfil-nombre" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu nombre</label>
+          <label htmlFor="perfil-nombre" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu nombre</label>
           <div className="flex gap-2">
             <input
               id="perfil-nombre"
               autoFocus={!!nombreGuardado}
-              className="v2-focus flex-1 min-w-0 rounded-2xl px-4 py-3 text-[16px] outline-none transition-colors"
+              className="v2-focus flex-1 min-w-0 rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
               style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
               placeholder="Tu nombre"
               value={nombre}
@@ -246,14 +246,14 @@ export function PerfilV2() {
             </button>
           </div>
           {nombreGuardado && (
-            <button type="button" onClick={cancelarNombre} className="v2-focus self-start min-h-[44px] px-1 text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>
+            <button type="button" onClick={cancelarNombre} className="v2-focus self-start min-h-[44px] px-1 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
               Cancelar
             </button>
           )}
         </div>
       ) : (
         <div className="flex items-center justify-center gap-2">
-          <p className="text-[24px] font-bold leading-tight tracking-[-0.01em] truncate" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{nombreGuardado}</p>
+          <p className="text-[22px] font-bold leading-tight tracking-[-0.01em] truncate" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{nombreGuardado}</p>
           {guardado && (
             <span className="w-6 h-6 rounded-full inline-flex items-center justify-center shrink-0" style={{ background: COLORS.lima, color: COLORS.ink }} role="status" aria-label="Nombre guardado">
               <Check size={12} />
@@ -263,7 +263,7 @@ export function PerfilV2() {
             type="button"
             onClick={() => setEditandoNombre(true)}
             aria-label="Editar tu nombre"
-            className="v2-focus inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-full text-[14px] font-semibold shrink-0"
+            className="v2-focus inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-full text-[13px] font-semibold shrink-0"
             style={{ color: COLORS.brand }}
           >
             <IconEditar size={16} /> Editar
@@ -276,7 +276,7 @@ export function PerfilV2() {
       {faltan.length === 0 && !faltaNivel && telefonoVerificado && (
         <section className="flex flex-col items-center gap-2 py-2">
           <Fini state="logro" size={124} />
-          <p className="text-[15px] font-bold text-center" style={{ color: COLORS.ink }}>Tu perfil está completo</p>
+          <p className="text-[14px] font-bold text-center" style={{ color: COLORS.ink }}>Tu perfil está completo</p>
         </section>
       )}
 
@@ -287,7 +287,7 @@ export function PerfilV2() {
             <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: COLORS.line }}>
               <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pctPerfil}%`, background: COLORS.brand }} />
             </div>
-            <span className="text-[14px] font-bold tabular-nums shrink-0" style={{ color: COLORS.brand, fontFamily: FONTS.mono }}>{pctPerfil}%</span>
+            <span className="text-[13px] font-bold tabular-nums shrink-0" style={{ color: COLORS.brand, fontFamily: FONTS.mono }}>{pctPerfil}%</span>
           </div>
 
           <div className="flex flex-col">
@@ -307,7 +307,7 @@ export function PerfilV2() {
                 >
                   {it.hecho ? <Check size={11} /> : null}
                 </span>
-                <span className="flex-1 text-[15px] font-medium" style={{ color: it.hecho ? COLORS.inkFaint : COLORS.ink, textDecoration: it.hecho ? 'line-through' : 'none' }}>
+                <span className="flex-1 text-[14px] font-medium" style={{ color: it.hecho ? COLORS.inkFaint : COLORS.ink, textDecoration: it.hecho ? 'line-through' : 'none' }}>
                   {it.label}
                 </span>
               </button>
@@ -327,7 +327,7 @@ export function PerfilV2() {
                 >
                   {nivel ? <Check size={11} /> : null}
                 </span>
-                <span className="flex-1 text-[15px] font-medium" style={{ color: nivel ? COLORS.inkFaint : COLORS.ink, textDecoration: nivel ? 'line-through' : 'none' }}>
+                <span className="flex-1 text-[14px] font-medium" style={{ color: nivel ? COLORS.inkFaint : COLORS.ink, textDecoration: nivel ? 'line-through' : 'none' }}>
                   Descubrí tu nivel de conocimiento financiero
                 </span>
               </button>
@@ -373,7 +373,7 @@ export function PerfilV2() {
             <button
               type="button"
               onClick={abrirConfigPin}
-              className="v2-focus self-start min-h-[48px] px-5 rounded-full text-[15px] font-bold"
+              className="v2-focus self-start min-h-[48px] px-5 rounded-full text-[14px] font-bold"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Activar PIN
@@ -391,7 +391,7 @@ export function PerfilV2() {
               maxLength={6}
               aria-label="PIN nuevo"
               placeholder="PIN nuevo (4 a 6 números)"
-              className="v2-focus w-full rounded-2xl px-4 py-3 text-[16px] tracking-[0.3em] transition-colors"
+              className="v2-focus w-full rounded-2xl px-4 py-3 text-[15px] tracking-[0.3em] transition-colors"
               style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
               value={pinNuevo}
               onChange={(e) => setPinNuevo(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -403,18 +403,18 @@ export function PerfilV2() {
               maxLength={6}
               aria-label="Repetir PIN"
               placeholder="Repetí el PIN"
-              className="v2-focus w-full rounded-2xl px-4 py-3 text-[16px] tracking-[0.3em] transition-colors"
+              className="v2-focus w-full rounded-2xl px-4 py-3 text-[15px] tracking-[0.3em] transition-colors"
               style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
               value={pinConfirmar}
               onChange={(e) => setPinConfirmar(e.target.value.replace(/\D/g, '').slice(0, 6))}
               onKeyDown={(e) => { if (e.key === 'Enter') void guardarPin(); }}
             />
-            {errorPin && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorPin}</p>}
+            {errorPin && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{errorPin}</p>}
             <div className="flex gap-2">
-              <button type="button" onClick={() => setConfigurandoPin(false)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+              <button type="button" onClick={() => setConfigurandoPin(false)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
                 Cancelar
               </button>
-              <button type="button" onClick={() => void guardarPin()} className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[14px] font-bold" style={{ background: COLORS.brand, color: COLORS.surface }}>
+              <button type="button" onClick={() => void guardarPin()} className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.brand, color: COLORS.surface }}>
                 Guardar PIN
               </button>
             </div>
@@ -427,8 +427,8 @@ export function PerfilV2() {
               <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
                 <Check size={13} />
               </span>
-              <span className="flex-1 text-[15px] font-medium" style={{ color: COLORS.ink }}>PIN activado</span>
-              <button type="button" onClick={abrirConfigPin} className="v2-focus text-[14px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
+              <span className="flex-1 text-[14px] font-medium" style={{ color: COLORS.ink }}>PIN activado</span>
+              <button type="button" onClick={abrirConfigPin} className="v2-focus text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.brand }}>
                 Cambiar
               </button>
             </div>
@@ -442,8 +442,8 @@ export function PerfilV2() {
                   <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
                     <Check size={13} />
                   </span>
-                  <span className="flex-1 text-[15px] font-medium" style={{ color: COLORS.ink }}>Face ID / Touch ID activado</span>
-                  <button type="button" onClick={desactivarBiometria} className="v2-focus text-[14px] font-semibold underline shrink-0" style={{ color: COLORS.inkSoft }}>
+                  <span className="flex-1 text-[14px] font-medium" style={{ color: COLORS.ink }}>Face ID / Touch ID activado</span>
+                  <button type="button" onClick={desactivarBiometria} className="v2-focus text-[13px] font-semibold underline shrink-0" style={{ color: COLORS.inkSoft }}>
                     Desactivar
                   </button>
                 </div>
@@ -453,30 +453,30 @@ export function PerfilV2() {
                     type="button"
                     onClick={() => void activarBiometria()}
                     disabled={guardandoBio}
-                    className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[14px] font-bold v2-disabled"
+                    className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[13px] font-bold v2-disabled"
                     style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
                   >
                     {guardandoBio ? 'Esperando al sensor…' : 'Activar Face ID / Touch ID'}
                   </button>
-                  {errorBio && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorBio}</p>}
+                  {errorBio && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{errorBio}</p>}
                 </div>
               )
             )}
 
             {!confirmarQuitarPin ? (
-              <button type="button" onClick={() => setConfirmarQuitarPin(true)} className="v2-focus self-start text-[14px] font-semibold underline mt-1" style={{ color: COLORS.inkSoft }}>
+              <button type="button" onClick={() => setConfirmarQuitarPin(true)} className="v2-focus self-start text-[13px] font-semibold underline mt-1" style={{ color: COLORS.inkSoft }}>
                 Desactivar PIN
               </button>
             ) : (
               <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-3 mt-1" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar que se desactiva el PIN">
-                <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+                <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
                   ¿Desactivar el PIN{tieneBio ? ' y Face ID / Touch ID' : ''}? Vas a poder entrar a FINA en este celular sin pedir nada extra.
                 </p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setConfirmarQuitarPin(false)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+                  <button type="button" onClick={() => setConfirmarQuitarPin(false)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
                     Cancelar
                   </button>
-                  <button type="button" onClick={quitarPin} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
+                  <button type="button" onClick={quitarPin} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
                     Desactivar
                   </button>
                 </div>
@@ -503,7 +503,7 @@ export function PerfilV2() {
               href={url}
               target="_blank"
               rel="noreferrer"
-              className="v2-focus flex items-center text-left text-[14px] font-medium min-h-[48px] py-3 border-b"
+              className="v2-focus flex items-center text-left text-[13px] font-medium min-h-[48px] py-3 border-b"
               style={{ color: COLORS.inkSoft, borderColor: COLORS.line }}
             >
               {txt}
@@ -511,14 +511,14 @@ export function PerfilV2() {
           ) : (
             <span
               key={txt}
-              className="flex items-center text-left text-[14px] font-medium min-h-[48px] py-3 border-b"
+              className="flex items-center text-left text-[13px] font-medium min-h-[48px] py-3 border-b"
               style={{ color: COLORS.inkFaint, borderColor: COLORS.line }}
             >
               {txt}
             </span>
           )
         ))}
-        <button type="button" className="v2-focus text-left text-[14px] font-medium min-h-[48px] py-3" style={{ color: COLORS.inkSoft }}>
+        <button type="button" className="v2-focus text-left text-[13px] font-medium min-h-[48px] py-3" style={{ color: COLORS.inkSoft }}>
           Enviar feedback
         </button>
       </div>
@@ -530,14 +530,14 @@ export function PerfilV2() {
           <button
             type="button"
             onClick={() => setConfirmarSalida(true)}
-            className="v2-focus self-start min-h-[48px] px-5 rounded-full text-[15px] font-bold"
+            className="v2-focus self-start min-h-[48px] px-5 rounded-full text-[14px] font-bold"
             style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
           >
             Cerrar sesión
           </button>
         ) : (
           <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar cierre de sesión">
-            <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
               ¿Cerrar sesión en este dispositivo? Tus datos quedan guardados: para volver a verlos, entrás con tu mail y contraseña.
             </p>
             <div className="flex gap-2">
@@ -546,7 +546,7 @@ export function PerfilV2() {
                 autoFocus
                 onClick={() => setConfirmarSalida(false)}
                 disabled={saliendo}
-                className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold"
+                className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold"
                 style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}
               >
                 Cancelar
@@ -555,7 +555,7 @@ export function PerfilV2() {
                 type="button"
                 onClick={() => void salir()}
                 disabled={saliendo}
-                className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold v2-disabled"
+                className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold v2-disabled"
                 style={{ background: COLORS.ink, color: COLORS.paper }}
               >
                 {saliendo ? 'Cerrando…' : 'Cerrar sesión'}

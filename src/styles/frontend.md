@@ -213,8 +213,9 @@ Reglas duras:
 - **Mostrar menos.** Una lista larga muestra los primeros ítems y un "Ver todos" (como
   Mercado Pago), no todo de una. Letra chica sólo para lo que de verdad es secundario.
 - **Lo importante, sin scrollear.** En un celular de 375px, lo principal de cada pantalla
-  se ve completo al abrirla. Tamaños de referencia: título de pantalla 26px, título de
-  sección 18px, texto 14 a 15px, dato principal 26 a 32px. Si algo no entra, se achica o
+  se ve completo al abrirla. Tamaños de referencia (bajados 1px en oct 2026): título de
+  pantalla 24px, título de sección 17px, texto 13 a 14px, dato principal 24 a 30px. Nada
+  por debajo de 13px salvo lo de verdad secundario. Si algo no entra, se achica o
   se va otra cosa, no se agranda la pantalla.
 - **Los botones abren pantallas, no despliegan hacia abajo** (CLAUDE.md regla 12). Un
   botón de acción (registrar un gasto o un ingreso, crear un objetivo) abre una pantalla

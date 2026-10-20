@@ -85,19 +85,19 @@ export function AvisosFina() {
   return (
     <section className="flex flex-col gap-3">
       <TituloSeccion>Avisos</TituloSeccion>
-      <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+      <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
         Pocos y útiles: como mucho, dos avisos por día.
       </p>
 
       {soporte === 'iphone-sin-instalar' && (
         <>
-          <p className="text-[14px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.ink, borderColor: COLORS.brandSoft }}>
+          <p className="text-[13px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.ink, borderColor: COLORS.brandSoft }}>
             En iPhone, los avisos funcionan con FINA en tu pantalla de inicio: en Safari tocá <strong>•••</strong> → <strong>Compartir</strong> → <strong>Agregar a pantalla de inicio</strong>, abrí FINA desde ese ícono y activalos acá.
           </p>
           <button
             type="button"
             onClick={() => setTutorial(true)}
-            className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[14px] font-bold"
+            className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[13px] font-bold"
             style={{ color: COLORS.brand, border: `1.5px solid ${COLORS.brandSoft}` }}
           >
             Ver cómo se hace
@@ -106,7 +106,7 @@ export function AvisosFina() {
         </>
       )}
       {soporte === 'no' && (
-        <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+        <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
           Este navegador no permite avisos. Probá desde Chrome en Android, o con FINA agregada a la pantalla de inicio del iPhone.
         </p>
       )}
@@ -116,7 +116,7 @@ export function AvisosFina() {
           type="button"
           onClick={() => void activar()}
           disabled={trabajando}
-          className="v2-focus rounded-2xl py-3.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
+          className="v2-focus rounded-2xl py-3.5 text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           {trabajando ? 'Activando…' : 'Activar avisos'}
@@ -129,18 +129,18 @@ export function AvisosFina() {
             {AVISOS.map((a) => (
               <div key={a.clave} className="flex items-center gap-3 py-3 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>{a.titulo}</p>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>{a.detalle}</p>
+                  <p className="text-[14px] font-semibold" style={{ color: COLORS.ink }}>{a.titulo}</p>
+                  <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>{a.detalle}</p>
                   {/* Sin el día de cobro no hay cuándo mandar el de separar: se
                       pregunta acá mismo, al lado del interruptor. */}
                   {a.clave === 'separar' && prefs.separar && (
                     <div className="mt-2 flex items-center gap-2">
-                      <label htmlFor="dia-cobro" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Qué día del mes cobrás?</label>
+                      <label htmlFor="dia-cobro" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Qué día del mes cobrás?</label>
                       <select
                         id="dia-cobro"
                         value={prefs.diaCobro ?? ''}
                         onChange={(e) => void guardar({ ...prefs, diaCobro: e.target.value ? Number(e.target.value) : null })}
-                        className="v2-focus rounded-xl px-2.5 min-h-[40px] text-[15px]"
+                        className="v2-focus rounded-xl px-2.5 min-h-[40px] text-[14px]"
                         style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                       >
                         <option value="">Elegí</option>
@@ -174,7 +174,7 @@ export function AvisosFina() {
               type="button"
               onClick={() => void probar()}
               disabled={trabajando}
-              className="v2-focus min-h-[44px] px-4 rounded-full text-[14px] font-bold v2-disabled"
+              className="v2-focus min-h-[44px] px-4 rounded-full text-[13px] font-bold v2-disabled"
               style={{ color: COLORS.brand, border: `1.5px solid ${COLORS.brandSoft}` }}
             >
               Mandarme uno de prueba
@@ -183,7 +183,7 @@ export function AvisosFina() {
               type="button"
               onClick={() => void desactivar()}
               disabled={trabajando}
-              className="v2-focus min-h-[44px] text-[14px] font-semibold underline v2-disabled"
+              className="v2-focus min-h-[44px] text-[13px] font-semibold underline v2-disabled"
               style={{ color: COLORS.inkSoft }}
             >
               Desactivar en este dispositivo
@@ -192,7 +192,7 @@ export function AvisosFina() {
         </>
       )}
 
-      {mensaje && <p role="status" className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{mensaje}</p>}
+      {mensaje && <p role="status" className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{mensaje}</p>}
     </section>
   );
 }

@@ -104,10 +104,10 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
     return (
       <div className="flex flex-col gap-1.5">
         <TituloSeccion>Tu teléfono</TituloSeccion>
-        <p className="text-[15px] font-semibold tabular-nums" style={{ color: COLORS.ink, fontFamily: FONTS.mono }}>
+        <p className="text-[14px] font-semibold tabular-nums" style={{ color: COLORS.ink, fontFamily: FONTS.mono }}>
           {telefono}
         </p>
-        <p className="text-[14px]" style={{ color: COLORS.limaText }}>
+        <p className="text-[13px]" style={{ color: COLORS.limaText }}>
           Verificado — ya podés registrar gastos hablándole a FINA por WhatsApp.
         </p>
       </div>
@@ -122,7 +122,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
       {!sinTitulo && (
         <>
           <TituloSeccion>Verificá tu teléfono</TituloSeccion>
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
             Es para que puedas registrar gastos hablándole a FINA por WhatsApp. Le mandás
             un código desde tu teléfono y listo — no te vamos a mandar ningún SMS.
           </p>
@@ -134,7 +134,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
           type="button"
           onClick={() => void pedir()}
           disabled={pidiendo}
-          className="v2-focus rounded-2xl py-3.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
+          className="v2-focus rounded-2xl py-3.5 text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
           style={{ background: COLORS.lima, color: COLORS.ink }}
         >
           {pidiendo ? 'Generando…' : 'Verificar con WhatsApp'}
@@ -144,9 +144,9 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
           {/* El código se muestra igual que el link: si abre WhatsApp desde la
               computadora y manda desde el celular, tiene que poder copiarlo. */}
           <div className="rounded-2xl px-4 py-3 flex flex-col gap-1" style={{ background: COLORS.limaSoft }}>
-            <span className="text-[14px]" style={{ color: COLORS.limaText }}>Tu código</span>
+            <span className="text-[13px]" style={{ color: COLORS.limaText }}>Tu código</span>
             <span
-              className="text-[20px] font-bold tabular-nums tracking-[0.12em]"
+              className="text-[19px] font-bold tabular-nums tracking-[0.12em]"
               style={{ color: COLORS.ink, fontFamily: FONTS.mono }}
             >
               {codigo}
@@ -157,13 +157,13 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
             href={link}
             target="_blank"
             rel="noreferrer"
-            className="v2-focus rounded-2xl py-3.5 text-[15px] font-bold text-center transition-all duration-100 active:scale-[0.98] flex items-center justify-center gap-2"
+            className="v2-focus rounded-2xl py-3.5 text-[14px] font-bold text-center transition-all duration-100 active:scale-[0.98] flex items-center justify-center gap-2"
             style={{ background: COLORS.lima, color: COLORS.ink }}
           >
             Abrir WhatsApp y enviar <IconChevron size={17} />
           </a>
 
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
             {esperando
               ? 'Esperando tu mensaje… Cuando lo envíes, esta pantalla se actualiza sola.'
               : 'Mandale el mensaje y volvé acá.'}
@@ -172,7 +172,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
           <button
             type="button"
             onClick={() => void pedir()}
-            className="v2-focus self-start text-[14px] font-semibold underline rounded-full py-2"
+            className="v2-focus self-start text-[13px] font-semibold underline rounded-full py-2"
             style={{ color: COLORS.brand }}
           >
             Pedir otro código
@@ -181,7 +181,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
       )}
 
       {error && (
-        <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>
+        <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>
       )}
     </div>
   );

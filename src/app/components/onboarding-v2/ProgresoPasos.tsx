@@ -38,13 +38,13 @@ export function ProgresoPasos() {
       ) : (
         <>
           <section className="flex flex-col gap-2" aria-label="Pasos grandes hechos">
-            <p className="text-[32px] font-bold leading-none tabular-nums" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
-              {hechos.hechos} <span className="text-[18px] font-semibold" style={{ color: COLORS.inkSoft }}>de {hechos.total} pasos grandes</span>
+            <p className="text-[30px] font-bold leading-none tabular-nums" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+              {hechos.hechos} <span className="text-[17px] font-semibold" style={{ color: COLORS.inkSoft }}>de {hechos.total} pasos grandes</span>
             </p>
             <div className="h-3 rounded-full overflow-hidden" style={{ background: COLORS.line }} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: COLORS.limaViz }} />
             </div>
-            <p className="text-[15px] leading-snug pt-1" style={{ color: COLORS.ink }}>{fraseDeProgreso(hechos.hechos, hechos.total)}</p>
+            <p className="text-[14px] leading-snug pt-1" style={{ color: COLORS.ink }}>{fraseDeProgreso(hechos.hechos, hechos.total)}</p>
           </section>
 
           <ul className="flex flex-col" aria-label="Tus pasos grandes">
@@ -60,8 +60,8 @@ export function ProgresoPasos() {
                     {p.hecho && <Check />}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[15px] font-semibold" style={{ color: p.hecho || esElProximo ? COLORS.ink : COLORS.inkSoft }}>{p.titulo}</span>
-                    <span className="block text-[14px]" style={{ color: p.hecho ? COLORS.limaText : esElProximo ? COLORS.brand : COLORS.inkFaint }}>
+                    <span className="block text-[14px] font-semibold" style={{ color: p.hecho || esElProximo ? COLORS.ink : COLORS.inkSoft }}>{p.titulo}</span>
+                    <span className="block text-[13px]" style={{ color: p.hecho ? COLORS.limaText : esElProximo ? COLORS.brand : COLORS.inkFaint }}>
                       {p.hecho
                         ? (p.completadoEn ? `Hecho el ${fecha(p.completadoEn)}` : 'Hecho')
                         : esElProximo ? 'Tu próximo paso' : 'Más adelante'}

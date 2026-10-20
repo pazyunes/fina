@@ -14,7 +14,7 @@ import { colorDeSeccion, fmtGasto, fmtPagos, type Categoria, type Gasto } from '
 function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () => void }) {
   return (
     <div className="mt-2 mb-1 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
-      <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+      <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
         ¿Borrar "{gasto.descripcion}" de <span className="font-mono tabular-nums">{fmtGasto(gasto)}</span>?
         {gasto.pagos?.length ? ` La plata vuelve a ${fmtPagos(gasto.pagos)}.` : gasto.metodoPago ? ` La plata vuelve a ${gasto.metodoPago}.` : ''}
       </p>
@@ -23,7 +23,7 @@ function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () 
           type="button"
           autoFocus
           onClick={onCancelar}
-          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold"
+          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold"
           style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}
         >
           Cancelar
@@ -31,7 +31,7 @@ function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () 
         <button
           type="button"
           onClick={() => { onCancelar(); acciones.borrarGasto(gasto.id); }}
-          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold transition-all duration-100 active:scale-95"
+          className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95"
           style={{ background: COLORS.ink, color: COLORS.paper }}
         >
           Sí, borrar
@@ -60,12 +60,12 @@ export function FilaGasto({ gasto, categorias, abierto, onAbrir }: {
       <div className="flex items-center gap-2.5">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colorDeSeccion(gasto.categoriaId, categorias) }} aria-hidden />
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{gasto.descripcion}</p>
-          <p className="text-[14px] truncate" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[14px] truncate" style={{ color: COLORS.ink }}>{gasto.descripcion}</p>
+          <p className="text-[13px] truncate" style={{ color: COLORS.inkSoft }}>
             {cat?.nombre ?? 'Sin sección'}, {fechaDisplay(gasto.ts).toLowerCase()}
           </p>
         </div>
-        <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(gasto)}</span>
+        <span className="font-mono tabular-nums text-[14px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(gasto)}</span>
         <button
           type="button"
           onClick={() => onAbrir(abierto === 'editar' ? null : 'editar')}

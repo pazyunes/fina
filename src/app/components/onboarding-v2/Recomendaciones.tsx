@@ -220,17 +220,17 @@ function Mensaje({ item, onUtil }: {
   const r = item.contenido;
   return (
     <article className="flex flex-col gap-2">
-      <h3 className="text-[15px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+      <h3 className="text-[14px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
         {r.titulo}
       </h3>
-      <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
+      <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
 
       {(item.tipo === 'ia' || item.tipo === 'calculada') && (
         <>
           {/* El dato en el que se apoya, con contra qué se compara. */}
           <div className="flex flex-col gap-0.5">
-            <p className="text-[15px] font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{item.contenido.dato.valor}</p>
-            <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{item.contenido.dato.referencia}</p>
+            <p className="text-[14px] font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{item.contenido.dato.valor}</p>
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{item.contenido.dato.referencia}</p>
             {item.contenido.confianza === 'estimado' && <EstadoConfianza estado="estimado" />}
           </div>
 
@@ -238,7 +238,7 @@ function Mensaje({ item, onUtil }: {
               para no insistir con lo que no le sirve. Tocar de nuevo saca la marca. */}
           {item.tipo === 'ia' && (
             <div className="flex items-center gap-1 pt-1" role="group" aria-label="¿Te sirvió esta recomendación?">
-              <span className="text-[14px] mr-1" style={{ color: COLORS.inkFaint }}>¿Te sirvió?</span>
+              <span className="text-[13px] mr-1" style={{ color: COLORS.inkFaint }}>¿Te sirvió?</span>
               {([true, false] as const).map((v) => {
                 const elegido = item.util === v;
                 return (
@@ -247,7 +247,7 @@ function Mensaje({ item, onUtil }: {
                     type="button"
                     aria-pressed={elegido}
                     onClick={() => onUtil(item.id, elegido ? null : v)}
-                    className="v2-focus min-h-[44px] min-w-[44px] px-3 rounded-full text-[14px] font-semibold"
+                    className="v2-focus min-h-[44px] min-w-[44px] px-3 rounded-full text-[13px] font-semibold"
                     style={elegido
                       ? { background: COLORS.brandSoft, color: COLORS.brandDark }
                       : { color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}

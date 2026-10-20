@@ -78,7 +78,7 @@ export function EntradaPreguntaDelDia() {
       <button
         type="button"
         onClick={() => setAbierta(true)}
-        className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[14px] font-semibold flex items-center gap-2"
+        className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[13px] font-semibold flex items-center gap-2"
         style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.line}` }}
       >
         Pregunta del día
@@ -98,7 +98,7 @@ export function EntradaPreguntaDelDia() {
               type="button"
               autoFocus
               onClick={() => setAbierta(false)}
-              className="v2-focus w-full min-h-[44px] rounded-xl text-[14px] font-semibold"
+              className="v2-focus w-full min-h-[44px] rounded-xl text-[13px] font-semibold"
               style={{ color: COLORS.inkSoft }}
             >
               {respondida ? 'Cerrar' : 'Ahora no'}
@@ -129,10 +129,10 @@ export function PreguntaDelDia({ onRespondida }: { onRespondida?: () => void } =
 
   return (
     <section className="flex flex-col gap-3" aria-labelledby="pregunta-del-dia">
-      <h2 id="pregunta-del-dia" className="text-[15px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+      <h2 id="pregunta-del-dia" className="text-[14px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
         Pregunta del día
       </h2>
-      <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>{p.pregunta}</p>
+      <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>{p.pregunta}</p>
 
       <div className="flex flex-col gap-2" role="group" aria-label="Opciones">
         {p.opciones.map((o, i) => {
@@ -154,12 +154,12 @@ export function PreguntaDelDia({ onRespondida }: { onRespondida?: () => void } =
               onClick={() => responder(i)}
               disabled={!!hoy}
               aria-pressed={laEligio}
-              className="v2-focus w-full min-h-[44px] px-4 py-2.5 rounded-xl text-left text-[14px] font-medium flex items-center justify-between gap-3"
+              className="v2-focus w-full min-h-[44px] px-4 py-2.5 rounded-xl text-left text-[13px] font-medium flex items-center justify-between gap-3"
               style={estilo}
             >
               <span>{o}</span>
-              {hoy && esCorrecta && <span className="shrink-0 text-[14px] font-semibold" style={{ color: COLORS.limaText }}>Correcta</span>}
-              {hoy && laEligio && !esCorrecta && <span className="shrink-0 text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu respuesta</span>}
+              {hoy && esCorrecta && <span className="shrink-0 text-[13px] font-semibold" style={{ color: COLORS.limaText }}>Correcta</span>}
+              {hoy && laEligio && !esCorrecta && <span className="shrink-0 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu respuesta</span>}
             </button>
           );
         })}
@@ -167,11 +167,11 @@ export function PreguntaDelDia({ onRespondida }: { onRespondida?: () => void } =
 
       {hoy && (
         <div className="flex flex-col gap-1.5" aria-live="polite">
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
             <span className="font-semibold" style={{ color: COLORS.ink }}>{hoy.acerto ? 'Bien, es esa. ' : 'Era otra. '}</span>
             {p.explicacion}
           </p>
-          <p className="text-[14px] font-mono tabular-nums" style={{ color: COLORS.inkFaint }}>
+          <p className="text-[13px] font-mono tabular-nums" style={{ color: COLORS.inkFaint }}>
             Acertaste {acertadas} de {respuestas.length}. Mañana hay otra.
           </p>
         </div>

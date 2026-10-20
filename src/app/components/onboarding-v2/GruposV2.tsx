@@ -98,7 +98,7 @@ export function GruposV2() {
       <button
         type="button"
         aria-label={enSubpaso ? 'Volver a elegir' : 'Volver a la pantalla anterior'}
-        className="v2-focus inline-flex items-center gap-1.5 self-start min-h-[44px] text-[14px] font-semibold rounded-full py-2 pr-3 pl-1 -ml-1"
+        className="v2-focus inline-flex items-center gap-1.5 self-start min-h-[44px] text-[13px] font-semibold rounded-full py-2 pr-3 pl-1 -ml-1"
         style={{ color: COLORS.inkSoft }}
         onClick={() => (enSubpaso ? setModo('elegir') : navigate(origen))}
       >
@@ -128,8 +128,8 @@ export function GruposV2() {
             <div className="flex items-center gap-3">
               <div className="shrink-0"><Fini state="vacio" size={104} /></div>
               <div className="min-w-0">
-                <p className="font-bold text-[16px] leading-tight" style={{ color: COLORS.ink }}>Armá tu primer grupo</p>
-                <p className="text-[14px] mt-1" style={{ color: COLORS.inkSoft }}>Con amigas y amigos para verse la actividad de la semana y motivarse entre todas.</p>
+                <p className="font-bold text-[15px] leading-tight" style={{ color: COLORS.ink }}>Armá tu primer grupo</p>
+                <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Con amigas y amigos para verse la actividad de la semana y motivarse entre todas.</p>
               </div>
             </div>
             {/* Preview de "así se va a ver" en estado por-descubrir: contorno
@@ -138,7 +138,7 @@ export function GruposV2() {
               {[0, 1, 2].map((i) => (
                 <div key={i} className="flex items-center gap-3">
                   <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
                     style={{ border: `1.5px dashed ${COLORS.lineStrong}`, color: COLORS.inkFaint }}
                   >
                     {i + 1}
@@ -161,8 +161,8 @@ export function GruposV2() {
               className="v2-focus w-full text-left min-h-[60px] py-3.5 border-b transition-all duration-100 active:scale-[0.99]"
               style={{ borderColor: COLORS.line }}
             >
-              <p className="font-semibold text-[16px]" style={{ color: COLORS.ink }}>Crear un grupo</p>
-              <p className="text-[14px] mt-0.5" style={{ color: COLORS.inkSoft }}>Le ponés nombre e invitás con un código.</p>
+              <p className="font-semibold text-[15px]" style={{ color: COLORS.ink }}>Crear un grupo</p>
+              <p className="text-[13px] mt-0.5" style={{ color: COLORS.inkSoft }}>Le ponés nombre e invitás con un código.</p>
             </button>
             <button
               type="button"
@@ -170,19 +170,19 @@ export function GruposV2() {
               className="v2-focus w-full text-left min-h-[60px] py-3.5 border-b transition-all duration-100 active:scale-[0.99]"
               style={{ borderColor: COLORS.line }}
             >
-              <p className="font-semibold text-[16px]" style={{ color: COLORS.ink }}>Unirme con un código</p>
-              <p className="text-[14px] mt-0.5" style={{ color: COLORS.inkSoft }}>Si una amiga ya te invitó.</p>
+              <p className="font-semibold text-[15px]" style={{ color: COLORS.ink }}>Unirme con un código</p>
+              <p className="text-[13px] mt-0.5" style={{ color: COLORS.inkSoft }}>Si una amiga ya te invitó.</p>
             </button>
           </div>
         )}
 
         {modo === 'crear' && (
           <div className="flex flex-col gap-2.5">
-            <label htmlFor="grupo-nombre" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Nombre del grupo</label>
+            <label htmlFor="grupo-nombre" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Nombre del grupo</label>
             <input
               id="grupo-nombre"
               autoFocus
-              className="v2-focus rounded-2xl px-4 py-3 text-[16px] outline-none transition-colors"
+              className="v2-focus rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
               style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
               placeholder="Ej: Ahorrando juntas"
               value={nombreGrupo}
@@ -197,17 +197,17 @@ export function GruposV2() {
             >
               {trabajando ? 'Creando…' : 'Crear grupo'}
             </button>
-            {errorGrupo && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorGrupo}</p>}
+            {errorGrupo && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{errorGrupo}</p>}
           </div>
         )}
 
         {modo === 'unirse' && (
           <div className="flex flex-col gap-2.5">
-            <label htmlFor="grupo-codigo" className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>Código del grupo</label>
+            <label htmlFor="grupo-codigo" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Código del grupo</label>
             <input
               id="grupo-codigo"
               autoFocus
-              className="v2-focus rounded-2xl px-4 py-3 text-[16px] outline-none transition-colors uppercase"
+              className="v2-focus rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors uppercase"
               style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
               placeholder="Ej: FINA-AB12C"
               value={codigoTxt}
@@ -222,7 +222,7 @@ export function GruposV2() {
             >
               {trabajando ? 'Entrando…' : 'Unirme'}
             </button>
-            {errorGrupo && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorGrupo}</p>}
+            {errorGrupo && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{errorGrupo}</p>}
           </div>
         )}
       </div>
@@ -238,7 +238,7 @@ export function GruposV2() {
         <Volver />
         <div className="flex items-center justify-between gap-3">
           <Titulo>{grupo.nombre}</Titulo>
-          <button type="button" onClick={() => void salir()} className="v2-focus text-[14px] font-semibold underline rounded-full px-2 py-2" style={{ color: COLORS.inkSoft }}>Salir</button>
+          <button type="button" onClick={() => void salir()} className="v2-focus text-[13px] font-semibold underline rounded-full px-2 py-2" style={{ color: COLORS.inkSoft }}>Salir</button>
         </div>
       </header>
 
@@ -249,22 +249,22 @@ export function GruposV2() {
         style={{ background: COLORS.brandSoft }}
       >
         {copiado ? (
-          <span className="inline-flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: COLORS.brandDark }}>
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: COLORS.brandDark }}>
             <Check size={13} /> Código copiado
           </span>
         ) : (
           <span className="min-w-0 text-left">
-            <span className="block text-[14px] font-semibold" style={{ color: COLORS.brandDark }}>Invitar amigas</span>
-            <span className="block text-[14px] font-mono tabular-nums truncate" style={{ color: COLORS.inkSoft }}>{grupo.codigo}</span>
+            <span className="block text-[13px] font-semibold" style={{ color: COLORS.brandDark }}>Invitar amigas</span>
+            <span className="block text-[13px] font-mono tabular-nums truncate" style={{ color: COLORS.inkSoft }}>{grupo.codigo}</span>
           </span>
         )}
-        <span className="text-[14px] font-bold shrink-0" style={{ color: COLORS.brandDark }}>
+        <span className="text-[13px] font-bold shrink-0" style={{ color: COLORS.brandDark }}>
           {typeof navigator !== 'undefined' && typeof navigator.share === 'function' ? 'Compartir' : 'Copiar'}
         </span>
       </button>
 
       <div className="flex flex-col gap-2.5">
-        <p className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>Actividad de la semana</p>
+        <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Actividad de la semana</p>
         {ordenados.map((m, i) => (
           <div
             key={m.nombre}
@@ -273,20 +273,20 @@ export function GruposV2() {
           >
             {/* Ranking = secuencia real, la numeración sí es válida (§2). El 1º
                 resalta con star + tinta; el resto, hueco + tinta-media. */}
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0" style={{ background: i === 0 ? COLORS.star : COLORS.tint, color: i === 0 ? COLORS.ink : COLORS.inkSoft }}>{i + 1}</span>
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0" style={{ background: i === 0 ? COLORS.star : COLORS.tint, color: i === 0 ? COLORS.ink : COLORS.inkSoft }}>{i + 1}</span>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-[15px] truncate" style={{ color: COLORS.ink }}>{m.nombre}{m.sosVos ? ' (vos)' : ''}</p>
+              <p className="font-semibold text-[14px] truncate" style={{ color: COLORS.ink }}>{m.nombre}{m.sosVos ? ' (vos)' : ''}</p>
               {/* Barra de ACTIVIDAD (registros de la semana), no de plata. */}
               <div className="h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ background: COLORS.tint }}>
                 <div className="h-full rounded-full" style={{ width: `${(m.actividad / max) * 100}%`, background: m.sosVos ? COLORS.brand : COLORS.star }} />
               </div>
             </div>
-            <span className="text-[14px] font-bold shrink-0 tabular-nums" style={{ color: COLORS.ink }}>{m.actividad}</span>
+            <span className="text-[13px] font-bold shrink-0 tabular-nums" style={{ color: COLORS.ink }}>{m.actividad}</span>
           </div>
         ))}
       </div>
 
-      <p className="text-[14px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+      <p className="text-[13px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
         El puntaje es cuánto registrás, no cuánto gastás. Nadie del grupo ve tus gastos ni tus montos.
       </p>
     </div>

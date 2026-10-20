@@ -28,7 +28,7 @@ export function TodasLasSecciones() {
       </header>
 
       {categorias.length === 0 ? (
-        <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+        <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
           Cuando registres tu primer gasto, cada sección aparece sola acá.
         </p>
       ) : (

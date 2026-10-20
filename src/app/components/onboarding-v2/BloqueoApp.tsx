@@ -62,7 +62,7 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
     <div className="min-h-full grid place-items-center px-6 py-16">
       <div className="flex flex-col items-center gap-3.5 w-full max-w-xs">
         <Fini state="idle" size={110} />
-        <p className="text-[17px] font-bold text-center" style={{ color: COLORS.ink }}>Ingresá tu PIN</p>
+        <p className="text-[16px] font-bold text-center" style={{ color: COLORS.ink }}>Ingresá tu PIN</p>
         <input
           ref={inputRef}
           type="password"
@@ -70,18 +70,18 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
           pattern="[0-9]*"
           maxLength={6}
           aria-label="PIN"
-          className="v2-focus w-full rounded-2xl px-4 py-3.5 text-[20px] text-center tracking-[0.5em] transition-colors"
+          className="v2-focus w-full rounded-2xl px-4 py-3.5 text-[19px] text-center tracking-[0.5em] transition-colors"
           style={{ background: COLORS.surface, border: `1.5px solid ${error ? COLORS.coralDark : COLORS.lineStrong}`, color: COLORS.ink }}
           value={pin}
           onChange={(e) => { setPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(false); }}
           onKeyDown={(e) => { if (e.key === 'Enter') void confirmar(); }}
         />
-        {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>PIN incorrecto. Probá de nuevo.</p>}
+        {error && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>PIN incorrecto. Probá de nuevo.</p>}
         <button
           type="button"
           onClick={() => void confirmar()}
           disabled={!pin || verificando}
-          className="v2-focus w-full rounded-2xl py-3.5 text-[15px] font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
+          className="v2-focus w-full rounded-2xl py-3.5 text-[14px] font-bold v2-disabled transition-all duration-100 active:scale-[0.98]"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           {verificando ? 'Comprobando…' : 'Entrar'}
@@ -91,7 +91,7 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
             type="button"
             onClick={() => void probarBiometria()}
             disabled={probandoBio}
-            className="v2-focus text-[14px] font-semibold underline"
+            className="v2-focus text-[13px] font-semibold underline"
             style={{ color: COLORS.brand }}
           >
             {probandoBio ? 'Esperando…' : 'Usar Face ID / Touch ID'}
@@ -99,19 +99,19 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
         )}
 
         {!confirmarSalida ? (
-          <button type="button" onClick={() => setConfirmarSalida(true)} className="v2-focus mt-1 text-[14px] font-semibold" style={{ color: COLORS.inkFaint }}>
+          <button type="button" onClick={() => setConfirmarSalida(true)} className="v2-focus mt-1 text-[13px] font-semibold" style={{ color: COLORS.inkFaint }}>
             ¿Olvidaste tu PIN?
           </button>
         ) : (
           <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-3 w-full" style={{ background: COLORS.tint }} role="group" aria-label="Olvidaste tu PIN">
-            <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
               No hay forma de recuperarlo: hay que cerrar sesión en este dispositivo y volver a entrar con tu mail y contraseña.
             </p>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setConfirmarSalida(false)} disabled={saliendo} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+              <button type="button" onClick={() => setConfirmarSalida(false)} disabled={saliendo} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
                 Cancelar
               </button>
-              <button type="button" onClick={() => void salir()} disabled={saliendo} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold v2-disabled" style={{ background: COLORS.ink, color: COLORS.paper }}>
+              <button type="button" onClick={() => void salir()} disabled={saliendo} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold v2-disabled" style={{ background: COLORS.ink, color: COLORS.paper }}>
                 {saliendo ? 'Saliendo…' : 'Cerrar sesión'}
               </button>
             </div>

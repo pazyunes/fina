@@ -162,7 +162,7 @@ function Animacion({ desde, hasta, reducir, onFin }: { desde: number; hasta: num
           </span>
           {/* Se va antes del vuelo: al contador de arriba llega sólo el número. */}
           <span
-            className="text-[16px] font-bold mt-1 transition-opacity duration-200"
+            className="text-[15px] font-bold mt-1 transition-opacity duration-200"
             style={{ color: COLORS.ink, fontFamily: FONTS.display, opacity: volando ? 0 : 1 }}
           >
             {hasta === 1 ? '¡Arrancaste tu racha!' : `¡${hasta} días de racha!`}

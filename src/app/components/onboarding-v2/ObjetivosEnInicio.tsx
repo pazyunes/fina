@@ -140,7 +140,7 @@ function Entrada({ titulo, linea, pct = null, atencion = false, onClick }: {
       style={{ background: COLORS.surface, border: `1.5px solid ${atencion ? COLORS.naranja : COLORS.line}` }}
     >
       <span className="flex-1 min-w-0 flex flex-col gap-1">
-        <span className="text-[14px] font-bold truncate" style={{ color: COLORS.ink }}>{titulo}</span>
+        <span className="text-[13px] font-bold truncate" style={{ color: COLORS.ink }}>{titulo}</span>
         {pct !== null && (
           <span className="h-1.5 rounded-full overflow-hidden" style={{ background: COLORS.limaSoft }} aria-hidden>
             <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: COLORS.limaViz }} />

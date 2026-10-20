@@ -14,8 +14,8 @@ import { CONTACTO_DATOS } from '../../lib/legales';
 function Bloque({ id, titulo, children }: { id?: string; titulo: string; children: React.ReactNode }) {
   return (
     <section id={id} className="flex flex-col gap-2 scroll-mt-4">
-      <h3 className="text-[15px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
-      <div className="flex flex-col gap-2 text-[14px] leading-relaxed" style={{ color: COLORS.ink }}>{children}</div>
+      <h3 className="text-[14px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{titulo}</h3>
+      <div className="flex flex-col gap-2 text-[13px] leading-relaxed" style={{ color: COLORS.ink }}>{children}</div>
     </section>
   );
 }
@@ -23,8 +23,8 @@ function Bloque({ id, titulo, children }: { id?: string; titulo: string; childre
 function EnSimple({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-2xl px-4 py-3.5" style={{ background: COLORS.brandSoft }}>
-      <p className="text-[14px] font-bold mb-1" style={{ color: COLORS.brandDark }}>En simple</p>
-      <p className="text-[14px] leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
+      <p className="text-[13px] font-bold mb-1" style={{ color: COLORS.brandDark }}>En simple</p>
+      <p className="text-[13px] leading-snug" style={{ color: COLORS.brandDark }}>{children}</p>
     </div>
   );
 }
@@ -44,8 +44,8 @@ export function TextoLegal() {
       {/* ───────────── TÉRMINOS ───────────── */}
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-1">
-          <h2 className="text-[19px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Términos y condiciones</h2>
-          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>En vigencia desde el 15 de octubre de 2026.</p>
+          <h2 className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Términos y condiciones</h2>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>En vigencia desde el 15 de octubre de 2026.</p>
         </div>
 
         <EnSimple>
@@ -163,8 +163,8 @@ export function TextoLegal() {
       {/* ───────────── PRIVACIDAD ───────────── */}
       <div id="privacidad" className="flex flex-col gap-5 scroll-mt-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-[19px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Política de privacidad</h2>
-          <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>
+          <h2 className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>Política de privacidad</h2>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
             Según la Ley 25.326 de Protección de los Datos Personales. En vigencia desde el 15 de octubre de 2026.
           </p>
         </div>

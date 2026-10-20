@@ -12,12 +12,12 @@ export function Proximamente() {
     >
       <Fini state="idle" size={150} />
       <h1
-        className="font-extrabold text-[32px] leading-[1.1] tracking-[-0.01em]"
+        className="font-extrabold text-[30px] leading-[1.1] tracking-[-0.01em]"
         style={{ color: COLORS.ink, fontFamily: FONTS.display }}
       >
         Volvemos pronto
       </h1>
-      <p className="text-[17px] leading-snug max-w-[34ch]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.body }}>
+      <p className="text-[16px] leading-snug max-w-[34ch]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.body }}>
         Estamos rehaciendo FINA de cero para que sea mucho más clara. Si ya la venías usando, te vamos a avisar cuando esté.
       </p>
     </div>

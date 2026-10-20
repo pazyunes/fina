@@ -77,9 +77,9 @@ export function FestejoPaso({ titulo, hechos, total, onVerProgreso, onCerrar }: 
         onClick={(e) => e.stopPropagation()}
       >
         <Fini state="logro" size={110} />
-        <p className="text-[22px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>¡Lo hiciste!</p>
-        <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{titulo}</p>
-        <p className="text-[14px] font-semibold tabular-nums" style={{ color: COLORS.limaText }}>
+        <p className="text-[21px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>¡Lo hiciste!</p>
+        <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{titulo}</p>
+        <p className="text-[13px] font-semibold tabular-nums" style={{ color: COLORS.limaText }}>
           {hechos} de {total} pasos grandes
         </p>
         <div className="w-full flex flex-col gap-2 pt-2">
@@ -87,7 +87,7 @@ export function FestejoPaso({ titulo, hechos, total, onVerProgreso, onCerrar }: 
             type="button"
             autoFocus
             onClick={onVerProgreso}
-            className="v2-focus w-full rounded-2xl min-h-[48px] text-[15px] font-bold transition-transform active:scale-[0.99]"
+            className="v2-focus w-full rounded-2xl min-h-[48px] text-[14px] font-bold transition-transform active:scale-[0.99]"
             style={{ background: COLORS.lima, color: COLORS.ink }}
           >
             Ver tu progreso
@@ -95,7 +95,7 @@ export function FestejoPaso({ titulo, hechos, total, onVerProgreso, onCerrar }: 
           <button
             type="button"
             onClick={onCerrar}
-            className="v2-focus w-full min-h-[44px] text-[14px] font-semibold"
+            className="v2-focus w-full min-h-[44px] text-[13px] font-semibold"
             style={{ color: COLORS.inkSoft }}
           >
             Seguir

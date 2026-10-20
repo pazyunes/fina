@@ -379,8 +379,8 @@ export function InversionesV2() {
           style={cardStyle}
           className={`v2-focus text-left ${CARD} p-5 flex flex-col gap-2 transition-transform duration-100 active:scale-[0.99]`}
         >
-          <span className="text-[18px] font-bold" style={{ color: COLORS.ink }}>Averiguá tu perfil de inversor</span>
-          <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>
+          <span className="text-[17px] font-bold" style={{ color: COLORS.ink }}>Averiguá tu perfil de inversor</span>
+          <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>
             {prefilledPerfil
               ? 'Ya nos contaste algo de esto en el onboarding. Te faltan un par de preguntas más.'
               : '2 minutos, para que las recomendaciones tengan que ver con vos. No te compromete a nada.'}
@@ -423,7 +423,7 @@ export function InversionesV2() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-3">
-            <Titulo className="!text-[22px]">{detalle.nombre}</Titulo>
+            <Titulo className="!text-[21px]">{detalle.nombre}</Titulo>
             <button
               type="button"
               onClick={() => setDetalle(null)}
@@ -435,20 +435,20 @@ export function InversionesV2() {
             </button>
           </div>
 
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>{detalle.desc}</p>
+          <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>{detalle.desc}</p>
 
           <div className="flex flex-col gap-1.5">
             <TituloSeccion>Qué le puede pasar a tu plata</TituloSeccion>
-            <p className="inline-flex items-center gap-2 text-[14px] font-bold" style={{ color: COLORS.ink }}>
+            <p className="inline-flex items-center gap-2 text-[13px] font-bold" style={{ color: COLORS.ink }}>
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: RIESGO_FILL[detalle.riesgo] }} aria-hidden />
               Riesgo {detalle.riesgo.toLowerCase()}
             </p>
-            <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{RIESGO_EXPLICADO[detalle.riesgo]}</p>
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{RIESGO_EXPLICADO[detalle.riesgo]}</p>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <TituloSeccion>Por qué te lo recomendamos</TituloSeccion>
-            <p className="text-[14px] leading-relaxed" style={{ color: COLORS.inkSoft }}>{detalle.porQue}</p>
+            <p className="text-[13px] leading-relaxed" style={{ color: COLORS.inkSoft }}>{detalle.porQue}</p>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -459,12 +459,12 @@ export function InversionesV2() {
               return (
                 <>
                   {tuyas.length > 0 && (
-                    <p className="text-[14px] leading-snug font-semibold" style={{ color: COLORS.limaText }}>
+                    <p className="text-[13px] leading-snug font-semibold" style={{ color: COLORS.limaText }}>
                       Ya lo tenés a mano desde {tuyas.join(' o ')}.
                     </p>
                   )}
                   {otras.length > 0 && (
-                    <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                    <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
                       {tuyas.length > 0 ? 'También está en ' : 'Está disponible en '}{otras.join(', ')}.
                     </p>
                   )}
@@ -473,7 +473,7 @@ export function InversionesV2() {
             })()}
           </div>
 
-          <p className="text-[14px] leading-snug pt-1" style={{ color: COLORS.inkFaint }}>
+          <p className="text-[13px] leading-snug pt-1" style={{ color: COLORS.inkFaint }}>
             Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.
           </p>
         </div>
@@ -498,7 +498,7 @@ export function InversionesV2() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-3">
-            <Titulo className="!text-[22px]">{editandoId ? 'Editar registro' : 'Registrar un aporte'}</Titulo>
+            <Titulo className="!text-[21px]">{editandoId ? 'Editar registro' : 'Registrar un aporte'}</Titulo>
             <button
               type="button"
               onClick={cerrarAporte}
@@ -512,19 +512,19 @@ export function InversionesV2() {
 
           {aportePaso === 'que-es' ? (
             <>
-              <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+              <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
                 Anotá acá la plata que vos ya pusiste en algún instrumento, por fuera de FINA.
               </p>
               <div className="flex flex-col gap-1.5">
                 <TituloSeccion>Esto no mueve tu plata</TituloSeccion>
-                <p className="text-[14px] leading-relaxed" style={{ color: COLORS.inkSoft }}>
+                <p className="text-[13px] leading-relaxed" style={{ color: COLORS.inkSoft }}>
                   FINA no invierte ni toca tu dinero. Registrar es solo anotar, como en un cuaderno,
                   para que puedas ver todo junto y seguir cómo evoluciona.
                 </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <TituloSeccion>Para qué sirve</TituloSeccion>
-                <p className="text-[14px] leading-relaxed" style={{ color: COLORS.inkSoft }}>
+                <p className="text-[13px] leading-relaxed" style={{ color: COLORS.inkSoft }}>
                   Con lo que anotes armamos tu evolución y te avisamos si hace rato que no le sumás.
                 </p>
               </div>
@@ -536,7 +536,7 @@ export function InversionesV2() {
                   más importante de la explicación que se salteó va en una
                   línea: registrar no mueve plata. */}
               {!editandoId && (
-                <p className="text-[14px] leading-snug -mt-2" style={{ color: COLORS.inkSoft }}>
+                <p className="text-[13px] leading-snug -mt-2" style={{ color: COLORS.inkSoft }}>
                   Es solo anotar lo que pusiste por fuera de FINA: acá no se mueve tu plata.
                 </p>
               )}
@@ -573,7 +573,7 @@ export function InversionesV2() {
                         aria-disabled={sinCotizacion || undefined}
                         title={sinCotizacion ? 'Todavía no tenemos la cotización del dólar' : undefined}
                         onClick={() => !sinCotizacion && setAporteMoneda(m)}
-                        className="v2-focus flex-1 min-h-[48px] rounded-2xl text-[14px] font-bold transition-all duration-100 active:scale-[0.98]"
+                        className="v2-focus flex-1 min-h-[48px] rounded-2xl text-[13px] font-bold transition-all duration-100 active:scale-[0.98]"
                         style={sel
                           ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
                           : { background: COLORS.surface, color: sinCotizacion ? COLORS.inkFaint : COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, cursor: sinCotizacion ? 'not-allowed' : 'pointer' }}
@@ -588,7 +588,7 @@ export function InversionesV2() {
                   <input
                     autoFocus
                     aria-label={`Monto del aporte en ${aporteMoneda === 'USD' ? 'dólares' : 'pesos'}`}
-                    className={`v2-focus w-full rounded-2xl ${aporteMoneda === 'USD' ? 'pl-14' : 'pl-8'} pr-4 py-3 text-[16px] font-mono tabular-nums outline-none transition-colors`}
+                    className={`v2-focus w-full rounded-2xl ${aporteMoneda === 'USD' ? 'pl-14' : 'pl-8'} pr-4 py-3 text-[15px] font-mono tabular-nums outline-none transition-colors`}
                     style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                     placeholder="Monto"
                     inputMode="decimal"
@@ -599,7 +599,7 @@ export function InversionesV2() {
                 {/* Se dice el equivalente y con qué cotización queda guardado,
                     para que no haya sorpresa después. */}
                 {aporteMoneda === 'USD' && rate && parseMoneyInput(aporteMonto) > 0 && (
-                  <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                  <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
                     Son <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{fmtMoney(parseMoneyInput(aporteMonto) * rate)}</span> al blue de hoy
                     (<span className="font-mono tabular-nums">{fmtMoney(rate)}</span>). Queda guardado a esa cotización.
                   </p>
@@ -607,7 +607,7 @@ export function InversionesV2() {
               </div>
 
               {errorAporte && (
-                <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorAporte}</p>
+                <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{errorAporte}</p>
               )}
 
               <Cta
@@ -627,14 +627,14 @@ export function InversionesV2() {
               {editandoId && (
                 confirmarBorrar ? (
                   <div className="flex flex-col gap-2.5 pt-1">
-                    <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+                    <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
                       ¿Borramos este registro de {nombreInstr(aporteInstrId)}? Se saca de tu total y de tu evolución.
                     </p>
                     <div className="flex gap-2.5">
                       <button
                         type="button"
                         onClick={() => setConfirmarBorrar(false)}
-                        className="v2-focus flex-1 rounded-2xl py-3.5 text-[14px] font-bold transition-all duration-100 active:scale-[0.98]"
+                        className="v2-focus flex-1 rounded-2xl py-3.5 text-[13px] font-bold transition-all duration-100 active:scale-[0.98]"
                         style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}
                       >
                         Cancelar
@@ -642,7 +642,7 @@ export function InversionesV2() {
                       <button
                         type="button"
                         onClick={() => { borrarAporte(); cerrarAporte(); }}
-                        className="v2-focus flex-1 rounded-2xl py-3.5 text-[14px] font-bold transition-all duration-100 active:scale-[0.98]"
+                        className="v2-focus flex-1 rounded-2xl py-3.5 text-[13px] font-bold transition-all duration-100 active:scale-[0.98]"
                         style={{ background: COLORS.naranja, color: COLORS.ink }}
                       >
                         Sí, borrar
@@ -653,7 +653,7 @@ export function InversionesV2() {
                   <button
                     type="button"
                     onClick={() => setConfirmarBorrar(true)}
-                    className="v2-focus min-h-[44px] text-[14px] font-semibold rounded-2xl transition-all duration-100 active:scale-[0.98]"
+                    className="v2-focus min-h-[44px] text-[13px] font-semibold rounded-2xl transition-all duration-100 active:scale-[0.98]"
                     style={{ color: COLORS.naranjaText }}
                   >
                     Borrar este registro
@@ -686,17 +686,17 @@ export function InversionesV2() {
               className="rounded-2xl px-5 py-5 flex flex-col gap-2"
               style={{ background: COLORS.surface, boxShadow: '0 2px 8px rgba(43,33,24,0.08)' }}
             >
-              <p className="text-[14px] font-medium" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[13px] font-medium" style={{ color: COLORS.inkSoft }}>
                 Para tu perfil <span className="font-bold" style={{ color: pl.strong }}>{perfil.label.toLowerCase()}</span>
               </p>
-              <p className="text-[24px] font-bold leading-tight tracking-[-0.01em]" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+              <p className="text-[22px] font-bold leading-tight tracking-[-0.01em]" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
                 {principal.nombre}
               </p>
-              <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{principal.desc}</p>
+              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{principal.desc}</p>
               <button
                 type="button"
                 onClick={() => setDetalle(principal)}
-                className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] mt-1 text-[15px] font-bold"
+                className="v2-focus self-start inline-flex items-center gap-1 min-h-[44px] mt-1 text-[14px] font-bold"
                 style={{ color: COLORS.brand }}
               >
                 Ver por qué <IconChevron size={16} />
@@ -717,7 +717,7 @@ export function InversionesV2() {
           {tab === 'recos' && (
             <div className="flex flex-col gap-1">
               {enQue.length > 0 && (
-                <p className="text-[14px] leading-snug pl-3.5 border-l-2 mb-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.lima }}>
+                <p className="text-[13px] leading-snug pl-3.5 border-l-2 mb-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.lima }}>
                   Ya invertís en {enQue.join(', ')}, así que priorizamos otras opciones para diversificar.
                 </p>
               )}
@@ -735,20 +735,20 @@ export function InversionesV2() {
                   >
                     <span className="flex-1 min-w-0 flex flex-col gap-0.5">
                       <span className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-[15px]" style={{ color: COLORS.ink }}>{r.nombre}</span>
+                        <span className="font-semibold text-[14px]" style={{ color: COLORS.ink }}>{r.nombre}</span>
                         {already && (
-                          <span className="text-[14px] font-semibold rounded-full px-2 py-0.5" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
+                          <span className="text-[13px] font-semibold rounded-full px-2 py-0.5" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
                             Ya lo hacés
                           </span>
                         )}
                       </span>
-                      <span className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.desc}</span>
+                      <span className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.desc}</span>
                     </span>
                     <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
                   </button>
                 );
               })}
-              <p className="text-[14px] leading-snug pt-2" style={{ color: COLORS.inkFaint }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
+              <p className="text-[13px] leading-snug pt-2" style={{ color: COLORS.inkFaint }}>Esto es orientativo y no reemplaza asesoramiento financiero. FINA no mueve tu plata.</p>
             </div>
           )}
 
@@ -782,7 +782,7 @@ export function InversionesV2() {
                           aria-pressed={activo}
                           aria-disabled={sinCotizacion || undefined}
                           title={sinCotizacion ? 'Todavía no tenemos la cotización del dólar' : `Ver en ${c === 'ARS' ? 'pesos' : 'dólares'}`}
-                          className="v2-focus rounded-full px-3 min-h-[36px] text-[14px] font-bold transition-colors duration-150"
+                          className="v2-focus rounded-full px-3 min-h-[36px] text-[13px] font-bold transition-colors duration-150"
                           style={activo
                             ? { background: COLORS.brand, color: COLORS.surface }
                             : { color: sinCotizacion ? COLORS.inkFaint : COLORS.inkSoft, cursor: sinCotizacion ? 'not-allowed' : 'pointer' }}
@@ -797,7 +797,7 @@ export function InversionesV2() {
               {/* Un monto convertido es un dato DERIVADO, no declarado: se dice a
                   qué se convirtió y con qué (§5). */}
               {isUsd && (
-                <p className="text-[14px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+                <p className="text-[13px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
                   El total está pasado a dólares con el blue de hoy. Cada registro se muestra en la moneda en que lo cargaste.
                 </p>
               )}
@@ -807,7 +807,7 @@ export function InversionesV2() {
               <button
                 type="button"
                 onClick={() => abrirAlta()}
-                className="v2-focus w-full rounded-2xl py-3.5 text-[15px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
+                className="v2-focus w-full rounded-2xl py-3.5 text-[14px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
                 style={{ background: COLORS.brand, color: COLORS.surface }}
               >
                 + Registrar un aporte
@@ -816,7 +816,7 @@ export function InversionesV2() {
               <div className="flex flex-col gap-2 pt-2">
                 <TituloSeccion>Tus registros</TituloSeccion>
                 {aportes.length === 0 ? (
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>
+                  <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>
                 ) : (
                   <div className="flex flex-col">
                     {/* Cada registro se toca para editarlo o borrarlo: abre el
@@ -831,12 +831,12 @@ export function InversionesV2() {
                         style={{ borderColor: COLORS.line }}
                       >
                         <span className="flex-1 min-w-0 flex flex-col">
-                          <span className="text-[15px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
-                          <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
+                          <span className="text-[14px] truncate" style={{ color: COLORS.ink }}>{nombreInstr(a.instrumentoId)}</span>
+                          <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{fechaDisplay(a.ts)}</span>
                         </span>
                         {/* Lo que cargaste, en la moneda en que lo cargaste: es
                             el hecho y no se convierte nunca. */}
-                        <span className="text-[15px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>
+                        <span className="text-[14px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>
                           {monedaDe(a) === 'USD' ? `US$ ${a.monto.toLocaleString('es-AR')}` : fmtMoney(a.monto)}
                         </span>
                         <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={16} /></span>
@@ -1149,7 +1149,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
       <TituloSeccion>Simulá con plata imaginaria</TituloSeccion>
 
       <div className="flex flex-col gap-2.5">
-        <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>¿En qué?</p>
+        <p className="text-[14px] font-semibold" style={{ color: COLORS.ink }}>¿En qué?</p>
         <OpcionesGrid
           opciones={INSTRUMENTOS.map((i) => ({ id: i.id, label: i.nombre }))}
           valor={instrId}
@@ -1158,12 +1158,12 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
       </div>
 
       <div className="flex flex-col gap-2.5">
-        <p className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>¿Cuánto por mes?</p>
+        <p className="text-[14px] font-semibold" style={{ color: COLORS.ink }}>¿Cuánto por mes?</p>
         <div className="relative">
           <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
           <input
             aria-label="Cuánto pondrías por mes"
-            className="v2-focus w-full rounded-2xl pl-8 pr-4 py-3 text-[16px] font-mono tabular-nums outline-none transition-colors"
+            className="v2-focus w-full rounded-2xl pl-8 pr-4 py-3 text-[15px] font-mono tabular-nums outline-none transition-colors"
             style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
             placeholder="Cuánto pondrías por mes"
             inputMode="decimal"
@@ -1178,7 +1178,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
               type="button"
               onClick={() => setMeses(m)}
               aria-pressed={meses === m}
-              className="v2-focus flex-1 min-h-[44px] rounded-2xl text-[14px] font-bold transition-all duration-100 active:scale-[0.97]"
+              className="v2-focus flex-1 min-h-[44px] rounded-2xl text-[13px] font-bold transition-all duration-100 active:scale-[0.97]"
               style={meses === m
                 ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
                 : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
@@ -1193,7 +1193,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
         <>
           {rinde && (
             <div className="flex flex-col gap-1.5 pt-1" aria-live="polite">
-              <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>A los {meses} meses podrías tener</p>
+              <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>A los {meses} meses podrías tener</p>
               <Rango min={loFinal} max={hiFinal} />
               <EstadoConfianza estado="estimado" />
             </div>
@@ -1207,13 +1207,13 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2.5">
               <span className="w-4 h-[2px] rounded-full shrink-0" style={{ background: COLORS.ink }} />
-              <span className="flex-1 text-[14px]" style={{ color: COLORS.inkSoft }}>Lo que pondrías</span>
-              <span className="font-mono tabular-nums font-semibold text-[14px]" style={{ color: COLORS.ink }}>{fmtMoney(totalAportado)}</span>
+              <span className="flex-1 text-[13px]" style={{ color: COLORS.inkSoft }}>Lo que pondrías</span>
+              <span className="font-mono tabular-nums font-semibold text-[13px]" style={{ color: COLORS.ink }}>{fmtMoney(totalAportado)}</span>
             </div>
             {rinde && (
               <div className="flex items-center gap-2.5">
                 <span className="w-4 h-[2.5px] rounded-full shrink-0" style={{ background: COLORS.brand }} />
-                <span className="flex-1 text-[14px]" style={{ color: COLORS.inkSoft }}>Lo que podrías tener, estimado</span>
+                <span className="flex-1 text-[13px]" style={{ color: COLORS.inkSoft }}>Lo que podrías tener, estimado</span>
               </div>
             )}
           </div>
@@ -1222,8 +1222,8 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
               viene parecen más que $1.000.000 hoy aunque compren menos. */}
           {rinde && !sup?.enDolares && (
             <div className="flex flex-col gap-1.5 pt-1 pl-3.5 border-l-2" style={{ borderColor: contraInflacion === 'gana' ? COLORS.lima : COLORS.star }}>
-              <p className="text-[14px] font-semibold" style={{ color: COLORS.ink }}>En plata de hoy</p>
-              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[13px] font-semibold" style={{ color: COLORS.ink }}>En plata de hoy</p>
+              <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
                 Con una inflación de {Math.round(INFLACION_ANUAL_ESPERADA * 100)}% anual, comprarían como{' '}
                 <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>entre {fmtMoney(loReal)} y {fmtMoney(hiReal)}</span> de hoy.{' '}
                 {contraInflacion === 'gana'
@@ -1242,7 +1242,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
               se quiere. */}
           <details className="group flex flex-col gap-1.5 pt-1">
             <summary
-              className="v2-focus list-none [&::-webkit-details-marker]:hidden cursor-pointer flex items-center gap-2 min-h-[44px] rounded-lg text-[15px] font-semibold"
+              className="v2-focus list-none [&::-webkit-details-marker]:hidden cursor-pointer flex items-center gap-2 min-h-[44px] rounded-lg text-[14px] font-semibold"
               style={{ color: COLORS.ink }}
             >
               <span className="flex-1">Cómo se hizo esta cuenta</span>
@@ -1250,9 +1250,9 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
                 <IconChevron size={16} />
               </span>
             </summary>
-            <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{sup?.comoFunciona}</p>
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{sup?.comoFunciona}</p>
             {rinde && (
-              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
                 Supuesto: <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>
                   {Math.round((sup!.tna as number) * 100)}% anual{sup?.enDolares ? ' en dólares' : ''}
                 </span>
@@ -1261,7 +1261,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
               </p>
             )}
             {sup?.fuente && (
-              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkFaint }}>
+              <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
                 Fuente: {sup.fuente}. Datos de {FECHA_SUPUESTOS}; las tasas cambian.
               </p>
             )}
@@ -1269,7 +1269,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
         </>
       )}
 
-      <p className="text-[14px] leading-snug" style={{ color: COLORS.inkFaint }}>
+      <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
         Es una simulación con números inventados sobre {instrumento.nombre}: no es una promesa de rendimiento, no mueve plata real y no reemplaza asesoramiento financiero.
       </p>
       <ArmarGrupoBtn />

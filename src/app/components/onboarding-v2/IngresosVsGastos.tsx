@@ -165,7 +165,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
 
   if (nadaRegistrado) {
     return (
-      <p className="text-[14px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+      <p className="text-[13px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
         Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto entra y cuánto sale cada {modoSemana ? 'día' : 'mes'}{explorar ? ', y cuánto te queda' : ''}.
       </p>
     );
@@ -175,7 +175,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
     <div className="flex flex-col gap-3">
       {/* El período elegido, en números. */}
       <div className="flex flex-col gap-2">
-        <p className="text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>
+        <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
           {tituloPeriodo}
         </p>
         <div className={`grid gap-2 ${explorar ? 'grid-cols-3' : 'grid-cols-2'}`}>
@@ -187,12 +187,12 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
           {explorar && actual.entro > 0 && (
             <div className="flex flex-col gap-0.5 min-w-0">
               <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? ((modoSemana ? semana.actual : esEsteMes) ? 'Te queda' : 'Te quedó') : 'Salió de más'}</span>
-              <span className="text-[15px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
+              <span className="text-[14px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
             </div>
           )}
         </div>
         {actual.entro === 0 && actual.salio > 0 && (
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
             Registraste gastos {esteTexto}, pero no ingresos.{' '}
             {explorar ? `Si los cargás, se ve cuánto te ${(modoSemana ? semana.actual : esEsteMes) ? 'queda' : 'quedó'}.` : 'Si los cargás, se ve cuánto entró.'}
           </p>
@@ -273,11 +273,11 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
 
       {conLista && (
         <div className="flex flex-col pt-1">
-          <p className="text-[15px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+          <p className="text-[14px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
             {modoSemana ? `Ingresos de ${semana.actual ? 'esta semana' : semana.etiqueta === 'Semana pasada' ? 'la semana pasada' : `la semana del ${semana.etiqueta}`}` : `Ingresos de ${esEsteMes ? 'este mes' : nombreMes(elegido, true)}`}
           </p>
           {ingresosLista.length === 0 && (
-            <p className="text-[14px] py-2" style={{ color: COLORS.inkSoft }}>No hay ingresos registrados.</p>
+            <p className="text-[13px] py-2" style={{ color: COLORS.inkSoft }}>No hay ingresos registrados.</p>
           )}
           {recortar(ingresosLista, verTodosIngresos).map((i) => (
             <FilaIngreso key={i.id} ingreso={i} abierto={borrando === i.id} onAbrir={() => setBorrando(borrando === i.id ? null : i.id)} onCerrar={() => setBorrando(null)} />
@@ -296,7 +296,7 @@ function Cifra({ color, etiqueta, valor }: { color: string; etiqueta: string; va
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} aria-hidden />
         {etiqueta}
       </span>
-      <span className="text-[15px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(valor)}</span>
+      <span className="text-[14px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(valor)}</span>
     </div>
   );
 }
@@ -331,12 +331,12 @@ function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingr
       <div className="flex items-center gap-2.5">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: INGRESO }} aria-hidden />
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{titulo}</p>
-          <p className="text-[14px] truncate" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[14px] truncate" style={{ color: COLORS.ink }}>{titulo}</p>
+          <p className="text-[13px] truncate" style={{ color: COLORS.inkSoft }}>
             {[i.medio, i.origen === 'whatsapp' ? 'por WhatsApp' : null, new Date(i.ts).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })].filter(Boolean).join(', ')}
           </p>
         </div>
-        <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>+{monto}</span>
+        <span className="font-mono tabular-nums text-[14px] shrink-0" style={{ color: COLORS.ink }}>+{monto}</span>
         <button
           type="button"
           onClick={() => { setEditando((v) => !v); onCerrar(); }}
@@ -361,14 +361,14 @@ function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingr
       {editando && <EditorIngreso ingreso={i} onCerrar={() => setEditando(false)} />}
       {abierto && (
         <div className="mt-2 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
             ¿Borrar este ingreso de <span className="font-mono tabular-nums">{monto}</span>?
           </p>
           <div className="flex gap-2">
-            <button type="button" autoFocus onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+            <button type="button" autoFocus onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
               Cancelar
             </button>
-            <button type="button" onClick={() => { onCerrar(); acciones.borrarIngreso(i.id); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[14px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
+            <button type="button" onClick={() => { onCerrar(); acciones.borrarIngreso(i.id); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
               Sí, borrar
             </button>
           </div>
