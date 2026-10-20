@@ -672,7 +672,7 @@ export function GastosV2() {
           medio), así que un solo color; el monto en tinta. */}
       {porMedio.length > 0 && (
         <section className="flex flex-col gap-2.5" aria-label="Con qué pagaste">
-          <TituloSeccion>Con qué pagaste {referenciaPeriodo}</TituloSeccion>
+          <TituloSeccion>¿Con qué pagaste {referenciaPeriodo}?</TituloSeccion>
           {porMedio.map((x) => (
             <div key={x.nombre} className="flex flex-col gap-1">
               <div className="flex items-baseline justify-between gap-2">
