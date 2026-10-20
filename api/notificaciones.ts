@@ -179,7 +179,9 @@ async function armarVencimiento(supabase: SupabaseClient, uid: string, hoy: stri
     : `${delDia.map((f) => `${f.description} (${pesos(f.amount, f.currency)})`).join(', ')}.`;
   return {
     title: titulo,
-    body: `${detalle} Cuando lo pagues, marcalo en FINA y queda registrado.`.slice(0, 180),
+    body: (delDia.length === 1
+      ? `${detalle} Cuando lo pagues, marcalo en FINA y queda registrado.`
+      : `${detalle} Cuando los pagues, marcalos en FINA.`).slice(0, 180),
     url: '/onboarding-v2/gastos?abrir=fijos',
     tag: 'fina-vencimiento',
   };
@@ -196,7 +198,7 @@ async function armarSeparar(supabase: SupabaseClient, uid: string): Promise<Avis
   if (lista.length === 0) {
     return {
       title: 'Hoy cobrás',
-      body: 'Buen momento para separar una parte apenas entra, antes de empezar a gastar.',
+      body: 'Buen momento para apartar una parte apenas entra, antes de empezar a gastar.',
       url: '/onboarding-v2/objetivos',
       tag: 'fina-separar',
     };
@@ -220,10 +222,10 @@ async function armarSeparar(supabase: SupabaseClient, uid: string): Promise<Avis
     ?.contenido?.separarPorSemana;
 
   return {
-    title: 'Hoy cobrás: buen día para separar',
+    title: 'Hoy cobrás: buen día para apartar',
     body: rango && rango.max > 0
-      ? `Para "${objetivo.title}", tu plan dice entre ${pesos(rango.min, objetivo.currency)} y ${pesos(rango.max, objetivo.currency)} por semana. Separalo apenas entra.`
-      : `Separá una parte para "${objetivo.title}" apenas entra la plata, antes de empezar a gastar.`,
+      ? `Para "${objetivo.title}", tu plan es apartar entre ${pesos(rango.min, objetivo.currency)} y ${pesos(rango.max, objetivo.currency)} por semana.`
+      : `Apartá una parte para "${objetivo.title}" apenas entra la plata, antes de empezar a gastar.`,
     url: '/onboarding-v2/objetivos?abrir=aporte_objetivo',
     tag: 'fina-separar',
   };
@@ -260,11 +262,11 @@ async function armarResumenSemanal(supabase: SupabaseClient, uid: string, hoy: s
     // Todo número con su referencia: contra la semana anterior, si hubo.
     partes.push(gastadoAntes > 0 ? `gastaste ${pesos(gastado)} (la anterior, ${pesos(gastadoAntes)})` : `gastaste ${pesos(gastado)}`);
   }
-  if (aportado > 0) partes.push(`le sumaste ${pesos(aportado)} a tus objetivos`);
+  if (aportado > 0) partes.push(`apartaste ${pesos(aportado)} para tus objetivos`);
 
   return {
     title: 'Tu semana en FINA',
-    body: `${partes.join(', ')}. Arranca otra semana.`,
+    body: `${partes.join(', ')}.`,
     url: '/onboarding-v2/home',
     tag: 'fina-resumen',
   };
@@ -290,18 +292,25 @@ async function avisoDeLaTarde(supabase: SupabaseClient, uid: string, hoy: string
   if (error) return null;
   const racha = rachaData as Racha;
   // Si no se pudo saber, se asume que hay: mejor no recordar que recordar de más.
-  const sinGastoHoy = (await hayGastoHoy(supabase, uid, hoy)) === false;
+  const gastoHoy = await hayGastoHoy(supabase, uid, hoy);
+  const sinGastoHoy = gastoHoy === false;
 
   // Racha en juego y nada anotado hoy: un solo aviso con las dos cosas. Contarle
   // un gasto a FINA por WhatsApp anota lo de hoy y salva la racha a la vez.
-  if (!racha.hoyCumplido && pref.racha !== false && racha.dias >= 2) {
+  //
+  // Si hay un gasto de hoy, el aviso no sale aunque la racha diga que el día no
+  // está cumplido: pasa con un gasto cargado antes con fecha de hoy (la racha
+  // mira `created_at`, `hayGastoHoy` también `occurred_at`), y decirle "no
+  // anotaste gastos" a quien ve uno de hoy en la app sería falso. Si no se pudo
+  // consultar (`null`), manda la racha, que ya sabe que hoy no se cargó nada.
+  if (!racha.hoyCumplido && gastoHoy !== true && pref.racha !== false && racha.dias >= 2) {
     return {
       tipo: 'racha',
       aviso: {
         title: `Tu racha de ${racha.dias} días`,
         body: sinGastoHoy
-          ? 'Hoy todavía no sumaste. Contale a FINA por WhatsApp lo que gastaste hoy y queda a salvo.'
-          : 'Hoy todavía no sumaste. Con anotar un gasto, alcanza.',
+          ? 'Hoy todavía no anotaste gastos. Contale a FINA por WhatsApp lo que gastaste y la racha queda a salvo.'
+          : 'Hoy todavía no anotaste gastos.',
         url: '/onboarding-v2/home',
         tag: 'fina-racha',
       },
@@ -313,8 +322,8 @@ async function avisoDeLaTarde(supabase: SupabaseClient, uid: string, hoy: string
   return {
     tipo: 'registro',
     aviso: {
-      title: '¿Anotaste lo de hoy?',
-      body: 'Si gastaste algo, contáselo a FINA por WhatsApp o anotalo en la app. Te lleva un minuto.',
+      title: 'Anotá tus gastos de hoy',
+      body: 'Si gastaste algo, contáselo a FINA por WhatsApp o anotalo en la app.',
       url: '/onboarding-v2/home',
       tag: 'fina-registro',
     },

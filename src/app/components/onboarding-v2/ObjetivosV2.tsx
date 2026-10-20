@@ -269,8 +269,8 @@ function frasesDeImpacto(f: FormaDeLlegar): string {
 
 function FormasDeLlegar({ formas }: { formas: FormaDeLlegar[] }) {
   return (
-    <section className="flex flex-col gap-1" aria-label="Formas de llegar antes">
-      <TituloSeccion>Formas de llegar antes</TituloSeccion>
+    <section className="flex flex-col gap-1" aria-label="De dónde podrías sacar más plata">
+      <TituloSeccion>De dónde podrías sacar más plata</TituloSeccion>
       <ul className="flex flex-col">
         {formas.map((f) => (
           <li key={f.id} className="py-3 border-b last:border-b-0 flex flex-col gap-0.5" style={{ borderColor: COLORS.line }}>
@@ -302,7 +302,7 @@ function PlanDelObjetivo({ plan, moneda, onMarcar }: {
       {rango && (
         <div className="flex flex-col gap-0.5">
           <p className="text-[13px]" style={{ color: COLORS.ink }}>
-            Separar entre <span className="font-semibold font-mono tabular-nums">{fmtMonto(Math.round(rango.min), moneda)}</span> y{' '}
+            Apartar entre <span className="font-semibold font-mono tabular-nums">{fmtMonto(Math.round(rango.min), moneda)}</span> y{' '}
             <span className="font-semibold font-mono tabular-nums">{fmtMonto(Math.round(rango.max), moneda)}</span> por semana
           </p>
           <EstadoConfianza estado="estimado" />
@@ -377,7 +377,7 @@ function MontoPicker({
           <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
           <input
             className={`w-full ${inputClass} pl-8`}
-            placeholder="¿Cuánto necesitás en total?"
+            placeholder="Monto"
             inputMode="decimal"
             value={montoTxt}
             onChange={(e) => setMontoTxt(formatThousands(e.target.value))}
@@ -411,7 +411,7 @@ function MontoPicker({
       )}
 
       {modo === 'desconocido' && (
-        <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Lo ponés más adelante, cuando lo tengas más claro.</p>
+        <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Lo completás después.</p>
       )}
     </div>
   );
@@ -662,7 +662,7 @@ export function ObjetivosV2() {
       monto,
       moneda: regMoneda,
       kind,
-      label: regLabel.trim() || (kind === 'paid' ? 'Pago' : 'Separado'),
+      label: regLabel.trim() || (kind === 'paid' ? 'Pago' : 'Apartado'),
     });
     if (r.error !== null) { setErrorRegistro(r.error); return; }
     setRegLabel(''); setRegMonto('');
@@ -791,10 +791,10 @@ export function ObjetivosV2() {
     // El próximo paso: una sola acción concreta. Sin plazo, el texto sale de
     // lo que viene haciendo con este objetivo.
     const sinPlazo = abierto.contribuciones.length === 0
-      ? 'Todavía no tiene registros. Si ya separaste algo, sumalo y empezás a ver el avance.'
+      ? 'Si ya apartaste plata para esto, anotala.'
       : aporteSemana > 0
-        ? 'Si separaste algo más, sumalo y se ve en el avance.'
-        : 'Esta semana todavía no le sumaste. Si separaste algo, sumalo acá.';
+        ? 'Anotá lo que vayas apartando.'
+        : 'Esta semana no anotaste nada para esto.';
     const pasoVencido = mensaje !== null && datos?.situacion.tipo === 'vencido';
 
     return (
@@ -846,7 +846,7 @@ export function ObjetivosV2() {
           {estado === 'definido' && (
             <Donut
               segments={[{ color: COLORS.lima, pct: Math.round(animPct) }]}
-              centerLabel={done ? '¡Lograste!' : 'Logrado'}
+              centerLabel={done ? 'Listo' : 'Logrado'}
               centerValue={`${Math.round(animPct)}%`}
               size={96}
             />
@@ -937,7 +937,7 @@ export function ObjetivosV2() {
           <div className="flex flex-col items-center gap-2 py-2">
             <Fini state="logro" size={132} />
             <p className="rounded-2xl px-4 py-3.5 text-[14px] font-bold text-center" style={{ background: COLORS.lima, color: COLORS.ink }}>
-              ¡Ya juntaste todo lo que necesitás para este objetivo!
+              Ya juntaste todo lo que necesitabas.
             </p>
           </div>
         )}
@@ -961,7 +961,7 @@ export function ObjetivosV2() {
               className="v2-focus self-start min-h-[44px] rounded-full px-5 text-[13px] font-bold transition-all duration-100 active:scale-95"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
-              {pasoVencido ? 'Cambiar la fecha' : 'Sumar un registro'}
+              {pasoVencido ? 'Cambiar la fecha' : 'Apartar plata'}
             </button>
           </section>
         )}
@@ -989,7 +989,7 @@ export function ObjetivosV2() {
               className="v2-focus w-full rounded-2xl min-h-[48px] text-[14px] font-bold transition-all duration-100 active:scale-[0.99]"
               style={{ background: COLORS.lima, color: COLORS.ink }}
             >
-              Ya lo usé
+              Ya lo pagué
             </button>
           )}
           <button
@@ -999,7 +999,7 @@ export function ObjetivosV2() {
             className="v2-focus w-full inline-flex items-center justify-center gap-1.5 rounded-2xl min-h-[48px] text-[14px] font-bold transition-all duration-100 active:scale-[0.99]"
             style={sumando ? { color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` } : { background: COLORS.brand, color: COLORS.surface }}
           >
-            <IconMas size={17} /> {abierto.clase === 'gasto' ? 'Apartar plata' : 'Sumar un registro'}
+            <IconMas size={17} /> Apartar plata
           </button>
           {/* PRUEBA — un aporte guardado es un logro chico: Fini salta una vez
               y se va. Se engancha al `celebrar` que ya existía, así no hay otro
@@ -1025,7 +1025,7 @@ export function ObjetivosV2() {
                     className="v2-focus py-2 rounded-xl text-[13px] font-semibold transition-all duration-100 active:scale-95"
                     style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
                   >
-                    {k === 'paid' ? 'Ya lo pagué' : 'Lo separé'}
+                    {k === 'paid' ? 'Ya lo pagué' : 'Lo aparté'}
                   </button>
                 );
               })}
@@ -1069,14 +1069,13 @@ export function ObjetivosV2() {
         {/* Historial de registros */}
         <div className="flex flex-col gap-2">
           <TituloSeccion>Registros</TituloSeccion>
-          {abierto.contribuciones.length === 0 && <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste nada.</p>}
           {abierto.contribuciones.map((c) => (
             <div key={c.id} className={`flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 ${CARD_SHADOW}`} style={{ background: COLORS.surface, borderColor: COLORS.line }}>
               <span
                 className="text-[12px] font-bold rounded-full px-2 py-0.5 shrink-0"
                 style={{ background: c.kind === 'paid' ? COLORS.greenSoft : COLORS.goldSoft, color: COLORS.ink }}
               >
-                {c.kind === 'paid' ? 'Pagado' : 'Separado'}
+                {c.kind === 'paid' ? 'Pagado' : 'Apartado'}
               </span>
               <span className="flex-1 min-w-0 truncate">
                 <span className="text-[13px]" style={{ color: COLORS.ink }}>{c.label}</span>
@@ -1108,7 +1107,7 @@ export function ObjetivosV2() {
 
 
         <div className="flex flex-col gap-1.5">
-          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>{claseNueva === 'gasto' ? '¿Cuándo lo vas a usar?' : '¿Para cuándo necesitás esa plata?'}</p>
+          <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>{claseNueva === 'gasto' ? '¿Cuándo lo pagás?' : '¿Para cuándo necesitás esa plata?'}</p>
           <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} />
           {claseNueva === 'gasto' && (
             <div className="flex flex-col gap-1.5 pt-1">
@@ -1136,7 +1135,7 @@ export function ObjetivosV2() {
             ni cuándo preguntar si se usó. */}
         <Cta label="Agregar" disabled={!nombre.trim() || (!horizonte && !horizonteFecha) || (tipo === 'grupal' && !grupo && !invitarNombre.trim())} onClick={() => void crearObjetivo()} />
         {nombre.trim() && !horizonte && !horizonteFecha && (
-          <p className="text-[13px] text-center -mt-1" style={{ color: COLORS.inkSoft }}>Elegí para cuándo, así te decimos cuánto reservar.</p>
+          <p className="text-[13px] text-center -mt-1" style={{ color: COLORS.inkSoft }}>Elegí una fecha exacta para ver cuánto apartar por mes.</p>
         )}
         {tipo === 'grupal' && !grupo && !invitarNombre.trim() && (
           <p className="text-[13px] text-center" style={{ color: COLORS.coralDark }}>Ponele nombre al grupo para poder invitar gente.</p>
@@ -1240,7 +1239,7 @@ export function ObjetivosV2() {
             </div>
             {estado === 'definido' ? (
               <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
-                {esGasto && 'Apartaste '}<MontoObj monto={avance(o)} moneda={o.moneda} className="text-[13px]" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(o)}</span>{!esGasto && ' ahorrados'}
+                {esGasto && 'Apartaste '}<MontoObj monto={avance(o)} moneda={o.moneda} className="text-[13px]" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(o)}</span>
                 {esGasto && fechaGasto && <>, {o.repite === 'semanal' ? 'cada semana, ' : o.repite === 'mensual' ? 'cada mes, ' : ''}el {fechaCorta(fechaGasto)}</>}
               </p>
             ) : (
@@ -1248,13 +1247,13 @@ export function ObjetivosV2() {
             )}
             {reserva ? (
               <p className="text-[13px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>
-                Reservá <span className="font-semibold tabular-nums" style={{ color: COLORS.limaText }}>entre {fmtMonto(reserva.porMes.min, o.moneda)} y {fmtMonto(reserva.porMes.max, o.moneda)} por mes</span>
+                Apartá <span className="font-semibold tabular-nums" style={{ color: COLORS.limaText }}>entre {fmtMonto(reserva.porMes.min, o.moneda)} y {fmtMonto(reserva.porMes.max, o.moneda)} por mes</span>
                 <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
               </p>
             ) : estado === 'definido' && !o.horizonte && avance(o) < o.montoTotal ? (
-              <p className="text-[13px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>Ponele fecha y te decimos cuánto reservar por mes.</p>
+              <p className="text-[13px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>Elegí una fecha para ver cuánto apartar por mes.</p>
             ) : estado !== 'definido' ? (
-              <p className="text-[13px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>Cuando sepas cuánto sale, te decimos cuánto reservar.</p>
+              <p className="text-[13px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>Completá el monto para ver cuánto apartar por mes.</p>
             ) : null}
           </div>
           {/* La flechita avisa que tocando se ve más: el detalle, con los tips
@@ -1265,10 +1264,10 @@ export function ObjetivosV2() {
         {tocaHoy && (
           <div className="mt-2 rounded-xl px-3 py-2.5 flex flex-wrap items-center gap-2" style={{ background: COLORS.limaSoft }}>
             <p className="flex-1 min-w-[150px] text-[13px] font-semibold" style={{ color: COLORS.ink }}>
-              {fechaGasto === hoyAR ? 'Hoy' : 'Ya'} tocaba. ¿Lo usaste?
+              {fechaGasto === hoyAR ? 'Era para hoy.' : 'La fecha ya pasó.'} ¿Ya lo pagaste?
             </p>
             <button type="button" onClick={() => abrirPago(o)} className="v2-focus min-h-[40px] px-3.5 rounded-full text-[13px] font-bold" style={{ background: COLORS.lima, color: COLORS.ink }}>
-              Sí, lo usé
+              Sí, lo pagué
             </button>
             <button type="button" onClick={() => setNoTodavia((v) => new Set(v).add(o.id))} className="v2-focus min-h-[40px] px-2 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
               Todavía no
@@ -1283,13 +1282,13 @@ export function ObjetivosV2() {
               className="v2-focus mr-auto inline-flex items-center min-h-[40px] px-3.5 rounded-full text-[13px] font-bold transition-transform active:scale-95"
               style={{ background: COLORS.limaSoft, color: COLORS.limaText }}
             >
-              Ya lo usé
+              Ya lo pagué
             </button>
           )}
           <button type="button" onClick={() => empezarEdicion(o)} aria-label={`Editar ${o.nombre}`} className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90" style={{ color: COLORS.brand }}>
             <IconEditar size={18} />
           </button>
-          <button type="button" onClick={() => setOpenId(o.id)} aria-label={esGasto ? `Apartar plata para ${o.nombre}` : `Sumar un registro a ${o.nombre}`} className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90" style={{ color: COLORS.brand }}>
+          <button type="button" onClick={() => setOpenId(o.id)} aria-label={`Apartar plata para ${o.nombre}`} className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90" style={{ color: COLORS.brand }}>
             <IconMas size={20} />
           </button>
           <button type="button" onClick={() => setConfirmarBorrar(o.id)} aria-label={`Borrar ${o.nombre}`} className="v2-focus w-11 h-11 rounded-full flex items-center justify-center transition-all duration-100 active:scale-90" style={{ color: COLORS.naranjaText }}>
@@ -1318,14 +1317,14 @@ export function ObjetivosV2() {
       {confirmarBorrarModal}
 
       {pagando && (
-        <Hoja titulo={`Usaste ${pagando.nombre}`} onCerrar={() => setPagandoId(null)}>
+        <Hoja titulo={`Pagar ${pagando.nombre}`} onCerrar={() => setPagandoId(null)}>
           <div className="flex flex-col gap-3 pt-1">
             <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              Lo anotamos en tus gastos. Lo que tenías apartado se usa para esto, así no se descuenta dos veces de tu disponible.
-              {pagando.repite === 'semanal' ? ' Como se repite, queda listo para la semana que viene.' : pagando.repite === 'mensual' ? ' Como se repite, queda listo para el mes que viene.' : ''}
+              Se anota en Gastos y usa lo que tenías apartado, así no se descuenta dos veces del disponible.
+              {pagando.repite === 'semanal' ? ' La fecha pasa a la semana que viene.' : pagando.repite === 'mensual' ? ' La fecha pasa al mes que viene.' : ''}
             </p>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="pago-monto" className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Cuánto gastaste?</label>
+              <label htmlFor="pago-monto" className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Cuánto pagaste?</label>
               <input
                 id="pago-monto"
                 autoFocus
@@ -1336,8 +1335,8 @@ export function ObjetivosV2() {
                 onChange={(e) => setMontoPago(formatThousands(e.target.value))}
               />
             </div>
-            <Desplegable id="pago-seccion" label="Sección" value={seccionPago} onChange={setSeccionPago}>
-              <option value="" style={{ color: COLORS.ink }}>Sin sección</option>
+            <Desplegable id="pago-seccion" label="Categoría" value={seccionPago} onChange={setSeccionPago}>
+              <option value="" style={{ color: COLORS.ink }}>Sin categoría</option>
               {db.secciones.map((sec) => <option key={sec.id} value={sec.id} style={{ color: COLORS.ink }}>{sec.nombre}</option>)}
             </Desplegable>
             {errorPago && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{errorPago}</p>}
@@ -1354,45 +1353,40 @@ export function ObjetivosV2() {
         </Hoja>
       )}
 
-      <header data-franja className="pb-1">
+      {/* Debajo del título, sin cartel: cuánto conviene apartar por mes en
+          total (estimado, como rango, regla 4) y las sugerencias, que abren el
+          alta en la parte que les corresponde. */}
+      <header data-franja className="pb-1 flex flex-col gap-2">
         <Titulo>Mis planes</Titulo>
-      </header>
-
-      {/* El cartel de arriba: para qué es la pantalla, cuánto tiene apartado
-          y cuánto conviene reservar por mes (estimado, como rango, regla 4).
-          Las sugerencias abren el alta en la parte que les corresponde. */}
-      <div className="mt-2 rounded-2xl px-4 py-3 flex flex-col gap-0.5" style={{ background: COLORS.brandSoft }} aria-live="polite">
-        <p className="text-[16px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>Gastos y objetivos próximos</p>
-        <p className="text-[13px] leading-snug" style={{ color: COLORS.brandDark }}>Planificá los gastos que ya sabés que se vienen.</p>
         {reservaTotal && (
-          <p className="text-[13px] leading-snug pt-1" style={{ color: COLORS.ink }}>
-            Para todo, reservá <span className="font-bold tabular-nums">entre {fmtMoney(reservaTotal.min)} y {fmtMoney(reservaTotal.max)} por mes</span>
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }} aria-live="polite">
+            Para llegar a tiempo con tus planes, apartá <span className="font-bold tabular-nums">entre {fmtMoney(reservaTotal.min)} y {fmtMoney(reservaTotal.max)} por mes</span>
             <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
           </p>
         )}
-        <div className="flex flex-wrap gap-1.5 pt-2" role="group" aria-label="Sugerencias para sumar">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Sugerencias para sumar">
           {SUGERENCIAS_OBJETIVO.map((sug) => (
             <button
               key={sug.nombre}
               type="button"
               onClick={() => abrirAlta(sug.clase, `Ej: ${sug.nombre}`)}
               className="v2-focus inline-flex items-center rounded-full px-3 min-h-[36px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
-              style={{ background: COLORS.surface, color: COLORS.ink }}
+              style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
             >
               {sug.nombre}
             </button>
           ))}
         </div>
-      </div>
+      </header>
 
       {/* Primero los objetivos de ahorro: son las aspiraciones de la persona,
           lo que más importa de la pantalla. Cada uno tiene fecha (para cuándo
-          necesita la plata) y, con eso, cuánto reservar y un tip para llegar. */}
-      <section className="flex flex-col gap-1" aria-label="Mis objetivos de ahorro">
-        <TituloSeccion>Mis objetivos de ahorro</TituloSeccion>
+          necesita la plata) y, con eso, cuánto apartar y un tip para llegar. */}
+      <section className="flex flex-col gap-1" aria-label="Objetivos de ahorro">
+        <TituloSeccion>Objetivos de ahorro</TituloSeccion>
         {deAhorro.length === 0 && (
           <p className="text-[13px] leading-snug py-1" style={{ color: COLORS.inkSoft }}>
-            Un viaje, un colchón para imprevistos, algo que quieras comprarte.
+            Anotá algo para lo que quieras ahorrar, como un viaje o un colchón para imprevistos.
           </p>
         )}
         <div className="flex flex-col">{deAhorro.map(fila)}</div>
@@ -1404,7 +1398,7 @@ export function ObjetivosV2() {
       <section className="flex flex-col gap-1" aria-label="Gastos planificados">
         <TituloSeccion>Gastos planificados</TituloSeccion>
         <p className="text-[13px] leading-snug py-1" style={{ color: COLORS.inkSoft }}>
-          Anotá los gastos que sabés que vas a tener, como una cuota, un regalo o una consulta. Así podés organizarte con tiempo y tener en cuenta esa plata antes de gastarla en otra cosa.
+          Anotá los gastos que sabés que vas a tener, como una cuota, un regalo o una consulta. Así podés organizarte con tiempo y tener en cuenta esa plata antes de gastarla en otra cosa. Lo que apartes deja de contar en tu disponible del período actual.
         </p>
         <div className="flex flex-col">{gastosQueVienen.map(fila)}</div>
         {botonAgregar('Agregar gasto planificado', () => abrirAlta('gasto', 'Ej: Psicóloga, la cuota del celular'))}

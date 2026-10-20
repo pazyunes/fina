@@ -36,27 +36,30 @@ type Instrumento = { id: string; nombre: string; desc: string; porQue: string; r
 const INSTRUMENTOS: Instrumento[] = [
   {
     id: 'cuenta_remunerada', nombre: 'Cuenta remunerada', desc: 'Tu plata rinde todos los días y la sacás cuando quieras.',
-    porQue: 'Te la recomendamos porque no perdés acceso a la plata ni un solo día. Sirve como base antes de meterte en algo más largo, y por eso la sugerimos casi sin importar tu perfil.',
+    porQue: 'No perdés acceso a la plata ni un solo día. Sirve como base antes de meterte en algo más largo.',
     riesgo: 'Bajo', apps: ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank'], perfiles: ['conservador', 'moderado', 'arriesgado'],
   },
   {
     id: 'plazo_fijo', nombre: 'Plazo fijo UVA', desc: 'Dejás la plata quieta un tiempo y sigue la inflación.',
-    porQue: 'Te la recomendamos porque dijiste que preferís cuidar lo que tenés antes que arriesgar. Esto ajusta por inflación sin que tengas que mirar el mercado todos los días.',
+    porQue: 'Ajusta por inflación sin que tengas que mirar el mercado todos los días.',
     riesgo: 'Bajo', apps: ['Banco tradicional', 'Mercado Pago', 'Ualá'], perfiles: ['conservador', 'moderado'],
   },
   {
-    id: 'fci', nombre: 'Fondo Común de Inversión', desc: 'Un equipo profesional invierte por vos, retiro rápido.',
-    porQue: 'Te la recomendamos porque buscás algo de crecimiento sin manejarlo vos misma: un equipo decide dónde poner la plata, y la podés sacar en pocos días si la necesitás.',
+    id: 'fci', nombre: 'Fondo Común de Inversión', desc: 'Un equipo invierte por vos y la sacás en 24 o 48 horas.',
+    porQue: 'No tenés que elegir vos dónde poner la plata ni seguir el mercado: de eso se encarga el equipo del fondo.',
     riesgo: 'Medio', apps: ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank'], perfiles: ['moderado', 'arriesgado'],
   },
   {
     id: 'dolar_mep', nombre: 'Dólar MEP', desc: 'Protegés lo ahorrado de la devaluación.',
-    porQue: 'Te la recomendamos porque tu prioridad parece ser no perder poder de compra frente al dólar. No crece como una inversión de riesgo, pero cuida el valor de lo que ya juntaste.',
+    porQue: 'No crece como una inversión de riesgo, pero cuida el valor de lo que ya juntaste si el peso se devalúa.',
     riesgo: 'Medio', apps: ['Banco tradicional', 'Brubank'], perfiles: ['moderado', 'arriesgado'],
   },
   {
     id: 'cedears', nombre: 'CEDEARs', desc: 'Pedacitos de empresas grandes del exterior, en pesos.',
-    porQue: 'Te la recomendamos porque contestaste que te bancás la volatilidad a cambio de más potencial. Subís y bajás con el mercado internacional, pero a largo plazo históricamente crece.',
+    // Sólo le aparece al perfil arriesgado, y a ese perfil se llega
+    // únicamente contestando "Pongo más" (calcularPerfil): la frase usa esa
+    // respuesta real, no una que la persona no dio.
+    porQue: 'Contestaste que si baja, ponés más. Sube y baja con el mercado internacional, pero a largo plazo históricamente crece.',
     riesgo: 'Alto', apps: ['Banco tradicional'], perfiles: ['arriesgado'],
   },
 ];
@@ -86,9 +89,13 @@ const PERFIL_LIGHT: Record<PerfilId, { soft: string; strong: string }> = {
 // términos de lo que se ve, sin dramatizar y sin prometer.
 const RIESGO_EXPLICADO: Record<Instrumento['riesgo'], string> = {
   Bajo: 'Lo que ponés no debería bajar. Rinde menos, pero es lo más previsible.',
-  Medio: 'Puede subir y bajar en el camino. Suele acomodarse con el tiempo.',
+  Medio: 'Puede subir y bajar en el camino.',
   Alto: 'Sube y baja bastante. Es para plata que puedas dejar quieta un buen rato.',
 };
+
+// Qué es anotar un aporte, dicho una sola vez: la duda más común es que la
+// app vaya a mover plata.
+const TEXTO_QUE_ES_APORTE = 'Anotá la plata que pusiste en una inversión por fuera de FINA. Acá no se mueve tu plata: sólo se anota para que veas todo junto.';
 
 const RIESGO_FILL: Record<Instrumento['riesgo'], string> = {
   Bajo: COLORS.lima,
@@ -207,7 +214,11 @@ export function InversionesV2() {
     setConfirmarBorrar(false);
     setAporteMonto('');
   }
+  // Si se llegó directo a los datos, la aclaración de que esto no mueve
+  // plata se muestra ahí; si se pasó por "qué es", ya se leyó y no se repite.
+  const [aporteDirecto, setAporteDirecto] = useState(false);
   function abrirAlta(directo = false) {
+    setAporteDirecto(directo);
     setEditandoId(null);
     setConfirmarBorrar(false);
     setAporteMonto('');
@@ -381,9 +392,12 @@ export function InversionesV2() {
         >
           <span className="text-[17px] font-bold" style={{ color: COLORS.ink }}>Averiguá tu perfil de inversor</span>
           <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>
+            {/* Cuántas preguntas: q1, q2, ¿ya invertís?, en qué (sólo si
+                invierte) y bancos. Si todavía no sabemos si invierte, es
+                "hasta", porque la de "en qué" puede no aparecer. */}
             {prefilledPerfil
-              ? 'Ya nos contaste algo de esto en el onboarding. Te faltan un par de preguntas más.'
-              : '2 minutos, para que las recomendaciones tengan que ver con vos. No te compromete a nada.'}
+              ? 'Te faltan un par de preguntas.'
+              : `Son ${yaInvierte === null ? 'hasta ' : ''}${2 + (prefilledYaInvierte ? 0 : 1) + (yaInvierte === 'no' ? 0 : 1) + 1} preguntas para recomendarte opciones según tu perfil.`}
           </span>
           <span className="self-end" style={{ color: COLORS.brand }}><IconChevron size={20} /></span>
         </button>
@@ -498,7 +512,7 @@ export function InversionesV2() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-start justify-between gap-3">
-            <Titulo className="!text-[21px]">{editandoId ? 'Editar registro' : 'Registrar un aporte'}</Titulo>
+            <Titulo className="!text-[21px]">{editandoId ? 'Editar aporte' : 'Registrar un aporte'}</Titulo>
             <button
               type="button"
               onClick={cerrarAporte}
@@ -513,31 +527,17 @@ export function InversionesV2() {
           {aportePaso === 'que-es' ? (
             <>
               <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
-                Anotá acá la plata que vos ya pusiste en algún instrumento, por fuera de FINA.
+                {TEXTO_QUE_ES_APORTE}
               </p>
-              <div className="flex flex-col gap-1.5">
-                <TituloSeccion>Esto no mueve tu plata</TituloSeccion>
-                <p className="text-[13px] leading-relaxed" style={{ color: COLORS.inkSoft }}>
-                  FINA no invierte ni toca tu dinero. Registrar es solo anotar, como en un cuaderno,
-                  para que puedas ver todo junto y seguir cómo evoluciona.
-                </p>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <TituloSeccion>Para qué sirve</TituloSeccion>
-                <p className="text-[13px] leading-relaxed" style={{ color: COLORS.inkSoft }}>
-                  Con lo que anotes armamos tu evolución y te avisamos si hace rato que no le sumás.
-                </p>
-              </div>
-              <Cta label="Registrar uno" onClick={() => setAportePaso('datos')} />
+              <Cta label="Continuar" onClick={() => setAportePaso('datos')} />
             </>
           ) : (
             <>
-              {/* Si se llegó directo a los datos (desde el paso del día), lo
-                  más importante de la explicación que se salteó va en una
-                  línea: registrar no mueve plata. */}
-              {!editandoId && (
+              {/* Si se llegó directo a los datos (desde el paso del día), la
+                  explicación que se salteó va acá, una sola vez. */}
+              {!editandoId && aporteDirecto && (
                 <p className="text-[13px] leading-snug -mt-2" style={{ color: COLORS.inkSoft }}>
-                  Es solo anotar lo que pusiste por fuera de FINA: acá no se mueve tu plata.
+                  {TEXTO_QUE_ES_APORTE}
                 </p>
               )}
               <div className="flex flex-col gap-2.5">
@@ -628,7 +628,7 @@ export function InversionesV2() {
                 confirmarBorrar ? (
                   <div className="flex flex-col gap-2.5 pt-1">
                     <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
-                      ¿Borramos este registro de {nombreInstr(aporteInstrId)}? Se saca de tu total y de tu evolución.
+                      ¿Borramos este aporte de {nombreInstr(aporteInstrId)}? Se saca de tu total y de tu evolución.
                     </p>
                     <div className="flex gap-2.5">
                       <button
@@ -656,7 +656,7 @@ export function InversionesV2() {
                     className="v2-focus min-h-[44px] text-[13px] font-semibold rounded-2xl transition-all duration-100 active:scale-[0.98]"
                     style={{ color: COLORS.naranjaText }}
                   >
-                    Borrar este registro
+                    Borrar este aporte
                   </button>
                 )
               )}
@@ -798,7 +798,7 @@ export function InversionesV2() {
                   qué se convirtió y con qué (§5). */}
               {isUsd && (
                 <p className="text-[13px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-                  El total está pasado a dólares con el blue de hoy. Cada registro se muestra en la moneda en que lo cargaste.
+                  El total está pasado a dólares con el blue de hoy. Cada aporte se muestra en la moneda en que lo cargaste.
                 </p>
               )}
 
@@ -814,7 +814,7 @@ export function InversionesV2() {
               </button>
 
               <div className="flex flex-col gap-2 pt-2">
-                <TituloSeccion>Tus registros</TituloSeccion>
+                <TituloSeccion>Tus aportes</TituloSeccion>
                 {aportes.length === 0 ? (
                   <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste aportes.</p>
                 ) : (
@@ -887,7 +887,7 @@ export function InversionesV2() {
 
       {paso === 'q1' && (
         <>
-          <Titulo>¿Con qué objetivo querés invertir esa plata?</Titulo>
+          <Titulo>¿Para qué querés invertir?</Titulo>
           <div className="flex flex-wrap gap-2.5">
             {['Sacarla pronto (corto plazo)', 'Dejarla que rinda (largo plazo)'].map((o) => (
               <Chip key={o} on={porQue === o} onClick={() => setPorQue(o)}>{o}</Chip>
@@ -899,7 +899,7 @@ export function InversionesV2() {
       {paso === 'q2' && (
         <>
           <Titulo>
-            Estás en una inversión que sube y baja en el camino, pero promete crecer a 5 años a una tasa razonable. ¿Qué hacés?
+            Invertiste y en un mes bajó un 10%. ¿Qué hacés?
           </Titulo>
           <div className="flex flex-wrap gap-2.5">
             {['Lo saco todo', 'Lo dejo y espero', 'Pongo más'].map((o) => (
@@ -1229,8 +1229,8 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
                 {contraInflacion === 'gana'
                   ? 'Le ganás a la inflación.'
                   : contraInflacion === 'pierde'
-                    ? 'Con este instrumento no le ganás a la inflación, la seguís de cerca.'
-                    : 'Según cómo rinda, le ganás a la inflación o la seguís de cerca.'}
+                    ? 'Con este instrumento perdés contra la inflación.'
+                    : 'Según cómo rinda, le ganás a la inflación o no.'}
               </p>
               <EstadoConfianza estado="estimado" />
             </div>
@@ -1270,7 +1270,7 @@ function Simulador({ perfilId }: { perfilId: PerfilId }) {
       )}
 
       <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
-        Es una simulación con números inventados sobre {instrumento.nombre}: no es una promesa de rendimiento, no mueve plata real y no reemplaza asesoramiento financiero.
+        Es una simulación con tasas estimadas para {instrumento.nombre}: no es una promesa de rendimiento ni asesoramiento financiero, y no mueve plata.
       </p>
       <ArmarGrupoBtn />
     </div>

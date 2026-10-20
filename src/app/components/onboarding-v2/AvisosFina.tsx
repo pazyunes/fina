@@ -18,9 +18,11 @@ type Interruptor = 'paso' | 'racha' | 'separar' | 'resumen' | 'vencimientos';
 const AVISOS: { clave: Interruptor; titulo: string; detalle: string }[] = [
   { clave: 'vencimientos', titulo: 'Gastos fijos', detalle: 'A las 10 hs, el día antes y el día que vence un gasto fijo.' },
   { clave: 'paso', titulo: 'Anotar lo del día', detalle: 'A las 19 hs, si todavía no anotaste ningún gasto.' },
-  { clave: 'racha', titulo: 'Tu racha', detalle: 'A las 19 hs, si tenés una racha y ese día todavía no sumaste. Va en lugar del paso.' },
-  { clave: 'separar', titulo: 'Día de separar', detalle: 'A las 10 hs del día que cobrás, para separar para tus objetivos apenas entra la plata.' },
-  { clave: 'resumen', titulo: 'Resumen de la semana', detalle: 'Los lunes a las 10 hs, cómo te fue la semana anterior.' },
+  { clave: 'racha', titulo: 'Tu racha', detalle: 'A las 19 hs, si tenés una racha y ese día todavía no anotaste gastos. Va en lugar de "Anotar lo del día".' },
+  // La clave sigue siendo 'separar' (es la columna de notification_prefs), pero
+  // además del día de cobro apaga los avisos de plazo de los objetivos.
+  { clave: 'separar', titulo: 'Objetivos de ahorro', detalle: 'A las 10 hs del día que cobrás y cuando se acerca la fecha de un objetivo.' },
+  { clave: 'resumen', titulo: 'Resumen de la semana', detalle: 'Los lunes a las 10 hs: días registrados, gastos y lo que apartaste para tus objetivos.' },
 ];
 
 const DIAS_DEL_MES = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -86,13 +88,13 @@ export function AvisosFina() {
     <section className="flex flex-col gap-3">
       <TituloSeccion>Avisos</TituloSeccion>
       <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-        Pocos y útiles: como mucho, dos avisos por día.
+        Como mucho, dos avisos por día.
       </p>
 
       {soporte === 'iphone-sin-instalar' && (
         <>
           <p className="text-[13px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.ink, borderColor: COLORS.brandSoft }}>
-            En iPhone, los avisos funcionan con FINA en tu pantalla de inicio: en Safari tocá <strong>•••</strong> → <strong>Compartir</strong> → <strong>Agregar a pantalla de inicio</strong>, abrí FINA desde ese ícono y activalos acá.
+            En iPhone, abrí FINA en Safari, tocá <strong>Compartir</strong> y después <strong>Agregar a pantalla de inicio</strong>. Entrá desde ese ícono y activalos acá.
           </p>
           <button
             type="button"

@@ -213,7 +213,7 @@ export function HomeV2() {
       {listo && !estado.perfil.telefonoVerificadoEn && (
         <Fila
           icon={<IconPerfil size={18} />}
-          label="Completá tu perfil"
+          label="Conectá tu WhatsApp"
           onClick={() => navigate('/onboarding-v2/perfil', { state: { abrir: 'verificar', from: '/onboarding-v2/home' } })}
         />
       )}

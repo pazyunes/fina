@@ -98,7 +98,7 @@ export function FestejoPaso({ titulo, hechos, total, onVerProgreso, onCerrar }: 
             className="v2-focus w-full min-h-[44px] text-[13px] font-semibold"
             style={{ color: COLORS.inkSoft }}
           >
-            Seguir
+            Cerrar
           </button>
         </div>
       </motion.div>

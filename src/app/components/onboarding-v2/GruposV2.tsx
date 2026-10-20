@@ -129,7 +129,7 @@ export function GruposV2() {
               <div className="shrink-0"><Fini state="vacio" size={104} /></div>
               <div className="min-w-0">
                 <p className="font-bold text-[15px] leading-tight" style={{ color: COLORS.ink }}>Armá tu primer grupo</p>
-                <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Con amigas y amigos para verse la actividad de la semana y motivarse entre todas.</p>
+                <p className="text-[13px] mt-1" style={{ color: COLORS.inkSoft }}>Compará con amigas y amigos cuántos gastos anotan.</p>
               </div>
             </div>
             {/* Preview de "así se va a ver" en estado por-descubrir: contorno
@@ -254,7 +254,7 @@ export function GruposV2() {
           </span>
         ) : (
           <span className="min-w-0 text-left">
-            <span className="block text-[13px] font-semibold" style={{ color: COLORS.brandDark }}>Invitar amigas</span>
+            <span className="block text-[13px] font-semibold" style={{ color: COLORS.brandDark }}>Invitar al grupo</span>
             <span className="block text-[13px] font-mono tabular-nums truncate" style={{ color: COLORS.inkSoft }}>{grupo.codigo}</span>
           </span>
         )}
@@ -264,7 +264,7 @@ export function GruposV2() {
       </button>
 
       <div className="flex flex-col gap-2.5">
-        <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Actividad de la semana</p>
+        <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Gastos anotados</p>
         {ordenados.map((m, i) => (
           <div
             key={m.nombre}

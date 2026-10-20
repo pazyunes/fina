@@ -62,7 +62,7 @@ export function FilaGasto({ gasto, categorias, abierto, onAbrir }: {
         <div className="flex-1 min-w-0">
           <p className="text-[14px] truncate" style={{ color: COLORS.ink }}>{gasto.descripcion}</p>
           <p className="text-[13px] truncate" style={{ color: COLORS.inkSoft }}>
-            {cat?.nombre ?? 'Sin sección'}, {fechaDisplay(gasto.ts).toLowerCase()}
+            {cat?.nombre ?? 'Sin categoría'}, {fechaDisplay(gasto.ts).toLowerCase()}
           </p>
         </div>
         <span className="font-mono tabular-nums text-[14px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(gasto)}</span>

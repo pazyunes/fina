@@ -166,7 +166,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
   if (nadaRegistrado) {
     return (
       <p className="text-[13px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-        Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto entra y cuánto sale cada {modoSemana ? 'día' : 'mes'}{explorar ? ', y cuánto te queda' : ''}.
+        Anotá tus ingresos y gastos para ver cuánto entra y sale cada {modoSemana ? 'día' : 'mes'}.
       </p>
     );
   }
@@ -193,8 +193,10 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
         </div>
         {actual.entro === 0 && actual.salio > 0 && (
           <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            Registraste gastos {esteTexto}, pero no ingresos.{' '}
-            {explorar ? `Si los cargás, se ve cuánto te ${(modoSemana ? semana.actual : esEsteMes) ? 'queda' : 'quedó'}.` : 'Si los cargás, se ve cuánto entró.'}
+            {/* Sin explorar no se muestra la diferencia, sólo las dos cifras:
+                ahí lo que falta ver es cuánto entró. */}
+            {esteTexto.charAt(0).toUpperCase() + esteTexto.slice(1)} no anotaste ingresos.{' '}
+            {explorar ? 'Anotalos para ver la diferencia.' : 'Anotalos para ver cuánto entró.'}
           </p>
         )}
       </div>

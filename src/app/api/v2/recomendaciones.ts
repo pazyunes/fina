@@ -110,7 +110,7 @@ export async function marcarUtil(id: string, util: boolean | null): Promise<Resu
       }
       ultima = nueva;
     }
-    if (util !== null) avisarConfirmacion('Respuesta guardada con éxito.');
+    if (util !== null) avisarConfirmacion('Respuesta guardada.');
     return ok(null);
   } catch (e) {
     return falla<null>(e, 'marcarUtil');
@@ -229,7 +229,7 @@ export async function marcarHecha(periodo: PeriodoRecomendacion, clave: string, 
     .from('recommendation_checks')
     .upsert({ user_id: uid, periodo, clave, ref }, { onConflict: 'user_id,periodo,clave,ref', ignoreDuplicates: true });
   if (error) return falla<null>(error.message, 'marcarHecha');
-  avisarConfirmacion('Recomendación cumplida con éxito.');
+  avisarConfirmacion('Recomendación cumplida.');
   return ok(null);
 }
 

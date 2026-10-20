@@ -1,13 +1,12 @@
 import { BotonVolver, COLORS, FONTS, Titulo, useVolver } from './shared';
 import { useProximoPaso } from '../../api/v2/ProximoPasoProvider';
-import { fraseDeProgreso } from '../../api/v2/proximoPaso';
 
 // Tu progreso: los pasos grandes que ya hiciste y los que vienen. Se llega
 // tocando el próximo paso en Inicio o desde el festejo al completar uno.
 //
 // El dato central es cuántos hiciste, con la barra en lima (el color del
-// avance, §5.3). La frase de abajo tiene el dato atrás: no felicita en el
-// vacío ni reta si todavía no hiciste ninguno.
+// avance, §5.3). Va sólo el dato, sin frase que lo comente: el número ya dice
+// cómo viene, y una frase motivadora no agrega nada (textos.md §4).
 
 function fecha(iso: string): string {
   return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
@@ -44,7 +43,6 @@ export function ProgresoPasos() {
             <div className="h-3 rounded-full overflow-hidden" style={{ background: COLORS.line }} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: COLORS.limaViz }} />
             </div>
-            <p className="text-[14px] leading-snug pt-1" style={{ color: COLORS.ink }}>{fraseDeProgreso(hechos.hechos, hechos.total)}</p>
           </section>
 
           <ul className="flex flex-col" aria-label="Tus pasos grandes">

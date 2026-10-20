@@ -271,7 +271,7 @@ export type MensajePlazo = {
 
 /** Con menos de dos semanas, el monto por semana puede ser mucho: se ofrece también mover la fecha. */
 function otraFecha(dias: number): string {
-  return dias < 14 ? ' Y si no, le podés poner una fecha nueva.' : '';
+  return dias < 14 ? ' O elegí una fecha más lejana.' : '';
 }
 
 /**
@@ -282,22 +282,22 @@ export function mensajePlazo(s: SituacionPlazo, fmt: (n: number) => string): Men
   switch (s.tipo) {
     case 'sin-aportes':
       return {
-        texto: `${quedan(s.dias)} y todavía no le sumaste nada.`,
-        salida: `Si sumás entre ${fmt(s.porSemana.min)} y ${fmt(s.porSemana.max)} por semana, llegás para el ${fechaLarga(s.fecha)}.${otraFecha(s.dias)}`,
+        texto: `${quedan(s.dias)} y no le apartaste nada en las últimas 4 semanas.`,
+        salida: `Apartando entre ${fmt(s.porSemana.min)} y ${fmt(s.porSemana.max)} por semana, llegás para el ${fechaLarga(s.fecha)}.${otraFecha(s.dias)}`,
         tono: 'accion',
         porSemana: s.porSemana,
       };
     case 'no-llega':
       return {
         texto: `${quedan(s.dias)} y a este ritmo no llegás para el ${fechaLarga(s.fecha)}.`,
-        salida: `Si sumás entre ${fmt(s.porSemana.min)} y ${fmt(s.porSemana.max)} por semana, llegás.${otraFecha(s.dias)}`,
+        salida: `Apartando entre ${fmt(s.porSemana.min)} y ${fmt(s.porSemana.max)} por semana, llegás.${otraFecha(s.dias)}`,
         tono: 'accion',
         porSemana: s.porSemana,
       };
     case 'en-camino':
       return { texto: `A este ritmo llegás para el ${fechaLarga(s.fecha)}.`, salida: null, tono: 'logro', porSemana: null };
     case 'vencido':
-      return { texto: `La fecha que le pusiste, el ${fechaLarga(s.fecha)}, ya pasó.`, salida: 'Si querés, le ponés una nueva.', tono: 'neutral', porSemana: null };
+      return { texto: `La fecha ya pasó (${fechaLarga(s.fecha)}).`, salida: 'Elegí una nueva fecha.', tono: 'neutral', porSemana: null };
     default:
       return null;
   }
@@ -395,8 +395,8 @@ export function formasDeLlegarAntes(d: DatosFormas): FormaDeLlegar[] {
     if (!imp) continue;
     candidatas.push({
       id: `seccion:${s.id}`,
-      titulo: `Un poco menos en ${s.nombre}`,
-      detalle: `En los últimos 30 días se fueron ${pesos(mes)}. Entre un 10% y un 20% menos son entre ${d.fmtObjetivo(redondearLindo(imp.extraSemanal.min))} y ${d.fmtObjetivo(redondearLindo(imp.extraSemanal.max))} por semana.`,
+      titulo: `Gastar entre 10% y 20% menos en ${s.nombre}`,
+      detalle: `En los últimos 30 días gastaste ${pesos(mes)} ahí. Son entre ${d.fmtObjetivo(redondearLindo(imp.extraSemanal.min))} y ${d.fmtObjetivo(redondearLindo(imp.extraSemanal.max))} más por semana.`,
       ...imp,
       peso: (preferidas.has(normalizar(s.nombre)) ? 2 : 1) * imp.extraSemanal.max,
     });
@@ -435,8 +435,8 @@ export function formasDeLlegarAntes(d: DatosFormas): FormaDeLlegar[] {
       const r = rangoLindo(d.ritmo * 0.85, d.ritmo * 1.15);
       candidatas.push({
         id: 'ritmo',
-        titulo: 'Sumar un poco más cada semana',
-        detalle: `Venís sumando entre ${d.fmtObjetivo(r.min)} y ${d.fmtObjetivo(r.max)} por semana. La cuenta es con un 20% a 40% más.`,
+        titulo: 'Apartar entre 20% y 40% más por semana',
+        detalle: `Venís apartando entre ${d.fmtObjetivo(r.min)} y ${d.fmtObjetivo(r.max)} por semana.`,
         ...imp,
         peso: imp.extraSemanal.max,
       });
@@ -449,8 +449,8 @@ export function formasDeLlegarAntes(d: DatosFormas): FormaDeLlegar[] {
       if (imp) {
         candidatas.push({
           id: 'ingresos',
-          titulo: 'Separar una parte de lo que entra',
-          detalle: `En los últimos 30 días te entraron ${pesos(entro)}. Entre un 5% y un 10% son entre ${d.fmtObjetivo(redondearLindo(imp.extraSemanal.min))} y ${d.fmtObjetivo(redondearLindo(imp.extraSemanal.max))} por semana.`,
+          titulo: 'Apartar entre 5% y 10% de tus ingresos',
+          detalle: `En los últimos 30 días tus ingresos fueron ${pesos(entro)}. Entre un 5% y un 10% son entre ${d.fmtObjetivo(redondearLindo(imp.extraSemanal.min))} y ${d.fmtObjetivo(redondearLindo(imp.extraSemanal.max))} por semana.`,
           ...imp,
           // Sin aportes, esta es la puerta de entrada: va primero.
           peso: Number.MAX_SAFE_INTEGER,

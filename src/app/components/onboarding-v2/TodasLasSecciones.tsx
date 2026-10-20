@@ -4,7 +4,7 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { FilaSeccion } from './FilaSeccion';
 import { colorDeSeccion, gastosDeLaBase, inicioDelMes, seccionesDeLaBase } from './datosGasto';
 
-// Tus secciones, todas. Se llega desde "Consultar todas" en Gastos, que
+// Tus secciones, todas. Se llega desde "Ver todas" en Gastos, que
 // muestra sólo las 5 donde más se gastó. Acá están también las que este mes
 // no tienen gastos, y es el único lugar donde se renombran y se borran.
 
@@ -24,12 +24,12 @@ export function TodasLasSecciones() {
     <div className="px-[22px] pt-4 flex flex-col gap-3 pb-4 lg:max-w-2xl lg:mx-auto lg:pt-6">
       <header className="flex flex-col gap-1">
         <BotonVolver onClick={volver} />
-        <Titulo>Tus secciones</Titulo>
+        <Titulo>Tus categorías</Titulo>
       </header>
 
       {categorias.length === 0 ? (
         <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-          Cuando registres tu primer gasto, cada sección aparece sola acá.
+          Las categorías aparecen cuando registrás gastos.
         </p>
       ) : (
         <div className="flex flex-col">

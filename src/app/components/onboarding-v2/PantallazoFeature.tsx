@@ -119,7 +119,7 @@ function PantallazoInversiones() {
 
   return (
     <Marco>
-      <Encabezado icono={<IconInversiones size={15} />} texto="Tu simulación" />
+      <Encabezado icono={<IconInversiones size={15} />} texto="Simulación de ejemplo" />
       <div className="flex flex-col gap-2">
         <svg viewBox={`0 0 ${ancho} ${alto}`} className="w-full" style={{ height: alto }} aria-hidden>
           <polyline points={puntos(aportado)} fill="none" stroke={COLORS.line} strokeWidth="2.5" strokeDasharray="4 4" />
@@ -127,15 +127,14 @@ function PantallazoInversiones() {
         </svg>
         <div className="flex flex-wrap gap-x-4 gap-y-1">
           <span className="text-[13px] flex items-center gap-1.5" style={{ color: COLORS.inkSoft }}>
-            <span className="w-3 h-[3px] rounded-full" style={{ background: COLORS.brand }} /> Con rendimiento
+            <span className="w-3 h-[3px] rounded-full" style={{ background: COLORS.brand }} /> Lo que podrías tener
           </span>
           <span className="text-[13px] flex items-center gap-1.5" style={{ color: COLORS.inkSoft }}>
-            <span className="w-3 h-[3px] rounded-full" style={{ background: COLORS.line }} /> Lo que pusiste
+            <span className="w-3 h-[3px] rounded-full" style={{ background: COLORS.line }} /> Lo que pondrías
           </span>
         </div>
         <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
-          Te mostramos cuánto podría rendir tu plata según tu perfil, y con qué
-          instrumento — nunca la movemos nosotros.
+          Simulá cuánto podría rendir tu plata en cada instrumento. FINA no mueve tu plata.
         </p>
       </div>
     </Marco>

@@ -22,7 +22,7 @@ const SECCIONES_SUGERIDAS = [
 
 // Sólo la fecha, sin hora (decisión oct 2026). El día va en la zona de quien
 // usa la app: "YYYY-MM-DD" del input de fecha.
-function aInputFecha(ts: number): string {
+export function aInputFecha(ts: number): string {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -31,7 +31,7 @@ function aInputFecha(ts: number): string {
  * el orden en que se anotaron. Otro día, al mediodía: lejos de la medianoche,
  * para que ninguna zona horaria lo corra al día de al lado.
  */
-function deInputFecha(fecha: string, original?: number): number {
+export function deInputFecha(fecha: string, original?: number): number {
   if (original !== undefined && aInputFecha(original) === fecha) return original;
   if (fecha === aInputFecha(Date.now())) return Date.now();
   return new Date(`${fecha}T12:00:00`).getTime();
@@ -168,7 +168,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
     // Un gasto fijo que todavía no se pagó no se registra como gasto: sólo
     // queda anotado para avisar. Si ya se pagó, se registra y queda el próximo.
     if (!fijo.activo || fijo.yaPagado) {
-      const r = await acciones.registrarGasto({ ...datos, tipoOtro, pagos: pagosFinal, confirmacion: fijo.activo ? 'Gasto fijo guardado con éxito.' : undefined });
+      const r = await acciones.registrarGasto({ ...datos, tipoOtro, pagos: pagosFinal, confirmacion: fijo.activo ? 'Gasto registrado y guardado como fijo.' : undefined });
       if (r.error !== null) { setError(r.error); return; }
     }
     if (fijo.activo) {
@@ -239,7 +239,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
         <div className="flex flex-col gap-2">
           <Desplegable
             id={`${idBase}-seccion`}
-            label="Sección"
+            label="Categoría"
             value={catId ? `c:${catId}` : creandoCat ? 'nueva' : nuevaCat ? `s:${nuevaCat}` : ''}
             onChange={(v) => {
               setCatId(v.startsWith('c:') ? v.slice(2) : null);
@@ -247,23 +247,23 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
               setCreandoCat(v === 'nueva');
             }}
           >
-            <option value="" disabled style={OPCION}>Elegí una sección</option>
+            <option value="" disabled style={OPCION}>Elegí una categoría</option>
             {categorias.length > 0 && (
-              <optgroup label="Tus secciones">
+              <optgroup label="Tus categorías">
                 {categorias.map((c) => <option key={c.id} value={`c:${c.id}`} style={OPCION}>{c.nombre}</option>)}
               </optgroup>
             )}
             {sugeridasDisponibles.length > 0 && (
-              <optgroup label="Otras secciones">
+              <optgroup label="Sugeridas">
                 {sugeridasDisponibles.map((n) => <option key={n} value={`s:${n}`} style={OPCION}>{n}</option>)}
               </optgroup>
             )}
-            <option value="nueva" style={OPCION}>+ Crear otra sección</option>
+            <option value="nueva" style={OPCION}>+ Nueva categoría</option>
           </Desplegable>
           {creandoCat && (
             <input
               autoFocus
-              aria-label="Nombre de la sección nueva"
+              aria-label="Nombre de la categoría nueva"
               className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
               style={INPUT_STYLE}
               placeholder="Ej: Mascota"
@@ -303,7 +303,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
                 className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
                 style={{ color: COLORS.brand }}
               >
-                Pagado con más de un medio
+                Dividir en varios medios
               </button>
             </>
           ) : (
@@ -313,7 +313,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
               className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
               style={{ color: COLORS.inkSoft }}
             >
-              Pagar con un solo medio
+              Usar un solo medio
             </button>
           )}
         </div>

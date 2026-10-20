@@ -80,7 +80,7 @@ export function ProximoPasoInicio() {
       {recien && !festejando && (
         <div className="flex items-center gap-2 text-[13px]" role="status">
           <p className="flex-1 min-w-0 font-semibold" style={{ color: COLORS.limaText }}>
-            Completaste "{recien.titulo}".
+            Paso hecho: {recien.titulo}
           </p>
           <button type="button" onClick={() => void volverAtras()} className="v2-focus shrink-0 min-h-[44px] px-1 text-[13px] font-semibold underline" style={{ color: COLORS.inkSoft }}>
             Deshacer

@@ -95,8 +95,7 @@ export function ObjetivosEnInicio() {
   if (!elegido) {
     return (
       <Entrada
-        titulo="Creá tu primer objetivo"
-        linea="Algo para lo que quieras juntar"
+        titulo="Creá tu primer objetivo de ahorro"
         onClick={() => navigate('/onboarding-v2/objetivos', { state: { crearObjetivo: true, from: '/onboarding-v2/home' } })}
       />
     );
@@ -128,9 +127,12 @@ export function ObjetivosEnInicio() {
   );
 }
 
-/** Fila-botón de Inicio: título, una línea y, si hay, una barrita de avance. */
+/**
+ * Fila-botón de Inicio: título y, si hay, una barrita de avance y una línea.
+ * La línea es opcional porque sin objetivos el título ya dice qué hacer.
+ */
 function Entrada({ titulo, linea, pct = null, atencion = false, onClick }: {
-  titulo: string; linea: string; pct?: number | null; atencion?: boolean; onClick: () => void;
+  titulo: string; linea?: string; pct?: number | null; atencion?: boolean; onClick: () => void;
 }) {
   return (
     <button
@@ -146,7 +148,7 @@ function Entrada({ titulo, linea, pct = null, atencion = false, onClick }: {
             <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: COLORS.limaViz }} />
           </span>
         )}
-        <span className="text-[13px] truncate font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>{linea}</span>
+        {linea && <span className="text-[13px] truncate font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>{linea}</span>}
       </span>
       <IconChevron size={16} style={{ color: COLORS.inkSoft }} />
     </button>

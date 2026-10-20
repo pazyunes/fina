@@ -45,7 +45,7 @@ export function nuevoId(): string {
  * que se había pintado de antemano (por ejemplo, vuelve a mostrar el gasto que
  * no se pudo borrar).
  *
- * Los carteles dicen SÓLO que la acción se hizo ("Gasto borrado con éxito").
+ * Los carteles dicen SÓLO que la acción se hizo ("Gasto borrado").
  * Nada de consecuencias ("la plata volvió a Mercado Pago"): el cartel confirma
  * lo que pasó en la base, y cualquier otra cosa que diga es una afirmación que
  * puede no ser cierta.
@@ -105,14 +105,14 @@ export function renombrarSeccion(id: string, nombre: string) {
   parchearEstado({
     secciones: leerEstado().secciones.map((s) => (s.id === id ? { ...s, nombre } : s)),
   });
-  push(() => api.renombrarSeccion(id, nombre), 'Sección renombrada con éxito.');
+  push(() => api.renombrarSeccion(id, nombre), 'Categoría renombrada.');
 }
 
 export function guardarTope(id: string, tope: { monto: number; periodo: Periodo } | null) {
   parchearEstado({
     secciones: leerEstado().secciones.map((s) => (s.id === id ? { ...s, tope } : s)),
   });
-  push(() => api.guardarTope(id, tope), tope ? 'Tope guardado con éxito.' : 'Tope eliminado con éxito.');
+  push(() => api.guardarTope(id, tope), tope ? 'Tope guardado.' : 'Tope eliminado.');
 }
 
 export function borrarSeccion(id: string) {
@@ -124,7 +124,7 @@ export function borrarSeccion(id: string) {
     // (`on delete set null`).
     gastos: est.gastos.map((g) => (g.seccionId === id ? { ...g, seccionId: null } : g)),
   });
-  push(() => api.borrarSeccion(id), 'Sección borrada con éxito.');
+  push(() => api.borrarSeccion(id), 'Categoría borrada.');
 }
 
 // Una sección que VOS vaciaste (le quedaba un solo gasto y lo borraste, o lo
@@ -154,7 +154,7 @@ export function sumarDisponible(medio: string, monto: number) {
       : [{ id: nuevoId(), nombre, saldo: monto, usadoEn: ahora }, ...est.mediosPago],
     cargas: [carga, ...est.cargas],
   });
-  push(() => api.sumarDisponible(nombre, monto), 'Dinero agregado con éxito.');
+  push(() => api.sumarDisponible(nombre, monto), 'Sumado a tu disponible.');
   push(() => api.registrarCarga(carga));
 }
 
@@ -188,7 +188,7 @@ export function unirMedios(origen: string, destino: string) {
   });
   // Si la base no pudo unirlos, todo vuelve a como estaba: mostrar unidos dos
   // medios que en la base siguen separados sería mentir.
-  push(() => api.unirMedios(o, d), 'Medios unidos con éxito.', () => parchearEstado({
+  push(() => api.unirMedios(o, d), 'Medios unidos.', () => parchearEstado({
     mediosPago: est.mediosPago, gastos: est.gastos, ingresos: est.ingresos, cargas: est.cargas, gastosFijos: est.gastosFijos,
   }));
 }
@@ -198,7 +198,7 @@ export function crearGastoFijo(g: Omit<GastoFijo, 'id'>, avisar = true): GastoFi
   const fijo: GastoFijo = { ...g, id: nuevoId() };
   const est = leerEstado();
   parchearEstado({ gastosFijos: [...est.gastosFijos, fijo].sort((a, b) => a.proximoPago.localeCompare(b.proximoPago)) });
-  push(() => api.crearGastoFijo(fijo), avisar ? 'Gasto fijo guardado con éxito.' : undefined, () => parchearEstado({ gastosFijos: leerEstado().gastosFijos.filter((x) => x.id !== fijo.id) }));
+  push(() => api.crearGastoFijo(fijo), avisar ? 'Gasto fijo guardado.' : undefined, () => parchearEstado({ gastosFijos: leerEstado().gastosFijos.filter((x) => x.id !== fijo.id) }));
   return fijo;
 }
 
@@ -213,7 +213,7 @@ export async function pagarGastoFijo(id: string): Promise<string | null> {
   const r = await registrarGasto({
     monto: fijo.monto, moneda: fijo.moneda, descripcion: fijo.descripcion,
     seccionId: fijo.seccionId, tipo: fijo.tipo, metodoPago: fijo.metodoPago,
-    confirmacion: 'Pago registrado con éxito.',
+    confirmacion: 'Pago registrado.',
   });
   if (r.error !== null) return r.error;
   const proximo = siguienteVencimiento(fijo.proximoPago, fijo.frecuencia, fijo.diaAncla);
@@ -232,7 +232,7 @@ export function borrarGastoFijo(id: string) {
   const est = leerEstado();
   const fijo = est.gastosFijos.find((x) => x.id === id);
   parchearEstado({ gastosFijos: est.gastosFijos.filter((x) => x.id !== id) });
-  push(() => api.borrarGastoFijo(id), 'Gasto fijo borrado con éxito.', () => {
+  push(() => api.borrarGastoFijo(id), 'Gasto fijo borrado.', () => {
     if (fijo && !leerEstado().gastosFijos.some((x) => x.id === id)) parchearEstado({ gastosFijos: [...leerEstado().gastosFijos, fijo] });
   });
 }
@@ -268,7 +268,7 @@ export async function registrarIngreso(i: {
   push(() => api.registrarIngreso({
     id: ingreso.id, monto: i.monto, moneda: i.moneda, montoArs, cotizacionId: conv.cotizacionId,
     fuente: i.fuente, fuenteOtra, descripcion: ingreso.descripcion, medio, ts: ingreso.ts,
-  }), 'Ingreso registrado con éxito.', () => parchearEstado({ ingresos: est.ingresos, mediosPago: est.mediosPago }));
+  }), 'Ingreso registrado.', () => parchearEstado({ ingresos: est.ingresos, mediosPago: est.mediosPago }));
   return { ingreso, error: null };
 }
 
@@ -350,7 +350,7 @@ export async function editarIngreso(id: string, c: {
     descripcion: c.descripcion !== undefined ? actual.descripcion : undefined,
     medio: medioNuevo !== undefined ? (actual.medio ?? undefined) : undefined,
     ts: c.ts !== undefined ? actual.ts : undefined,
-  }), 'Ingreso editado con éxito.', () => {
+  }), 'Ingreso editado.', () => {
     // La base quedó como antes: la pantalla también. Sobre el estado de AHORA,
     // no sobre la foto de antes, para no pisar lo que pasó mientras tanto.
     parchearEstado({ ingresos: leerEstado().ingresos.map((x) => (x.id === id ? actual : x)).sort((a, b) => b.ts - a.ts) });
@@ -367,7 +367,7 @@ export function borrarIngreso(id: string) {
     ? est.mediosPago.map((m) => (m.nombre === ingreso.medio ? { ...m, saldo: m.saldo - ingreso.montoArs } : m))
     : est.mediosPago;
   parchearEstado({ ingresos: est.ingresos.filter((x) => x.id !== id), mediosPago });
-  push(() => api.borrarIngreso(id), 'Ingreso borrado con éxito.', () => {
+  push(() => api.borrarIngreso(id), 'Ingreso borrado.', () => {
     const actual = leerEstado();
     if (!ingreso || actual.ingresos.some((x) => x.id === id)) return;
     parchearEstado({ ingresos: [...actual.ingresos, ingreso].sort((a, b) => b.ts - a.ts), mediosPago: est.mediosPago });
@@ -472,7 +472,7 @@ export async function registrarGasto(g: {
   const { confirmacion, ...datos } = g;
   push(() => api.registrarGasto({
     ...datos, tipoOtro, id: gasto.id, montoArs, cotizacionId: conv.cotizacionId,
-  }), confirmacion ?? 'Gasto registrado con éxito.', () => {
+  }), confirmacion ?? 'Gasto registrado.', () => {
     // La base no lo tiene: que la pantalla tampoco.
     parchearEstado({ gastos: leerEstado().gastos.filter((x) => x.id !== gasto.id) });
     deshacerMedios(ajustes, est.mediosPago);
@@ -607,7 +607,7 @@ export async function editarGasto(id: string, cambios: {
     metodoPago: pagoTocado ? actual.metodoPago : undefined,
     pagos: tocaPagos ? (actual.pagos?.length ? actual.pagos : null) : undefined,
     ts: cambios.ts !== undefined ? actual.ts : undefined,
-  }), 'Gasto editado con éxito.', () => {
+  }), 'Gasto editado.', () => {
     // La base quedó como antes: la pantalla también.
     parchearEstado({ gastos: leerEstado().gastos.map((x) => (x.id === id ? actual : x)).sort((a, b) => b.ts - a.ts) });
     deshacerMedios(ajustes, est.mediosPago);
@@ -635,7 +635,7 @@ export function borrarGasto(id: string) {
   if (gasto) borrarSeccionSiQuedoVacia(gasto.seccionId, est.gastos, gastosDespues);
   // Si la base no lo borró, vuelve a aparecer con su saldo: mostrar borrado un
   // gasto que sigue existiendo es justo lo que no puede pasar.
-  push(() => api.borrarGasto(id), 'Gasto borrado con éxito.', () => {
+  push(() => api.borrarGasto(id), 'Gasto borrado.', () => {
     const actual = leerEstado();
     if (!gasto || actual.gastos.some((g) => g.id === id)) return;
     parchearEstado({ gastos: [...actual.gastos, gasto].sort((a, b) => b.ts - a.ts), mediosPago: est.mediosPago });
@@ -665,7 +665,7 @@ export function crearObjetivo(o: {
     repite: o.repite ?? null,
   };
   parchearEstado({ objetivos: [...leerEstado().objetivos, objetivo] });
-  push(() => api.crearObjetivo({ ...o, id: objetivo.id }), 'Objetivo creado con éxito.', () => {
+  push(() => api.crearObjetivo({ ...o, id: objetivo.id }), 'Objetivo creado.', () => {
     parchearEstado({ objetivos: leerEstado().objetivos.filter((x) => x.id !== objetivo.id) });
   });
   return objetivo;
@@ -675,12 +675,12 @@ export function editarObjetivo(id: string, parche: Partial<Objetivo>) {
   parchearEstado({
     objetivos: leerEstado().objetivos.map((x) => (x.id === id ? { ...x, ...parche } : x)),
   });
-  push(() => api.editarObjetivo(id, parche), 'Cambios guardados con éxito.');
+  push(() => api.editarObjetivo(id, parche), 'Cambios guardados.');
 }
 
 export function borrarObjetivo(id: string) {
   parchearEstado({ objetivos: leerEstado().objetivos.filter((x) => x.id !== id) });
-  push(() => api.borrarObjetivo(id), 'Objetivo borrado con éxito.');
+  push(() => api.borrarObjetivo(id), 'Objetivo borrado.');
 }
 
 export async function sumarContribucion(objetivoId: string, c: {
@@ -708,7 +708,7 @@ export async function sumarContribucion(objetivoId: string, c: {
   });
   push(() => api.sumarContribucion(objetivoId, {
     ...c, id: contrib.id, montoArs: conv.montoArs, cotizacionId: conv.cotizacionId,
-  }), 'Registro sumado con éxito.', () => parchearEstado({
+  }), 'Registro sumado.', () => parchearEstado({
     objetivos: leerEstado().objetivos.map((x) => (x.id === objetivoId
       ? { ...x, contribuciones: x.contribuciones.filter((k) => k.id !== contrib.id) }
       : x)),
@@ -733,7 +733,7 @@ export async function pagarGastoQueSeViene(o: Objetivo, p: { monto: number; secc
   if (!esConvertible(moneda)) return 'Para registrarlo como gasto, el monto tiene que estar en pesos o en dólares.';
   const r = await registrarGasto({
     monto: p.monto, moneda, descripcion: o.nombre, seccionId: p.seccionId,
-    tipo: 'necesario', metodoPago: null, confirmacion: 'Pago registrado con éxito.',
+    tipo: 'necesario', metodoPago: null, confirmacion: 'Pago registrado.',
   });
   if (r.error !== null) return r.error;
   const liberar = Math.min(p.apartado, p.monto);
@@ -759,7 +759,7 @@ export function borrarContribucion(objetivoId: string, id: string) {
       ? { ...x, contribuciones: x.contribuciones.filter((c) => c.id !== id) }
       : x)),
   });
-  push(() => api.borrarContribucion(id), 'Registro borrado con éxito.');
+  push(() => api.borrarContribucion(id), 'Registro borrado.');
 }
 
 // ── Inversiones ──────────────────────────────────────────────────────────
@@ -786,7 +786,7 @@ export async function sumarAporte(a: {
   parchearEstado({ aportes: [aporte, ...leerEstado().aportes] });
   push(() => api.sumarAporte({
     ...a, id: aporte.id, montoArs: conv.montoArs ?? 0, cotizacionId: conv.cotizacionId,
-  }), 'Aporte registrado con éxito.', () => {
+  }), 'Aporte registrado.', () => {
     parchearEstado({ aportes: leerEstado().aportes.filter((x) => x.id !== aporte.id) });
   });
   return { aporte, error: null };
@@ -830,7 +830,7 @@ export async function editarAporte(id: string, c: {
     moneda: cambioMonto ? moneda : undefined,
     montoArs: cambioMonto ? montoArs : undefined,
     cotizacionId,
-  }), 'Cambios guardados con éxito.', () => {
+  }), 'Cambios guardados.', () => {
     parchearEstado({ aportes: leerEstado().aportes.map((x) => (x.id === id ? actual : x)) });
   });
   return { error: null };
@@ -838,7 +838,7 @@ export async function editarAporte(id: string, c: {
 
 export function borrarAporte(id: string) {
   parchearEstado({ aportes: leerEstado().aportes.filter((x) => x.id !== id) });
-  push(() => api.borrarAporte(id), 'Aporte borrado con éxito.');
+  push(() => api.borrarAporte(id), 'Aporte borrado.');
 }
 
 // ── Verificación del teléfono ────────────────────────────────────────────
@@ -873,7 +873,7 @@ export async function subirFoto(archivo: File): Promise<{ url: string | null; er
   const r = await api.subirFoto(archivo);
   if (r.error !== null) return { url: null, error: r.error };
   parchearEstado({ perfil: { ...leerEstado().perfil, fotoUrl: r.data } });
-  avisarConfirmacion('Foto actualizada con éxito.');
+  avisarConfirmacion('Foto actualizada.');
   return { url: r.data, error: null };
 }
 
@@ -881,7 +881,7 @@ export async function borrarFoto(): Promise<string | null> {
   const r = await api.borrarFoto();
   if (r.error !== null) return r.error;
   parchearEstado({ perfil: { ...leerEstado().perfil, fotoUrl: null } });
-  avisarConfirmacion('Foto eliminada con éxito.');
+  avisarConfirmacion('Foto eliminada.');
   return null;
 }
 
@@ -897,7 +897,7 @@ export async function crearGrupo(nombre: string): Promise<{ grupo: Grupo | null;
   const conMiembros = await api.leerMiGrupo();
   const grupo = conMiembros.data ?? r.data;
   parchearEstado({ grupo });
-  avisarConfirmacion('Grupo creado con éxito.');
+  avisarConfirmacion('Grupo creado.');
   return { grupo, error: null };
 }
 
@@ -906,7 +906,7 @@ export async function unirseAGrupo(codigo: string): Promise<{ grupo: Grupo | nul
   if (r.error !== null) return { grupo: null, error: r.error };
   if (r.data === null) return { grupo: null, error: 'Ese código no existe. Fijate que esté bien escrito.' };
   parchearEstado({ grupo: r.data });
-  avisarConfirmacion('Te uniste al grupo con éxito.');
+  avisarConfirmacion('Te uniste al grupo.');
   return { grupo: r.data, error: null };
 }
 
@@ -916,6 +916,6 @@ export async function salirDelGrupo(): Promise<string | null> {
   const r = await api.salirDelGrupo(grupo.id);
   if (r.error !== null) return r.error;
   parchearEstado({ grupo: null });
-  avisarConfirmacion('Saliste del grupo con éxito.');
+  avisarConfirmacion('Saliste del grupo.');
   return null;
 }

@@ -70,8 +70,8 @@ const DEFS: Def[] = [
     armar: (e) => ({
       titulo: 'Abrí una cuenta para hacer rendir tu plata',
       porQue: e.perfil.reserva > 0
-        ? `Tenés ${pesos(e.perfil.reserva)} apartados. En una cuenta remunerada esa plata suma intereses todos los días, sin que hagas nada.`
-        : 'Con inflación, la plata quieta en una caja de ahorro compra menos cada mes. Una cuenta remunerada le suma intereses todos los días.',
+        ? `Tenés ${pesos(e.perfil.reserva)} apartados. Si no están en una cuenta remunerada, ahí sumarían intereses todos los días.`
+        : 'Con inflación, la plata quieta en una caja de ahorro suele comprar menos cada mes. Una cuenta remunerada le suma intereses todos los días.',
       comoHacerlo: [
         'Elegí un banco digital o una billetera virtual con cuenta remunerada.',
         'Abrila desde el celular con tu DNI: lleva unos minutos.',
@@ -87,10 +87,10 @@ const DEFS: Def[] = [
     armar: (e) => {
       const credito = pagadoConCredito(e);
       return {
-        titulo: 'Dejá de usar crédito caro',
+        titulo: 'Ordená tus cuotas y préstamos',
         porQue: credito > 0
-          ? `En los últimos 30 días pagaste ${pesos(credito)} con tarjeta de crédito. Las cuotas con interés y los préstamos rápidos cuestan más de lo que rinde cualquier ahorro.`
-          : 'Las cuotas con interés, el pago mínimo de la tarjeta y los préstamos rápidos cuestan más de lo que rinde cualquier ahorro.',
+          ? `En los últimos 30 días pagaste ${pesos(credito)} con tarjeta. Las cuotas con interés y los préstamos rápidos suelen costar más de lo que rinde una cuenta remunerada o un plazo fijo.`
+          : 'Las cuotas con interés, el pago mínimo de la tarjeta y los préstamos rápidos suelen costar más de lo que rinde una cuenta remunerada o un plazo fijo.',
         comoHacerlo: [
           'Anotá qué cuotas y préstamos tenés y cuánto pagás por mes.',
           'Pagá el total de la tarjeta, no el mínimo, cuando puedas.',
@@ -102,11 +102,9 @@ const DEFS: Def[] = [
   {
     clave: 'ahorro_automatico',
     puntaje: (e) => 35 + (e.ingresos.length > 0 ? 20 : 0),
-    armar: (e) => ({
-      titulo: 'Separá un ahorro apenas cobrás',
-      porQue: e.ingresos.length > 0
-        ? 'Ya registrás lo que te entra. Separar un monto fijo el mismo día que cobrás funciona mejor que esperar a ver qué sobra a fin de mes.'
-        : 'Separar un monto fijo el mismo día que cobrás funciona mejor que esperar a ver qué sobra a fin de mes.',
+    armar: () => ({
+      titulo: 'Apartá un ahorro apenas cobrás',
+      porQue: 'Apartar un monto fijo el mismo día que cobrás funciona mejor que esperar a ver qué sobra a fin de mes.',
       comoHacerlo: [
         'Elegí un monto que no te complique, aunque sea chico.',
         'Programá una transferencia automática para el día que cobrás.',
@@ -118,9 +116,11 @@ const DEFS: Def[] = [
     clave: 'primera_inversion',
     puntaje: (e) => (invierte(e) ? null : 30 + (e.perfil.reserva > 0 ? 15 : 0)),
     hechoSolo: invierte,
-    armar: () => ({
+    armar: (e) => ({
       titulo: 'Hacé tu primera inversión',
-      porQue: 'No hace falta mucha plata para empezar. Lo importante es arrancar con algo que entiendas y que se ajuste a lo que buscás.',
+      porQue: e.perfil.reserva > 0
+        ? `Tenés ${pesos(e.perfil.reserva)} apartados: con una parte ya podés empezar.`
+        : 'Se puede empezar con montos chicos.',
       comoHacerlo: [
         'Hacé el perfil de inversor en FINA para saber qué te conviene.',
         'Empezá con un monto chico en un instrumento simple.',
@@ -139,8 +139,8 @@ const DEFS: Def[] = [
       return {
         titulo: 'Diversificá tus inversiones',
         porQue: unico
-          ? `Hoy tenés todo en ${unico}. Repartir entre dos o tres instrumentos distintos hace que una mala racha de uno no te pegue en todo.`
-          : 'Repartir entre dos o tres instrumentos distintos hace que una mala racha de uno no te pegue en todo.',
+          ? `Hoy tenés todo en ${unico}. Repartí entre dos o tres instrumentos distintos: si a uno le va mal, no te afecta todo.`
+          : 'Repartí entre dos o tres instrumentos distintos: si a uno le va mal, no te afecta todo.',
         comoHacerlo: [
           'Sumá un instrumento distinto al que ya tenés (otro plazo, otra moneda u otro riesgo).',
           'No hace falta mover todo: empezá con lo que vayas a invertir de ahora en más.',
@@ -180,17 +180,6 @@ export function todosLosPasos(e: EstadoV2, marcados: ReadonlySet<string>): PasoE
   const filas = DEFS.map((d) => ({ clave: d.clave, titulo: d.armar(e).titulo, hecho: estaHecho(e, d.clave, marcados), puntaje: d.puntaje(e, marcados) ?? -1 }));
   return [...filas.filter((f) => f.hecho), ...filas.filter((f) => !f.hecho).sort((a, b) => b.puntaje - a.puntaje)]
     .map(({ clave, titulo, hecho }) => ({ clave, titulo, hecho }));
-}
-
-/**
- * Una frase para la pantalla de progreso, con el dato atrás (frontend.md §2.3:
- * nada de "felicitaciones" sin un dato). No reta si todavía no hizo ninguno.
- */
-export function fraseDeProgreso(hechos: number, total: number): string {
-  if (hechos === 0) return 'Todavía no marcaste ningún paso grande. El primero es el que más cuesta, y después cada uno se hace más fácil.';
-  if (hechos >= total) return `Hiciste los ${total} pasos grandes. Tu plata está mucho más ordenada que cuando empezaste.`;
-  if (hechos === 1) return 'Ya hiciste tu primer paso grande. Es el que más cuesta: lo que sigue se apoya en este.';
-  return `Ya hiciste ${hechos} de ${total} pasos grandes. Cada uno deja tu plata un poco más ordenada que antes.`;
 }
 
 /** Cuántos pasos hizo, de los que existen: para decir "Hiciste 2 de 5". */

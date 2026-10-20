@@ -6,7 +6,7 @@ import { FilaGasto } from './FilaGasto';
 import { Desplegable, INPUT_STYLE } from './FormularioGasto';
 import { gastosDeLaBase, seccionesDeLaBase } from './datosGasto';
 
-// Todos tus gastos, de todos los períodos. Se llega desde "Consultar todos" en
+// Todos tus gastos, de todos los períodos. Se llega desde "Ver todos" en
 // Gastos, que muestra sólo los últimos 5: la lista completa, con buscador,
 // filtro por sección y por fechas, vive acá para que Gastos no repita el mismo
 // listado. Editar abre el formulario en el mismo renglón.
@@ -99,10 +99,10 @@ export function TodosLosGastos() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
-          <Desplegable id="filtro-seccion" label="Sección" value={seccion} onChange={setSeccion}>
-            <option value="" style={OPCION}>Todas las secciones</option>
+          <Desplegable id="filtro-seccion" label="Categoría" value={seccion} onChange={setSeccion}>
+            <option value="" style={OPCION}>Todas las categorías</option>
             {categorias.map((c) => <option key={c.id} value={c.id} style={OPCION}>{c.nombre}</option>)}
-            <option value="__sin" style={OPCION}>Sin sección</option>
+            <option value="__sin" style={OPCION}>Sin categoría</option>
           </Desplegable>
           <div className="flex flex-col gap-3 sm:flex-row">
             <CampoFecha id="filtro-desde" label="Desde" value={filtroDesde} max={filtroHasta || undefined} onChange={setFiltroDesde} />

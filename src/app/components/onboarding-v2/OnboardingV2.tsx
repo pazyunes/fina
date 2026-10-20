@@ -78,29 +78,31 @@ type StepKey =
 // ninguna pantalla del flujo quede sin acompañamiento — pedido explícito:
 // "que aparezca más veces el personaje, que sea más principal".
 //
-// `null` = esa pantalla no lleva a Fini en la franja de arriba, porque el
-// personaje ya es el protagonista adentro (la bienvenida y la llegada) o
-// porque el propio contenido ya es un cartel que habla (la intermedia).
+// `null` = esa pantalla no lleva a Fini en la franja de arriba: porque el
+// personaje ya es el protagonista adentro (la bienvenida y la llegada), porque
+// el propio contenido ya es un cartel que habla (la intermedia) o porque la
+// línea que tenía prometía algo que la app no hace (género, edad, situación,
+// zona, si ya invierte). Mejor sin globo que con un globo que no es cierto.
 const FINI_DICE: Record<StepKey, { dice: string; estado: FiniState } | null> = {
   intro: null,
   nombre: { dice: 'Así te vamos a hablar de acá en adelante.', estado: 'saludo' },
-  genero: { dice: 'Elegí la que mejor te represente hoy, después vas a poder hacer todo lo demás igual.', estado: 'idle' },
-  edad: { dice: 'Nos sirve para comparar tu situación con la de gente parecida a vos.', estado: 'idle' },
-  objetivo: { dice: 'Con esto armamos por dónde arrancar. Después podés cambiarlo cuando quieras.', estado: 'pensando' },
-  situacion: { dice: 'No hace falta que sea exacto, con que sea parecido a tu realidad alcanza.', estado: 'idle' },
-  zona: { dice: 'Los precios y las opciones para invertir cambian según dónde estés.', estado: 'idle' },
+  genero: null,
+  edad: null,
+  objetivo: { dice: 'Con esto elegimos qué mostrarte primero.', estado: 'pensando' },
+  situacion: null,
+  zona: null,
   ingresos: { dice: 'Podés marcar más de una. Muchos no tenemos una sola fuente.', estado: 'idle' },
-  estabilidadIngresos: { dice: 'Con esto afinamos qué opciones tienen más sentido para vos.', estado: 'idle' },
+  estabilidadIngresos: { dice: 'Con esto ajustamos tus recomendaciones.', estado: 'idle' },
   tedioso: { dice: 'Contame la verdad, si te da fiaca, hay una forma de hacerlo sin abrir la app.', estado: 'idle' },
   invReaccion: { dice: 'No hay respuesta correcta. Sirve para saber cuánto vaivén te resulta cómodo.', estado: 'pensando' },
-  invYaInvierte: { dice: 'Si todavía no, no importa: la mayoría arranca justo acá.', estado: 'idle' },
-  objetivoInversion: { dice: 'Nunca movemos tu plata, esto es solo para recomendarte según vos.', estado: 'idle' },
+  invYaInvierte: null,
+  objetivoInversion: { dice: 'Nunca movemos tu plata. Es para recomendarte según tu perfil.', estado: 'idle' },
   definirObjetivo: { dice: 'Lo dejamos cargado y ya lo vas a ver con su progreso apenas entres.', estado: 'progreso' },
   intermedia: null,
   comoConocio: { dice: 'Última, prometido. Nos ayuda a saber dónde contarle a más gente.', estado: 'idle' },
   // Los términos se aceptan en la misma pantalla en que se crea la cuenta, así
   // que el mensaje de privacidad va acá.
-  login: { dice: 'Tus datos son privados: solo se usan para darte recomendaciones a vos. Nunca los compartimos ni los vendemos.', estado: 'idle' },
+  login: { dice: 'Tus datos son privados. Nunca los vendemos.', estado: 'idle' },
 };
 
 const CTA_LABELS: Record<StepKey, string> = {
@@ -118,7 +120,7 @@ const CTA_LABELS: Record<StepKey, string> = {
   invYaInvierte: 'Continuar',
   objetivoInversion: 'Continuar',
   definirObjetivo: 'Guardar objetivo',
-  intermedia: 'Genial, sigamos',
+  intermedia: 'Continuar',
   comoConocio: 'Continuar',
   login: 'Continuar',
 };
@@ -133,12 +135,12 @@ const SKIPPABLE: StepKey[] = [
 // elimina el "Continuar" huérfano flotando abajo — que era la mitad de lo que
 // se veía mal en el flujo viejo.
 //
-// Quedan afuera a propósito los pasos donde la respuesta dispara una devolución
-// que hay que poder leer: `objetivo` (la burbuja "modo ahorro activado") y
-// `tedioso` (la explicación del bot de WhatsApp). Ahí el CTA se queda, porque
-// avanzar solo se comería el mensaje.
+// Queda afuera a propósito `tedioso`: la respuesta abre la explicación del bot
+// de WhatsApp, que hay que poder leer. Ahí el CTA se queda, porque avanzar solo
+// se comería el mensaje. `objetivo` antes también esperaba porque mostraba una
+// burbuja de festejo; sin la burbuja, avanza solo como el resto.
 const AUTO_AVANCE: StepKey[] = [
-  'genero', 'edad', 'situacion', 'zona', 'estabilidadIngresos',
+  'genero', 'edad', 'objetivo', 'situacion', 'zona', 'estabilidadIngresos',
   'invReaccion', 'invYaInvierte', 'objetivoInversion', 'comoConocio',
 ];
 
@@ -177,13 +179,6 @@ const OBJETIVOS: { id: ObjetivoId; label: string }[] = [
   { id: 'objetivo', label: 'Lograr un objetivo puntual' },
   { id: 'no_claro', label: 'Todavía no lo tengo claro' },
 ];
-
-const BUBBLE_POR_TOP: Record<ObjetivoId, string> = {
-  invertir: 'Buenísimo, te ayudamos a que tu plata trabaje para vos.',
-  ahorrar: 'Modo ahorro activado. Lo vamos a hacer fácil.',
-  objetivo: 'Con la mira puesta en lo que de verdad te importa.',
-  no_claro: 'Tranqui, lo vamos descubriendo juntas, a tu ritmo.',
-};
 
 const ZONAS: { id: string; label: string; muted?: boolean }[] = [
   { id: 'CABA', label: 'CABA' },
@@ -244,9 +239,9 @@ const COMO_CONOCIO: { id: string; label: string }[] = [
 ];
 
 const PREVIEW_INFO: Record<ObjetivoId, { titulo: string; desc: string; bg: string }> = {
-  invertir: { titulo: 'Inversiones', desc: 'Según tu perfil, te mostramos en qué te conviene poner tu plata para que rinda.', bg: COLORS.skySoft },
-  ahorrar: { titulo: 'Ahorro', desc: 'Apartás plata en tu reserva y ves crecer cuánto llevás guardado, sin tentarte.', bg: COLORS.goldSoft },
-  objetivo: { titulo: 'Objetivos', desc: 'Tu meta con su progreso, vas viendo cuánto te falta para lograrla.', bg: COLORS.goldSoft },
+  invertir: { titulo: 'Inversiones', desc: 'Según tu perfil, te mostramos opciones para invertir.', bg: COLORS.skySoft },
+  ahorrar: { titulo: 'Ahorro', desc: 'Apartás plata en tu reserva y ves crecer cuánto llevás guardado.', bg: COLORS.goldSoft },
+  objetivo: { titulo: 'Objetivos de ahorro', desc: 'Tu meta con su progreso, vas viendo cuánto te falta para lograrla.', bg: COLORS.goldSoft },
   no_claro: { titulo: 'Tu FINA', desc: 'Gastos, ahorro, objetivos e inversiones, todo en un lugar, a tu ritmo.', bg: COLORS.tint },
 };
 
@@ -435,7 +430,6 @@ export function OnboardingV2() {
     setCategoriasRecortarSel((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]));
   };
 
-  const objetivoBubble = meta ? BUBBLE_POR_TOP[meta] : 'No te vas a arrepentir...';
   const categoriasElegidas = [...categoriasGasto, ...categoriasOtro.custom];
   const sufijoGenero = genero === 'masculino' ? 'os' : genero === 'femenino' ? 'as' : '@s';
 
@@ -674,6 +668,10 @@ export function OnboardingV2() {
   // Lo que dice Fini en esta pantalla. En la de llegada no va: ahí el
   // personaje está adentro, grande y centrado.
   const finiDice = FINI_DICE[currentKey];
+  // Centradas van sólo las pantallas que no son una pregunta (bienvenida,
+  // intermedia, llegada). Antes se decidía por "tiene a Fini o no", pero ahora
+  // hay preguntas sin globo y esas siguen arrancando arriba como las demás.
+  const centrado = finished || currentKey === 'intro' || currentKey === 'intermedia';
 
   // Una sola barra continua, no cuatro segmentos por sección. Los segmentos
   // decían en qué bloque estabas pero nunca cuánto faltaba en total; el
@@ -764,7 +762,7 @@ export function OnboardingV2() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: reduce ? 0 : 0.18 }}
               aria-live="polite"
-              className={`flex flex-col gap-5 w-full ${finiDice && !finished ? 'pb-8' : 'my-auto pb-[12vh]'}`}
+              className={`flex flex-col gap-5 w-full ${centrado ? 'my-auto pb-[12vh]' : 'pb-8'}`}
             >
               {currentKey === 'intro' && (
                 <>
@@ -772,7 +770,7 @@ export function OnboardingV2() {
                   <LogoFina alto={34} className="self-center lg:hidden" />
                   <FiniPresenta dice="¡Hola! Soy Fini y te voy a acompañar." state="saludo" size={132} />
                   <Titulo>
-                    Llegó tu momento de cambiar la historia de tus finanzas
+                    Ordená tu plata, a tu ritmo
                   </Titulo>
                   {/* Sin caja. Tres promesas no necesitan un contenedor para
                       leerse como grupo: el aire y la repetición del check ya
@@ -780,7 +778,7 @@ export function OnboardingV2() {
                       contra el papel, o sea que no agrupaba nada — solo sumaba
                       un borde más a la pantalla. */}
                   <ul className="flex flex-col gap-3.5 list-none p-0 m-0">
-                    {['Conocé tus gastos', 'Lográ tus objetivos', 'Cuidá tu bienestar financiero'].map((txt) => (
+                    {['Conocé tus gastos', 'Lográ tus objetivos', 'Ahorrá para lo que querés'].map((txt) => (
                       <li key={txt} className="flex items-center gap-3 text-[17px] font-semibold" style={{ color: COLORS.ink }}>
                         <span className="w-[26px] h-[26px] rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brand }}>
                           <CheckIcon />
@@ -789,7 +787,7 @@ export function OnboardingV2() {
                       </li>
                     ))}
                   </ul>
-                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo, no hace falta que sepas nada todavía.</p>
+                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>No hace falta que sepas de finanzas.</p>
                 </>
               )}
 
@@ -837,18 +835,13 @@ export function OnboardingV2() {
               {currentKey === 'objetivo' && (
                 <>
                   <Titulo>¿Qué es lo que más querés lograr con tu plata?</Titulo>
-                  <OpcionesLista opciones={OBJETIVOS} valor={meta} onElegir={setMeta} />
-                  {meta && (
-                    <div className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[13px] font-semibold" style={{ color: COLORS.ink, background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
-                      {objetivoBubble}
-                    </div>
-                  )}
+                  <OpcionesLista opciones={OBJETIVOS} valor={meta} onElegir={(id) => elegir(setMeta, id)} />
                 </>
               )}
 
               {currentKey === 'situacion' && (
                 <>
-                  <Titulo>Contanos, ¿en qué andás?</Titulo>
+                  <Titulo>¿Trabajás, estudiás o las dos?</Titulo>
                   <OpcionesGrid opciones={SITUACIONES} valor={situacion} onElegir={(id) => elegir(setSituacion, id)} />
                 </>
               )}
@@ -863,7 +856,7 @@ export function OnboardingV2() {
               {currentKey === 'ingresos' && (
                 <>
                   <Titulo>¿De dónde vienen tus ingresos hoy?</Titulo>
-                  <Nota>Esto es solo tuyo, nadie más lo ve. Elegí todas las que apliquen.</Nota>
+                  <Nota>Nadie más lo ve.</Nota>
                   <MultiOtroChips opciones={INGRESOS_OPCIONES.map((v) => ({ value: v, display: v }))} seleccion={ingresos} toggle={toggleIngresos} otro={ingresosOtro} />
                 </>
               )}
@@ -898,15 +891,14 @@ export function OnboardingV2() {
                         <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}><IconChat size={24} /></span>
                         <div className="flex flex-col">
                           <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>
-                            {tedioso === 'si' ? 'Tranqui, para eso está tu FINA en WhatsApp' : 'Igual te va a encantar tu FINA en WhatsApp'}
+                            {tedioso === 'si' ? 'Tranqui, para eso está tu FINA en WhatsApp' : 'También podés usar FINA por WhatsApp'}
                           </p>
                           <p className="text-[13px]" style={{ color: COLORS.limaText }}>Sin planillas, sin abrir la app.</p>
                         </div>
                       </div>
                       <p className="text-[13px] leading-relaxed" style={{ color: COLORS.ink }}>
-                        Le escribís tu gasto como se lo contarías a una amiga —{' '}
-                        <span className="font-semibold">“gasté 5.000 en el súper”</span>{' '}
-                        — y FINA lo registra sola, al toque. También te responde dudas y te avisa cómo venís.
+                        Le escribís tu gasto como se lo contarías a una amiga, por ejemplo:{' '}
+                        <span className="font-semibold">gasté 5.000 en el súper</span>. FINA lo anota. Antes tenés que verificar tu teléfono desde Perfil.
                       </p>
                     </div>
                   )}
@@ -941,7 +933,7 @@ export function OnboardingV2() {
 
               {currentKey === 'objetivoInversion' && (
                 <>
-                  <Titulo>¿Con qué objetivo querés invertir esa plata?</Titulo>
+                  <Titulo>¿Cuándo pensás usar la plata que invertís?</Titulo>
                   <OpcionesLista
                     opciones={PLAZOS_INVERSION}
                     valor={invPorQue}
@@ -987,7 +979,7 @@ export function OnboardingV2() {
                     dice={meta === 'invertir' ? 'Mirá lo que vas a poder simular con tu perfil.' : meta === 'ahorrar' ? 'Mirá cómo se va a ir viendo tu reserva.' : meta === 'objetivo' ? 'Así lo vas a ver cada vez que entres.' : 'Mirá lo que FINA va a armar con lo que registres.'}
                     state="insight"
                   />
-                  <Titulo>{meta === 'invertir' ? 'Tu plata, lista para crecer' : meta === 'ahorrar' ? 'Tu ahorro, siempre a la vista' : meta === 'objetivo' ? '¡Tu objetivo ya está en marcha!' : 'Así se va a ir viendo tu FINA'}</Titulo>
+                  <Titulo>{meta === 'invertir' ? 'Así vas a ver tus inversiones' : meta === 'ahorrar' ? 'Tu ahorro, siempre a la vista' : meta === 'objetivo' ? 'Así vas a ver tu objetivo' : 'Así se va a ir viendo tu FINA'}</Titulo>
                   <PantallazoFeature meta={meta} nombreObjetivo={objNombre} />
                   <Nota>Los números son de ejemplo. Los tuyos aparecen cuando empieces a registrar.</Nota>
 
@@ -1003,7 +995,7 @@ export function OnboardingV2() {
                       <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}><IconChat size={24} /></span>
                       <div>
                         <p className="font-bold text-[14px]" style={{ color: COLORS.ink }}>Tu bot de WhatsApp</p>
-                        <p className="text-[13px]" style={{ color: COLORS.limaText }}>Es el botón redondo del medio, abajo de todo. Contale un gasto hablando y listo, sin abrir la app.</p>
+                        <p className="text-[13px]" style={{ color: COLORS.limaText }}>Contale tus gastos por WhatsApp sin abrir la app. Antes verificá tu teléfono en Perfil.</p>
                       </div>
                     </div>
                   </div>
@@ -1012,7 +1004,7 @@ export function OnboardingV2() {
 
               {currentKey === 'comoConocio' && (
                 <>
-                  <Titulo>Una última curiosidad: ¿cómo conociste FINA?</Titulo>
+                  <Titulo>¿Cómo conociste FINA?</Titulo>
                   <OpcionesGrid
                     opciones={COMO_CONOCIO}
                     valor={comoConocio}
@@ -1024,12 +1016,12 @@ export function OnboardingV2() {
 
               {currentKey === 'login' && !finished && pasoLogin === 'datos' && (
                 <>
-                  <Titulo>Guardá tu progreso</Titulo>
-                  <Campo label="Mail" error={intentoLogin && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Campo obligatorio') : undefined}>
+                  <Titulo>Creá tu cuenta</Titulo>
+                  <Campo label="Mail" error={intentoLogin && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Escribí tu mail') : undefined}>
                     <input className={inputClass} style={inputStyle(intentoLogin && !emailOk)} placeholder="vos@mail.com" value={email} onChange={(e) => { setEmail(e.target.value); setCuentaExistente(null); }} autoComplete="email" />
                   </Campo>
                   <SugerenciaMail email={email} onUsar={(c) => { setEmail(c); setCuentaExistente(null); }} />
-                  <Campo label="Contraseña" error={intentoLogin && !passwordOk ? 'Mínimo 8 caracteres, con una mayúscula, un número y un carácter especial' : undefined}>
+                  <Campo label="Contraseña" error={intentoLogin && !passwordOk ? (password ? 'Mínimo 8 caracteres, con una mayúscula, un número y un carácter especial' : 'Escribí tu contraseña') : undefined}>
                     <InputContrasena className={inputClass} style={inputStyle(intentoLogin && !passwordOk)} placeholder="Elegí una contraseña segura" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
                   </Campo>
                   <Campo label="Teléfono" error={intentoLogin && !telefonoOk ? problemaTelefonoAr(telefono) ?? undefined : undefined}>
@@ -1047,7 +1039,7 @@ export function OnboardingV2() {
                     </div>
                   </Campo>
                   <p className="text-[13px]" style={{ color: COLORS.inkFaint }}>
-                    Te lo pedimos para que puedas registrar gastos por WhatsApp. Todavía no lo verificamos con un SMS.
+                    Es para registrar gastos por WhatsApp. Lo verificás después desde tu perfil.
                   </p>
                   {/* Los términos se aceptan acá, en la misma pantalla en que
                       se crea la cuenta: es el momento en que el consentimiento
@@ -1113,7 +1105,7 @@ export function OnboardingV2() {
               {currentKey === 'login' && !finished && pasoLogin === 'confirmar' && (
                 <>
                   <Titulo>Confirmá tu mail</Titulo>
-                  <Apoyo>Te mandamos un mail a {email.trim()}. Tocá el link y volvé a entrar: tus respuestas ya quedaron guardadas.</Apoyo>
+                  <Apoyo>Te mandamos un mail a {email.trim()}. Tocá el link y volvé a entrar desde este dispositivo: tus respuestas se suben cuando entres.</Apoyo>
                 </>
               )}
 
@@ -1126,7 +1118,6 @@ export function OnboardingV2() {
                 <div className="flex flex-col items-center gap-3 text-center">
                   <div className="py-2"><Fini state="logro" size={150} /></div>
                   <Titulo className="text-center">¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</Titulo>
-                  <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Ya está, a partir de ahora, te acompañamos en esto.</p>
                   <InvitacionAvisos momento="onboarding" />
                 </div>
               )}

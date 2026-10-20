@@ -19,7 +19,14 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 // persistidos, nunca con un contador inventado. El nivel de conocimiento
 // financiero vive ACÁ adentro (no como cartel aparte arriba de todo en
 // Home, que no se entendía) — Home solo tiene la entrada a esta pantalla.
-const NIVELES_FINANCIEROS = ['Recién estoy arrancando', 'Sé lo básico, quiero mejorar', 'Me manejo bastante bien', 'Soy bastante experta/o en esto'];
+// El id es lo que se guarda en el perfil, así que no cambia aunque cambie el
+// texto: si no, quien ya eligió el último nivel lo perdería.
+const NIVELES_FINANCIEROS: { id: string; label: string }[] = [
+  { id: 'Recién estoy arrancando', label: 'Recién estoy arrancando' },
+  { id: 'Sé lo básico, quiero mejorar', label: 'Sé lo básico, quiero mejorar' },
+  { id: 'Me manejo bastante bien', label: 'Me manejo bastante bien' },
+  { id: 'Soy bastante experta/o en esto', label: 'Sé mucho de finanzas' },
+];
 
 // Check propio (currentColor) — el color lo pone el contenedor para respetar
 // el contraste (§3.3: sobre relleno de color, tinta; nunca blanco sobre lima).
@@ -35,8 +42,8 @@ function itemsPerfil() {
   const objetivos = vistaObjetivos();
   return [
     { label: 'Agregá tu primer gasto', hecho: g.gastos.length > 0, to: '/onboarding-v2/gastos' },
-    { label: 'Definí un tope para recortar algo', hecho: Object.keys(g.topes).length > 0, to: '/onboarding-v2/gastos' },
-    { label: 'Sumá un objetivo', hecho: objetivos.length > 0, to: '/onboarding-v2/objetivos' },
+    { label: 'Poné un tope a una categoría', hecho: Object.keys(g.topes).length > 0, to: '/onboarding-v2/gastos' },
+    { label: 'Creá un objetivo de ahorro', hecho: objetivos.length > 0, to: '/onboarding-v2/objetivos' },
   ];
 }
 
@@ -328,7 +335,7 @@ export function PerfilV2() {
                   {nivel ? <Check size={11} /> : null}
                 </span>
                 <span className="flex-1 text-[14px] font-medium" style={{ color: nivel ? COLORS.inkFaint : COLORS.ink, textDecoration: nivel ? 'line-through' : 'none' }}>
-                  Descubrí tu nivel de conocimiento financiero
+                  Contanos cuánto sabés de finanzas
                 </span>
               </button>
             )}
@@ -342,7 +349,7 @@ export function PerfilV2() {
             <div ref={nivelRef} className="flex flex-col gap-3 pt-1">
               <TituloSeccion>¿Cómo describirías lo que sabés hoy?</TituloSeccion>
               <OpcionesLista
-                opciones={NIVELES_FINANCIEROS.map((n) => ({ id: n, label: n }))}
+                opciones={NIVELES_FINANCIEROS}
                 valor={nivel}
                 onElegir={(n) => { setNivel(n); saveV2NivelFinanciero(n); setAbriendoNivel(false); }}
               />
@@ -470,7 +477,7 @@ export function PerfilV2() {
             ) : (
               <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-3 mt-1" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar que se desactiva el PIN">
                 <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
-                  ¿Desactivar el PIN{tieneBio ? ' y Face ID / Touch ID' : ''}? Vas a poder entrar a FINA en este celular sin pedir nada extra.
+                  ¿Desactivar el PIN{tieneBio ? ' y Face ID / Touch ID' : ''}? FINA va a abrir en este celular sin pedir PIN.
                 </p>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setConfirmarQuitarPin(false)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
@@ -491,7 +498,8 @@ export function PerfilV2() {
       {/* Estos tres eran botones sin `onClick`: se podían tocar y no pasaba
           nada. Los dos legales ahora son links de verdad cuando la URL exista
           (ver lib/legales.ts) y, mientras no exista, no se pueden tocar — que
-          es más honesto que un botón que promete algo y no hace nada. */}
+          es más honesto que un botón que promete algo y no hace nada. El
+          tercero, "Enviar feedback", se sacó: no tenía a dónde mandar nada. */}
       <div className="flex flex-col">
         {[
           { txt: 'Términos y condiciones', url: TERMINOS_URL },
@@ -503,7 +511,7 @@ export function PerfilV2() {
               href={url}
               target="_blank"
               rel="noreferrer"
-              className="v2-focus flex items-center text-left text-[13px] font-medium min-h-[48px] py-3 border-b"
+              className="v2-focus flex items-center text-left text-[13px] font-medium min-h-[48px] py-3 border-b last:border-b-0"
               style={{ color: COLORS.inkSoft, borderColor: COLORS.line }}
             >
               {txt}
@@ -511,16 +519,13 @@ export function PerfilV2() {
           ) : (
             <span
               key={txt}
-              className="flex items-center text-left text-[13px] font-medium min-h-[48px] py-3 border-b"
+              className="flex items-center text-left text-[13px] font-medium min-h-[48px] py-3 border-b last:border-b-0"
               style={{ color: COLORS.inkFaint, borderColor: COLORS.line }}
             >
               {txt}
             </span>
           )
         ))}
-        <button type="button" className="v2-focus text-left text-[13px] font-medium min-h-[48px] py-3" style={{ color: COLORS.inkSoft }}>
-          Enviar feedback
-        </button>
       </div>
 
       {/* Cerrar sesión. Con confirmación: está al final de una pantalla que se

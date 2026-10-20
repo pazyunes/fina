@@ -63,10 +63,6 @@ export function GastosV2() {
   const [addDispVal, setAddDispVal] = useState('');
   const [addDispMetodo, setAddDispMetodo] = useState<string | null>(null);
   const [addDispMetodoOtro, setAddDispMetodoOtro] = useState('');
-  // ¿Es plata que ENTRÓ (un ingreso) o plata que ya tenía (sólo se carga el
-  // saldo)? Por defecto, que entró: es lo más común una vez que la persona ya
-  // cargó lo que tenía.
-  const [addDispEsIngreso, setAddDispEsIngreso] = useState(true);
   const [addDispFuente, setAddDispFuente] = useState<FuenteIngreso | ''>('');
   const [addDispFuenteOtra, setAddDispFuenteOtra] = useState('');
 
@@ -124,8 +120,8 @@ export function GastosV2() {
   const referenciaPeriodo = /^(este|esta|la)\b/.test(textoPeriodo) ? textoPeriodo : `en ${textoPeriodo.toLowerCase()}`;
 
   const totalGastado = gastosVentana.reduce((s, g) => s + g.montoArs, 0);
-  // Lo que entró EN EL PERÍODO, sólo con lo registrado ("Me entró" y "Ya la
-  // tenía"). No se arrastra lo que sobró del mes anterior: que haya sobrado no
+  // Lo que entró EN EL PERÍODO, sólo con lo registrado (los ingresos y las
+  // cargas de saldo que ya existían). No se arrastra lo que sobró del mes anterior: que haya sobrado no
   // quiere decir que siga estando.
   const plataDelPeriodo =
     db.ingresos.filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana).reduce((t, i) => t + i.montoArs, 0)
@@ -151,7 +147,7 @@ export function GastosV2() {
   const conIngreso = plataDelPeriodo > 0;
   const porSeccion = [
     ...categorias.map((c) => ({ id: c.id, nombre: c.nombre, color: colorDe(c.id), monto: gastadoEn(c.id) })),
-    { id: '__sin', nombre: 'Sin sección', color: COLORS.lineStrong, monto: gastosVentana.filter((g) => !g.categoriaId).reduce((s, g) => s + g.montoArs, 0) },
+    { id: '__sin', nombre: 'Sin categoría', color: COLORS.lineStrong, monto: gastosVentana.filter((g) => !g.categoriaId).reduce((s, g) => s + g.montoArs, 0) },
   ].filter((s) => s.monto > 0).sort((a, b) => b.monto - a.monto);
   // Lo apartado entra al anillo como su propia porción (lila): ni gastado ni
   // libre.
@@ -280,7 +276,6 @@ export function GastosV2() {
     setAddDispMetodoOtro('');
     setAddDispFuente('');
     setAddDispFuenteOtra('');
-    setAddDispEsIngreso(true);
     setAddingDisponible(false);
   }
 
@@ -290,8 +285,7 @@ export function GastosV2() {
     const metodo = (addDispMetodo === 'otro' ? addDispMetodoOtro.trim() : addDispMetodo) || '';
     // El medio usado sube al principio de la lista: al registrar un gasto se
     // ofrecen los más recientes primero.
-    if (addDispEsIngreso) void acciones.registrarIngreso({ monto: n, moneda: 'ARS', fuente: addDispFuente || null, fuenteOtra: addDispFuenteOtra, medio: metodo });
-    else acciones.sumarDisponible(metodo, n);
+    void acciones.registrarIngreso({ monto: n, moneda: 'ARS', fuente: addDispFuente || null, fuenteOtra: addDispFuenteOtra, medio: metodo });
     cerrarIngreso();
   }
 
@@ -372,7 +366,7 @@ export function GastosV2() {
             <Monto value={conIngreso ? disponibleVentana : totalGastado} size={24} className="font-bold leading-tight tracking-[-0.01em]" />
             {conIngreso && (
               <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-                De <span className="font-mono tabular-nums">{fmtMoney(plataDelPeriodo)}</span> que te entraron
+                De <span className="font-mono tabular-nums">{fmtMoney(plataDelPeriodo)}</span> registrados
               </p>
             )}
             <EstadoConfianza estado="declarado" className="mt-1" />
@@ -399,7 +393,7 @@ export function GastosV2() {
               ))}
               {porSeccion.length > 3 && (
                 <li className="text-[13px] pl-[22px]" style={{ color: COLORS.inkSoft }}>
-                  Y {porSeccion.length - 3} {porSeccion.length - 3 === 1 ? 'sección más' : 'secciones más'}, abajo
+                  Y {porSeccion.length - 3} {porSeccion.length - 3 === 1 ? 'categoría más' : 'categorías más'}
                 </li>
               )}
               {conApartado && (
@@ -418,25 +412,25 @@ export function GastosV2() {
           {gastasteDeMas > 0 && (
             <p className="px-2 text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
               {apartadoAhora > 0
-                ? <>Entre lo gastado y lo apartado, son <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró</>
-                : <>Salieron <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> más de lo que registraste que te entró</>}
+                ? <>Gastos y apartado superan en <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> lo que registraste</>
+                : <>Tus gastos superan en <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> lo que registraste</>}
             </p>
           )}
           {!conIngreso && totalGastado > 0 && (
             <button
               type="button"
-              onClick={() => { setAddDispEsIngreso(true); setAddingDisponible(true); setAddingGasto(false); }}
+              onClick={() => { setAddingDisponible(true); setAddingGasto(false); }}
               className="v2-focus self-center min-h-[44px] text-[13px] font-semibold"
               style={{ color: COLORS.brand }}
             >
-              Sumá lo que te entró para ver cuánto te {periodoCerrado ? 'quedó' : 'queda'}
+              Agregá tus ingresos para ver tu disponible
             </button>
           )}
           {!conIngreso && totalGastado === 0 && (
             <p className="px-2 text-[13px] leading-snug text-center" style={{ color: COLORS.inkSoft }}>
               {periodoCerrado
-                ? `No registraste entradas ni gastos en ${textoPeriodo.toLowerCase()}.`
-                : 'Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto te queda.'}
+                ? `No registraste ingresos ni gastos ${referenciaPeriodo}.`
+                : 'Registrá ingresos y gastos para ver tu disponible.'}
             </p>
           )}
         </div>
@@ -470,17 +464,6 @@ export function GastosV2() {
         {addingDisponible && (
           <Hoja titulo="Nuevo ingreso" onCerrar={cerrarIngreso}>
           <div className="flex flex-col gap-2 pt-1">
-            <SegmentedTab
-              options={[{ id: 'ingreso' as const, label: 'Me entró' }, { id: 'tenia' as const, label: 'Ya la tenía' }]}
-              value={addDispEsIngreso ? 'ingreso' : 'tenia'}
-              onChange={(v) => setAddDispEsIngreso(v === 'ingreso')}
-              trackColor={COLORS.tint}
-            />
-            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              {addDispEsIngreso
-                ? 'Cuenta como ingreso: se suma a lo que entró este mes.'
-                : 'Sólo suma a tu dinero disponible, sin contar como ingreso.'}
-            </p>
             <input
               autoFocus
               aria-label="Monto que te entró"
@@ -491,19 +474,17 @@ export function GastosV2() {
               value={addDispVal}
               onChange={(e) => setAddDispVal(formatThousands(e.target.value))}
             />
-            {addDispEsIngreso && (
-              <select
-                aria-label="De dónde vino la plata"
-                value={addDispFuente}
-                onChange={(e) => setAddDispFuente(e.target.value as FuenteIngreso | '')}
-                className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[14px]"
-                style={{ ...INPUT_STYLE, color: addDispFuente ? COLORS.ink : COLORS.inkFaint }}
-              >
-                <option value="" style={{ color: COLORS.ink }}>¿De dónde vino? (opcional)</option>
-                {FUENTES_INGRESO.map((f) => <option key={f.id} value={f.id} style={{ color: COLORS.ink }}>{f.label}</option>)}
-              </select>
-            )}
-            {addDispEsIngreso && addDispFuente === 'otro' && (
+            <select
+              aria-label="De dónde vino la plata"
+              value={addDispFuente}
+              onChange={(e) => setAddDispFuente(e.target.value as FuenteIngreso | '')}
+              className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[14px]"
+              style={{ ...INPUT_STYLE, color: addDispFuente ? COLORS.ink : COLORS.inkFaint }}
+            >
+              <option value="" style={{ color: COLORS.ink }}>¿De dónde vino? (opcional)</option>
+              {FUENTES_INGRESO.map((f) => <option key={f.id} value={f.id} style={{ color: COLORS.ink }}>{f.label}</option>)}
+            </select>
+            {addDispFuente === 'otro' && (
               <div className="flex flex-col gap-2">
                 <input
                   autoFocus
@@ -540,7 +521,7 @@ export function GastosV2() {
             )}
             {/* Se pregunta el medio acá para que después, al registrar un
                 gasto, se puedan ofrecer los que de verdad tenés. */}
-            <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{addDispEsIngreso ? '¿Dónde entró?' : '¿En qué lo tenés?'}</p>
+            <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Dónde entró?</p>
             <div className="flex flex-wrap gap-1.5">
               {metodosOfrecidos.map((m) => (
                 <button
@@ -580,7 +561,7 @@ export function GastosV2() {
                 Cancelar
               </button>
               <button type="button" onClick={agregarDinero} disabled={parseMoneyInput(addDispVal) <= 0} className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[13px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
-                Agregar
+                Agregar ingreso
               </button>
             </div>
           </div>
@@ -604,7 +585,7 @@ export function GastosV2() {
       {/* Por tipo: sólo la pregunta y cuánto fue de cada uno en el período. */}
       {porTipo.length > 0 && (
         <section className="flex flex-col gap-1" aria-label="Por tipo de gasto">
-          <TituloSeccion>¿En qué tipo de gasto se te va?</TituloSeccion>
+          <TituloSeccion>Por tipo de gasto</TituloSeccion>
           <ul className="flex flex-col">
             {porTipo.map((t) => (
               <li key={t.clave} className="flex items-center gap-2.5 py-2 border-b last:border-b-0 text-[13px]" style={{ borderColor: COLORS.line }}>
@@ -618,15 +599,15 @@ export function GastosV2() {
 
       {/* Tus secciones: las 5 donde más se gastó, con su total y su tope.
           Renombrar y borrar están en Tus secciones, la pantalla completa. */}
-      <section className="flex flex-col gap-1" aria-label="Tus secciones">
-        <TituloSeccion>Tus secciones</TituloSeccion>
+      <section className="flex flex-col gap-1" aria-label="Tus categorías">
+        <TituloSeccion>Tus categorías</TituloSeccion>
         {categorias.length === 0 ? (
           // Vidriera vacía (§10): promesa, no falla. Único lugar de esta
           // pantalla donde Fini puede aparecer (§6).
           <div className="py-4 flex flex-col items-center text-center gap-3">
             <Fini state="vacio" size={104} />
             <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              Cuando registres tu primer gasto, cada sección aparece sola acá y le podés poner un tope.
+              Registrá un gasto y su categoría aparece acá para ponerle un tope.
             </p>
             <EstadoConfianza estado="por-descubrir" />
           </div>
@@ -653,7 +634,7 @@ export function GastosV2() {
               className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
               style={{ color: COLORS.brand }}
             >
-              Consultar todas
+              Ver todas
             </button>
           </>
         )}
@@ -662,11 +643,11 @@ export function GastosV2() {
       {/* Tus gastos: los 5 más recientes, cada uno con su sección. Editar abre
           el formulario en el mismo renglón. La lista completa, con buscador y
           filtros, está en Todos tus gastos. */}
-      <section className="flex flex-col gap-1" aria-label="Tus gastos">
-        <TituloSeccion>Tus gastos</TituloSeccion>
+      <section className="flex flex-col gap-1" aria-label="Últimos gastos">
+        <TituloSeccion>Últimos gastos</TituloSeccion>
         {gastos.length === 0 && <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
         {gastos.length > 0 && ultimosGastos.length === 0 && (
-          <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>No hay gastos en {textoPeriodo}.</p>
+          <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>No hay gastos {referenciaPeriodo}.</p>
         )}
         <div className="flex flex-col">
           {ultimosGastos.map((g) => (
@@ -686,7 +667,7 @@ export function GastosV2() {
             className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
             style={{ color: COLORS.brand }}
           >
-            Consultar todos
+            Ver todos
           </button>
         )}
       </section>
@@ -694,8 +675,8 @@ export function GastosV2() {
       {/* Con qué pagaste en el período. Una sola serie (cuánto salió de cada
           medio), así que un solo color; el monto en tinta. */}
       {porMedio.length > 0 && (
-        <section className="flex flex-col gap-2.5" aria-label="Con qué pagaste">
-          <TituloSeccion>¿Con qué pagaste {referenciaPeriodo}?</TituloSeccion>
+        <section className="flex flex-col gap-2.5" aria-label="Medios de pago">
+          <TituloSeccion>Medios de pago {referenciaPeriodo}</TituloSeccion>
           {porMedio.map((x) => (
             <div key={x.nombre} className="flex flex-col gap-1">
               <div className="flex items-baseline justify-between gap-2">
@@ -732,7 +713,7 @@ export function GastosV2() {
                   <span className="shrink-0" style={{ color: COLORS.brand }}><IconEditar size={22} /></span>
                   <span className="flex flex-col">
                     <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde FINA</span>
-                    <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>Lo cargás acá, a mano, en un toque.</span>
+                    <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>Lo cargás a mano acá.</span>
                   </span>
                 </button>
                 {/* Relleno lima: registrar hablando es la funcionalidad más
@@ -747,7 +728,7 @@ export function GastosV2() {
                   <span className="shrink-0" style={{ color: COLORS.ink }}><IconChat size={22} /></span>
                   <span className="flex flex-col">
                     <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde WhatsApp</span>
-                    <span className="text-[13px]" style={{ color: COLORS.limaText }}>Se lo contás a FINA hablando, sin cargar nada.</span>
+                    <span className="text-[13px]" style={{ color: COLORS.limaText }}>Le escribís a FINA y ella lo registra.</span>
                   </span>
                 </button>
                 <button type="button" onClick={() => setChooser(false)} className="v2-focus text-[13px] font-semibold py-1 min-h-[44px]" style={{ color: COLORS.inkSoft }}>Cancelar</button>
@@ -758,8 +739,8 @@ export function GastosV2() {
                 <div className="flex flex-col gap-2.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }}>
                   {[
                     'Abrí el chat de FINA en WhatsApp.',
-                    'Escribile tu gasto como se lo contarías a una amiga. Ej: "gasté 5.000 en el súper".',
-                    'FINA lo registra solo y lo ves acá en tus gastos.',
+                    'Escribile el gasto, por ejemplo: gasté 5.000 en el súper.',
+                    'FINA lo registra y aparece en Mis gastos.',
                   ].map((t, i) => (
                     <div key={t} className="flex gap-2.5 items-start">
                       <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold" style={{ background: COLORS.lima, color: COLORS.ink }}>{i + 1}</span>

@@ -76,7 +76,7 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">
-          <p id="fijo-titulo" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>Es un gasto que se repite</p>
+          <p id="fijo-titulo" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>Es un gasto fijo</p>
         </div>
         <button
           type="button"
@@ -94,7 +94,7 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
       {valor.activo && (
         <div className="rounded-xl p-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }}>
           <div className="flex flex-col gap-1.5">
-            <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Ya lo pagaste esta vez?</p>
+            <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Ya lo pagaste?</p>
             <SegmentedTab
               options={[{ id: 'si' as const, label: 'Sí, ya lo pagué' }, { id: 'no' as const, label: 'Todavía no' }]}
               value={valor.yaPagado ? 'si' : 'no'}
@@ -143,8 +143,8 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
 
           <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
             {valor.yaPagado
-              ? 'Lo registramos hoy como un gasto y te avisamos antes del próximo pago.'
-              : 'No cuenta como gasto hasta que lo pagues. Te avisamos antes de que venza.'}
+              ? 'Lo registramos como gasto y te avisamos antes del próximo pago.'
+              : 'No cuenta como gasto hasta que toques Ya lo pagué. Te avisamos antes de que venza.'}
           </p>
         </div>
       )}
@@ -301,7 +301,7 @@ export function AvisoVencimientoHome() {
           className="v2-focus flex-1 min-h-[44px] rounded-xl text-[13px] font-semibold"
           style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
         >
-          {proximos.length === 1 ? 'Ver' : 'Ver todos'}
+          Ver gastos fijos
         </button>
       </div>
     </section>

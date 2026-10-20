@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { COLORS, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
+import { COLORS, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
+import { aInputFecha, deInputFecha } from './FormularioGasto';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { FUENTES_INGRESO, type FuenteIngreso, type Ingreso, type MonedaConvertible } from '../../api/v2/tipos';
@@ -22,7 +23,8 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
   const [medio, setMedio] = useState(ingreso.medio ?? '');
   const [medioOtro, setMedioOtro] = useState('');
   const [descripcion, setDescripcion] = useState(ingreso.descripcion);
-  const [fechaHora, setFechaHora] = useState(() => aInputFechaHora(ingreso.ts));
+  // Sólo el día, como en los gastos.
+  const [fecha, setFecha] = useState(() => aInputFecha(ingreso.ts));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +39,6 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
     // siempre recalcularía a la cotización de HOY un ingreso en dólares viejo
     // con sólo corregirle la descripción.
     const cambioMonto = montoNum !== ingreso.monto || moneda !== ingreso.moneda;
-    const ts = deInputFechaHora(fechaHora);
     const r = await acciones.editarIngreso(ingreso.id, {
       monto: cambioMonto ? montoNum : undefined,
       moneda: cambioMonto ? moneda : undefined,
@@ -45,8 +46,8 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
       fuenteOtra,
       descripcion,
       medio: medioFinal && medioFinal !== ingreso.medio ? medioFinal : undefined,
-      // La fecha del input no tiene segundos: si no se tocó, no se pisa la original.
-      ts: fechaHora === aInputFechaHora(ingreso.ts) ? undefined : ts,
+      // La fecha del input no tiene hora: si no se tocó, no se pisa la original.
+      ts: fecha === aInputFecha(ingreso.ts) ? undefined : deInputFecha(fecha, ingreso.ts),
     });
     setGuardando(false);
     if (r.error !== null) { setError(r.error); return; }
@@ -146,15 +147,15 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
       />
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`ing-fecha-${ingreso.id}`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha y hora</label>
+        <label htmlFor={`ing-fecha-${ingreso.id}`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha</label>
         <input
           id={`ing-fecha-${ingreso.id}`}
-          type="datetime-local"
-          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[14px]"
+          type="date"
+          className="v2-focus w-full min-w-0 rounded-xl px-3.5 min-h-[48px] text-[14px]"
           style={INPUT_STYLE}
-          value={fechaHora}
-          max={aInputFechaHora(Date.now())}
-          onChange={(e) => setFechaHora(e.target.value)}
+          value={fecha}
+          max={aInputFecha(Date.now())}
+          onChange={(e) => setFecha(e.target.value)}
         />
       </div>
 

@@ -101,7 +101,7 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
               <button
                 type="button"
                 onClick={() => { setBorrando((v) => !v); onAbrir(false); }}
-                aria-label={`Borrar la sección ${cat.nombre}`}
+                aria-label={`Borrar la categoría ${cat.nombre}`}
                 aria-expanded={borrando}
                 className="v2-focus w-11 h-11 -mr-2 rounded-full flex items-center justify-center shrink-0"
                 style={{ color: borrando ? COLORS.ink : COLORS.inkFaint }}
@@ -166,11 +166,11 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
       )}
 
       {borrando && (
-        <div className="rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado de la sección">
+        <div className="rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado de la categoría">
           <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
-            ¿Borrar la sección "{cat.nombre}"?
+            ¿Borrar la categoría "{cat.nombre}"?
             {cantGastos > 0
-              ? ` Sus ${cantGastos} ${cantGastos === 1 ? 'gasto no se borra' : 'gastos no se borran'}: ${cantGastos === 1 ? 'queda' : 'quedan'} sin sección.`
+              ? (cantGastos === 1 ? ' Su gasto queda sin categoría.' : ` Sus ${cantGastos} gastos quedan sin categoría.`)
               : ' No tiene gastos.'}
           </p>
           <div className="flex gap-2">

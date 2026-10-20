@@ -1,5 +1,5 @@
 // Aviso de plazo de un objetivo (DEBT I7): "Quedan 30 días para el viaje y
-// todavía no le sumaste nada", con la salida en rango. Función pura: no lee la
+// todavía no apartaste nada", con la salida en rango. Función pura: no lee la
 // base ni manda nada. Recibe los objetivos de UNA persona y el día de hoy, y
 // devuelve como mucho un aviso, o null.
 //
@@ -141,15 +141,15 @@ export function avisoDePlazo(
     // Si sumó algo esta semana, se reconoce antes de hablar del plazo.
     const semana = aporteDeLaSemana(aportes, ahora);
     const body = s.tipo === 'sin-aportes'
-      ? `Todavía no le sumaste nada. Si separás ${rango} por semana, llegás para el ${fechaLarga(fecha)}.`
-      : `${semana > 0 ? `Esta semana le sumaste ${monto(semana, o.currency)}. ` : ''}A este ritmo no llegás para el ${fechaLarga(fecha)}. Si sumás ${rango} por semana, llegás.`;
+      ? `Todavía no apartaste nada. Si apartás ${rango} por semana, llegás para el ${fechaLarga(fecha)}.`
+      : `${semana > 0 ? `Esta semana apartaste ${monto(semana, o.currency)}. ` : ''}A este ritmo no llegás para el ${fechaLarga(fecha)}. Si apartás ${rango} por semana, llegás.`;
 
     candidatos.push({
       dias,
       aviso: {
         title: `${quedan(dias)} para ${nombre}`.slice(0, 80),
         // Sin el prefijo de la semana si no entra: mejor sin el dato extra que cortado.
-        body: body.length <= 180 ? body : body.replace(/^Esta semana le sumaste [^.]*\. /, '').slice(0, 180),
+        body: body.length <= 180 ? body : body.replace(/^Esta semana apartaste [^.]*\. /, '').slice(0, 180),
         url: `/onboarding-v2/objetivos?abrir=aporte_objetivo&objetivo=${encodeURIComponent(o.id)}`,
         tag: 'fina-plazo',
       },

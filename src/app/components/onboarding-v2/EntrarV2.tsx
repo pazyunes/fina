@@ -5,6 +5,7 @@ import { traducirErrorAuth } from '../../lib/erroresAuth';
 import { emailValido, sugerenciaEmail } from '../../lib/email';
 import { emailTieneCuenta } from '../../api/v2/cuenta';
 import { FiniPresenta } from './FiniDice';
+import { Fini } from './Fini';
 import {
   Apoyo, COLOR_VARS, COLORS, Cta, DeviceFrame, FONT_VARS, LogoFina, Titulo, BotonFantasma,
 } from './shared';
@@ -83,7 +84,7 @@ function AvisoSinCuenta({ email, onCrear }: { email: string; onCrear: () => void
   return (
     <div role="alert" className="rounded-2xl px-4 py-3.5 flex flex-col gap-2.5" style={{ background: COLORS.brandSoft }}>
       <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
-        No tenés una cuenta con <strong>{email.trim()}</strong>. Fijate que esté bien escrito, o creá una: son un par de preguntas.
+        No tenés una cuenta con <strong>{email.trim()}</strong>. Fijate que esté bien escrito, o creá una.
       </p>
       <button
         type="button"
@@ -195,19 +196,17 @@ export function EntrarV2() {
                 />
                 <Titulo>Te mandamos el mail</Titulo>
                 <Apoyo>
-                  Te llega a {email.trim()} un link para poner una contraseña nueva. Vence en una hora.
+                  Te llega a {email.trim()} un link para poner una contraseña nueva.
                 </Apoyo>
               </>
             ) : modo === 'recuperar' ? (
               <>
-                <FiniPresenta
-                  dice="Tranqui, le pasa a cualquiera."
-                  state="idle"
-                  size={124}
-                />
+                {/* Sin globo: la frase de consuelo no decía nada que la
+                    persona necesite para recuperar la contraseña. */}
+                <div className="self-center"><Fini state="idle" size={124} /></div>
                 <Titulo>Recuperá tu contraseña</Titulo>
                 <Apoyo>Escribí tu mail y te mandamos un link para poner una nueva.</Apoyo>
-                <Campo label="Mail" error={intento && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Campo obligatorio') : undefined}>
+                <Campo label="Mail" error={intento && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Escribí tu mail') : undefined}>
                   <input
                     className={inputClass}
                     style={inputStyle(intento && !emailOk)}
@@ -230,9 +229,8 @@ export function EntrarV2() {
                   size={124}
                 />
                 <Titulo>Volvé a entrar</Titulo>
-                <Apoyo>Con tu mail y tu contraseña, todo tuyo vuelve como lo dejaste.</Apoyo>
 
-                <Campo label="Mail" error={intento && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Campo obligatorio') : undefined}>
+                <Campo label="Mail" error={intento && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Escribí tu mail') : undefined}>
                   <input
                     className={inputClass}
                     style={inputStyle(intento && !emailOk)}
@@ -243,7 +241,7 @@ export function EntrarV2() {
                   />
                 </Campo>
                 <SugerenciaMail email={email} onUsar={(c) => { setEmail(c); setSinCuenta(false); }} />
-                <Campo label="Contraseña" error={intento && password.length === 0 ? 'Campo obligatorio' : undefined}>
+                <Campo label="Contraseña" error={intento && password.length === 0 ? 'Escribí tu contraseña' : undefined}>
                   <InputContrasena
                     className={inputClass}
                     style={inputStyle(intento && password.length === 0)}
@@ -279,7 +277,7 @@ export function EntrarV2() {
           ) : (
             <>
               <Cta label={trabajando ? 'Entrando…' : 'Entrar'} disabled={trabajando} onClick={() => void entrar()} />
-              <BotonFantasma label="No tengo cuenta, quiero crear una" onClick={() => navigate('/onboarding-v2')} />
+              <BotonFantasma label="Crear una cuenta" onClick={() => navigate('/onboarding-v2')} />
             </>
           )}
         </div>

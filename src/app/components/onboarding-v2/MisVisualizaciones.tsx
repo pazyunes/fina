@@ -73,7 +73,7 @@ function TortaSecciones({ filas, total }: { filas: { id: string; label: string; 
         <Donut
           size={140}
           segments={filas.map((f) => ({ color: f.color, pct: total > 0 ? (f.valor / total) * 100 : 0 }))}
-          centerLabel="Gastaste"
+          centerLabel="En total"
           centerValue={fmtMoney(total)}
         />
       </div>
@@ -148,19 +148,19 @@ export function MisVisualizaciones() {
       contenido: <IngresosVsGastos explorar />,
     },
     {
-      titulo: 'Gastos por sección',
-      // Puede haber muchas secciones: la leyenda se scrollea ADENTRO de su
+      titulo: 'Gastos por categoría',
+      // Puede haber muchas categorías: la leyenda se scrollea ADENTRO de su
       // propio alto en vez de estirar la tarjeta (y con ella, todas las demás
       // de la fila).
       contenido: gastos.length === 0
-        ? <SinDatos>Cuando registres tu primer gasto, acá vas a ver en qué se te va.</SinDatos>
-        : porSeccion.length === 0 ? <SinDatos>Todavía no hay gastos con sección.</SinDatos>
+        ? <SinDatos>Anotá tu primer gasto para ver cuánto va a cada categoría.</SinDatos>
+        : porSeccion.length === 0 ? <SinDatos>Todavía no hay gastos con categoría.</SinDatos>
         : <TortaSecciones filas={porSeccion} total={porSeccion.reduce((t, f) => t + f.valor, 0)} />,
     },
     {
       titulo: 'Gastos por tipo',
       contenido: gastos.length === 0
-        ? <SinDatos>Cuando registres gastos vas a poder ver cuánto fue necesario y cuánto impulso.</SinDatos>
+        ? <SinDatos>Anotá gastos para ver cuánto fue necesario, urgente o gusto.</SinDatos>
         : porTipo.length === 0 ? <SinDatos>Todavía no hay gastos clasificados.</SinDatos>
         : <Barras filas={porTipo} />,
     },

@@ -460,7 +460,7 @@ export function subirPendientesLocales() {
 const LS_NOMBRE = 'fina_v2_nombre';
 export function saveV2Nombre(nombre: string) {
   escribirLocal(LS_NOMBRE, nombre);
-  acciones.guardarPerfil({ nombre }, 'Nombre guardado con éxito.');
+  acciones.guardarPerfil({ nombre }, 'Nombre guardado.');
 }
 export function loadV2Nombre(): string {
   return leerEstado().perfil.nombre || leerLocal(LS_NOMBRE) || '';
@@ -579,7 +579,7 @@ export function ArmarGrupoBtn() {
       <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.brandSoft, color: COLORS.brand }}><IconGrupo size={18} /></span>
       <span className="flex-1 min-w-0">
         <span className="block text-[15px] font-semibold" style={{ color: COLORS.ink }}>{grupo ? grupo.nombre : 'Armar un grupo'}</span>
-        <span className="block text-[13px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Competí con amigas y amigos por actividad'}</span>
+        <span className="block text-[13px]" style={{ color: COLORS.inkSoft }}>{grupo ? 'Ver el ranking de tu grupo' : 'Compará con amigas y amigos cuántos gastos anotan'}</span>
       </span>
       <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
     </button>
@@ -734,7 +734,7 @@ export function loadV2TerminosAceptados(): boolean {
 const LS_NIVEL_FIN = 'fina_v2_nivel_financiero';
 export function saveV2NivelFinanciero(nivel: string) {
   escribirLocal(LS_NIVEL_FIN, nivel);
-  acciones.guardarPerfil({ nivelFinanciero: nivel }, 'Nivel financiero guardado con éxito.');
+  acciones.guardarPerfil({ nivelFinanciero: nivel }, 'Nivel guardado.');
 }
 export function loadV2NivelFinanciero(): string | null {
   return leerEstado().perfil.nivelFinanciero ?? leerLocal(LS_NIVEL_FIN);
@@ -1232,7 +1232,7 @@ export function DeviceFrame({ children }: { children: React.ReactNode }) {
             ))}
           </ul>
         </div>
-        <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Tu información es privada, no la compartimos con nadie.</p>
+        <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Tus datos son privados. Nunca los vendemos.</p>
       </aside>
 
       {/* Flujo de preguntas */}
@@ -1435,7 +1435,7 @@ export function vistaInversiones(): VistaInversiones {
 const LS_RESERVA = 'fina_v2_reserva';
 export function saveV2Reserva(monto: number) {
   escribirLocal(LS_RESERVA, String(monto));
-  acciones.guardarPerfil({ reserva: monto }, 'Reserva actualizada con éxito.');
+  acciones.guardarPerfil({ reserva: monto }, 'Reserva actualizada.');
 }
 export function loadV2Reserva(): number {
   if (estaHidratado()) return leerEstado().perfil.reserva;
