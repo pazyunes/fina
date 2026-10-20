@@ -1218,9 +1218,6 @@ export function ObjetivosV2() {
     // si se usó; "todavía no" la saca hasta la próxima visita.
     const fechaGasto = esGasto ? parsearHorizonte(o.horizonte, hoyAR) : null;
     const tocaHoy = esGasto && !!fechaGasto && fechaGasto <= hoyAR && !noTodavia.has(o.id);
-    // En un objetivo de ahorro, un tip para llegar: la primera forma de llegar
-    // antes, con sus datos (estimado).
-    const tip = !esGasto && estado === 'definido' ? formasDe(o)[0] : undefined;
     return (
       <div key={o.id} className="relative w-full py-3.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
         <button type="button" onClick={() => setOpenId(o.id)} className="v2-focus w-full flex items-center gap-3.5 text-left">
@@ -1243,7 +1240,7 @@ export function ObjetivosV2() {
             </div>
             {estado === 'definido' ? (
               <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
-                {esGasto ? 'Apartaste' : 'Llevás'} <MontoObj monto={avance(o)} moneda={o.moneda} className="text-[13px]" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(o)}</span>
+                {esGasto && 'Apartaste '}<MontoObj monto={avance(o)} moneda={o.moneda} className="text-[13px]" /> de <span className="font-mono tabular-nums" style={{ color: COLORS.ink }}>{montoLabel(o)}</span>{!esGasto && ' ahorrados'}
                 {esGasto && fechaGasto && <>, {o.repite === 'semanal' ? 'cada semana, ' : o.repite === 'mensual' ? 'cada mes, ' : ''}el {fechaCorta(fechaGasto)}</>}
               </p>
             ) : (
@@ -1259,12 +1256,10 @@ export function ObjetivosV2() {
             ) : estado !== 'definido' ? (
               <p className="text-[13px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>Cuando sepas cuánto sale, te decimos cuánto reservar.</p>
             ) : null}
-            {tip && (
-              <p className="text-[13px] mt-1 leading-snug" style={{ color: COLORS.inkSoft }}>
-                Tip: {tip.titulo.charAt(0).toLowerCase() + tip.titulo.slice(1)}, <span className="font-semibold" style={{ color: COLORS.limaText }}>{frasesDeImpacto(tip).toLowerCase()}</span>
-              </p>
-            )}
           </div>
+          {/* La flechita avisa que tocando se ve más: el detalle, con los tips
+              para llegar antes. */}
+          <span className="shrink-0 self-center" style={{ color: COLORS.inkFaint }} aria-hidden><IconChevron size={18} /></span>
         </button>
         {/* El día que tocaba: ¿lo usaste? Sí abre la hoja para anotarlo. */}
         {tocaHoy && (
@@ -1367,8 +1362,8 @@ export function ObjetivosV2() {
           y cuánto conviene reservar por mes (estimado, como rango, regla 4).
           Las sugerencias abren el alta en la parte que les corresponde. */}
       <div className="mt-2 rounded-2xl px-4 py-3 flex flex-col gap-0.5" style={{ background: COLORS.brandSoft }} aria-live="polite">
-        <p className="text-[16px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>¿Qué se viene?</p>
-        <p className="text-[13px] leading-snug" style={{ color: COLORS.brandDark }}>Planificá los gastos que ya sabés que se vienen y tus objetivos.</p>
+        <p className="text-[16px] font-bold leading-tight" style={{ color: COLORS.brandDark, fontFamily: FONTS.display }}>Gastos y objetivos próximos</p>
+        <p className="text-[13px] leading-snug" style={{ color: COLORS.brandDark }}>Planificá los gastos que ya sabés que se vienen.</p>
         {reservaTotal && (
           <p className="text-[13px] leading-snug pt-1" style={{ color: COLORS.ink }}>
             Para todo, reservá <span className="font-bold tabular-nums">entre {fmtMoney(reservaTotal.min)} y {fmtMoney(reservaTotal.max)} por mes</span>
@@ -1409,10 +1404,7 @@ export function ObjetivosV2() {
       <section className="flex flex-col gap-1" aria-label="Gastos planificados">
         <TituloSeccion>Gastos planificados</TituloSeccion>
         <p className="text-[13px] leading-snug py-1" style={{ color: COLORS.inkSoft }}>
-          {gastosQueVienen.length === 0
-            ? 'La psicóloga, una cuota, un regalo. '
-            : ''}
-          Lo que apartás para estos gastos no está contado en tu dinero disponible.
+          Anotá los gastos que sabés que vas a tener, como una cuota, un regalo o una consulta. Así podés organizarte con tiempo y tener en cuenta esa plata antes de gastarla en otra cosa.
         </p>
         <div className="flex flex-col">{gastosQueVienen.map(fila)}</div>
         {botonAgregar('Agregar gasto planificado', () => abrirAlta('gasto', 'Ej: Psicóloga, la cuota del celular'))}

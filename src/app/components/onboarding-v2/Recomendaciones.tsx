@@ -38,26 +38,28 @@ import {
 // montos ni instrumentos de inversión. No usan IA ni cuestan nada.
 type General = { titulo: string; texto: string };
 
+// Cada consejo: un título que dice qué hacer y UNA oración corta que dice por
+// qué o cómo. Claro para cualquiera, sin vueltas (CLAUDE.md regla 13).
 const GENERALES: Record<PeriodoRecomendacion, General[]> = {
   dia: [
-    { titulo: 'Fijate qué gasto de hoy fue un gusto', texto: 'No para culparte: para saber qué disfrutás. Los gastos que valorás se sostienen; los que no, se pueden soltar sin extrañarlos.' },
-    { titulo: 'Sumá cuánto pagás por mes en cuotas', texto: 'Entre todas las que tenés. Es plata de tus próximos sueldos que ya está comprometida, y conviene saber cuánta es.' },
-    { titulo: 'Mirá qué suscripciones te cobraron', texto: 'En el resumen de la tarjeta o de tu billetera virtual. Las que no usás son plata que se va sola todos los meses.' },
-    { titulo: 'Antes de una compra grande, dejala pasar un día', texto: 'Si al otro día la seguís queriendo igual, adelante. Muchas compras de impulso no pasan esa prueba.' },
-    { titulo: 'Si te ofrecen un préstamo, mirá el costo total', texto: 'No la cuota: el CFT (costo financiero total). Es lo que de verdad terminás pagando, y en los préstamos rápidos suele ser muy alto.' },
-    { titulo: 'Compará tu gasto con tu mes, no con el de otros', texto: 'Lo que gasta otra persona no dice nada de tus finanzas. La referencia que sirve es cómo te fue a vos.' },
+    { titulo: 'Antes de una compra grande, esperá 24 horas.', texto: 'Si todavía la querés mañana, volvé a evaluarla.' },
+    { titulo: 'Fijate qué gasto de hoy fue un gusto.', texto: 'No para culparte: para saber en qué disfrutás gastar.' },
+    { titulo: 'Sumá cuánto pagás por mes en cuotas.', texto: 'Es plata de tus próximos sueldos que ya está usada.' },
+    { titulo: 'Revisá qué suscripciones te cobraron.', texto: 'Las que no usás se llevan plata todos los meses.' },
+    { titulo: 'Si te ofrecen un préstamo, mirá el costo total.', texto: 'Fijate el CFT, no la cuota: es lo que vas a pagar de verdad.' },
+    { titulo: 'Compará tus gastos con tus meses anteriores.', texto: 'Lo que gastan otras personas no te dice nada de tu plata.' },
   ],
   semana: [
-    { titulo: 'Elegí un día fijo para mirar tus números', texto: 'Cinco minutos, siempre el mismo día. Lo que se mira seguido se ordena casi solo.' },
-    { titulo: 'Decidí cuánto separar antes de cobrar', texto: 'Una decisión que se toma una sola vez funciona mejor que proponerse ahorrar todos los días. Una vez que entra la plata, cuesta más.' },
-    { titulo: 'Encontrá el gasto que se repite', texto: 'Delivery, transporte, salidas: el que aparece todas las semanas es donde más margen hay, mucho más que en los gustos chicos.' },
-    { titulo: 'Hablá de plata con alguien de confianza', texto: 'Contar en qué andás ayuda a sostenerlo. No hace falta dar números.' },
+    { titulo: 'Elegí un día fijo para mirar tus números.', texto: 'Con cinco minutos por semana alcanza.' },
+    { titulo: 'Decidí cuánto ahorrar antes de cobrar.', texto: 'Separalo apenas entra la plata, después cuesta más.' },
+    { titulo: 'Buscá el gasto que se repite todas las semanas.', texto: 'Ahí hay más margen que en los gustos chicos.' },
+    { titulo: 'Contale a alguien de confianza en qué andás.', texto: 'Hablarlo ayuda a sostenerlo, sin dar números.' },
   ],
   mes: [
-    { titulo: 'Calculá tus gastos fijos del mes', texto: 'Alquiler, servicios, transporte, suscripciones. Lo que queda después es tu margen de verdad para decidir.' },
-    { titulo: 'Averiguá cuánto rinde tu plata guardada', texto: 'Con inflación, los pesos quietos compran menos cada mes. Saber si tu plata le gana o le pierde es el primer paso para decidir.' },
-    { titulo: 'Definí de cuánto querés tu colchón', texto: 'Cuántos meses de gastos fijos querés tener apartados para imprevistos. Aunque tardes en llegar, tener el número ayuda.' },
-    { titulo: 'Leé el resumen de tu tarjeta completo', texto: 'No solo el total a pagar: qué cuotas siguen y cuándo terminan. Así sabés cuánto de los próximos meses ya está usado.' },
+    { titulo: 'Sumá tus gastos fijos del mes.', texto: 'Lo que queda después es lo que podés decidir.' },
+    { titulo: 'Averiguá cuánto rinde tu plata guardada.', texto: 'Con inflación, la plata quieta compra menos cada mes.' },
+    { titulo: 'Definí de cuánto querés tu fondo para imprevistos.', texto: 'Por ejemplo, lo que gastás en uno o dos meses.' },
+    { titulo: 'Leé el resumen completo de tu tarjeta.', texto: 'Fijate qué cuotas siguen y cuándo terminan.' },
   ],
 };
 
@@ -99,9 +101,7 @@ function topeSugerido(estado: EstadoV2, periodo: 'semana' | 'mes'): Recomendacio
   const alto = redondear(base);
   return {
     titulo: `Probá un tope para ${mejor.nombre}`,
-    texto: periodo === 'mes'
-      ? 'Es la sección donde más se te fue y todavía no tiene tope. Un tope parecido a lo que ya gastás te avisa cuánto te queda sin pedirte que cambies nada; si querés recortar un poco, apuntá a la parte de abajo del rango.'
-      : 'Por semana se ve más rápido cuánto te queda. Un tope parecido a lo que ya gastás no te pide cambiar nada; si querés recortar un poco, apuntá a la parte de abajo del rango.',
+    texto: 'Es donde más gastaste y no tiene tope. Un tope te avisa cuánto te queda; si querés gastar menos, elegí el número más bajo.',
     dato: {
       valor: `Entre ${fmtMoney(bajo)} y ${fmtMoney(alto)} por ${periodo === 'mes' ? 'mes' : 'semana'}`,
       referencia: `Gastaste ${fmtMoney(mejor.total)} en ${mejor.nombre} los últimos 30 días (${mejor.cant} gastos)`,

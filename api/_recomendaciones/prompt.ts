@@ -191,7 +191,8 @@ Vale para todo texto que escribas (títulos, textos, datos, el mensaje del paso,
 - No uses guiones largos ni medios para separar ideas. Usá una coma o un punto. Para un rango de números escribí "entre 10 y 20" o "10 a 20", nunca con guion.
 - No uses comillas tipográficas (rizadas ni angulares). Si hacen falta comillas, van rectas (").
 - No uses emojis, ni viñetas, ni símbolos decorativos.
-- No uses títulos, encabezados intermedios ni etiquetas de sección dentro de los textos. Texto continuo, directo y sin divisiones artificiales.`;
+- No uses títulos, encabezados intermedios ni etiquetas de sección dentro de los textos. Texto continuo, directo y sin divisiones artificiales.
+- Escribí claro, para alguien que nunca leyó de finanzas. El título dice qué hacer, en una frase corta (por ejemplo "Antes de una compra grande, esperá 24 horas."). El texto es UNA oración corta que dice por qué o cómo (por ejemplo "Si todavía la querés mañana, volvé a evaluarla."). Sin palabras técnicas sin explicar.`;
 
 export function armarMensaje(opciones: {
   periodos: ('dia' | 'semana' | 'mes')[];

@@ -144,7 +144,7 @@ export function MisVisualizaciones() {
 
   const tarjetas = [
     {
-      titulo: 'Ingresos y gastos por mes',
+      titulo: 'Ingresos y gastos',
       contenido: <IngresosVsGastos explorar />,
     },
     {

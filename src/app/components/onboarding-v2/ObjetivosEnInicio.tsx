@@ -107,17 +107,17 @@ export function ObjetivosEnInicio() {
   const conMonto = d.total > 0;
   const pct = conMonto ? Math.min(100, Math.round((d.juntado / d.total) * 100)) : null;
   const mensaje = mensajePlazo(d.situacion, fmt);
-  // Una sola línea: si está atrasado, eso (es lo accionable); si avanzó esta
-  // semana, el delta (§5.3); si no, cuánto lleva.
-  const linea = mensaje?.tono === 'accion'
-    ? mensaje.texto
-    : d.semana > 0 ? `+${fmt(d.semana)} esta semana`
-    : conMonto ? `Llevás ${fmt(d.juntado)} de ${fmt(d.total)}`
+  // Una sola línea, la más clara: cuánto lleva de cuánto (decisión oct 2026).
+  // Un gasto planificado se "aparta"; un objetivo de ahorro se "ahorra".
+  const esGasto = o.clase === 'gasto';
+  const linea = conMonto
+    ? `${fmt(d.juntado)} de ${fmt(d.total)} ${esGasto ? 'apartados' : 'ahorrados'}`
     : 'Ponele un monto para ver cuánto falta';
+  const nombre = o.nombre.charAt(0).toLowerCase() + o.nombre.slice(1);
 
   return (
     <Entrada
-      titulo={conMonto ? `Sumale a ${o.nombre}` : o.nombre}
+      titulo={conMonto ? `${esGasto ? 'Apartá' : 'Ahorrá'} para ${nombre}` : o.nombre}
       linea={linea}
       pct={pct}
       atencion={mensaje?.tono === 'accion'}

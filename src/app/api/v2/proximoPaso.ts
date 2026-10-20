@@ -68,7 +68,7 @@ const DEFS: Def[] = [
     // Con plata apartada, cada día que pasa quieta es lo que más se pierde.
     puntaje: (e) => 50 + (e.perfil.reserva > 0 ? 30 : 0),
     armar: (e) => ({
-      titulo: 'Abrí una cuenta donde tu plata rinda',
+      titulo: 'Abrí una cuenta para hacer rendir tu plata',
       porQue: e.perfil.reserva > 0
         ? `Tenés ${pesos(e.perfil.reserva)} apartados. En una cuenta remunerada esa plata suma intereses todos los días, sin que hagas nada.`
         : 'Con inflación, la plata quieta en una caja de ahorro compra menos cada mes. Una cuenta remunerada le suma intereses todos los días.',

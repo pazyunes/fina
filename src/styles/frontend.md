@@ -372,6 +372,13 @@ chico y aun así tiene que leerse como avance.**
 - **Buena noticia:** dato → qué significa para el objetivo.
 - **Todo número lleva referencia.** `$42.000` no dice nada; `$42.000, casi lo mismo que el
   mes pasado` sí.
+- **Claro antes que nada** (CLAUDE.md regla 13). Todo texto se entiende a la primera,
+  para alguien que nunca leyó de finanzas: frases cortas, palabras de todos los días, una
+  idea por oración. Un consejo es un título que dice qué hacer y una oración corta que
+  dice por qué o cómo. ✅ *"Antes de una compra grande, esperá 24 horas. Si todavía la
+  querés mañana, volvé a evaluarla."* ❌ *"Antes de una compra grande, dejala pasar un
+  día. Si al otro día la seguís queriendo igual, adelante. Muchas compras de impulso no
+  pasan esa prueba."*
 - **Voz:** segunda del singular rioplatense (*vos, tenés, mirá, fijate*); primera del plural
   para la marca (*te mostramos, averiguamos por vos*).
 - **Sin emojis** (ver §5.5).

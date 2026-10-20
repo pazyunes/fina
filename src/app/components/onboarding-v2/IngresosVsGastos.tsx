@@ -179,14 +179,14 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
           {tituloPeriodo}
         </p>
         <div className={`grid gap-2 ${explorar ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          <Cifra color={INGRESO} etiqueta="Entró" valor={actual.entro} />
-          <Cifra color={GASTO} etiqueta="Salió" valor={actual.salio} />
+          <Cifra color={INGRESO} etiqueta="Ingresos" valor={actual.entro} />
+          <Cifra color={GASTO} etiqueta="Gastos" valor={actual.salio} />
           {/* Sólo cuando hay ingresos cargados: sin ellos "te quedó" sería
               "menos lo que gastaste", que no es verdad. En tinta, nunca en
               alerta: pasarse no es un error (regla 3). */}
           {explorar && actual.entro > 0 && (
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? ((modoSemana ? semana.actual : esEsteMes) ? 'Te queda' : 'Te quedó') : 'Salió de más'}</span>
+              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? ((modoSemana ? semana.actual : esEsteMes) ? 'Disponible' : 'Te quedó') : 'Gastaste de más'}</span>
               <span className="text-[14px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
             </div>
           )}
@@ -266,9 +266,8 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
 
       {/* Leyenda: el color no es lo único que dice qué es cada barra. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <Leyenda color={INGRESO} texto="Entró" />
-        <Leyenda color={GASTO} texto="Salió" />
-        <span className="text-[13px]" style={{ color: COLORS.inkFaint }}>Según lo que registraste</span>
+        <Leyenda color={INGRESO} texto="Ingresos" />
+        <Leyenda color={GASTO} texto="Gastos" />
       </div>
 
       {conLista && (
