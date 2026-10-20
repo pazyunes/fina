@@ -26,9 +26,10 @@ const SUGERENCIAS_OBJETIVO = [
   // Cada sugerencia abre el alta en la parte que le corresponde: lo que se va
   // a pagar sí o sí, o algo para lo que se ahorra.
   { nombre: 'Vacaciones', clase: 'ahorro' as const },
-  { nombre: 'Regalo', clase: 'gasto' as const },
-  { nombre: 'Cuota', clase: 'gasto' as const },
   { nombre: 'Decoración', clase: 'ahorro' as const },
+  { nombre: 'Cuota', clase: 'gasto' as const },
+  { nombre: 'Regalo', clase: 'gasto' as const },
+  { nombre: 'Consulta', clase: 'gasto' as const },
   { nombre: 'Deuda', clase: 'gasto' as const },
 ];
 
@@ -1299,6 +1300,49 @@ export function ObjetivosV2() {
     );
   };
 
+  // Una parte vacía muestra cómo se va a ver (§10: promesa, no falla): una
+  // fila de ejemplo tenue, marcada como ejemplo, y las sugerencias de esa
+  // parte para empezar. Tocar el ejemplo o una sugerencia abre el alta.
+  const vacio = (clase: 'ahorro' | 'gasto', ej: { nombre: string; monto: string; cuando: string }) => (
+    <div className="flex flex-col gap-2.5">
+      <button
+        type="button"
+        onClick={() => abrirAlta(clase, `Ej: ${ej.nombre}`)}
+        className="v2-focus w-full flex items-center gap-3 text-left rounded-2xl px-3 py-3 border border-dashed"
+        style={{ borderColor: COLORS.lineStrong }}
+        aria-label={clase === 'ahorro' ? 'Agregar objetivo de ahorro' : 'Agregar gasto planificado'}
+      >
+        <span className="w-11 h-11 rounded-full border-2 border-dashed shrink-0" style={{ borderColor: COLORS.lineStrong }} aria-hidden />
+        <span className="flex-1 min-w-0 flex flex-col" style={{ opacity: 0.6 }}>
+          <span className="text-[15px] font-semibold truncate" style={{ color: COLORS.ink }}>{ej.nombre}</span>
+          <span className="text-[13px] tabular-nums truncate" style={{ color: COLORS.inkSoft }}>{ej.monto}, {ej.cuando}</span>
+        </span>
+        <span className="shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold" style={{ background: COLORS.tint, color: COLORS.inkSoft }}>Ejemplo</span>
+      </button>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Sugerencias para empezar">
+        {SUGERENCIAS_OBJETIVO.filter((sug) => sug.clase === clase).map((sug) => (
+          <button
+            key={sug.nombre}
+            type="button"
+            onClick={() => abrirAlta(clase, `Ej: ${sug.nombre}`)}
+            className="v2-focus inline-flex items-center gap-1 rounded-full px-3 min-h-[36px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
+            style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
+          >
+            <IconMas size={13} /> {sug.nombre}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => abrirAlta(clase, clase === 'ahorro' ? 'Ej: Vacaciones, un colchón' : 'Ej: Psicóloga, la cuota del celular')}
+          className="v2-focus inline-flex items-center gap-1 rounded-full px-3 min-h-[36px] text-[13px] font-semibold border border-dashed"
+          style={{ borderColor: COLORS.lineStrong, color: COLORS.ink }}
+        >
+          <IconMas size={13} /> Otro
+        </button>
+      </div>
+    </div>
+  );
+
   const botonAgregar = (label: string, onClick: () => void) => (
     <button
       type="button"
@@ -1364,44 +1408,30 @@ export function ObjetivosV2() {
             <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
           </p>
         )}
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Sugerencias para sumar">
-          {SUGERENCIAS_OBJETIVO.map((sug) => (
-            <button
-              key={sug.nombre}
-              type="button"
-              onClick={() => abrirAlta(sug.clase, `Ej: ${sug.nombre}`)}
-              className="v2-focus inline-flex items-center rounded-full px-3 min-h-[36px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
-              style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
-            >
-              {sug.nombre}
-            </button>
-          ))}
-        </div>
       </header>
 
-      {/* Primero los objetivos de ahorro: son las aspiraciones de la persona,
-          lo que más importa de la pantalla. Cada uno tiene fecha (para cuándo
-          necesita la plata) y, con eso, cuánto apartar y un tip para llegar. */}
-      <section className="flex flex-col gap-1" aria-label="Objetivos de ahorro">
+      {/* Primero los objetivos de ahorro: son las aspiraciones de la persona.
+          Sin descripción: el título y el ejemplo ya dicen qué va acá. */}
+      <section className="flex flex-col gap-2" aria-label="Objetivos de ahorro">
         <TituloSeccion>Objetivos de ahorro</TituloSeccion>
-        {deAhorro.length === 0 && (
-          <p className="text-[13px] leading-snug py-1" style={{ color: COLORS.inkSoft }}>
-            Anotá algo para lo que quieras ahorrar, como un viaje o un colchón para imprevistos.
-          </p>
-        )}
-        <div className="flex flex-col">{deAhorro.map(fila)}</div>
-        {botonAgregar('Agregar objetivo de ahorro', () => abrirAlta('ahorro', 'Ej: Vacaciones, un colchón'))}
+        {deAhorro.length === 0
+          ? vacio('ahorro', { nombre: 'Vacaciones', monto: '$0 de $500.000', cuando: 'para marzo' })
+          : <div className="flex flex-col">{deAhorro.map(fila)}</div>}
+        {deAhorro.length > 0 && botonAgregar('Agregar objetivo de ahorro', () => abrirAlta('ahorro', 'Ej: Vacaciones, un colchón'))}
       </section>
 
-      {/* Después lo que ya sabe que va a usar: la psicóloga, una cuota. Lo
-          apartado para esto no está en el disponible de Gastos, y se dice. */}
-      <section className="flex flex-col gap-1" aria-label="Gastos planificados">
-        <TituloSeccion>Gastos planificados</TituloSeccion>
-        <p className="text-[13px] leading-snug py-1" style={{ color: COLORS.inkSoft }}>
-          Anotá los gastos que sabés que vas a tener, como una cuota, un regalo o una consulta. Así podés organizarte con tiempo y tener en cuenta esa plata antes de gastarla en otra cosa. Lo que apartes deja de contar en tu disponible del período actual.
-        </p>
-        <div className="flex flex-col">{gastosQueVienen.map(fila)}</div>
-        {botonAgregar('Agregar gasto planificado', () => abrirAlta('gasto', 'Ej: Psicóloga, la cuota del celular'))}
+      {/* Después lo que ya sabe que va a pagar. Una sola frase, porque es lo
+          que no se ve a simple vista: lo apartado no cuenta en el disponible
+          de Gastos (apartado.ts, sólo en el período actual). */}
+      <section className="flex flex-col gap-2" aria-label="Gastos planificados">
+        <div className="flex flex-col gap-0.5">
+          <TituloSeccion>Gastos planificados</TituloSeccion>
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>Lo que apartes no cuenta en tu disponible.</p>
+        </div>
+        {gastosQueVienen.length === 0
+          ? vacio('gasto', { nombre: 'Psicóloga', monto: '$0 de $40.000', cuando: 'cada mes, el 10' })
+          : <div className="flex flex-col">{gastosQueVienen.map(fila)}</div>}
+        {gastosQueVienen.length > 0 && botonAgregar('Agregar gasto planificado', () => abrirAlta('gasto', 'Ej: Psicóloga, la cuota del celular'))}
       </section>
     </div>
   );
