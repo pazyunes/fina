@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { COLORS, fmtMoney, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { COLORS, fmtMoney, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
@@ -19,6 +19,23 @@ const SECCIONES_SUGERIDAS = [
   'Supermercado', 'Transporte', 'Belleza y cuidado personal', 'Ropa',
   'Suscripciones', 'Compras online', 'Farmacia', 'Regalos', 'Deporte',
 ];
+
+// Sólo la fecha, sin hora (decisión oct 2026). El día va en la zona de quien
+// usa la app: "YYYY-MM-DD" del input de fecha.
+function aInputFecha(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+/**
+ * Hoy se guarda con la hora en que se carga, así los gastos de hoy quedan en
+ * el orden en que se anotaron. Otro día, al mediodía: lejos de la medianoche,
+ * para que ninguna zona horaria lo corra al día de al lado.
+ */
+function deInputFecha(fecha: string, original?: number): number {
+  if (original !== undefined && aInputFecha(original) === fecha) return original;
+  if (fecha === aInputFecha(Date.now())) return Date.now();
+  return new Date(`${fecha}T12:00:00`).getTime();
+}
 
 // Medios de pago sugeridos, para la primera vez que no hay ninguno cargado.
 export const METODOS_SUGERIDOS = ['Efectivo', 'Débito', 'Crédito', 'Mercado Pago', 'Transferencia'];
@@ -79,7 +96,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
 
   const [monto, setMonto] = useState(() => (gasto ? formatMontoInicial(gasto.monto) : ''));
   const [moneda, setMoneda] = useState<Moneda>(gasto?.moneda ?? 'ARS');
-  const [fechaHora, setFechaHora] = useState(() => aInputFechaHora(gasto?.ts ?? Date.now()));
+  const [fecha, setFecha] = useState(() => aInputFecha(gasto?.ts ?? Date.now()));
   const [desc, setDesc] = useState(gasto?.descripcion ?? '');
   // Sin sección elegida de entrada: con la primera ya marcada, era fácil
   // registrar un gasto en la sección equivocada sin darse cuenta.
@@ -135,7 +152,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
       seccionId,
       tipo,
       metodoPago: medio,
-      ts: deInputFechaHora(fechaHora),
+      ts: deInputFecha(fecha, gasto?.ts),
     };
 
     if (gasto) {
@@ -201,18 +218,18 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
         value={desc}
         onChange={(e) => setDesc(e.target.value)}
       />
-      {/* Por defecto queda en "ahora": sólo hace falta tocarlo para cargar un
-          gasto de otro momento. */}
+      {/* Por defecto queda en hoy: sólo hace falta tocarlo para cargar un
+          gasto de otro día. Sin hora: con el día alcanza. */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${idBase}-fecha-hora`} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha y hora</label>
+        <label htmlFor={`${idBase}-fecha`} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha</label>
         <input
-          id={`${idBase}-fecha-hora`}
-          type="datetime-local"
+          id={`${idBase}-fecha`}
+          type="date"
           className="v2-focus w-full min-w-0 rounded-xl px-3.5 min-h-[48px] text-[15px] transition-colors"
           style={INPUT_STYLE}
-          value={fechaHora}
-          max={aInputFechaHora(Date.now())}
-          onChange={(e) => setFechaHora(e.target.value)}
+          value={fecha}
+          max={aInputFecha(Date.now())}
+          onChange={(e) => setFecha(e.target.value)}
         />
       </div>
 
