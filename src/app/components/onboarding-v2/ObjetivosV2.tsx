@@ -472,7 +472,8 @@ export function ObjetivosV2() {
   const [montoTotal, setMontoTotal] = useState('');
   const [montoMinTxt, setMontoMinTxt] = useState('');
   // Qué se está creando: algo que ya sabe que va a pagar o un objetivo de
-  // ahorro. Lo elige el botón de cada parte de la lista, y se puede cambiar.
+  // ahorro. Lo decide el botón (o la sugerencia) que abrió el alta: en el
+  // pop up no se elige. Por ahora todo es individual (decisión oct 2026).
   const [claseNueva, setClaseNueva] = useState<'ahorro' | 'gasto'>('ahorro');
   const [repiteNueva, setRepiteNueva] = useState<'una' | 'semanal' | 'mensual'>('una');
   // El gasto que se está por marcar como pagado (se abre en una hoja).
@@ -1101,36 +1102,10 @@ export function ObjetivosV2() {
           <p className="text-[18px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{claseNueva === 'gasto' ? 'Nuevo gasto planificado' : 'Nuevo objetivo de ahorro'}</p>
           <button type="button" onClick={cerrarCrear} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
-        {/* Qué es: cambia lo que se pregunta abajo y en qué parte de la lista
-            queda. Los dos apartan plata que deja de estar libre. */}
-        <SegmentedTab
-          options={[{ id: 'ahorro' as const, label: 'Quiero ahorrar' }, { id: 'gasto' as const, label: 'Lo voy a gastar' }]}
-          value={claseNueva}
-          onChange={(c) => { setClaseNueva(c); if (c === 'gasto') setTipo('individual'); }}
-          trackColor={COLORS.tint}
-        />
         <label htmlFor="nuevo-objetivo-nombre" className="sr-only">Nombre (obligatorio)</label>
         <input id="nuevo-objetivo-nombre" autoFocus required aria-required="true" className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder={ejemploNombre} value={nombre} onChange={(e) => setNombre(e.target.value)} />
         <input className={`${inputClass} rounded-2xl py-3 text-[16px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
-        {claseNueva === 'ahorro' && <div className="flex flex-col gap-1.5">
-          <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Individual o en conjunto?</p>
-          <SegmentedTab
-            options={[
-              { id: 'individual', label: 'Individual' },
-              { id: 'grupal', label: grupo ? `En conjunto (${grupo.nombre})` : 'En conjunto' },
-            ]}
-            value={tipo}
-            onChange={setTipo}
-            trackColor={COLORS.gold}
-          />
-          {tipo === 'grupal' && !grupo && (
-            <div className="flex flex-col gap-1.5 mt-1">
-              <input className={inputClass} placeholder="Nombre del grupo" value={invitarNombre} onChange={(e) => setInvitarNombre(e.target.value)} />
-              <p className="text-[14px]" style={{ color: COLORS.inkSoft }}>Armamos el grupo con este nombre y vas a poder invitar gente apenas lo crees.</p>
-            </div>
-          )}
-        </div>}
 
         <div className="flex flex-col gap-1.5">
           <p className="text-[14px] font-bold" style={{ color: COLORS.ink }}>{claseNueva === 'gasto' ? '¿Cuándo lo vas a usar?' : '¿Para cuándo necesitás esa plata?'}</p>
