@@ -186,7 +186,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
               alerta: pasarse no es un error (regla 3). */}
           {explorar && actual.entro > 0 && (
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? 'Te quedó' : 'Salió de más'}</span>
+              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? ((modoSemana ? semana.actual : esEsteMes) ? 'Te queda' : 'Te quedó') : 'Salió de más'}</span>
               <span className="text-[15px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
             </div>
           )}
