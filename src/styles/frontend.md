@@ -372,7 +372,9 @@ chico y aun así tiene que leerse como avance.**
 - **Buena noticia:** dato → qué significa para el objetivo.
 - **Todo número lleva referencia.** `$42.000` no dice nada; `$42.000, casi lo mismo que el
   mes pasado` sí.
-- **Claro antes que nada** (CLAUDE.md regla 13). Todo texto se entiende a la primera,
+- **Las reglas de textos están en `textos.md`** (CLAUDE.md regla 13), y mandan sobre
+  este apartado. Leelas antes de escribir cualquier texto.
+- **Claro antes que nada.** Todo texto se entiende a la primera,
   para alguien que nunca leyó de finanzas: frases cortas, palabras de todos los días, una
   idea por oración. Un consejo es un título que dice qué hacer y una oración corta que
   dice por qué o cómo. ✅ *"Antes de una compra grande, esperá 24 horas. Si todavía la
