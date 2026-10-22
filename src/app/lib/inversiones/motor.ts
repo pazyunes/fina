@@ -35,7 +35,7 @@ const EPS = 0.001;
 
 // ── Inflación de referencia ──────────────────────────────────────────────
 export type ComponenteInflacion = {
-  id: 'indec' | 'rem' | 'uva';
+  id: 'indec' | 'indec-control' | 'rem' | 'uva' | 'personal';
   etiqueta: string;
   /** Fracción mensual. */
   mensual: number;
@@ -55,7 +55,10 @@ export const mensualDeAnual = (anualPct: number): number => Math.pow(1 + anualPc
 export const temDeTna = (tna: number): number => (tna * 30) / 365;
 export const realMensual = (tem: number, inflacion: number): number => (1 + tem) / (1 + inflacion) - 1;
 
-export function inflacionDeReferencia(m: Mercado, ahora: number = Date.now()): Inflacion | null {
+/** Los datos que una alerta grave dejó "en revisión": lo que depende de ellos no se recomienda. */
+export const enRevision = (m: Mercado, clave: string): boolean => m.alertas.some((a) => a.gravedad === 'grave' && a.clave === clave);
+
+export function inflacionDeReferencia(m: Mercado, ahora: number = Date.now(), personal: number | null = null): Inflacion | null {
   const componentes: ComponenteInflacion[] = [];
 
   const meses = m.inflacion.meses;
@@ -67,6 +70,19 @@ export function inflacionDeReferencia(m: Mercado, ahora: number = Date.now()): I
       componentes.push({ id: 'indec', etiqueta: 'promedio de los últimos 3 meses (INDEC)', mensual: prom, fecha });
     }
   }
+  // La segunda fuente (el INDEC publicado en datos.gob.ar): si difiere de la primera,
+  // se compara contra la más alta, así nunca se subestima la inflación.
+  const control = m.inflacion.control;
+  if (control && control.length >= 3) {
+    const ultimos = control.slice(-3);
+    const ult = ultimos[ultimos.length - 1].fecha;
+    const [anio, mes] = ult.split('-').map(Number);
+    const finDeMes = new Date(Date.UTC(anio, mes, 0)).toISOString().slice(0, 10);
+    if (estaVigente('inflacion', finDeMes, ahora)) {
+      const prom = ultimos.reduce((a, x) => a + x.valor, 0) / ultimos.length / 100;
+      componentes.push({ id: 'indec-control', etiqueta: 'promedio de los últimos 3 meses (INDEC, segunda fuente)', mensual: prom, fecha: finDeMes });
+    }
+  }
   const rem = m.inflacion.esperada12m;
   if (rem && estaVigente('rem', rem.fecha, ahora)) {
     componentes.push({ id: 'rem', etiqueta: 'lo que espera el mercado para el próximo año (BCRA)', mensual: mensualDeAnual(rem.valor), fecha: rem.fecha });
@@ -74,6 +90,11 @@ export function inflacionDeReferencia(m: Mercado, ahora: number = Date.now()): I
   const uva = m.inflacion.uva30d;
   if (uva && estaVigente('uva', uva.fecha, ahora)) {
     componentes.push({ id: 'uva', etiqueta: 'lo que subió la UVA en el último mes (BCRA)', mensual: uva.valor / 100, fecha: uva.fecha });
+  }
+  // La inflación de esta persona (lo que subió lo que ella consume): si es más alta que la
+  // oficial, es contra esa que tiene que rendir lo que invierta.
+  if (personal !== null && componentes.length > 0) {
+    componentes.push({ id: 'personal', etiqueta: 'lo que subió lo que vos consumís (INDEC, con tus gastos)', mensual: personal, fecha: m.ipc?.fecha ?? componentes[0].fecha });
   }
   if (componentes.length === 0) return null;
 
@@ -279,7 +300,7 @@ function evaluarDolar(
   }
   return {
     producto, proveedor, veredicto: 'variable', tna: null, tem: null, real: null,
-    fecha: mep.fecha, fuente: mep.fuente, vigente: estaVigente('dolar', mep.fecha, ahora), confianza: 'por-descubrir',
+    fecha: mep.fecha, fuente: mep.fuente, vigente: estaVigente('dolar', mep.fecha, ahora) && !enRevision(m, 'dolar'), confianza: 'por-descubrir',
     detalle: partes.join(' '),
     notas: [
       'No genera interés: protege de una suba del dólar, pero si el dólar sube menos que la inflación, perdés poder de compra.',
@@ -295,7 +316,7 @@ function evaluarCedears(
   const spy = m.cedears.valor.find((c) => c.simbolo === 'SPY') ?? m.cedears.valor[0];
   return {
     producto, proveedor, veredicto: 'variable', tna: null, tem: null, real: null,
-    fecha: m.cedears.fecha, fuente: m.cedears.fuente, vigente: estaVigente('cedears', m.cedears.fecha, ahora), confianza: 'por-descubrir',
+    fecha: m.cedears.fecha, fuente: m.cedears.fuente, vigente: estaVigente('cedears', m.cedears.fecha, ahora) && !enRevision(m, 'cedears'), confianza: 'por-descubrir',
     detalle: `Un CEDEAR de ${spy.simbolo} (las 500 empresas más grandes de EE.UU.) cuesta ${fmtPesos(spy.precio)} y hoy ${spy.variacionDia >= 0 ? 'subió' : 'bajó'} ${pct(Math.abs(spy.variacionDia), 1)}.`,
     notas: ['No hay un rendimiento que se pueda prometer: sube y baja con el mercado y con el dólar.'],
   };
@@ -330,6 +351,8 @@ export type Contexto = {
   yaInvierteEn: ProductoId[];
   /** Todavía no tiene unos meses de gastos a mano. */
   necesitaCaja: boolean;
+  /** La inflación de esta persona (fracción mensual), si se pudo calcular. */
+  inflacionPersonal?: number | null;
   ahora?: number;
 };
 
@@ -368,7 +391,7 @@ const MAX_RECOMENDADAS = 4;
 
 export function recomendar(ctx: Contexto): Resultado {
   const ahora = ctx.ahora ?? Date.now();
-  const infl = inflacionDeReferencia(ctx.mercado, ahora);
+  const infl = inflacionDeReferencia(ctx.mercado, ahora, ctx.inflacionPersonal ?? null);
   if (!infl) return { inflacion: null, items: [], sinBase: true };
 
   const candidatos: ItemProducto[] = [];
@@ -447,9 +470,21 @@ export function recomendar(ctx: Contexto): Resultado {
       if (a.rec.yaLoHace !== b.rec.yaLoHace) return Number(a.rec.yaLoHace) - Number(b.rec.yaLoHace);
       return puntaje(b.rec.mejor) - puntaje(a.rec.mejor);
     });
-  const marcadas = recomendadas.slice(0, MAX_RECOMENDADAS);
+  // Se marcan hasta MAX_RECOMENDADAS, pero siempre la mejor de cada rol: si alguien puede dejar
+  // la plata cinco años, los CEDEARs (el único que crece a largo plazo) no pueden quedar afuera
+  // sólo porque hay cuatro opciones de ahorro delante.
+  const elegidas = new Set<ItemProducto>();
+  for (const rol of ['caja', 'ahorro', 'crecimiento'] as const) {
+    const mejorDelRol = recomendadas.find((c) => c.rec.rol === rol);
+    if (mejorDelRol) elegidas.add(mejorDelRol);
+  }
+  for (const c of recomendadas) {
+    if (elegidas.size >= MAX_RECOMENDADAS) break;
+    elegidas.add(c);
+  }
+  const marcadas = recomendadas.filter((c) => elegidas.has(c));
   const resto = [
-    ...recomendadas.slice(MAX_RECOMENDADAS).map((c) => ({ ...c, recomendado: false, motivo: null })),
+    ...recomendadas.filter((c) => !elegidas.has(c)).map((c) => ({ ...c, recomendado: false, motivo: null })),
     ...candidatos.filter((c) => !c.recomendado),
   ];
   return { inflacion: infl, items: [...marcadas, ...resto], sinBase: false };

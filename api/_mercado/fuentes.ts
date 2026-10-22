@@ -10,14 +10,20 @@
 //     remuneradas de billeteras, letras del Tesoro, riesgo país, histórico del MEP.
 //   · BCRA, API de estadísticas v4 (oficial): TAMAR, BADLAR, inflación esperada (REM).
 //     La v3 fue dada de baja (devuelve 410).
-//   · DolarAPI: cotizaciones del dólar.
-//   · data912 (comunitaria): precios de CEDEARs.
+//   · DolarAPI: cotizaciones del dólar. Bluelytics, como segunda fuente para chequearlo.
+//   · BYMA Open Data (el mercado, oficial y gratuito): precios de CEDEARs. data912
+//     (comunitaria) queda como segunda fuente para chequearlos.
+//   · datos.gob.ar (donde publica el INDEC): índices de precios, por rubro y por
+//     región, y el nivel general para chequear la inflación mensual.
+//   · Yahoo Finance (NO oficial): el S&P 500 en dólares, para decir qué rindió a largo plazo.
 // Lo comunitario es el punto débil: por eso lo que baja se guarda (ver
 // mercado.ts) y se muestra siempre con su fecha.
 
+import { SERIES_IPC, type RegionIpc } from '../../src/app/lib/inversiones/ipc.js';
 import type {
-  CedearMercado, CuentaMercado, Dato, FondoMercado, LetraMercado, Mercado, PlazoFijoBanco,
+  CedearMercado, CuentaMercado, Dato, FondoMercado, IpcRubros, LetraMercado, Mercado, PlazoFijoBanco, SpyEstadisticas,
 } from '../../src/app/lib/inversiones/mercadoTipos.js';
+import { chequear, type Controles } from './chequeos.js';
 
 const AD = 'https://api.argentinadatos.com/v1';
 const BCRA = 'https://api.bcra.gob.ar/estadisticas/v4.0/monetarias';
@@ -29,7 +35,7 @@ async function traer<T>(url: string, ms = 9000): Promise<T> {
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
     const res = await fetch(url, { headers: { accept: 'application/json' }, signal: ctrl.signal });
-    if (!res.ok) throw new Error(`${url} respondió ${res.status}`);
+    if (!res.ok) throw new Error(`${new URL(url).hostname} respondió ${res.status}`);
     return (await res.json()) as T;
   } finally {
     clearTimeout(timer);
@@ -200,16 +206,45 @@ async function letras(hoy: string): Promise<Dato<LetraMercado[]> | null> {
 // ── CEDEARs ──────────────────────────────────────────────────────────────
 const CEDEARS_DE_REFERENCIA = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'KO', 'MELI'];
 type FilaCedear = { symbol: string; c: number; pct_change: number };
+type FilaByma = { symbol: string; trade: number; previousClosingPrice: number; tradeVolume: number; denominationCcy: string };
 
-async function cedears(hoy: string): Promise<Dato<CedearMercado[]> | null> {
+/** BYMA devuelve varias filas por papel (según el plazo de liquidación): se toma la que más se operó. */
+async function cedearsByma(hoy: string): Promise<Dato<CedearMercado[]> | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch('https://open.bymadata.com.ar/vanoms-be-core/rest/api/bymadata/free/cedears', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json', 'user-agent': 'Mozilla/5.0 (FINA)' },
+      body: JSON.stringify({ excludeZeroPxAndQty: true, T2: true, T1: false, T0: false }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`BYMA respondió ${res.status}`);
+    const filas = (await res.json()) as FilaByma[];
+    const salida: CedearMercado[] = [];
+    for (const s of CEDEARS_DE_REFERENCIA) {
+      const candidatas = filas.filter((f) => f.symbol === s && f.denominationCcy === 'ARS' && esNum(f.trade) && f.trade > 0);
+      if (candidatas.length === 0) continue;
+      const f = candidatas.reduce((a, c) => (c.tradeVolume > a.tradeVolume ? c : a));
+      const variacion = esNum(f.previousClosingPrice) && f.previousClosingPrice > 0 ? (f.trade / f.previousClosingPrice - 1) * 100 : 0;
+      salida.push({ simbolo: s, precio: f.trade, variacionDia: variacion });
+    }
+    if (salida.length === 0) return null;
+    return { valor: salida, fecha: hoy, fuente: 'BYMA (el mercado), última operación' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** La segunda fuente de precios: sólo para chequear que BYMA no esté dando algo raro. */
+async function cedearsData912(): Promise<Record<string, number> | null> {
   const filas = await traer<FilaCedear[]>('https://data912.com/live/arg_cedears');
-  const salida: CedearMercado[] = CEDEARS_DE_REFERENCIA
-    .map((s) => filas.find((f) => f.symbol === s))
-    .filter(sinNulos)
-    .filter((f) => esNum(f.c) && f.c > 0)
-    .map((f) => ({ simbolo: f.symbol, precio: f.c, variacionDia: esNum(f.pct_change) ? f.pct_change : 0 }));
-  if (salida.length === 0) return null;
-  return { valor: salida, fecha: hoy, fuente: 'precios de mercado (data912), última operación' };
+  const salida: Record<string, number> = {};
+  for (const s of CEDEARS_DE_REFERENCIA) {
+    const f = filas.find((x) => x.symbol === s);
+    if (f && esNum(f.c) && f.c > 0) salida[s] = f.c;
+  }
+  return Object.keys(salida).length > 0 ? salida : null;
 }
 
 // ── dólar ────────────────────────────────────────────────────────────────
@@ -250,6 +285,111 @@ async function riesgoPais(): Promise<Dato<number> | null> {
   return { valor: r.valor, fecha: r.fecha, fuente: 'riesgo país (vía ArgentinaDatos)' };
 }
 
+// ── segundas fuentes y datos nuevos ──────────────────────────────────────
+/** Bluelytics: el mismo dólar por otro camino, para chequear a DolarAPI. */
+async function bluelytics(): Promise<{ oficial: number | null; blue: number | null } | null> {
+  const r = await traer<{ oficial?: { value_sell?: number }; blue?: { value_sell?: number } }>('https://api.bluelytics.com.ar/v2/latest');
+  const oficial = esNum(r.oficial?.value_sell) ? r.oficial.value_sell : null;
+  const blue = esNum(r.blue?.value_sell) ? r.blue.value_sell : null;
+  return oficial === null && blue === null ? null : { oficial, blue };
+}
+
+/** Tasa promedio de depósitos a 30 días que publica el BCRA: un termómetro para las tasas de plazo fijo. */
+const bcraPlazoFijo30 = (): Promise<Dato<number> | null> => bcra(12, 'Tasa de depósitos a 30 días, BCRA');
+
+type RespSeries = { data?: (string | number | null)[][] };
+
+/**
+ * Índices del INDEC de un conjunto de series, últimos meses. Si el pedido junto
+ * falla (la API rechaza todo si una serie no tiene datos), se pide de a una y se
+ * saltean las que vienen vacías: un rubro que falta no tira abajo a los demás.
+ */
+async function seriesIndec(ids: string[], ultimos: number): Promise<Record<string, { fecha: string; valor: number }[]>> {
+  const url = (lista: string[]) => `https://apis.datos.gob.ar/series/api/series?ids=${lista.join(',')}&last=${ultimos}&format=json`;
+  const leer = (lista: string[], r: RespSeries): Record<string, { fecha: string; valor: number }[]> => {
+    const salida: Record<string, { fecha: string; valor: number }[]> = {};
+    lista.forEach((id, i) => {
+      salida[id] = (r.data ?? []).flatMap((fila) => {
+        const v = fila[i + 1];
+        return esNum(v) ? [{ fecha: String(fila[0]), valor: v }] : [];
+      });
+    });
+    return salida;
+  };
+  try {
+    return leer(ids, await traer<RespSeries>(url(ids)));
+  } catch {
+    const partes = await Promise.all(ids.map(async (id) => {
+      try {
+        return leer([id], await traer<RespSeries>(url([id])));
+      } catch {
+        return { [id]: [] };
+      }
+    }));
+    return Object.assign({}, ...partes) as Record<string, { fecha: string; valor: number }[]>;
+  }
+}
+
+async function ipcRubros(): Promise<Dato<IpcRubros> | null> {
+  const regiones: RegionIpc[] = ['nacional', 'gba'];
+  const salida: IpcRubros = { nacional: {}, gba: {} };
+  let ultima = '';
+  const pedidos = await Promise.all(regiones.map((region) => seriesIndec(Object.values(SERIES_IPC[region]), 5)));
+  for (const [i, region] of regiones.entries()) {
+    const mapa = SERIES_IPC[region];
+    const datos = pedidos[i];
+    for (const [rubro, id] of Object.entries(mapa)) {
+      const serie = datos[id] ?? [];
+      if (serie.length > 0) salida[region][rubro] = serie;
+    }
+    const general = salida[region].general;
+    if (general && general.length > 0 && general[general.length - 1].fecha > ultima) ultima = general[general.length - 1].fecha;
+  }
+  if (!ultima || !salida.nacional.general) return null;
+  // El índice de un mes trae fecha del día 1, pero recién existe al terminar el mes: la frescura se mide desde el último día.
+  const [anio, mes] = ultima.split('-').map(Number);
+  const finDeMes = new Date(Date.UTC(anio, mes, 0)).toISOString().slice(0, 10);
+  return { valor: salida, fecha: finDeMes, fuente: 'índices de precios del INDEC (datos.gob.ar)' };
+}
+
+/** La inflación mensual del INDEC calculada de su propio índice, para chequear la que usamos. */
+function controlDeInflacion(ipc: Dato<IpcRubros> | null): { fecha: string; valor: number }[] | null {
+  const serie = ipc?.valor.nacional.general;
+  if (!serie || serie.length < 2) return null;
+  const salida: { fecha: string; valor: number }[] = [];
+  for (let i = 1; i < serie.length; i++) {
+    // Los índices vienen con fecha del primer día del mes: la variación se asigna a ese mes.
+    salida.push({ fecha: serie[i].fecha, valor: (serie[i].valor / serie[i - 1].valor - 1) * 100 });
+  }
+  return salida;
+}
+
+type RespYahoo = {
+  chart?: { result?: { meta?: { regularMarketPrice?: number; regularMarketTime?: number }; indicators?: { adjclose?: { adjclose?: (number | null)[] }[] } }[] };
+};
+
+/** El S&P 500 (vía SPY) en dólares: precio de hoy, rendimiento anualizado de 10 años y el peor año. */
+async function spyYahoo(): Promise<Dato<SpyEstadisticas> | null> {
+  const r = await traer<RespYahoo>('https://query1.finance.yahoo.com/v8/finance/chart/SPY?range=10y&interval=1mo', 12000);
+  const res = r.chart?.result?.[0];
+  const serie = (res?.indicators?.adjclose?.[0]?.adjclose ?? []).filter((x): x is number => esNum(x) && x > 0);
+  const precio = res?.meta?.regularMarketPrice;
+  const t = res?.meta?.regularMarketTime;
+  if (!esNum(precio) || !esNum(t) || serie.length < 60) return null;
+  const anios = (serie.length - 1) / 12;
+  const anualizado = (Math.pow(serie[serie.length - 1] / serie[0], 1 / anios) - 1) * 100;
+  let peor: number | null = null;
+  for (let i = 12; i < serie.length; i++) {
+    const v = (serie[i] / serie[i - 12] - 1) * 100;
+    if (peor === null || v < peor) peor = v;
+  }
+  return {
+    valor: { precioUsd: precio, anualizado10a: anualizado, peorAnio: peor },
+    fecha: new Date(t * 1000).toISOString().slice(0, 10),
+    fuente: 'Yahoo Finance (no oficial)',
+  };
+}
+
 // ── armado ───────────────────────────────────────────────────────────────
 /** Corre una fuente; si falla la anota y devuelve el valor de repuesto. */
 async function seguro<T>(nombre: string, fallas: string[], f: () => Promise<T>, vacio: T): Promise<T> {
@@ -266,7 +406,7 @@ export async function construirMercado(ahora: number = Date.now()): Promise<Merc
   const fallas: string[] = [];
   const dolarVacio: Mercado['dolar'] = { oficial: null, mep: null, ccl: null, blue: null, brechaMep: null, mep30d: null };
 
-  const [meses, esperada, uva, tamar, badlar, pf, ctas, fci, lts, ced, usd, rp] = await Promise.all([
+  const [meses, esperada, uva, tamar, badlar, pf, ctas, fci, lts, cedByma, usd, rp, ipc, spy, blu, pf30, ced912] = await Promise.all([
     seguro('inflación', fallas, inflacionMeses, []),
     seguro('inflación esperada (REM)', fallas, () => bcra(29, 'REM, BCRA: inflación esperada a 12 meses'), null),
     seguro('UVA', fallas, () => uva30d(hoy), null),
@@ -276,15 +416,31 @@ export async function construirMercado(ahora: number = Date.now()): Promise<Merc
     seguro('cuentas remuneradas', fallas, cuentas, null),
     seguro('fondos', fallas, fondos, null),
     seguro('letras', fallas, () => letras(hoy), null),
-    seguro('CEDEARs', fallas, () => cedears(hoy), null),
+    seguro('CEDEARs (BYMA)', fallas, () => cedearsByma(hoy), null),
     seguro('dólar', fallas, dolar, dolarVacio),
     seguro('riesgo país', fallas, riesgoPais, null),
+    seguro('índices del INDEC', fallas, ipcRubros, null),
+    seguro('S&P 500', fallas, spyYahoo, null),
+    // Segundas fuentes: si fallan no es una falla de datos, sólo hay un chequeo menos.
+    bluelytics().catch(() => null),
+    bcraPlazoFijo30().catch(() => null),
+    cedearsData912().catch(() => null),
   ]);
 
-  return {
+  // Si BYMA no respondió, se usa la fuente comunitaria como principal (y se dice).
+  let ced = cedByma;
+  if (!ced && ced912) {
+    ced = {
+      valor: Object.entries(ced912).map(([simbolo, precio]) => ({ simbolo, precio, variacionDia: 0 })),
+      fecha: hoy,
+      fuente: 'precios de mercado (data912, fuente comunitaria)',
+    };
+  }
+
+  const mercado: Mercado = {
     generadoEn: new Date(ahora).toISOString(),
     desactualizado: false,
-    inflacion: { meses, esperada12m: esperada, uva30d: uva, interanual: interanual(meses) },
+    inflacion: { meses, esperada12m: esperada, uva30d: uva, interanual: interanual(meses), control: controlDeInflacion(ipc) },
     tasas: { tamar, badlar },
     plazoFijo: pf,
     cuentas: ctas,
@@ -293,8 +449,13 @@ export async function construirMercado(ahora: number = Date.now()): Promise<Merc
     cedears: ced,
     dolar: usd,
     riesgoPais: rp,
+    spy,
+    ipc,
+    alertas: [],
     fallas,
   };
+  const controles: Controles = { dolar: blu, plazoFijo30: pf30, cedears: ced912 };
+  return { ...mercado, alertas: chequear(mercado, controles, ahora) };
 }
 
 /**
@@ -311,6 +472,7 @@ export function rellenarConAnterior(nuevo: Mercado, previo: Mercado | null): Mer
       esperada12m: nuevo.inflacion.esperada12m ?? previo.inflacion.esperada12m,
       uva30d: nuevo.inflacion.uva30d ?? previo.inflacion.uva30d,
       interanual: nuevo.inflacion.interanual ?? previo.inflacion.interanual,
+      control: nuevo.inflacion.control ?? previo.inflacion.control,
     },
     tasas: {
       tamar: nuevo.tasas.tamar ?? previo.tasas.tamar,
@@ -330,6 +492,8 @@ export function rellenarConAnterior(nuevo: Mercado, previo: Mercado | null): Mer
       mep30d: nuevo.dolar.mep30d ?? previo.dolar.mep30d,
     },
     riesgoPais: nuevo.riesgoPais ?? previo.riesgoPais,
+    spy: nuevo.spy ?? previo.spy,
+    ipc: nuevo.ipc ?? previo.ipc,
   };
 }
 

@@ -66,6 +66,28 @@ export type CedearMercado = {
   variacionDia: number;
 };
 
+/** Un chequeo que no cerró: dos fuentes que no coinciden, un valor que no es verosímil. */
+export type Alerta = {
+  /** Qué dato: 'dolar', 'inflacion', 'cedears'… */
+  clave: string;
+  /** 'grave' saca de las recomendaciones lo que depende de ese dato; 'aviso' sólo avisa. */
+  gravedad: 'aviso' | 'grave';
+  mensaje: string;
+};
+
+/** Los índices mensuales del INDEC por rubro, para calcular la inflación de cada persona. */
+export type IpcRegion = Record<string, { fecha: string; valor: number }[]>;
+export type IpcRubros = { nacional: IpcRegion; gba: IpcRegion };
+
+/** Lo que se sabe del S&P 500 (el índice que sigue SPY), en dólares. */
+export type SpyEstadisticas = {
+  precioUsd: number;
+  /** Rendimiento anualizado de los últimos 10 años, en porcentaje. */
+  anualizado10a: number | null;
+  /** El peor período de 12 meses de esos 10 años, en porcentaje. */
+  peorAnio: number | null;
+};
+
 export type Mercado = {
   /** Cuándo armó el servidor este paquete (ISO). */
   generadoEn: string;
@@ -80,6 +102,8 @@ export type Mercado = {
     uva30d: Dato<number> | null;
     /** Inflación interanual calculada con los últimos 12 meses, en porcentaje. */
     interanual: number | null;
+    /** Los mismos meses según la segunda fuente (INDEC publicado en datos.gob.ar), para chequear. null si no respondió. */
+    control: { fecha: string; valor: number }[] | null;
   };
   tasas: {
     /** TNA en porcentaje (24 = 24%). */
@@ -102,6 +126,12 @@ export type Mercado = {
     mep30d: number | null;
   };
   riesgoPais: Dato<number> | null;
+  /** El S&P 500 en dólares: sirve para decir qué rindió a largo plazo en lugar de repetir un número escrito a mano. */
+  spy: Dato<SpyEstadisticas> | null;
+  /** Índices del INDEC por rubro, para la inflación personal. */
+  ipc: Dato<IpcRubros> | null;
+  /** Chequeos que no cerraron. Vacío = todo coincide. */
+  alertas: Alerta[];
   /** Fuentes que fallaron al armar este paquete, para decirlo en vez de ocultarlo. */
   fallas: string[];
 };
@@ -112,6 +142,7 @@ export type Mercado = {
 // la recomendación que depende de él deja de mostrarse (no se usa un número
 // viejo como si fuera de hoy).
 export const LIMITE_DIAS = {
+  ipcRubros: 70,
   dolar: 2,
   fondo: 5,       // cubre fin de semana largo
   cuenta: 5,

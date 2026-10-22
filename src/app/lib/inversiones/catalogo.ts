@@ -174,7 +174,7 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     queEs: 'Un préstamo que le hacés al Estado por unos meses. Pagás hoy un precio y en una fecha fija te devuelve un monto mayor. Se compra desde un broker (una app o empresa donde comprás inversiones).',
     dondeQuedaTuPlata: 'En el Tesoro Nacional. Lo que comprás queda a tu nombre en tu cuenta del broker (la plataforma donde lo comprás).',
     riesgoTexto: 'Si esperás hasta el vencimiento cobrás lo que figuraba; si vendés antes, el precio puede ser menor.',
-    cuandoLaSacas: 'Al vencimiento, o antes vendiéndola (se acredita en 1 o 2 días hábiles).',
+    cuandoLaSacas: 'Al vencimiento, o antes vendiéndola: se acredita en 1 o 2 días hábiles (de lunes a viernes, sin feriados).',
     garantia: 'No tiene seguro de depósitos: el respaldo es el compromiso de pago del Estado.',
     glosario: [G.broker, G.letra, G.vencimiento, G.tna],
   },

@@ -24,6 +24,8 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Mercado } from '../src/app/lib/inversiones/mercadoTipos.js';
+import { recomendar } from '../src/app/lib/inversiones/motor.js';
+import { registrarYAvisar } from './_mercado/alertas.js';
 import { completarConHistoria, construirMercado, hoyAR, paqueteUtil, rellenarConAnterior } from './_mercado/fuentes.js';
 
 type Req = { method?: string };
@@ -62,10 +64,34 @@ async function leerFotos(db: SupabaseClient | null): Promise<Mercado[]> {
   }
 }
 
+/**
+ * Qué se le habría recomendado hoy a cada tipo de persona. Se guarda junto con la
+ * foto del día: cuando pase un mes se puede mirar qué pasó con eso y saber, con
+ * datos y no a ojo, qué tan bien recomienda el motor. Son recomendaciones
+ * genéricas por perfil: no hay nada personal.
+ */
+function recomendadoHoy(m: Mercado) {
+  const salida = [];
+  for (const perfil of ['conservador', 'moderado', 'arriesgado'] as const) {
+    for (const horizonteMeses of [6, 36]) {
+      const r = recomendar({ mercado: m, perfil, horizonteMeses, monto: null, usa: [], yaInvierteEn: [], necesitaCaja: false });
+      salida.push({
+        perfil, horizonteMeses,
+        inflacionMensual: r.inflacion?.mensual ?? null,
+        recomendadas: r.items.filter((i) => i.recomendado).map((i) => ({
+          producto: i.rec.producto.id, proveedor: i.rec.mejor.proveedor, veredicto: i.rec.mejor.veredicto,
+          tna: i.rec.mejor.tna, fecha: i.rec.mejor.fecha,
+        })),
+      });
+    }
+  }
+  return salida;
+}
+
 async function guardar(db: SupabaseClient | null, m: Mercado): Promise<void> {
   if (!db) return;
   try {
-    await db.from('market_snapshots').upsert({ day: hoyAR(), data: m, fetched_at: m.generadoEn }, { onConflict: 'day' });
+    await db.from('market_snapshots').upsert({ day: hoyAR(), data: { ...m, recomendadoHoy: recomendadoHoy(m) }, fetched_at: m.generadoEn }, { onConflict: 'day' });
   } catch {
     /* guardar es un extra: si la tabla todavía no existe, la función sigue andando */
   }
@@ -83,6 +109,8 @@ async function regenerar(): Promise<Mercado> {
     return { ...nuevo, desactualizado: true };
   }
   await guardar(db, nuevo);
+  // Si algún chequeo no cerró, se anota y se le avisa a quien mantiene FINA.
+  await registrarYAvisar(db, nuevo.alertas, hoyAR());
   return nuevo;
 }
 

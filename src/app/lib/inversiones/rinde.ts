@@ -45,10 +45,13 @@ export function describirRinde(producto: ProductoId, ev: Evaluacion | null, m: M
     };
   }
   if (producto === 'cedear') {
+    const spy = m?.spy?.valor;
     return {
       titulo: 'Sin rendimiento fijo',
       detalle: 'Se mide a largo plazo',
-      ejemplo: 'En 10 años o más, el índice de las 500 empresas más grandes de EE.UU. rindió cerca de 10% por año en dólares, con años de pérdida en el medio.',
+      ejemplo: spy && spy.anualizado10a !== null
+        ? `En los últimos 10 años, las 500 empresas más grandes de EE.UU. rindieron cerca de ${pct(spy.anualizado10a, 0)} por año en dólares${spy.peorAnio !== null && spy.peorAnio < 0 ? `, pero hubo períodos de 12 meses en que bajaron hasta ${pct(Math.abs(spy.peorAnio), 0)}` : ''}. Lo pasado no asegura lo que viene.`
+        : 'En 10 años o más, el índice de las 500 empresas más grandes de EE.UU. rindió, en promedio, cerca de 10% por año en dólares, con años de pérdida en el medio. Lo pasado no asegura lo que viene.',
       aclaracion: null,
       chip: null,
       fecha: ev?.fecha ?? null,

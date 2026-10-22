@@ -2,11 +2,14 @@ import { useMemo, useState } from 'react';
 import type { PosicionInversion } from '../../../api/v2/tipos';
 import type { PerfilRiesgo, ProductoId, ProveedorId } from '../../../lib/inversiones/catalogo';
 import type { Colchon, SugerenciaMonto } from '../../../lib/inversiones/cuanto';
+import type { InflacionPersonal } from '../../../lib/inversiones/inflacionPersonal';
+import { RUBROS } from '../../../lib/inversiones/ipc';
+import { pct } from '../../../lib/inversiones/formato';
 import { recomendar, type ItemProducto, type Recomendacion } from '../../../lib/inversiones/motor';
 import type { Valores } from '../../../lib/inversiones/registro';
 import { useMercado } from '../../../lib/inversiones/useMercado';
 import { IconChevron } from '../FinaIcons';
-import { COLORS, formatThousands, parseMoneyInput, TituloSeccion } from '../shared';
+import { COLORS, EstadoConfianza, formatThousands, parseMoneyInput, TituloSeccion } from '../shared';
 import { CuantoPoner } from './CuantoPoner';
 import { FlujoInversion } from './FlujoInversion';
 import { Parrafo } from './Hoja';
@@ -25,7 +28,7 @@ const TIEMPOS: { id: string; label: string; meses: number }[] = [
 // marcan con un cartelito verde. O puede elegir directo una inversión.
 // Todo sale de los datos de mercado de hoy: si no hay datos, no hay recomendación.
 export function RecomendacionesTab({
-  perfil, horizonteMeses, usa, posiciones, productosQuiz, sugerencia, colchon, onRegistrar,
+  perfil, horizonteMeses, usa, posiciones, productosQuiz, sugerencia, colchon, inflacionPersonal, onRegistrar,
 }: {
   perfil: PerfilRiesgo;
   horizonteMeses: number | null;
@@ -35,6 +38,8 @@ export function RecomendacionesTab({
   productosQuiz: ProductoId[];
   sugerencia: SugerenciaMonto;
   colchon: Colchon | null;
+  /** Lo que subió lo que esta persona consume, si se pudo calcular. */
+  inflacionPersonal: InflacionPersonal | null;
   onRegistrar: (tipo: PosicionInversion['tipo'], previos: Partial<Valores>) => void;
 }) {
   const { estado, reintentar } = useMercado();
@@ -52,9 +57,9 @@ export function RecomendacionesTab({
   );
   const resultado = useMemo(
     () => (mercado
-      ? recomendar({ mercado, perfil, horizonteMeses: horizonte, monto, usa, yaInvierteEn, necesitaCaja: !colchon?.cubierto })
+      ? recomendar({ mercado, perfil, horizonteMeses: horizonte, monto, usa, yaInvierteEn, necesitaCaja: !colchon?.cubierto, inflacionPersonal: inflacionPersonal?.mensual ?? null })
       : null),
-    [mercado, perfil, horizonte, monto, usa, yaInvierteEn, colchon],
+    [mercado, perfil, horizonte, monto, usa, yaInvierteEn, colchon, inflacionPersonal],
   );
 
   if (estado.tipo === 'cargando') {
@@ -166,6 +171,21 @@ export function RecomendacionesTab({
       </section>
 
       <CuantoPoner sugerencia={sugerencia} colchon={colchon} />
+
+      {inflacionPersonal && (
+        <section className="flex flex-col gap-2" aria-label="Tu inflación personal">
+          <TituloSeccion>Tu inflación personal</TituloSeccion>
+          <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>
+            Según en qué gastás y dónde vivís, lo que consumís subió cerca de{' '}
+            <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{pct(inflacionPersonal.mensual * 100, 1)}</span> por mes en los últimos meses.
+            El promedio oficial {inflacionPersonal.region === 'gba' ? 'de CABA y GBA' : 'del país'} fue{' '}
+            <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{pct(inflacionPersonal.oficial * 100, 1)}</span>.
+            Lo que más pesa en tus gastos: {inflacionPersonal.pesos.filter((p) => p.rubro !== 'general').slice(0, 2).map((p) => RUBROS.find((r) => r.id === p.rubro)?.nombre.toLowerCase()).join(' y ')}.
+            Por eso, para recomendarte, comparamos contra la más alta de las dos.
+          </p>
+          <EstadoConfianza estado="estimado" />
+        </section>
+      )}
 
       <MercadoHoy mercado={mercado} />
 

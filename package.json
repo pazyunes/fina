@@ -6,7 +6,10 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:inversiones": "node scripts/test-inversiones.mjs",
+    "verificar:datos": "node scripts/test-inversiones.mjs en-vivo",
+    "backtest:inversiones": "node scripts/test-inversiones.mjs backtest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

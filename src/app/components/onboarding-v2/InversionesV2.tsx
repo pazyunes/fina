@@ -5,6 +5,7 @@ import { ALIAS_PROVEEDOR, EN_QUE_A_PRODUCTO, type ProveedorId } from '../../lib/
 import { calcularSobrante, colchon as calcularColchon, horizonteDesdeQuiz, sugerirMonto } from '../../lib/inversiones/cuanto';
 import type { Valores } from '../../lib/inversiones/registro';
 import type { PosicionInversion } from '../../api/v2/tipos';
+import { calcularInflacionPersonal } from '../../lib/inversiones/inflacionPersonal';
 import { Desplegable } from './inversiones/Desplegable';
 import { MisInversiones } from './inversiones/MisInversiones';
 import { RecomendacionesTab } from './inversiones/RecomendacionesTab';
@@ -334,6 +335,13 @@ export function InversionesV2() {
     const colchon = sobrante ? calcularColchon(sobrante.gastoMensual, db.perfil.reserva, enCaja) : null;
     const sugerencia = sugerirMonto(sobrante);
     const horizonteMeses = horizonteDesdeQuiz(porQue);
+    // La inflación de esta persona: lo que subió lo que ella consume, con sus propios gastos y su zona.
+    const ipc = estadoMercado.tipo === 'listo' ? estadoMercado.mercado.ipc?.valor ?? null : null;
+    const inflacionPersonal = calcularInflacionPersonal(
+      db.gastos.map((g) => ({ montoArs: g.montoArs, ts: g.ts, seccion: db.secciones.find((x) => x.id === g.seccionId)?.nombre ?? null })),
+      ipc,
+      db.perfil.zona,
+    );
     // Productos en los que la persona dijo que ya invierte (quiz) o que ya registró.
     const productosQuiz = enQue.flatMap((o) => EN_QUE_A_PRODUCTO[o] ?? []);
 
@@ -525,6 +533,7 @@ export function InversionesV2() {
               productosQuiz={productosQuiz}
               sugerencia={sugerencia}
               colchon={colchon}
+              inflacionPersonal={inflacionPersonal}
               onRegistrar={abrirRegistro}
             />
           )}

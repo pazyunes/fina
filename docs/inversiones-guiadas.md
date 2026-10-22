@@ -69,6 +69,37 @@ se revisa en código. Cada noticia lleva su fuente y enlace. Sin clave, muestra 
 relevantes con su enlace. Se cachea 30 minutos por tipo. **La parte con el modelo no se pudo probar sin
 la clave.**
 
+## Calidad de los datos: chequeos, alertas y tests
+
+**Dos fuentes para cada dato crítico** (`api/_mercado/chequeos.ts`): el dólar contra Bluelytics, la
+inflación contra el INDEC publicado en datos.gob.ar, los precios de CEDEARs (BYMA) contra otra fuente,
+las tasas de plazo fijo contra el promedio del BCRA, y que cada tasa sea verosímil y no esté vieja.
+Una alerta **grave** (dos fuentes que discrepan mucho) saca de las recomendaciones lo que depende de ese
+dato; un **aviso** sólo se registra. En inflación, si las fuentes difieren se usa la más alta.
+
+**Dónde te avisa** (`api/_mercado/alertas.ts`): una notificación en tu celular o compu (la misma
+tecnología que ya usa la app), una vez por día y por dato. Para activarla hay que definir en Vercel
+`ALERTAS_USER_ID` con tu id de usuaria (Supabase → Authentication → Users) y tener las notificaciones
+activadas en la app. Además quedan anotadas en `data_alerts` (migración 0040) y se ven en
+`/api/estado-datos?clave=<CRON_SECRET>`, que arma todo de cero y muestra qué fuentes respondieron y
+cuán fresco está cada dato.
+
+**Cada recomendación queda registrada** (sin datos personales): junto con la foto diaria de mercado se
+guarda qué se habría recomendado hoy a cada perfil (`recomendadoHoy` en `market_snapshots`). Dentro de
+un mes se puede mirar qué pasó con eso.
+
+**Inflación personal** (`lib/inversiones/inflacionPersonal.ts`, `ipc.ts`): con las secciones donde la
+persona registra sus gastos, su zona (CABA/GBA o resto del país) y los índices del INDEC por rubro. Se
+muestra como estimado y, si es más alta que la oficial, contra esa se compara lo que se recomienda.
+
+**Tests** (sin dependencias nuevas):
+- `npm run test:inversiones` — 108 tests de cálculos, reglas y textos, sin red.
+- `npm run verificar:datos` — 22 verificaciones con los datos reales de hoy: que cada fuente responda,
+  que los números sean verosímiles, que las fuentes coincidan, y que nuestras cuentas den igual que
+  hechas aparte.
+- `npm run backtest:inversiones` — mira cómo le habría ido a la regla en el pasado (31 meses). Con
+  `BACKTEST_DESDE=2025-04` se acota al período más parecido a hoy.
+
 ## Fuentes (verificadas el 21/10/2026)
 
 | Dato | Fuente | Nota |
@@ -76,7 +107,10 @@ la clave.**
 | Inflación mensual, UVA, plazo fijo por banco, cuentas de billeteras, letras, riesgo país, fondos | ArgentinaDatos | API **comunitaria**, no oficial |
 | TAMAR, BADLAR, inflación esperada (REM) | BCRA, API de estadísticas **v4** | La v3 fue dada de baja (410) |
 | Dólar | DolarAPI | |
-| Precios de CEDEARs | data912 | comunitaria |
+| Precios de CEDEARs | BYMA Open Data (oficial); data912 sólo como segunda fuente | |
+| Índices del INDEC por rubro y región, e inflación oficial (segunda fuente) | datos.gob.ar | oficial; va un mes atrasada |
+| Dólar (segunda fuente) | Bluelytics | |
+| S&P 500 en dólares, historia de 10 años | Yahoo Finance | **no oficial** |
 | Noticias | RSS de Ámbito, Infobae, iProfesional, BBC Mundo | titulares públicos |
 
 CAFCI bloquea las consultas automáticas (403). El histórico por fecha de ArgentinaDatos
@@ -86,7 +120,7 @@ se usa "ayer contra hoy" con un rango ancho.
 
 ## Para dejarlo andando
 
-1. Correr `supabase/migrations/0039_inversiones_guiadas.sql` en el SQL Editor de Supabase.
+1. Correr `supabase/migrations/0039_inversiones_guiadas.sql` y después `0040_alertas_de_datos.sql` en el SQL Editor de Supabase.
    Sin eso la app anda, pero registrar una inversión específica avisa que falta la base, y
    el avance del paso a paso queda sólo en el dispositivo.
 2. En Vercel, definir `SUPABASE_SERVICE_ROLE_KEY` para que `/api/mercado` guarde una foto

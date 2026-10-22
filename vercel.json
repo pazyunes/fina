@@ -28,6 +28,12 @@
     },
     "api/noticias.ts": {
       "maxDuration": 30
+    },
+    "api/estado-datos.ts": {
+      "maxDuration": 30
+    },
+    "api/mercado.ts": {
+      "maxDuration": 30
     }
   },
   "crons": [
