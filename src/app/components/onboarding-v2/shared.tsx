@@ -747,37 +747,27 @@ export function loadV2NivelFinanciero(): string | null {
 }
 
 // Donut de progreso/distribución (conic-gradient, sin librerías de charts).
-//
-// `separados`: un corte de 2px del color del fondo entre segmento y segmento
-// (guía de dataviz). Sin él, dos categorías de colores cercanos que quedan
-// pegadas se leen como una sola.
+// Los segmentos van pegados, sin cortes entre ellos (pedido de diseño, oct 2026).
 export function Donut({
   segments,
   centerLabel,
   centerValue,
   size = 132,
   dark = false,
-  separados = false,
 }: {
   segments: { color: string; pct: number }[];
   centerLabel: string;
   centerValue: string;
   size?: number;
   dark?: boolean;
-  separados?: boolean;
 }) {
-  const visibles = segments.filter((s) => s.pct > 0);
-  // 2px medidos en el borde de afuera, pasados a porcentaje de la vuelta.
-  const corte = separados && visibles.length > 1 ? 200 / (Math.PI * size) : 0;
-  const fondo = dark ? COLORS.darkCard : COLORS.surface;
   let acc = 0;
-  const stops = visibles
+  const stops = segments
+    .filter((s) => s.pct > 0)
     .map((s) => {
       const start = acc;
       acc += s.pct;
-      if (!corte) return `${s.color} ${start}% ${acc}%`;
-      const fin = Math.max(start, acc - corte);
-      return `${s.color} ${start}% ${fin}%, ${fondo} ${fin}% ${acc}%`;
+      return `${s.color} ${start}% ${acc}%`;
     })
     .join(', ');
   const inset = Math.round(size * 0.13);
