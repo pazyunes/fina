@@ -17,6 +17,7 @@ import { CuantoPoner } from './CuantoPoner';
 import { FlujoInversion } from './FlujoInversion';
 import { Parrafo } from './Hoja';
 import { MercadoHoy } from './MercadoHoy';
+import { AprendeCards } from './AprendeCards';
 
 // Cuánto tiempo puede dejar la plata quieta, en meses (para recomendar).
 const TIEMPOS: { id: string; label: string; meses: number }[] = [
@@ -190,6 +191,8 @@ export function RecomendacionesTab({
       <section className="flex flex-col" aria-label="Inversiones">
         {resultado.items.map(fila)}
       </section>
+
+      <AprendeCards recomendados={resultado.items.filter((i) => i.recomendado).map((i) => i.rec.producto.id)} />
 
       <CuantoPoner sugerencia={sugerencia} colchon={colchon} />
 
