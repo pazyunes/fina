@@ -21,7 +21,7 @@ export type ProductoId =
   | 'dolar'
   | 'cedear';
 
-export type ProveedorId = 'mercado_pago' | 'uala' | 'cocos' | 'balanz' | 'banco';
+export type ProveedorId = 'mercado_pago' | 'uala' | 'naranja_x' | 'cocos' | 'balanz' | 'banco';
 export type PerfilRiesgo = 'conservador' | 'moderado' | 'arriesgado';
 export type Riesgo = 'Bajo' | 'Medio' | 'Alto';
 
@@ -35,6 +35,12 @@ export type Rol = 'caja' | 'ahorro' | 'crecimiento';
 
 export type Termino = { termino: string; significado: string };
 
+/**
+ * La ficha de cada inversión. Es contenido FIJO y corto, siempre en el mismo
+ * orden: qué es, cuánto rinde (eso sí se calcula con datos de hoy, ver
+ * `describirRinde`), dónde queda tu plata, riesgo, cuándo la sacás, si alguien
+ * la garantiza, y un glosario al final.
+ */
 export type Producto = {
   id: ProductoId;
   nombre: string;
@@ -48,66 +54,59 @@ export type Producto = {
   plazoMinimoDias: number | null;
   perfiles: PerfilRiesgo[];
   queEs: string;
-  dondeQuedaTuPlata: string[];
-  quePuedePasar: string;
+  dondeQuedaTuPlata: string;
+  /** Una línea: cuánto se mueve y por qué. */
+  riesgoTexto: string;
   cuandoLaSacas: string;
   garantia: string;
   glosario: Termino[];
+};
+
+const TNA: Termino = {
+  termino: 'TNA',
+  significado: 'Tasa nominal anual: cuánto rinde en un año. Para saber lo que rinde por mes, dividila por 12: una TNA de 20% es cerca de 1,6% por mes.',
 };
 
 export const PRODUCTOS: Record<ProductoId, Producto> = {
   cuenta_remunerada: {
     id: 'cuenta_remunerada',
     nombre: 'Cuenta remunerada',
-    resumen: 'La plata que tenés quieta en tu billetera genera intereses todos los días.',
+    resumen: 'La plata que dejás quieta en tu billetera genera intereses todos los días.',
     rol: 'caja',
     riesgo: 'Bajo',
     horizonteMinimoMeses: 0,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs:
-      'Es una cuenta de tu billetera donde el saldo que dejás quieto genera intereses todos los días, sin que hagas nada. La seguís usando como siempre.',
-    dondeQuedaTuPlata: [
-      'La billetera junta la plata de muchas personas y la usa en cosas de muy corto plazo: préstamos entre bancos, títulos del Estado a pocos días. Con lo que gana, te paga una parte como interés.',
-      'En varias billeteras ese “rendimiento” viene de un fondo común de inversión de dinero (un “money market”) que está detrás de la cuenta. En la app podés ver cuál es.',
-    ],
-    quePuedePasar:
-      'El saldo casi no se mueve: no suele bajar. Lo que sí cambia, seguido y a veces de un día para el otro, es la tasa que te pagan, y puede quedar por debajo de la inflación.',
-    cuandoLaSacas: 'Cuando quieras: en el momento o, como mucho, en el día.',
-    garantia:
-      'Depende de la billetera. Si la plata queda en un fondo de inversión, no tiene la garantía de depósitos que sí tienen los bancos. Cada app lo aclara en su sección de rendimientos.',
+    queEs: 'Una cuenta de tu billetera donde la plata que dejás quieta genera intereses todos los días. La seguís usando como siempre.',
+    dondeQuedaTuPlata: 'La billetera la presta a muy corto plazo (a bancos y al Estado) y te paga una parte. En varias, detrás hay un fondo de inversión de dinero.',
+    riesgoTexto: 'Casi no se mueve: lo que cambia es la tasa que te pagan.',
+    cuandoLaSacas: 'Cuando quieras, en el momento.',
+    garantia: 'Depende de la billetera. Si queda en un fondo de inversión, no tiene el seguro de depósitos de los bancos.',
     glosario: [
-      { termino: 'TNA', significado: 'Tasa nominal anual: lo que rendiría en un año si la tasa de hoy se mantuviera. Es la forma más común de mostrar una tasa.' },
+      TNA,
       { termino: 'Tope', significado: 'Hasta qué saldo te pagan esa tasa. Lo que pasa de ese monto rinde menos o nada.' },
     ],
   },
 
   fci: {
     id: 'fci',
-    nombre: 'Fondo común de dinero',
-    resumen: 'Una bolsa de plata de muchas personas que presta a muy corto plazo; la sacás en pocos días.',
+    nombre: 'Fondo común de inversión',
+    resumen: 'Una bolsa de plata de muchas personas que maneja un profesional. Podés empezar con $1.000.',
     rol: 'caja',
     riesgo: 'Bajo',
     horizonteMinimoMeses: 0,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs:
-      'Un fondo común de inversión (FCI) es una “bolsa” de plata que arman muchas personas juntas. Una empresa autorizada por la CNV, la sociedad gerente, decide en qué se invierte. Vos comprás cuotapartes: pedacitos de esa bolsa. Acá hablamos del tipo más conservador, el “money market”.',
-    dondeQuedaTuPlata: [
-      'Los fondos money market prestan a muy corto plazo: depósitos en bancos, letras del Tesoro, préstamos de un día entre entidades. Cada día el fondo suma esos intereses y el valor de cada cuotaparte sube un poquito. Ese aumento es tu ganancia.',
-      'Tu plata no queda en la empresa que administra el fondo. Un banco distinto, el custodio, guarda los activos del fondo por separado. Si la sociedad gerente tuviera problemas, el patrimonio del fondo sigue siendo de los inversores.',
-    ],
-    quePuedePasar:
-      'En un money market el valor de la cuotaparte casi siempre sube día a día. No está garantizado: en fondos más arriesgados (de bonos o de acciones) puede bajar. Y lo que rindió ayer no asegura lo que rinda mañana.',
-    cuandoLaSacas:
-      'Pedís el rescate y la plata vuelve a tu cuenta en 0 a 2 días hábiles, según el fondo. Se muestra en la ficha de cada uno.',
-    garantia:
-      'No tiene garantía de depósitos. Sí está regulado por la CNV y el patrimonio del fondo está separado del de la empresa que lo administra.',
+    queEs: 'Una “bolsa” de plata de muchas personas que maneja un profesional (la sociedad gerente). Vos tenés cuotapartes: pedacitos de esa bolsa. Acá hablamos del más conservador, el “money market”.',
+    dondeQuedaTuPlata: 'El fondo presta a muy corto plazo (bancos y Estado) y cada día sube un poquito el valor de tu cuotaparte. Los activos los guarda un banco aparte, el custodio, no la gerente.',
+    riesgoTexto: 'Casi no baja. Si un fondo promete mucho más que el resto, preguntá qué riesgo toma.',
+    cuandoLaSacas: 'Entre el mismo día y 2 días hábiles, según el fondo.',
+    garantia: 'No tiene seguro de depósitos, pero está regulado por la CNV y la plata del fondo está separada de la de la gerente.',
     glosario: [
-      { termino: 'Cuotaparte', significado: 'Cada pedacito del fondo. Su valor cambia todos los días; cuando sube, ganás.' },
-      { termino: 'Sociedad gerente', significado: 'La empresa que decide en qué invierte el fondo.' },
-      { termino: 'Custodio', significado: 'El banco que guarda los activos del fondo, aparte de la gerente.' },
-      { termino: 'Rescate', significado: 'Pedir que te devuelvan tu plata: se venden tus cuotapartes y el dinero llega a tu cuenta.' },
+      { termino: 'Cuotaparte', significado: 'Cada pedacito del fondo. Cuando su valor sube, ganás.' },
+      { termino: 'Money market', significado: 'Fondo que presta a muy corto plazo. Es el más estable y el más líquido.' },
+      { termino: 'Rescate', significado: 'Pedir que te devuelvan tu plata: se venden tus cuotapartes y llega a tu cuenta.' },
+      TNA,
     ],
   },
 
@@ -120,73 +119,55 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     horizonteMinimoMeses: 1,
     plazoMinimoDias: 30,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs:
-      'Le prestás tu plata al banco por un tiempo fijo (30, 60, 90 días…). Al vencimiento el banco te devuelve lo que prestaste más un interés que conocés desde el primer día.',
-    dondeQuedaTuPlata: [
-      'La plata queda en el banco. El banco la usa para dar créditos y paga tu interés con lo que cobra por prestarla.',
-      'Durante el plazo no la podés usar. Algunos plazos fijos son “precancelables” y te dejan sacarla antes, pero con una tasa menor.',
-    ],
-    quePuedePasar:
-      'Cobrás exactamente lo pactado. El riesgo es otro: si la inflación del período es mayor que tu interés, con esa plata comprás menos que antes aunque tengas más pesos.',
-    cuandoLaSacas: 'Al vencimiento. Antes, sólo si es precancelable y con menos interés.',
-    garantia:
-      'Los depósitos en bancos están cubiertos por el seguro de depósitos hasta un tope por persona y por banco. El BCRA actualiza ese tope: conviene mirar el vigente.',
+    queEs: 'Le prestás plata al banco por un tiempo (30, 60, 90 días…) y sabés desde el primer día cuánto te devuelve.',
+    dondeQuedaTuPlata: 'En el banco. Mientras dura el plazo no la podés usar.',
+    riesgoTexto: 'Cobrás lo pactado. El riesgo es que la inflación sea mayor y con esa plata compres menos.',
+    cuandoLaSacas: 'Al vencimiento. Antes, solo si es precancelable y con menos interés.',
+    garantia: 'Sí: los depósitos en bancos tienen seguro de depósitos hasta un tope por persona y por banco.',
     glosario: [
-      { termino: 'TNA', significado: 'Tasa nominal anual. Para saber cuánto cobrás en tu plazo: TNA × días ÷ 365.' },
-      { termino: 'Vencimiento', significado: 'El día en que el banco te devuelve el capital y el interés.' },
-      { termino: 'Precancelable', significado: 'Podés retirarlo antes del vencimiento, cobrando una tasa menor.' },
+      TNA,
+      { termino: 'Vencimiento', significado: 'El día en que el banco te devuelve la plata más el interés.' },
+      { termino: 'Precancelable', significado: 'Se puede retirar antes, cobrando una tasa menor.' },
     ],
   },
 
   plazo_fijo_uva: {
     id: 'plazo_fijo_uva',
     nombre: 'Plazo fijo UVA',
-    resumen: 'Un plazo fijo cuyo capital se actualiza con la inflación, para no perder poder de compra.',
+    resumen: 'Un plazo fijo que se actualiza con la inflación, para no perder poder de compra.',
     rol: 'ahorro',
     riesgo: 'Bajo',
     horizonteMinimoMeses: 3,
     plazoMinimoDias: 90,
     perfiles: ['conservador', 'moderado'],
-    queEs:
-      'Es un plazo fijo donde tu capital se ajusta por la inflación (el índice UVA) y además suma un interés chico. Está pensado para que tu plata no pierda valor, no para ganarle por mucho a la inflación.',
-    dondeQuedaTuPlata: [
-      'Igual que en un plazo fijo común: la plata queda en el banco durante todo el plazo, y el banco la usa para dar créditos.',
-      'El plazo mínimo es de 90 días. Durante ese tiempo no la podés tocar.',
-    ],
-    quePuedePasar:
-      'Cobrás tu capital actualizado por lo que subió la UVA, más el interés. Si la inflación sube, cobrás más pesos; si baja, cobrás menos. Siempre vas a cobrar en pesos y nunca menos que lo que puso el ajuste.',
+    queEs: 'Un plazo fijo donde tu plata se actualiza con la inflación (la UVA), más un interés chico. Protege lo que ahorraste; no está pensado para ganarle por mucho a la inflación.',
+    dondeQuedaTuPlata: 'En el banco, durante todo el plazo. Mínimo 90 días.',
+    riesgoTexto: 'Si la inflación sube, cobrás más pesos; si baja, cobrás menos. Siempre cobrás en pesos.',
     cuandoLaSacas: 'Al vencimiento, como mínimo a los 90 días.',
-    garantia: 'Es un depósito en un banco, así que entra en el seguro de depósitos hasta el tope vigente.',
+    garantia: 'Sí: es un depósito en un banco, con seguro de depósitos hasta el tope vigente.',
     glosario: [
-      { termino: 'UVA', significado: 'Unidad de Valor Adquisitivo: un índice del BCRA que sigue a la inflación. Si la UVA sube 2%, tu capital sube 2%.' },
+      { termino: 'UVA', significado: 'Un índice del BCRA que sigue a la inflación. Si la UVA sube 2%, tu plata sube 2%.' },
+      { termino: 'Vencimiento', significado: 'El día en que el banco te devuelve la plata ajustada más el interés.' },
     ],
   },
 
   letra: {
     id: 'letra',
     nombre: 'Letras del Tesoro',
-    resumen: 'Un préstamo al Estado por unos meses, con un monto fijo a cobrar en una fecha conocida.',
+    resumen: 'Un préstamo al Estado por unos meses, con un monto fijo a cobrar en una fecha.',
     rol: 'ahorro',
     riesgo: 'Medio',
     horizonteMinimoMeses: 1,
     plazoMinimoDias: null,
     perfiles: ['moderado', 'arriesgado'],
-    queEs:
-      'Una letra es un préstamo que le hacés al Estado nacional por unos meses. Pagás hoy un precio y en una fecha ya fijada el Estado te devuelve un monto mayor. La diferencia es tu ganancia, y se sabe cuánto es desde el día en que la comprás.',
-    dondeQuedaTuPlata: [
-      'Tu plata va al Tesoro Nacional, que la usa para financiarse. Vos no entregás plata a un banco: pagás por un título que queda registrado a tu nombre en tu cuenta comitente (el “depósito” de tus títulos), separado de la plata del broker.',
-      'Se compran a través de un broker (Cocos, Balanz, etc.) y se ven en tu cartera como cualquier otra tenencia.',
-    ],
-    quePuedePasar:
-      'Si la esperás hasta el vencimiento, cobrás lo que figuraba al comprarla. Si la vendés antes, el precio de mercado puede ser menor al que esperabas. El riesgo principal es que el Estado no pague: por eso conviene mirar el riesgo país.',
-    cuandoLaSacas:
-      'Al vencimiento, o antes vendiéndola en el mercado. La venta se acredita en uno o dos días hábiles.',
-    garantia: 'No tiene garantía de depósitos. El respaldo es el compromiso de pago del Estado nacional.',
+    queEs: 'Un préstamo que le hacés al Estado por unos meses. Pagás hoy un precio y en una fecha fija te devuelve un monto mayor.',
+    dondeQuedaTuPlata: 'En el Tesoro Nacional. Lo que comprás queda a tu nombre en tu cuenta del broker.',
+    riesgoTexto: 'Si esperás al vencimiento cobrás lo que figuraba; si vendés antes, el precio puede ser menor.',
+    cuandoLaSacas: 'Al vencimiento, o antes vendiéndola (se acredita en 1 o 2 días hábiles).',
+    garantia: 'No tiene seguro de depósitos: el respaldo es el compromiso de pago del Estado.',
     glosario: [
-      { termino: 'LECAP', significado: 'Letra capitalizable: no paga cupones, se cobra todo junto al final.' },
-      { termino: 'Vencimiento', significado: 'La fecha en que el Estado te devuelve el monto fijado.' },
-      { termino: 'TEM', significado: 'Tasa efectiva mensual: lo que rinde por mes. Es la más fácil de comparar con la inflación mensual.' },
-      { termino: 'Cuenta comitente', significado: 'Tu cuenta en el broker donde se guardan tus títulos.' },
+      { termino: 'Vencimiento', significado: 'La fecha en que el Estado te devuelve la plata.' },
+      TNA,
     ],
   },
 
@@ -199,46 +180,35 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     horizonteMinimoMeses: 3,
     plazoMinimoDias: null,
     perfiles: ['moderado', 'arriesgado'],
-    queEs:
-      'El dólar MEP es una forma legal de comprar dólares desde un broker: comprás un bono en pesos y lo vendés en dólares, sin pasar por el cupo del banco. Por eso su precio es distinto al oficial.',
-    dondeQuedaTuPlata: [
-      'Los dólares quedan en tu cuenta del broker, a tu nombre. Desde ahí los podés pasar a una cuenta en dólares de tu banco.',
-      'No genera intereses: guardar dólares no rinde, protege.',
-    ],
-    quePuedePasar:
-      'Lo que cambia es cuántos pesos valen tus dólares. Si el dólar sube más que la inflación, ganás poder de compra; si sube menos, perdés. Nadie sabe cuánto va a subir.',
-    cuandoLaSacas: 'Cuando quieras: vendés los dólares y los pesos llegan en uno o dos días hábiles.',
-    garantia: 'No hay garantía sobre el valor. El dólar puede subir o bajar.',
+    queEs: 'Comprar dólares de forma legal desde un broker (se llama dólar MEP), para cuidar tus ahorros si el dólar sube.',
+    dondeQuedaTuPlata: 'Los dólares quedan a tu nombre en tu cuenta del broker. Los podés pasar a una cuenta en dólares de tu banco.',
+    riesgoTexto: 'No genera intereses y lo que valen en pesos sube o baja con el dólar.',
+    cuandoLaSacas: 'Cuando quieras: vendés y los pesos llegan en 1 o 2 días hábiles.',
+    garantia: 'Ninguna sobre su valor: el dólar puede subir o bajar.',
     glosario: [
-      { termino: 'MEP', significado: 'Mercado Electrónico de Pagos: el mecanismo para comprar dólares con un bono.' },
-      { termino: 'Brecha', significado: 'La diferencia entre el dólar MEP y el oficial, en porcentaje.' },
+      { termino: 'MEP', significado: 'La forma legal de comprar dólares con un bono, sin pasar por el cupo del banco.' },
+      { termino: 'Brecha', significado: 'Cuánto más caro está el MEP que el dólar oficial.' },
     ],
   },
 
   cedear: {
     id: 'cedear',
     nombre: 'CEDEARs',
-    resumen: 'Pedacitos de empresas grandes del exterior (o de un índice), comprados en pesos.',
+    resumen: 'Pedacitos de empresas grandes del exterior, comprados en pesos. Para largo plazo.',
     rol: 'crecimiento',
     riesgo: 'Alto',
     horizonteMinimoMeses: 36,
     plazoMinimoDias: null,
     perfiles: ['arriesgado'],
-    queEs:
-      'Un CEDEAR es un certificado en pesos que representa un pedacito de una acción de una empresa del exterior (por ejemplo Apple) o de un grupo de ellas, como el índice S&P 500 (SPY).',
-    dondeQuedaTuPlata: [
-      'Comprás el certificado en el mercado argentino. Está respaldado por acciones reales que un banco guarda en el exterior. El CEDEAR queda a tu nombre en tu cuenta comitente del broker.',
-      'Como la empresa cotiza en dólares, tu CEDEAR se mueve con dos cosas a la vez: el precio de la empresa y el dólar.',
-    ],
-    quePuedePasar:
-      'El precio sube y baja todos los días y puede haber años enteros de pérdida. Históricamente el mercado de EE.UU. creció a lo largo de décadas, pero eso no asegura lo que pase en los próximos años.',
-    cuandoLaSacas:
-      'Lo vendés cuando quieras en horario de mercado y los pesos llegan en uno o dos días hábiles. Pero si vendés cuando el precio está bajo, la pérdida se concreta.',
-    garantia: 'Ninguna garantía sobre el valor.',
+    queEs: 'Un pedacito de una empresa grande del exterior (como Apple), comprado en pesos. Un ETF como SPY reúne a las 500 más grandes de EE.UU. y te evita elegir una sola.',
+    dondeQuedaTuPlata: 'Está respaldado por acciones reales que guarda un banco en el exterior. Queda a tu nombre en tu cuenta del broker.',
+    riesgoTexto: 'Sube y baja todos los días y puede haber años de pérdida. Es para plata que no vas a necesitar en 3 años o más.',
+    cuandoLaSacas: 'Cuando quieras en horario de mercado (1 o 2 días hábiles), pero si vendés cuando está bajo, perdés.',
+    garantia: 'Ninguna.',
     glosario: [
-      { termino: 'Acción', significado: 'Una parte de una empresa. Si la empresa vale más, tu parte vale más.' },
-      { termino: 'Índice', significado: 'Un conjunto de empresas juntas; SPY sigue a las 500 más grandes de EE.UU.' },
-      { termino: 'Volatilidad', significado: 'Cuánto sube y baja el precio. Alta volatilidad = más vaivén.' },
+      { termino: 'ETF', significado: 'Un “paquete” de muchas empresas en una sola compra.' },
+      { termino: 'Diversificar', significado: 'No poner toda la plata en el mismo lugar: si uno cae, no caés vos.' },
+      { termino: 'Volatilidad', significado: 'Cuánto sube y baja el precio. Más vaivén, más riesgo.' },
     ],
   },
 };
@@ -269,6 +239,13 @@ export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
     nombre: 'Mercado Pago',
     tipo: 'billetera',
     productos: { cuenta_remunerada: { tipo: 'fondo', id: 'Mercado Fondo - Clase A' } },
+    paraEmpezar: 'Una cuenta con tu DNI y una selfie, y plata para ingresar.',
+  },
+  naranja_x: {
+    id: 'naranja_x',
+    nombre: 'Naranja X',
+    tipo: 'billetera',
+    productos: { cuenta_remunerada: { tipo: 'cuenta', id: 'NARANJA X' } },
     paraEmpezar: 'Una cuenta con tu DNI y una selfie, y plata para ingresar.',
   },
   uala: {
@@ -311,11 +288,17 @@ export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
   },
 };
 
-export const ORDEN_PRODUCTOS: ProductoId[] = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'dolar', 'cedear'];
+/**
+ * Lo que se recomienda y se puede registrar, empezando por lo conocido. Las
+ * letras del Tesoro siguen en el catálogo (el motor las sabe evaluar) pero no se
+ * ofrecen: nadie las conoce, y para empezar alcanza con lo de abajo.
+ */
+export const ORDEN_PRODUCTOS: ProductoId[] = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'dolar', 'cedear'];
 
 /** Los nombres con los que la persona dice que usa cada proveedor (campo "bancos" del perfil inversor). */
 export const ALIAS_PROVEEDOR: Record<string, ProveedorId> = {
   'Mercado Pago': 'mercado_pago',
+  'Naranja X': 'naranja_x',
   Ualá: 'uala',
   'Cocos Capital': 'cocos',
   Cocos: 'cocos',

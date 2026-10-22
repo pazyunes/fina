@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as acciones from '../../../api/v2/acciones';
 import type { PosicionInversion } from '../../../api/v2/tipos';
 import { nombreProducto } from '../../../lib/inversiones/catalogo';
@@ -41,6 +41,15 @@ export function MisInversiones({
   const mercado = estado.tipo === 'listo' ? estado.mercado : null;
   const [abierta, setAbierta] = useState<PosicionInversion | null>(null);
   const [confirmarBorrar, setConfirmarBorrar] = useState(false);
+  const [confirmarCerrar, setConfirmarCerrar] = useState(false);
+  // Lo último que hizo, para poder deshacerlo unos segundos.
+  const [deshacer, setDeshacer] = useState<{ tipo: 'cerrada' | 'borrada'; pos: PosicionInversion } | null>(null);
+
+  useEffect(() => {
+    if (!deshacer) return;
+    const t = setTimeout(() => setDeshacer(null), 8000);
+    return () => clearTimeout(t);
+  }, [deshacer]);
 
   const activas = posiciones.filter((p) => p.estado === 'activa');
   const cerradas = posiciones.filter((p) => p.estado === 'cerrada');
@@ -51,7 +60,7 @@ export function MisInversiones({
     <button
       key={p.id}
       type="button"
-      onClick={() => { setAbierta(p); setConfirmarBorrar(false); }}
+      onClick={() => { setAbierta(p); setConfirmarBorrar(false); setConfirmarCerrar(false); }}
       className="v2-focus w-full text-left flex items-center justify-between gap-3 min-h-[64px] py-3 border-b last:border-b-0 transition-all duration-100 active:scale-[0.99]"
       style={{ borderColor: COLORS.line }}
       aria-label={`Ver ${nombreProducto(p.tipo)} en ${p.proveedor}`}
@@ -114,6 +123,28 @@ export function MisInversiones({
 
       {legacy}
 
+      {deshacer && (
+        <div
+          role="status"
+          className="fixed left-4 right-4 bottom-4 z-40 mx-auto max-w-[420px] flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
+          style={{ background: COLORS.ink, color: COLORS.surface }}
+        >
+          <span className="text-[15px]">{deshacer.tipo === 'cerrada' ? 'Inversión cerrada.' : 'Inversión borrada.'}</span>
+          <button
+            type="button"
+            onClick={() => {
+              if (deshacer.tipo === 'cerrada') acciones.reabrirPosicion(deshacer.pos.id);
+              else acciones.restaurarPosicion(deshacer.pos);
+              setDeshacer(null);
+            }}
+            className="v2-focus min-h-[44px] px-3 text-[15px] font-bold"
+            style={{ color: COLORS.star }}
+          >
+            Deshacer
+          </button>
+        </div>
+      )}
+
       {abierta && (
         <Hoja titulo={nombreProducto(abierta.tipo)} onCerrar={() => setAbierta(null)}>
           <div className="flex flex-col">
@@ -133,21 +164,40 @@ export function MisInversiones({
           </p>
 
           {abierta.estado === 'activa' && (
-            <button
-              type="button"
-              onClick={() => { acciones.cerrarPosicion(abierta.id); setAbierta(null); }}
-              className="v2-focus min-h-[48px] rounded-2xl text-[16px] font-bold"
-              style={{ border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
-            >
-              Ya la cobré / la cerré
-            </button>
+            confirmarCerrar ? (
+              <div className="flex flex-col gap-2.5">
+                <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+                  ¿Ya la cobraste o la cerraste? Si confirmás, esta inversión se va a borrar de tu lista. Si te arrepentís, vas a poder deshacerlo enseguida.
+                </p>
+                <div className="flex gap-2.5">
+                  <button type="button" onClick={() => setConfirmarCerrar(false)} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}>Cancelar</button>
+                  <button
+                    type="button"
+                    onClick={() => { acciones.cerrarPosicion(abierta.id); setDeshacer({ tipo: 'cerrada', pos: abierta }); setAbierta(null); }}
+                    className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold"
+                    style={{ background: COLORS.brand, color: COLORS.surface }}
+                  >
+                    Sí, confirmar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmarCerrar(true)}
+                className="v2-focus min-h-[48px] rounded-2xl text-[16px] font-bold"
+                style={{ border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
+              >
+                Ya la cobré / la cerré
+              </button>
+            )
           )}
           {confirmarBorrar ? (
             <div className="flex flex-col gap-2.5">
               <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>¿Borramos este registro? Es como si nunca lo hubieras anotado.</p>
               <div className="flex gap-2.5">
                 <button type="button" onClick={() => setConfirmarBorrar(false)} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}>Cancelar</button>
-                <button type="button" onClick={() => { acciones.borrarPosicion(abierta.id); setAbierta(null); }} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ background: COLORS.naranja, color: COLORS.ink }}>Sí, borrar</button>
+                <button type="button" onClick={() => { acciones.borrarPosicion(abierta.id); setDeshacer({ tipo: 'borrada', pos: abierta }); setAbierta(null); }} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ background: COLORS.naranja, color: COLORS.ink }}>Sí, borrar</button>
               </div>
             </div>
           ) : (

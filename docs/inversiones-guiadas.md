@@ -28,6 +28,21 @@ fuentes públicas ─► api/mercado.ts ─► src/app/api/v2/mercado.ts ─► 
   no bloquean, y el armado desde una captura.
 - **`lib/inversiones/seguimiento.ts`**: las "Novedades" de Mis inversiones.
 
+## Cómo se ve (decisiones de producto)
+
+- **La ficha de cada inversión son "globitos"**, siempre los mismos y en el mismo orden: ¿Qué es?,
+  ¿Cuánto rinde? (porcentaje + un ejemplo con plata), ¿Dónde queda tu plata?, riesgo, ¿Cuándo la
+  podés sacar?, ¿Alguien la garantiza? y un glosario al final. El texto fijo vive en
+  `lib/inversiones/catalogo.ts`; el "cuánto rinde" se arma con datos de hoy en `lib/inversiones/rinde.ts`.
+- **Un proveedor que hoy rinde menos que la inflación no se ofrece** si hay otro que no (hoy Mercado
+  Pago y Naranja X quedan afuera de "cuenta remunerada").
+- **Se recomienda sólo lo conocido**: cuenta remunerada, fondo común (money market), plazo fijo (y UVA),
+  dólar y CEDEARs. Las letras del Tesoro siguen en el motor pero no se ofrecen.
+- **Si no se sabe cuánto le sobra a la persona, no se dice nada**: la sección "¿Con cuánto empezar?" no aparece.
+- **El paso a paso** arranca con 3 pantallas ("Aprendé en 2 minutos"), después el monto, y los pasos
+  son numerados y se puede ir y volver. Los 12+ pasos a paso siguen sin verificarse en las apps reales.
+- En Mercado Pago el rendimiento está en **Inversiones → Mercado Fondo**, no en "Reservas" (que no rinde).
+
 ## Fuentes (verificadas el 21/10/2026)
 
 | Dato | Fuente | Nota |

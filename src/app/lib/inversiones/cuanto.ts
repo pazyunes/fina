@@ -87,28 +87,11 @@ export type SugerenciaMonto = {
 };
 
 export function sugerirMonto(sobrante: Sobrante | null): SugerenciaMonto {
-  if (!sobrante) {
-    return {
-      tipo: 'por-descubrir',
-      monto: null,
-      primero: null,
-      mensajes: [
-        'Todavía no sabemos cuánto te sobra por mes. Con los ingresos y gastos de un mes más te lo afinamos.',
-        'Mientras tanto, si querés probar, empezá con un monto chico que no necesites este mes.',
-      ],
-    };
-  }
-  if (sobrante.mediana <= 0) {
-    return {
-      tipo: 'todavia-no',
-      monto: null,
-      primero: null,
-      mensajes: [
-        'En los últimos meses no te sobró plata a fin de mes. Invertir es para lo que sobra, así que por ahora no te sugerimos un monto.',
-        'Podés mirar y simular igual para entender cómo funciona. Y si querés, te ayudamos a ver en qué se va la plata para que aparezca algo para separar.',
-      ],
-    };
-  }
+  // Si no se sabe cuánto le sobra, no se dice nada: no hay nada que mostrar. La
+  // pantalla simplemente no trae esta sección.
+  if (!sobrante) return { tipo: 'por-descubrir', monto: null, primero: null, mensajes: [] };
+  if (sobrante.mediana <= 0) return { tipo: 'todavia-no', monto: null, primero: null, mensajes: [] };
+
   if (sobrante.piso <= 0) {
     const min = redondearMonto(sobrante.mediana * 0.05);
     const max = Math.max(min, redondearMonto(sobrante.mediana * 0.15));
@@ -116,10 +99,7 @@ export function sugerirMonto(sobrante: Sobrante | null): SugerenciaMonto {
       tipo: 'empezar-poco',
       monto: { min, max },
       primero: min,
-      mensajes: [
-        `En algunos meses no te sobró nada, y en el mejor te sobraron alrededor de ${fmtPesos(sobrante.mediana)}. Por eso arrancamos con poco.`,
-        `Empezá con ${fmtPesos(min)}: alcanza para aprender cómo funciona sin que te falte plata un mes flojo.`,
-      ],
+      mensajes: [`Te conviene empezar con poco: ${fmtPesos(min)} por mes. Es lo que podés separar sin que te falte en un mes flojo.`],
     };
   }
   const min = redondearMonto(sobrante.piso * 0.15);
@@ -128,10 +108,7 @@ export function sugerirMonto(sobrante: Sobrante | null): SugerenciaMonto {
     tipo: 'regular',
     monto: { min, max },
     primero: min,
-    mensajes: [
-      `Mirando tus últimos ${sobrante.meses} meses, lo que menos te sobró fue ${fmtPesos(sobrante.piso)}. Partimos de ese mes, no del promedio, para que puedas sostenerlo siempre.`,
-      `Te sugerimos entre ${fmtPesos(min)} y ${fmtPesos(max)} por mes. Para la primera vez, ${fmtPesos(min)}.`,
-    ],
+    mensajes: [`Te conviene empezar con ${fmtPesos(min)} por mes. Es lo que te suele sobrar${max > min ? `, y de a poco podés llegar a ${fmtPesos(max)}` : ''}.`],
   };
 }
 

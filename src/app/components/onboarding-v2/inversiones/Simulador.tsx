@@ -13,7 +13,7 @@ import { Parrafo } from './Hoja';
 // hoy: una tasa nominal alta con una inflación más alta es una pérdida, y en
 // pesos eso no se ve si no se traduce.
 
-const SIMULABLES: ProductoId[] = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'dolar', 'cedear'];
+const SIMULABLES: ProductoId[] = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'dolar', 'cedear'];
 
 function GraficoSimulacion({
   aportado, lo, hi, meses,

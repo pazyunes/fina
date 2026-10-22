@@ -423,7 +423,11 @@ export function recomendar(ctx: Contexto): Resultado {
       continue;
     }
 
-    const opciones = [...vigentes].sort((a, b) => {
+    // Un proveedor que hoy rinde menos que la inflación no se ofrece si hay otro
+    // que no: es la misma regla que para el producto, aplicada a cada opción.
+    const noPierden = vigentes.filter((e) => e.veredicto !== 'pierde');
+    const candidatas = noPierden.length > 0 ? noPierden : vigentes;
+    const opciones = [...candidatas].sort((a, b) => {
       const d = puntaje(b) - puntaje(a);
       if (Math.abs(d) > 0.0005) return d;
       return Number(ctx.usa.includes(b.proveedor)) - Number(ctx.usa.includes(a.proveedor));
@@ -449,12 +453,6 @@ export function recomendar(ctx: Contexto): Resultado {
 
     if (todasPierden) {
       avisos.push('Hoy todas las opciones de este tipo rinden menos que la inflación. Sirven para tener la plata a mano, no para que crezca.');
-    }
-    if (mejor.veredicto === 'pierde' && !todasPierden) {
-      avisos.push('Esta opción en particular rinde menos que la inflación hoy; mirá las otras.');
-    }
-    if (vigentes.length < evals.length) {
-      avisos.push('Dejamos afuera opciones de las que no tenemos un dato de hoy.');
     }
     if (mejor.veredicto === 'variable') {
       avisos.push('No tiene un rendimiento que se pueda prometer: puede subir y bajar.');

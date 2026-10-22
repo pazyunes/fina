@@ -124,75 +124,86 @@ function guiaMercadoPago(ctx: ContextoGuia): Guia {
   return {
     proveedor: 'mercado_pago',
     producto: 'cuenta_remunerada',
-    titulo: 'Cuenta remunerada en Mercado Pago',
-    alTerminar: `${montoTxt(ctx.monto)} generando intereses todos los días en tu cuenta de Mercado Pago, disponibles cuando los necesites.`,
+    titulo: 'Rendimientos en Mercado Pago',
+    alTerminar: `${montoTxt(ctx.monto)} generando intereses todos los días en Mercado Pago, disponibles cuando los necesites.`,
     tiempo: 'Unos 10 minutos si ya tenés la cuenta; media hora si hay que crearla.',
     pasos: [
       pasoCuentaBilletera('Mercado Pago'),
       pasoIngresar('Mercado Pago', ctx.monto, false),
       {
-        id: 'activar',
-        titulo: 'Activá los rendimientos',
-        haces: 'Entrá a la sección “Rendimientos” (puede aparecer como “Tu plata rinde”) desde la pantalla de inicio.',
-        loVes: 'Vas a ver tu saldo, cuánto rindió hoy y un botón para activar. Si ya aparece activado, no hay nada más que tocar.',
-        lograras: 'Que el saldo empiece a generar intereses solo, todos los días. Detrás de esa función hay un fondo común de dinero (Mercado Fondo): tu plata queda invertida ahí, y la podés usar igual que siempre.',
-        chequeo: 'Ves un monto de “rendimiento de hoy” aunque sea de centavos.',
+        id: 'inversiones',
+        titulo: 'Entrá a “Inversiones” y buscá Mercado Fondo',
+        haces: 'En la pantalla de inicio de Mercado Pago tocá “Inversiones” y buscá “Mercado Fondo”.',
+        loVes: 'La ficha del fondo, con lo que rindió y un botón para invertir. Ojo: “Reservas” es otra cosa. Guarda tu plata, pero no genera intereses.',
+        lograras: 'Mercado Fondo es un fondo de inversión de dinero: tu plata queda ahí, rinde todos los días y la podés usar o retirar cuando quieras.',
+        chequeo: 'Estás en la ficha de Mercado Fondo.',
+      },
+      {
+        id: 'invertir',
+        titulo: `Invertí ${montoTxt(ctx.monto)}`,
+        haces: 'Tocá “Invertir” (puede decir “Suscribir”), poné el monto y confirmá.',
+        loVes: 'La app te muestra cuánto vas a invertir y de qué saldo sale.',
+        lograras: 'Tu plata pasa a ser cuotapartes del fondo y empieza a rendir desde el día siguiente.',
+        chequeo: 'En “Inversiones” ves tu monto invertido.',
       },
       {
         id: 'tasa',
-        titulo: 'Mirá la tasa que te muestran',
-        haces: 'Fijate qué porcentaje anual te muestra la app junto a “Rinde” (puede llamarse TNA o TEA).',
-        loVes: 'Un porcentaje, a veces con la leyenda “anual”. Es el que va a variar de un día para el otro.',
-        lograras: 'Comparar lo que te prometen con lo que muestra el mercado hoy, y entender si le está ganando a la inflación.',
+        titulo: 'Mirá cuánto rinde',
+        haces: 'En la ficha del fondo fijate el porcentaje anual que te muestran (puede llamarse TNA o TEA).',
+        loVes: 'Un porcentaje junto a “Rinde” o “Rendimiento”. Cambia de un día para el otro.',
+        lograras: 'Saber con qué número arrancás, y poder compararlo con otras opciones.',
         chequeo: 'Anotaste el porcentaje: lo vas a cargar en FINA.',
         datos: tasa ? [{ etiqueta: 'Lo que vemos hoy en el mercado', valor: tasa }] : undefined,
       },
-      pasoRescate('Mercado Pago', 'Tu plata sigue disponible: la usás como saldo normal, o la transferís a tu banco cuando quieras.'),
+      pasoRescate('Mercado Pago', 'Cuando la necesites: entrá a Mercado Fondo desde “Inversiones” y tocá “Rescatar” (o “Retirar”). La plata vuelve a tu saldo en el momento o en el día.'),
       pasoRegistrar(),
     ],
     porVerificar: [
-      'Que la sección se llame “Rendimientos” y esté en la pantalla de inicio.',
-      'Que el rendimiento de la cuenta venga del fondo Mercado Fondo.',
-      'Si hay un tope de saldo que rinde.',
+      'Cómo se llama el botón para invertir en Mercado Fondo.',
+      'Si el saldo de “Pesos” rinde solo o hay que pasarlo a Mercado Fondo.',
+      'Cuánto tarda el rescate.',
     ],
   };
 }
 
-function guiaUala(ctx: ContextoGuia): Guia {
+function guiaCuentaAutomatica(prov: 'uala' | 'naranja_x', ctx: ContextoGuia): Guia {
+  const nombre = PROVEEDORES[prov].nombre;
   const notas = ctx.evaluacion?.notas ?? [];
+  const pasos: PasoGuia[] = [
+    pasoCuentaBilletera(nombre),
+    pasoIngresar(nombre, ctx.monto, false),
+    {
+      id: 'saldo',
+      titulo: 'Dejá el saldo en la cuenta',
+      haces: 'No hay que activar nada: el saldo que tenés en la cuenta rinde solo.',
+      loVes: 'Entrá a la sección de rendimientos o de tu saldo y buscá la tasa y las condiciones.',
+      lograras: 'Que tu plata genere intereses mientras la tenés quieta, sin comprar ningún producto.',
+      chequeo: 'Ves el rendimiento diario en tu cuenta.',
+      datos: notas.map((n) => ({ etiqueta: 'Condiciones de hoy', valor: n })),
+    },
+  ];
+  if (prov === 'uala') {
+    pasos.push({
+      id: 'niveles',
+      titulo: 'Entendé los niveles de tasa',
+      haces: 'Ualá paga más si hacés determinadas operaciones al mes. Fijate si te conviene llegar a ese nivel o si con el básico alcanza.',
+      loVes: 'En la sección de rendimientos (o “Ualá Plus”) figura qué tenés que hacer para subir de nivel.',
+      lograras: 'No resignar tasa sin darte cuenta, ni cambiar tus hábitos sólo por subir un escalón.',
+      chequeo: 'Sabés en qué nivel estás y qué te pide el siguiente.',
+    });
+  }
+  pasos.push(pasoRescate(nombre, 'Tu plata sigue disponible como saldo: la usás normal o la transferís a tu banco.'), pasoRegistrar());
   return {
-    proveedor: 'uala',
+    proveedor: prov,
     producto: 'cuenta_remunerada',
-    titulo: 'Cuenta remunerada en Ualá',
-    alTerminar: `${montoTxt(ctx.monto)} rindiendo todos los días en tu cuenta de Ualá, disponibles cuando los necesites.`,
+    titulo: `Cuenta remunerada en ${nombre}`,
+    alTerminar: `${montoTxt(ctx.monto)} rindiendo todos los días en tu cuenta de ${nombre}, disponibles cuando los necesites.`,
     tiempo: 'Unos 10 minutos si ya tenés la cuenta; media hora si hay que crearla.',
-    pasos: [
-      pasoCuentaBilletera('Ualá'),
-      pasoIngresar('Ualá', ctx.monto, false),
-      {
-        id: 'saldo',
-        titulo: 'Dejá el saldo en la cuenta',
-        haces: 'No hay que activar nada: el saldo que tenés en la cuenta rinde solo.',
-        loVes: 'Entrá a la sección de rendimientos o de tu saldo y buscá la tasa y las condiciones.',
-        lograras: 'Que tu plata genere intereses mientras la tenés quieta, sin comprar ningún producto.',
-        chequeo: 'Ves el rendimiento diario en tu cuenta.',
-        datos: notas.map((n) => ({ etiqueta: 'Condiciones de hoy', valor: n })),
-      },
-      {
-        id: 'niveles',
-        titulo: 'Entendé los niveles de tasa',
-        haces: 'Ualá paga más si hacés determinadas operaciones al mes. Fijate si te conviene llegar a ese nivel o con el básico alcanza.',
-        loVes: 'En la sección de rendimientos (o “Ualá Plus”) figura qué tenés que hacer para subir de nivel.',
-        lograras: 'No resignar tasa sin darte cuenta, ni cambiar tus hábitos de gasto sólo por subir un escalón. Un gasto no es un error: no gastes de más para ganar un punto.',
-        chequeo: 'Sabés en qué nivel estás y qué te pide el siguiente.',
-      },
-      pasoRescate('Ualá', 'Tu plata sigue disponible como saldo: la usás normal o la transferís a tu banco.'),
-      pasoRegistrar(),
-    ],
+    pasos,
     porVerificar: [
-      'Dónde se ve la tasa y los niveles dentro de la app.',
+      'Dónde se ve la tasa dentro de la app.',
       'Si el rendimiento es automático o hay que activarlo.',
-      'Cómo se llaman los niveles hoy (Plus 1, Plus 2).',
+      ...(prov === 'uala' ? ['Cómo se llaman hoy los niveles (Plus 1, Plus 2).'] : []),
     ],
   };
 }
@@ -203,7 +214,7 @@ function guiaFondoBroker(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
   return {
     proveedor: prov,
     producto: 'fci',
-    titulo: `Fondo común de dinero en ${nombre}`,
+    titulo: `Fondo común de inversión en ${nombre}`,
     alTerminar: `${montoTxt(ctx.monto)} invertidos en el fondo ${fondo}: un fondo que presta a muy corto plazo y que podés rescatar en pocos días.`,
     tiempo: 'Un día o dos para que aprueben la cuenta; después, 10 minutos.',
     pasos: [
@@ -418,7 +429,8 @@ export function armarGuia(proveedor: ProveedorId, producto: ProductoId, ctx: Con
   if (!PROVEEDORES[proveedor].productos[producto]) return null;
   switch (`${proveedor}:${producto}`) {
     case 'mercado_pago:cuenta_remunerada': return guiaMercadoPago(ctx);
-    case 'uala:cuenta_remunerada': return guiaUala(ctx);
+    case 'uala:cuenta_remunerada': return guiaCuentaAutomatica('uala', ctx);
+    case 'naranja_x:cuenta_remunerada': return guiaCuentaAutomatica('naranja_x', ctx);
     case 'cocos:fci': return guiaFondoBroker('cocos', ctx);
     case 'balanz:fci': return guiaFondoBroker('balanz', ctx);
     case 'cocos:letra': return guiaLetras('cocos', ctx);

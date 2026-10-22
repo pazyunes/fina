@@ -710,6 +710,21 @@ export function cerrarPosicion(id: string) {
   push(() => api.editarPosicion(id, { estado: 'cerrada' }), 'Inversión marcada como cerrada.');
 }
 
+/** Deshacer un "cerrar": vuelve a figurar entre las activas. */
+export function reabrirPosicion(id: string) {
+  parchearEstado({
+    posiciones: leerEstado().posiciones.map((p) => (p.id === id ? { ...p, estado: 'activa' as const } : p)),
+  });
+  push(() => api.editarPosicion(id, { estado: 'activa' }), 'Inversión restaurada.');
+}
+
+/** Deshacer un "borrar": se vuelve a guardar la misma fila, con el mismo id. */
+export function restaurarPosicion(p: PosicionInversion) {
+  parchearEstado({ posiciones: [p, ...leerEstado().posiciones.filter((x) => x.id !== p.id)] });
+  const { ts: _ts, ...resto } = p;
+  push(() => api.crearPosicion(resto), 'Inversión restaurada.');
+}
+
 export function borrarPosicion(id: string) {
   parchearEstado({ posiciones: leerEstado().posiciones.filter((p) => p.id !== id) });
   push(() => api.borrarPosicion(id), 'Inversión borrada con éxito.');

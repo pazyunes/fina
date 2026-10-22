@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { PosicionInversion } from '../../../api/v2/tipos';
-import { PRODUCTOS, type PerfilRiesgo, type ProductoId, type ProveedorId } from '../../../lib/inversiones/catalogo';
+import { PRODUCTOS, PROVEEDORES, type PerfilRiesgo, type ProductoId, type ProveedorId } from '../../../lib/inversiones/catalogo';
 import type { Colchon, SugerenciaMonto } from '../../../lib/inversiones/cuanto';
 import { pct } from '../../../lib/inversiones/formato';
 import { recomendar, textoVeredicto, type Recomendacion, type Veredicto } from '../../../lib/inversiones/motor';
@@ -151,8 +151,9 @@ export function RecomendacionesTab({
       {detalle && (
         <DetalleProducto
           rec={detalle}
-          inflacion={inflacion}
+          mercado={mercado}
           usa={usa}
+          sugerencia={sugerencia}
           onCerrar={() => setDetalle(null)}
           onElegir={(proveedor) => { setGuia({ rec: detalle, proveedor }); setDetalle(null); }}
         />
@@ -173,8 +174,5 @@ export function RecomendacionesTab({
 }
 
 function nombreProveedor(id: ProveedorId): string {
-  const nombres: Record<ProveedorId, string> = {
-    mercado_pago: 'Mercado Pago', uala: 'Ualá', cocos: 'Cocos Capital', balanz: 'Balanz', banco: 'tu banco',
-  };
-  return nombres[id];
+  return id === 'banco' ? 'tu banco' : PROVEEDORES[id].nombre;
 }
