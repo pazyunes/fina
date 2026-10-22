@@ -7,7 +7,8 @@ import { Desplegable } from './Desplegable';
 // vista y con su fecha. Si alguien quiere saber "¿por qué me dicen esto?", acá
 // está la respuesta: son estos datos, de estas fechas.
 export function MercadoHoy({ mercado }: { mercado: Mercado }) {
-  const lista = indicadores(mercado);
+  // Sólo lo que está al día: un número viejo no se muestra (y si falta algo esencial, la pantalla ni llega acá).
+  const lista = indicadores(mercado).filter((i) => i.vigente);
   return (
     <Desplegable titulo="Los números de hoy en los que nos basamos">
       <div className="flex flex-col pt-1">
@@ -16,18 +17,13 @@ export function MercadoHoy({ mercado }: { mercado: Mercado }) {
             <span className="flex flex-col min-w-0">
               <span className="text-[15px]" style={{ color: COLORS.ink }}>{i.etiqueta}</span>
               <span className="text-[12px] leading-snug" style={{ color: COLORS.inkFaint }}>
-                {i.vigente ? `al ${fechaCorta(i.fecha)}` : `desactualizado, es del ${fechaCorta(i.fecha)}`} · {i.fuente}
+                al {fechaCorta(i.fecha)} · {i.fuente}
               </span>
             </span>
             <span className="font-mono tabular-nums text-[15px] font-semibold shrink-0" style={{ color: COLORS.ink }}>{i.valor}</span>
           </div>
         ))}
       </div>
-      {mercado.fallas.length > 0 && (
-        <p className="text-[13px] leading-snug pt-2" style={{ color: COLORS.inkFaint }}>
-          Algunas fuentes no respondieron hoy ({mercado.fallas.map((f) => f.split(':')[0]).join(', ')}). Lo que depende de ellas no se recomienda hasta tener el dato.
-        </p>
-      )}
     </Desplegable>
   );
 }

@@ -26,9 +26,10 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Mercado } from '../src/app/lib/inversiones/mercadoTipos.js';
 import { recomendar } from '../src/app/lib/inversiones/motor.js';
 import { registrarYAvisar } from './_mercado/alertas.js';
+import { leerDeclaradas } from './_mercado/declaradas.js';
 import { completarConHistoria, construirMercado, hoyAR, paqueteUtil, rellenarConAnterior } from './_mercado/fuentes.js';
 
-type Req = { method?: string };
+type Req = { method?: string; query?: Record<string, string | string[] | undefined> };
 type Res = { status(code: number): Res; json(body: unknown): void; setHeader(nombre: string, valor: string): void };
 
 const CINCO_MIN = 5 * 60 * 1000;
@@ -101,7 +102,8 @@ async function regenerar(): Promise<Mercado> {
   const db = clienteServicio();
   const previo = memoria?.datos ?? (await leerUltimoGuardado(db));
   const fotos = await leerFotos(db);
-  const nuevo = completarConHistoria(rellenarConAnterior(await construirMercado(), previo), fotos);
+  const declaradas = await leerDeclaradas(db, hoyAR());
+  const nuevo = completarConHistoria(rellenarConAnterior(await construirMercado(Date.now(), declaradas), previo), fotos);
 
   if (!paqueteUtil(nuevo)) {
     // Casi nada llegó: mejor el último paquete bueno, dicho como desactualizado, que uno vacío.
@@ -120,12 +122,16 @@ export default async function handler(req: Req, res: Res) {
     return;
   }
 
-  if (!memoria || Date.now() - memoria.cuando >= CINCO_MIN) {
+  // Quien reintenta quiere un paquete nuevo, pero no más de uno por minuto para no saturar las fuentes.
+  const pideFresco = !!req.query?.fresco && !!memoria && Date.now() - memoria.cuando > 60_000;
+  if (!memoria || pideFresco || Date.now() - memoria.cuando >= CINCO_MIN) {
     // Si varias personas piden a la vez, todas esperan la misma regeneración.
     enCurso ??= regenerar().finally(() => { enCurso = null; });
     try {
       memoria = { cuando: Date.now(), datos: await enCurso };
     } catch (e) {
+      console.error('[mercado] no se pudo armar el paquete:', e instanceof Error ? e.message : e);
+      await registrarYAvisar(clienteServicio(), [{ clave: 'api-mercado', gravedad: 'grave', mensaje: `No se pudieron armar los datos de mercado: ${e instanceof Error ? e.message : String(e)}` }], hoyAR());
       if (!memoria) {
         res.setHeader('Cache-Control', 'no-store');
         res.status(503).json({ error: 'No hay datos de mercado disponibles', detalle: e instanceof Error ? e.message : String(e) });

@@ -700,6 +700,11 @@ export async function registrarPosicion(
   if (r.error !== null) return { posicion: null, error: mensajeDePosicion(r.error) };
   parchearEstado({ posiciones: [r.data, ...leerEstado().posiciones] });
   avisarConfirmacion('Inversión registrada con éxito.');
+  // La tasa que vio en su app también es un dato real para todos: queda anotada (sin avisarle nada).
+  if (datos.tna !== null && datos.proveedor && (datos.tipo === 'cuenta_remunerada' || datos.tipo === 'fci')) {
+    const fondo = typeof datos.detalle.fondo === 'string' ? datos.detalle.fondo : '';
+    void api.declararTasa({ tipo: datos.tipo, lugar: datos.proveedor, fondo, tna: datos.tna });
+  }
   return { posicion: r.data, error: null };
 }
 
@@ -708,6 +713,11 @@ export function cerrarPosicion(id: string) {
     posiciones: leerEstado().posiciones.map((p) => (p.id === id ? { ...p, estado: 'cerrada' as const } : p)),
   });
   push(() => api.editarPosicion(id, { estado: 'cerrada' }), 'Inversión marcada como cerrada.');
+}
+
+/** La tasa que la persona ve en su app, anotada desde el paso a paso. Silenciosa. */
+export function declararTasa(d: { tipo: 'cuenta_remunerada' | 'fci'; lugar: string; fondo?: string; tna: number }) {
+  void api.declararTasa(d);
 }
 
 /** Deshacer un "cerrar": vuelve a figurar entre las activas. */

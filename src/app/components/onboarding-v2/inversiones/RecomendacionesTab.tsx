@@ -5,6 +5,7 @@ import type { Colchon, SugerenciaMonto } from '../../../lib/inversiones/cuanto';
 import type { InflacionPersonal } from '../../../lib/inversiones/inflacionPersonal';
 import { RUBROS } from '../../../lib/inversiones/ipc';
 import { pct } from '../../../lib/inversiones/formato';
+import { hayFallaEsencial, MENSAJE_DE_ERROR } from '../../../lib/inversiones/estadoDatos';
 import { recomendar, type ItemProducto, type Recomendacion } from '../../../lib/inversiones/motor';
 import type { Valores } from '../../../lib/inversiones/registro';
 import { useMercado } from '../../../lib/inversiones/useMercado';
@@ -70,23 +71,16 @@ export function RecomendacionesTab({
       </div>
     );
   }
-  if (estado.tipo === 'error' || !mercado || !resultado) {
+  // Cualquier problema con los datos se le muestra igual a la persona: un error corto y reintentar
+  // más tarde. El detalle de qué falló le llega a quien mantiene FINA (ver estadoDatos.ts).
+  if (estado.tipo === 'error' || !mercado || !resultado || resultado.sinBase || hayFallaEsencial(mercado)) {
     return (
-      <div className="flex flex-col gap-3">
-        <TituloSeccion>No pudimos traer los datos de hoy</TituloSeccion>
-        <Parrafo>Sin los números del mercado no te recomendamos nada: preferimos no decirte algo que no podemos respaldar. Probá de nuevo en un momento.</Parrafo>
+      <div className="flex flex-col gap-3" role="alert">
+        <TituloSeccion>{MENSAJE_DE_ERROR.titulo}</TituloSeccion>
+        <Parrafo>{MENSAJE_DE_ERROR.texto}</Parrafo>
         <button type="button" onClick={reintentar} className="v2-focus self-start min-h-[44px] rounded-full px-5 text-[15px] font-bold" style={{ border: `1.5px solid ${COLORS.brand}`, color: COLORS.brand }}>
           Reintentar
         </button>
-      </div>
-    );
-  }
-  if (resultado.sinBase) {
-    return (
-      <div className="flex flex-col gap-3">
-        <TituloSeccion>Todavía no podemos recomendarte</TituloSeccion>
-        <Parrafo>No tenemos un dato de inflación al día, y sin eso no se puede saber si una opción le gana o no. Apenas lo tengamos te mostramos las opciones.</Parrafo>
-        <MercadoHoy mercado={mercado} />
       </div>
     );
   }
@@ -121,12 +115,6 @@ export function RecomendacionesTab({
 
   return (
     <div className="flex flex-col gap-6">
-      {mercado.desactualizado && (
-        <p className="text-[14px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.star }}>
-          No pudimos actualizar los datos y estamos mostrando los últimos que tenemos. Cada número dice de qué fecha es.
-        </p>
-      )}
-
       <section className="flex flex-col gap-3" aria-label="Contanos qué querés hacer">
         <TituloSeccion>¿Cuánto querés invertir?</TituloSeccion>
         <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>

@@ -396,12 +396,15 @@ async function seguro<T>(nombre: string, fallas: string[], f: () => Promise<T>, 
   try {
     return await f();
   } catch (e) {
-    fallas.push(`${nombre}: ${e instanceof Error ? e.message : String(e)}`);
+    const motivo = e instanceof Error ? e.message : String(e);
+    // Queda en los logs de Vercel además de en las alertas: ahí se ve qué falló y por qué.
+    console.error(`[mercado] la fuente "${nombre}" falló:`, motivo);
+    fallas.push(`${nombre}: ${motivo}`);
     return vacio;
   }
 }
 
-export async function construirMercado(ahora: number = Date.now()): Promise<Mercado> {
+export async function construirMercado(ahora: number = Date.now(), declaradas: Mercado['declaradas'] = {}): Promise<Mercado> {
   const hoy = hoyAR(ahora);
   const fallas: string[] = [];
   const dolarVacio: Mercado['dolar'] = { oficial: null, mep: null, ccl: null, blue: null, brechaMep: null, mep30d: null };
@@ -451,6 +454,7 @@ export async function construirMercado(ahora: number = Date.now()): Promise<Merc
     riesgoPais: rp,
     spy,
     ipc,
+    declaradas,
     alertas: [],
     fallas,
   };
@@ -494,6 +498,7 @@ export function rellenarConAnterior(nuevo: Mercado, previo: Mercado | null): Mer
     riesgoPais: nuevo.riesgoPais ?? previo.riesgoPais,
     spy: nuevo.spy ?? previo.spy,
     ipc: nuevo.ipc ?? previo.ipc,
+    declaradas: nuevo.declaradas,
   };
 }
 

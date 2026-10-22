@@ -24,7 +24,7 @@ import {
   type FuenteDato, type PerfilRiesgo, type Producto, type ProductoId, type ProveedorId, type Rol,
 } from './catalogo';
 import { diaMes, enMeses, fmtPesos, listaConY, nombreCuenta, nombrePropio, pct, pctConSigno, rangoPct, rangoPctConSigno } from './formato';
-import { limitesDe } from './limites';
+import { claveDeclarada, limitesDe, origenDeclarable } from './limites';
 import { edadEnDias, estaVigente, type Dato, type Mercado } from './mercadoTipos';
 
 export type Rango = { min: number; max: number };
@@ -152,14 +152,35 @@ function conTasa(
   };
 }
 
+/** Lo que declaran varias personas que ven la tasa en su app: respaldo cuando la publicada falta o está vieja. */
+function declaradaPara(producto: ProductoId, proveedor: ProveedorId, m: Mercado): { tna: number; n: number; fecha: string } | null {
+  const o = origenDeclarable(producto, proveedor, PROVEEDORES[proveedor].nombre);
+  return o ? (m.declaradas[claveDeclarada(o.tipo, o.lugar, o.fondo)] ?? null) : null;
+}
+
+function evaluarConDeclarada(
+  producto: ProductoId, proveedor: ProveedorId, d: { tna: number; n: number; fecha: string }, infl: Inflacion,
+): Evaluacion {
+  return conTasa(producto, proveedor, { min: Math.max(0, d.tna - 0.01), max: d.tna + 0.01 }, infl.mensual, {
+    fecha: d.fecha,
+    fuente: 'tasas que declaran personas que lo usan',
+    confianza: 'declarado',
+    vigente: true,
+    detalle: `Según lo que declaran ${d.n} personas que lo usan, rinde cerca de ${pct(d.tna * 100, 0)} anual.`,
+    notas: ['Es lo que ven en su propia app: puede cambiar de un día para el otro.'],
+  });
+}
+
 function evaluarFondo(
   producto: ProductoId, proveedor: ProveedorId, id: string, m: Mercado, infl: Inflacion, ahora: number,
 ): Evaluacion {
   const f = m.fondos?.valor.find((x) => x.id === id);
+  const declarada = declaradaPara(producto, proveedor, m);
+  const vigente = !!f && estaVigente('fondo', f.fecha, ahora);
+  const medidas = f ? [f.tna1, f.tna7, f.tna30].filter((x): x is number => x !== null) : [];
+  // Sin un dato publicado al día, se usa lo que declaran las personas (si son suficientes).
+  if ((!f || !m.fondos || !vigente || medidas.length === 0) && declarada) return evaluarConDeclarada(producto, proveedor, declarada, infl);
   if (!f || !m.fondos) return sinDato(producto, proveedor, 'No tenemos el dato de este fondo.');
-  const vigente = estaVigente('fondo', f.fecha, ahora);
-
-  const medidas = [f.tna1, f.tna7, f.tna30].filter((x): x is number => x !== null);
   if (medidas.length === 0) return sinDato(producto, proveedor, 'Todavía no tenemos rendimiento calculado para este fondo.');
 
   // Cuantos más días de historia, más angosto el rango. Con un solo día, el
@@ -183,6 +204,8 @@ function evaluarCuenta(
   m: Mercado, infl: Inflacion, ahora: number,
 ): Evaluacion {
   const base = m.cuentas?.valor.find((c) => c.id === f.id);
+  const declarada = declaradaPara(producto, proveedor, m);
+  if ((!base || !m.cuentas || !estaVigente('cuenta', base.fecha, ahora)) && declarada) return evaluarConDeclarada(producto, proveedor, declarada, infl);
   if (!base || !m.cuentas) return sinDato(producto, proveedor, 'No tenemos la tasa de esta cuenta.');
   const niveles = (f.extra ?? [])
     .map((id) => m.cuentas?.valor.find((c) => c.id === id))

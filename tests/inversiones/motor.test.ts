@@ -12,6 +12,8 @@ import { evaluar, inflacionDeReferencia, recomendar, type Contexto } from '../..
 import type { Mercado } from '../../src/app/lib/inversiones/mercadoTipos';
 import { AHORA, mercadoFixture } from './fixture';
 import { chequear } from '../../api/_mercado/chequeos';
+import { agregarDeclaradas } from '../../src/app/lib/inversiones/declaradas';
+import { hayFallaEsencial, MENSAJE_DE_ERROR } from '../../src/app/lib/inversiones/estadoDatos';
 
 const ctx = (m: Mercado, c: Partial<Contexto> = {}): Contexto => ({
   mercado: m, perfil: 'moderado', horizonteMeses: 12, monto: null, usa: [], yaInvierteEn: [], necesitaCaja: true, ahora: AHORA, ...c,
@@ -248,5 +250,82 @@ describe('textos para alguien que no sabe nada', () => {
       assert.equal(new Set(nombres).size, nombres.length, `${p.id} repite términos`);
       for (const g of p.glosario) assert.ok(g.significado.length > 15, `${p.id}.${g.termino} sin definición`);
     }
+  });
+});
+
+describe('tasas declaradas por las personas (billeteras y fondos sin API)', () => {
+  const fila = (user: string, tna: number, dia = '2026-10-20', kind = 'cuenta_remunerada', provider = 'Ualá', fund = '') => ({ user_id: user, kind, provider, fund, tna, declared_on: dia });
+  it('con menos de 3 personas no se usa nada (una sola persona o un error de tipeo no pesa)', () => {
+    assert.deepEqual(agregarDeclaradas([fila('a', 0.2), fila('b', 0.21)]), {});
+  });
+  it('con 3 o más se usa la MEDIANA, y se dice cuántas son', () => {
+    const r = agregarDeclaradas([fila('a', 0.19), fila('b', 0.2), fila('c', 0.21), fila('d', 0.9)]);
+    const d = r['cuenta_remunerada|Ualá|'];
+    assert.equal(d.n, 4);
+    assert.ok(Math.abs(d.tna - 0.205) < 1e-9, 'la mediana ignora al que puso 90%');
+  });
+  it('cada persona cuenta una vez por lugar, con su declaración más reciente', () => {
+    const r = agregarDeclaradas([fila('a', 0.1, '2026-10-15'), fila('a', 0.2, '2026-10-20'), fila('b', 0.2), fila('c', 0.2)]);
+    assert.equal(r['cuenta_remunerada|Ualá|'].n, 3);
+    assert.ok(Math.abs(r['cuenta_remunerada|Ualá|'].tna - 0.2) < 1e-9);
+  });
+  it('los lugares no se mezclan (un fondo no se confunde con una cuenta)', () => {
+    const r = agregarDeclaradas([
+      fila('a', 0.2), fila('b', 0.2), fila('c', 0.2),
+      fila('a', 0.18, '2026-10-20', 'fci', 'Cocos Capital', 'Cocos Ahorro'), fila('b', 0.18, '2026-10-20', 'fci', 'Cocos Capital', 'Cocos Ahorro'),
+    ]);
+    assert.ok(r['cuenta_remunerada|Ualá|']);
+    assert.equal(r['fci|Cocos Capital|Cocos Ahorro'], undefined, 'sólo 2 personas');
+  });
+  it('si la tasa publicada de Ualá falta o está vieja, se usa lo declarado y se marca como declarado', () => {
+    const base = mercadoFixture();
+    const m = mercadoFixture({
+      cuentas: { ...base.cuentas!, valor: base.cuentas!.valor.map((c) => ({ ...c, fecha: '2026-09-01' })) },
+      declaradas: { 'cuenta_remunerada|Ualá|': { tna: 0.22, n: 5, fecha: '2026-10-20' } },
+    });
+    const infl = inflacionDeReferencia(m, AHORA)!;
+    const ev = evaluar('cuenta_remunerada', 'uala', m, infl, AHORA)!;
+    assert.equal(ev.confianza, 'declarado');
+    assert.equal(ev.vigente, true);
+    assert.match(ev.detalle, /5 personas/);
+  });
+  it('si la tasa publicada está al día, NO se reemplaza por lo declarado', () => {
+    const m = mercadoFixture({ declaradas: { 'cuenta_remunerada|Ualá|': { tna: 0.5, n: 9, fecha: '2026-10-20' } } });
+    const infl = inflacionDeReferencia(m, AHORA)!;
+    assert.equal(evaluar('cuenta_remunerada', 'uala', m, infl, AHORA)!.confianza, 'confirmado');
+  });
+  it('el fondo de Mercado Pago usa lo declarado cuando el dato de CAFCI está viejo', () => {
+    const base = mercadoFixture();
+    const m = mercadoFixture({
+      fondos: { ...base.fondos!, valor: base.fondos!.valor.map((f) => ({ ...f, fecha: '2026-09-01' })) },
+      declaradas: { 'fci|Mercado Pago|Mercado Fondo': { tna: 0.2, n: 4, fecha: '2026-10-20' } },
+    });
+    const infl = inflacionDeReferencia(m, AHORA)!;
+    assert.equal(evaluar('cuenta_remunerada', 'mercado_pago', m, infl, AHORA)!.confianza, 'declarado');
+  });
+  it('si lo declarado se aleja mucho de lo publicado, se le avisa a quien mantiene FINA', () => {
+    const m = mercadoFixture({ declaradas: { 'cuenta_remunerada|Ualá|': { tna: 0.26, n: 6, fecha: '2026-10-20' } } });
+    const a = chequear(m, { dolar: null, plazoFijo30: null, cedears: null }, AHORA).find((x) => x.clave === 'cuentas');
+    assert.ok(a);
+    assert.match(a.mensaje, /6 personas/);
+  });
+});
+
+describe('cuando los datos fallan, la persona sólo ve "hubo un error"', () => {
+  it('una falla esencial, datos desactualizados o una alerta grave => error', () => {
+    assert.equal(hayFallaEsencial(mercadoFixture({ fallas: ['plazo fijo: respondió 500'] })), true);
+    assert.equal(hayFallaEsencial(mercadoFixture({ fallas: ['dólar: timeout'] })), true);
+    assert.equal(hayFallaEsencial(mercadoFixture({ desactualizado: true })), true);
+    assert.equal(hayFallaEsencial(mercadoFixture({ alertas: [{ clave: 'dolar', gravedad: 'grave', mensaje: 'x' }] })), true);
+  });
+  it('una falla de algo opcional, o un simple aviso, NO bloquea', () => {
+    assert.equal(hayFallaEsencial(mercadoFixture({ fallas: ['S&P 500: respondió 429'] })), false);
+    assert.equal(hayFallaEsencial(mercadoFixture({ fallas: ['índices del INDEC: respondió 500'] })), false);
+    assert.equal(hayFallaEsencial(mercadoFixture({ alertas: [{ clave: 'dolar', gravedad: 'aviso', mensaje: 'x' }] })), false);
+    assert.equal(hayFallaEsencial(mercadoFixture()), false);
+  });
+  it('el mensaje es corto y no cuenta qué fuente falló', () => {
+    assert.equal(MENSAJE_DE_ERROR.titulo, 'Hubo un error al traer los datos');
+    assert.equal(MENSAJE_DE_ERROR.texto, 'Probá de nuevo más tarde.');
   });
 });

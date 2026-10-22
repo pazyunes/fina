@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { fmtPesos } from '../../../lib/inversiones/formato';
 import type { Guia, PasoGuia } from '../../../lib/inversiones/guias';
+import { soloNumeros, leerNumero } from '../../../lib/inversiones/registro';
 import { BotonFantasma, COLORS, Cta } from '../shared';
 
 // Los pasos de una inversión, numerados. El número se ve en todos: en los que ya
 // hiciste (lima), en el que estás mirando (violeta) y en los que faltan. Se puede
 // ir para adelante y para atrás, y tocar cualquier paso para releerlo.
 export function PasosNumerados({
-  guia, monto, hechos, abierto, onAbrir, onHacer, onDeshacer, onVerBasico, onRegistrar,
+  guia, monto, hechos, abierto, onAbrir, onHacer, onDeshacer, onVerBasico, onRegistrar, onDeclarar,
 }: {
   guia: Guia;
   monto: number | null;
@@ -17,6 +19,8 @@ export function PasosNumerados({
   onDeshacer: (i: number) => void;
   onVerBasico: () => void;
   onRegistrar: () => void;
+  /** La persona anotó la tasa que ve en su app (fracción: 0.19 = 19%). */
+  onDeclarar: (paso: PasoGuia, tna: number) => void;
 }) {
   const total = guia.pasos.length;
   const terminada = hechos.length === total;
@@ -67,6 +71,7 @@ export function PasosNumerados({
                     </div>
                   )}
                   <Bloque t="Sabés que salió bien cuando" x={paso.chequeo} />
+                  {paso.declara && <DeclararTasa onAnotar={(tna) => onDeclarar(paso, tna)} />}
 
                   {hecho && !paso.registra ? (
                     <>
@@ -119,6 +124,47 @@ function Bloque({ t, x, fuerte = false }: { t: string; x: string; fuerte?: boole
     <div className="flex flex-col gap-0.5">
       <p className="text-[13px] font-bold" style={{ color: COLORS.inkFaint }}>{t}</p>
       <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: fuerte ? COLORS.ink : COLORS.inkSoft, fontWeight: fuerte ? 600 : 400 }}>{x}</p>
+    </div>
+  );
+}
+
+/**
+ * "¿Qué tasa te muestra la app?" Billeteras y fondos no tienen una API con su tasa: lo
+ * que la persona ve en su pantalla es el dato real, y le sirve a todos. Es opcional.
+ */
+function DeclararTasa({ onAnotar }: { onAnotar: (tna: number) => void }) {
+  const [txt, setTxt] = useState('');
+  const [hecho, setHecho] = useState(false);
+  const n = txt.trim() ? leerNumero(txt) : null;
+  const valida = n !== null && n >= 1 && n <= 200;
+  if (hecho) return <p className="text-[14px]" style={{ color: COLORS.limaText }}>Gracias: lo que ves en tu app ayuda a que las recomendaciones sean más precisas para todos.</p>;
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl p-3" style={{ background: COLORS.tint }}>
+      <label htmlFor="declarar-tasa" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Qué tasa te muestra la app? (opcional)</label>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            id="declarar-tasa"
+            inputMode="decimal"
+            placeholder="Ej: 19"
+            value={txt}
+            onChange={(e) => setTxt(soloNumeros(e.target.value))}
+            className="v2-focus w-full rounded-2xl pl-4 pr-9 py-2.5 text-[16px] font-mono tabular-nums outline-none"
+            style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+          />
+          <span className="absolute top-1/2 -translate-y-1/2 right-4" style={{ color: COLORS.inkSoft }}>%</span>
+        </div>
+        <button
+          type="button"
+          disabled={!valida}
+          onClick={() => { if (valida && n !== null) { onAnotar(n / 100); setHecho(true); } }}
+          className="v2-focus min-h-[44px] rounded-2xl px-4 text-[15px] font-bold"
+          style={valida ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.inkFaint, border: `1.5px solid ${COLORS.lineStrong}` }}
+        >
+          Anotar
+        </button>
+      </div>
+      <p className="text-[12px] leading-snug" style={{ color: COLORS.inkSoft }}>Es la TNA (tasa nominal anual: cuánto rinde en un año). Si solo ves la TEA, anotá esa.</p>
     </div>
   );
 }

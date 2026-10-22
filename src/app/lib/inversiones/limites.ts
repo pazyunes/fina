@@ -125,3 +125,20 @@ export function avisoDeMonto(l: Limites, monto: number | null): { texto: string;
   if (l.max !== null && monto > l.max && l.textoMax) return { texto: l.textoMax, bloquea: false };
   return null;
 }
+
+// ── Tasas declaradas por las personas ────────────────────────────────────
+/** La clave con la que se agrupan las tasas declaradas: 'fci|Mercado Pago|Mercado Fondo'. */
+export const claveDeclarada = (tipo: 'cuenta_remunerada' | 'fci', lugar: string, fondo = ''): string => `${tipo}|${lugar}|${fondo}`;
+
+/** De dónde sale la tasa declarada para este producto en este proveedor, o null si no aplica. */
+export function origenDeclarable(
+  producto: ProductoId, proveedor: ProveedorId, nombreProveedor: string,
+): { tipo: 'cuenta_remunerada' | 'fci'; lugar: string; fondo: string } | null {
+  if (producto === 'cuenta_remunerada') {
+    // La cuenta de Mercado Pago es un fondo (Mercado Fondo): se declara como fondo.
+    if (proveedor === 'mercado_pago') return { tipo: 'fci', lugar: nombreProveedor, fondo: FONDOS_POR_PROVEEDOR.mercado_pago?.nombre ?? '' };
+    return { tipo: 'cuenta_remunerada', lugar: nombreProveedor, fondo: '' };
+  }
+  if (producto === 'fci') return { tipo: 'fci', lugar: nombreProveedor, fondo: FONDOS_POR_PROVEEDOR[proveedor]?.nombre ?? '' };
+  return null;
+}

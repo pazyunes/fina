@@ -98,6 +98,23 @@ export function chequear(m: Mercado, c: Controles, ahora: number = Date.now()): 
     }
   }
 
+  // ── 5b. Lo que declaran las personas contra lo publicado ──
+  for (const [clave, d] of Object.entries(m.declaradas)) {
+    const [tipo, lugar, fondo] = clave.split('|');
+    if (tipo === 'cuenta_remunerada') {
+      const id = lugar === 'Ualá' ? 'UALA' : lugar === 'Naranja X' ? 'NARANJA X' : null;
+      const pub = id ? m.cuentas?.valor.find((c) => c.id === id)?.tna : undefined;
+      if (pub !== undefined && Math.abs(d.tna - pub) > 0.03) {
+        hay('cuentas', 'aviso', `${d.n} personas declaran ${(d.tna * 100).toFixed(1)}% para ${lugar}, pero la tasa publicada es ${(pub * 100).toFixed(1)}%.`);
+      }
+    } else if (tipo === 'fci') {
+      const f = m.fondos?.valor.find((x) => fondo && x.id.toLowerCase().startsWith(fondo.toLowerCase()));
+      if (f && f.tna1 !== null && Math.abs(d.tna - f.tna1) > 0.05) {
+        hay('fondos', 'aviso', `${d.n} personas declaran ${(d.tna * 100).toFixed(1)}% para ${fondo}, pero el rendimiento calculado es ${(f.tna1 * 100).toFixed(1)}%.`);
+      }
+    }
+  }
+
   // ── 6. Que no esté viejo ──
   const viejo = (nombre: string, clave: Parameters<typeof estaVigente>[0], fecha: string | undefined | null) => {
     if (fecha && !estaVigente(clave, fecha, ahora)) hay(`viejo:${nombre}`, 'aviso', `${nombre} está desactualizado: el último dato es del ${fechaLarga(fecha)} (hace ${edadEnDias(fecha, ahora)} días).`);

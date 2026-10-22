@@ -84,6 +84,17 @@ activadas en la app. Además quedan anotadas en `data_alerts` (migración 0040) 
 `/api/estado-datos?clave=<CRON_SECRET>`, que arma todo de cero y muestra qué fuentes respondieron y
 cuán fresco está cada dato.
 
+**Billeteras y fondos: lo declaran las personas.** No tienen API pública con su tasa, así que el dato real es
+lo que cada persona ve en su app. Se anota cuando registra una inversión o desde el paso a paso ("¿Qué tasa te
+muestra la app?"), en `declared_rates` (migración 0041). Se usa la **mediana de los últimos 7 días, sólo si
+declararon al menos 3 personas distintas** (`lib/inversiones/declaradas.ts`): como respaldo cuando la tasa
+publicada falta o está vieja, y como chequeo (si lo declarado se aleja de lo publicado, te llega un aviso).
+
+**Cuando un dato falla, la persona sólo ve "Hubo un error al traer los datos. Probá de nuevo más tarde."**, con
+un botón para reintentar. No se le cuenta qué fuente falló ni se le muestra nada a medias
+(`lib/inversiones/estadoDatos.ts`). Las fuentes opcionales (S&P 500, índices por rubro, letras, riesgo país)
+no bloquean. El detalle queda en los logs de Vercel, en `data_alerts` y te llega por notificación.
+
 **Cada recomendación queda registrada** (sin datos personales): junto con la foto diaria de mercado se
 guarda qué se habría recomendado hoy a cada perfil (`recomendadoHoy` en `market_snapshots`). Dentro de
 un mes se puede mirar qué pasó con eso.
@@ -93,7 +104,7 @@ persona registra sus gastos, su zona (CABA/GBA o resto del país) y los índices
 muestra como estimado y, si es más alta que la oficial, contra esa se compara lo que se recomienda.
 
 **Tests** (sin dependencias nuevas):
-- `npm run test:inversiones` — 108 tests de cálculos, reglas y textos, sin red.
+- `npm run test:inversiones` — 119 tests de cálculos, reglas y textos, sin red.
 - `npm run verificar:datos` — 22 verificaciones con los datos reales de hoy: que cada fuente responda,
   que los números sean verosímiles, que las fuentes coincidan, y que nuestras cuentas den igual que
   hechas aparte.
@@ -120,7 +131,7 @@ se usa "ayer contra hoy" con un rango ancho.
 
 ## Para dejarlo andando
 
-1. Correr `supabase/migrations/0039_inversiones_guiadas.sql` y después `0040_alertas_de_datos.sql` en el SQL Editor de Supabase.
+1. Correr en el SQL Editor de Supabase, en orden: `0039_inversiones_guiadas.sql`, `0040_alertas_de_datos.sql` y `0041_tasas_declaradas.sql`.
    Sin eso la app anda, pero registrar una inversión específica avisa que falta la base, y
    el avance del paso a paso queda sólo en el dispositivo.
 2. En Vercel, definir `SUPABASE_SERVICE_ROLE_KEY` para que `/api/mercado` guarde una foto

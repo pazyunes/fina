@@ -22,7 +22,7 @@
 
 import { PROVEEDORES, type ProductoId, type ProveedorId } from './catalogo';
 import { diaMes, fmtPesos, nombrePropio, pct } from './formato';
-import { CEDEARS_DISPONIBLES, FONDOS_POR_PROVEEDOR, precioCedear } from './limites';
+import { CEDEARS_DISPONIBLES, FONDOS_POR_PROVEEDOR, origenDeclarable, precioCedear } from './limites';
 import { bancosOrdenados, type Evaluacion } from './motor';
 import type { Mercado } from './mercadoTipos';
 import type { Valores } from './registro';
@@ -38,6 +38,8 @@ export type PasoGuia = {
   datos?: { etiqueta: string; valor: string }[];
   /** true en el último paso: lleva a registrar la inversión en FINA. */
   registra?: boolean;
+  /** Si el paso mira una tasa en la app, se le pide a la persona que la anote: es un dato real para todos. */
+  declara?: { tipo: 'cuenta_remunerada' | 'fci'; lugar: string; fondo: string };
 };
 
 export type Guia = {
@@ -183,6 +185,7 @@ function guiaMercadoPago(ctx: ContextoGuia): Guia {
         lograras: 'Saber con qué número arrancás, y poder compararlo con otras opciones.',
         chequeo: 'Anotaste el porcentaje: lo vas a cargar en FINA.',
         datos: tasa ? [{ etiqueta: 'Lo que vemos hoy', valor: tasa }] : undefined,
+        declara: origenDeclarable('cuenta_remunerada', 'mercado_pago', 'Mercado Pago') ?? undefined,
       },
       pasoRescate('Mercado Pago', 'Cuando la necesites: entrá a Mercado Fondo desde “Inversiones” y tocá “Rescatar” (o “Retirar”: pedir que te devuelvan la plata). Vuelve a tu saldo en el momento o en el día.'),
       pasoRegistrar(),
@@ -209,6 +212,7 @@ function guiaCuentaAutomatica(prov: 'uala' | 'naranja_x', ctx: ContextoGuia): Gu
       lograras: 'Que tu plata genere intereses mientras la tenés quieta, sin comprar ningún producto.',
       chequeo: 'Ves el rendimiento diario en tu cuenta.',
       datos: notas.map((n) => ({ etiqueta: 'Condiciones de hoy', valor: n })),
+      declara: origenDeclarable('cuenta_remunerada', prov, nombre) ?? undefined,
     },
   ];
   if (prov === 'uala') {
@@ -257,6 +261,7 @@ function guiaFondoBroker(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
         lograras: 'Elegir con los ojos abiertos: ya sabés dónde queda tu plata (en un fondo que presta a muy corto plazo) y cuánto tarda en volver.',
         chequeo: 'Estás en la pantalla del fondo y viste en cuánto tiempo podés sacar tu plata (el plazo de rescate).',
         datos: ctx.evaluacion ? [{ etiqueta: 'Lo que rindió', valor: ctx.evaluacion.detalle }] : undefined,
+        declara: origenDeclarable('fci', prov, nombre) ?? undefined,
       },
       {
         id: 'suscribir',

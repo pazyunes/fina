@@ -5,6 +5,7 @@ import { fechaCorta } from '../../../lib/inversiones/mercadoTipos';
 import { evaluar, inflacionDeReferencia, type Evaluacion } from '../../../lib/inversiones/motor';
 import { useMercado } from '../../../lib/inversiones/useMercado';
 import { ArmarGrupoBtn, COLORS, EstadoConfianza, FONTS, fmtMoney, fmtMontoCompacto, formatThousands, OpcionesGrid, parseMoneyInput, Rango, TituloSeccion } from '../shared';
+import { hayFallaEsencial, MENSAJE_DE_ERROR } from '../../../lib/inversiones/estadoDatos';
 import { Parrafo } from './Hoja';
 
 // Simulador con plata ficticia, pensado para bajar el miedo de quien nunca
@@ -108,11 +109,11 @@ export function Simulador() {
       </div>
 
       {estado.tipo === 'cargando' && <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Trayendo las tasas de hoy…</p>}
-      {estado.tipo === 'error' && <Parrafo>No pudimos traer las tasas de hoy, así que no podemos simular con números reales. Probá de nuevo en un rato.</Parrafo>}
-      {mercado && !infl && <Parrafo>No tenemos un dato de inflación al día, así que no podemos mostrarte el resultado en plata de hoy.</Parrafo>}
-      {mercado && infl && !mejor && <Parrafo>De esta opción no tenemos un dato de hoy, así que no la simulamos con números inventados.</Parrafo>}
+      {(estado.tipo === 'error' || (mercado && (hayFallaEsencial(mercado) || !infl))) && (
+        <Parrafo>{MENSAJE_DE_ERROR.titulo}. {MENSAJE_DE_ERROR.texto}</Parrafo>
+      )}
 
-      {mejor && (
+      {mejor && mercado && !hayFallaEsencial(mercado) && (
         <>
           {sinRendimiento ? (
             <div className="flex flex-col gap-2">

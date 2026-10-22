@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import * as acciones from '../../../api/v2/acciones';
 import { guardarPlan, leerPlan } from '../../../api/v2/planes';
 import { type ProveedorId } from '../../../lib/inversiones/catalogo';
 import type { SugerenciaMonto } from '../../../lib/inversiones/cuanto';
@@ -168,6 +169,7 @@ export function FlujoInversion({
         }}
         onDeshacer={(i) => { const nuevos = hechos.filter((h) => h !== i); setHechos(nuevos); persistir(nuevos); }}
         onVerBasico={() => setFase('aprende')}
+        onDeclarar={(paso, tna) => { if (paso.declara) acciones.declararTasa({ ...paso.declara, tna }); }}
         onRegistrar={() => onRegistrar(previosParaRegistro(proveedor, producto.id, ctx))}
       />
     </Hoja>

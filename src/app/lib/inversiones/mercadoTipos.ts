@@ -66,6 +66,9 @@ export type CedearMercado = {
   variacionDia: number;
 };
 
+/** La mediana de lo que declaran varias personas para un mismo lugar. */
+export type TasaDeclarada = { tna: number; n: number; fecha: string };
+
 /** Un chequeo que no cerró: dos fuentes que no coinciden, un valor que no es verosímil. */
 export type Alerta = {
   /** Qué dato: 'dolar', 'inflacion', 'cedears'… */
@@ -130,6 +133,12 @@ export type Mercado = {
   spy: Dato<SpyEstadisticas> | null;
   /** Índices del INDEC por rubro, para la inflación personal. */
   ipc: Dato<IpcRubros> | null;
+  /**
+   * Lo que declaran las personas que ven la tasa en su propia app (billeteras y fondos no tienen
+   * API pública). La mediana de los últimos 7 días, sólo si declararon al menos 3 personas.
+   * Clave: 'cuenta_remunerada|Ualá|' o 'fci|Mercado Pago|Mercado Fondo'.
+   */
+  declaradas: Record<string, TasaDeclarada>;
   /** Chequeos que no cerraron. Vacío = todo coincide. */
   alertas: Alerta[];
   /** Fuentes que fallaron al armar este paquete, para decirlo en vez de ocultarlo. */

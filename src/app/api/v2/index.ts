@@ -993,6 +993,23 @@ export async function editarPosicion(id: string, parche: Partial<Pick<PosicionIn
   );
 }
 
+/**
+ * Anota la tasa que la persona ve en su app (billeteras y fondos no tienen API pública).
+ * Una por persona, lugar y día. Es un extra: si falla, no se le dice nada a la persona.
+ */
+export async function declararTasa(d: { tipo: 'cuenta_remunerada' | 'fci'; lugar: string; fondo?: string; tna: number }): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<null>('sin sesión', 'declararTasa');
+  if (!(d.tna >= 0.01 && d.tna <= 2) || !d.lugar) return falla<null>('tasa fuera de lo verosímil', 'declararTasa');
+  const hoy = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
+  return correr<null>('declararTasa', () =>
+    supabase.from('declared_rates').upsert(
+      { user_id: uid, kind: d.tipo, provider: d.lugar, fund: d.fondo ?? '', tna: d.tna, declared_on: hoy },
+      { onConflict: 'user_id,kind,provider,fund,declared_on' },
+    ).then(({ error }) => ({ data: null, error })),
+  );
+}
+
 export async function borrarPosicion(id: string): Promise<Resultado<null>> {
   return borrarFila('investment_positions', id, 'borrarPosicion');
 }

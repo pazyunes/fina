@@ -73,6 +73,7 @@ export function mercadoFixture(cambios: Partial<Mercado> = {}): Mercado {
     riesgoPais: { valor: 672, fecha: '2026-10-20', fuente: 'ArgentinaDatos' },
     spy: { valor: { precioUsd: 762, anualizado10a: 15.0, peorAnio: -18.2 }, fecha: '2026-10-21', fuente: 'Yahoo' },
     ipc: null,
+    declaradas: {},
     alertas: [],
     fallas: [],
   };

@@ -63,7 +63,7 @@ export function RegistroPosicion({
   async function subirCaptura(f: File) {
     setCaptura({ estado: 'leyendo' });
     const r = await leerCaptura(f);
-    if (r.error !== null) { setCaptura({ estado: 'aviso', mensaje: 'No pudimos leer la captura. Podés completar los datos a mano.' }); return; }
+    if (r.error !== null) { setCaptura({ estado: 'aviso', mensaje: 'Hubo un error al leer la captura. Probá de nuevo más tarde o completá los datos a mano.' }); return; }
     const res = r.data;
     if (res.estado === 'no_configurado') { setCaptura({ estado: 'aviso', mensaje: 'La lectura de capturas todavía no está activada. Completá los datos a mano.' }); return; }
     if (res.estado === 'no_es_inversion') { setCaptura({ estado: 'aviso', mensaje: 'Esa imagen no parece ser de una inversión. Probá con el comprobante o la pantalla del saldo.' }); return; }

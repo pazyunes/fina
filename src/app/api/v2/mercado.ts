@@ -28,9 +28,8 @@ export function mercadoEnMemoria(): Mercado | null {
 }
 
 /**
- * Trae los datos de mercado. Si el servidor no responde y ya había un paquete
- * en memoria, devuelve ese (su fecha dice cuán viejo es); si no había, null.
- * Nunca inventa un valor.
+ * Trae los datos de mercado. Si no se pudo, devuelve null (y la pantalla dice que hubo un error).
+ * Nunca inventa un valor ni rellena con uno viejo.
  */
 export function traerMercado(forzar = false): Promise<Mercado | null> {
   if (!forzar && cache && Date.now() - cache.cuando < CINCO_MIN) return Promise.resolve(cache.mercado);
@@ -38,14 +37,16 @@ export function traerMercado(forzar = false): Promise<Mercado | null> {
 
   pendiente = (async () => {
     try {
-      const res = await fetch('/api/mercado', { headers: { accept: 'application/json' } });
-      if (!res.ok) return cache?.mercado ?? null;
+      // Al reintentar se pide un paquete nuevo en lugar del que quedó guardado.
+      const res = await fetch(forzar ? `/api/mercado?fresco=${Date.now()}` : '/api/mercado', { headers: { accept: 'application/json' } });
+      // Si no se pudo traer, es un error: no se rellena con lo que había (la pantalla dice "hubo un error").
+      if (!res.ok) return null;
       const json: unknown = await res.json();
-      if (!esMercado(json)) return cache?.mercado ?? null;
+      if (!esMercado(json)) return null;
       cache = { cuando: Date.now(), mercado: json };
       return json;
     } catch {
-      return cache?.mercado ?? null;
+      return null;
     } finally {
       pendiente = null;
     }
