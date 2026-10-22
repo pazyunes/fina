@@ -1,0 +1,247 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>FINA — Flowchart</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --violeta: #7626B3;
+    --violeta-osc: #5C1B8E;
+    --lila: #EFE3FB;
+    --borde: #C9AEE8;
+    --linea: #B9A0D6;
+    --tinta: #2B2118;
+    --tinta-suave: #6B5B48;
+    --verde-bg: #EAF5D0;
+    --verde-bd: #9CC34F;
+    --verde-tx: #41660F;
+    --ambar-bg: #FFF4E0;
+    --ambar-bd: #E8B457;
+    --ambar-tx: #8A5A05;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #FFFFFF; color: var(--tinta);
+    font-family: 'Figtree', system-ui, sans-serif;
+    width: 1000px; padding: 28px 26px 34px;
+  }
+  .titulo-doc {
+    font-family: 'Baloo 2', system-ui, sans-serif; font-size: 27px; font-weight: 700;
+    color: var(--violeta-osc); text-align: center; margin: 0 0 2px;
+  }
+  .sub-doc { text-align: center; color: var(--tinta-suave); font-size: 13.5px; margin: 0 0 22px; }
+
+  .banda {
+    background: var(--lila); color: var(--violeta-osc);
+    font-weight: 700; font-size: 13px; letter-spacing: .09em; text-transform: uppercase;
+    text-align: center; padding: 8px 10px; border-radius: 6px; margin: 22px 0 14px;
+  }
+  .col { display: flex; flex-direction: column; align-items: center; }
+
+  .caja {
+    background: #fff; border: 1.6px solid var(--borde); border-radius: 11px;
+    padding: 9px 15px; text-align: center; max-width: 430px;
+  }
+  .caja b { display: block; font-size: 14.5px; font-weight: 700; color: var(--violeta-osc); }
+  .caja span { display: block; font-size: 11.5px; color: var(--tinta-suave); margin-top: 2px; line-height: 1.45; }
+  .caja.ancha { max-width: 560px; }
+
+  .datos { border-left: 7px solid var(--violeta); position: relative; }
+  .datos .tag {
+    position: absolute; top: -9px; right: 8px; font-size: 8.5px; font-weight: 700;
+    letter-spacing: .08em; color: var(--violeta); background: #fff; padding: 0 4px;
+  }
+  .final { background: var(--violeta); border-color: var(--violeta); }
+  .final b, .final span { color: #fff; }
+  .final span { opacity: .82; }
+  .error { background: var(--ambar-bg); border: 1.6px dashed var(--ambar-bd); }
+  .error b { color: var(--ambar-tx); }
+  .bot { background: var(--verde-bg); border-color: var(--verde-bd); }
+  .bot b { color: var(--verde-tx); }
+  .bot span { color: #5d7a30; }
+
+  .rombo {
+    width: 240px; height: 136px; display: flex; align-items: center; justify-content: center;
+    position: relative; margin: 4px 0;
+  }
+  .rombo i {
+    position: absolute; inset: 0; margin: auto; width: 96px; height: 96px;
+    border: 1.6px solid var(--borde); background: #fff; transform: rotate(45deg); border-radius: 8px;
+  }
+  .rombo p {
+    position: relative; margin: 0; text-align: center; font-size: 12.5px; font-weight: 700;
+    color: var(--violeta-osc); line-height: 1.25; max-width: 168px;
+  }
+  .rombo p em { display: block; font-style: normal; font-size: 10.5px; font-weight: 500; color: var(--tinta-suave); }
+
+  .baja { width: 0; border-left: 2px solid var(--linea); height: 16px; }
+  .baja.corta { height: 10px; }
+  .punta {
+    width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 7px solid var(--linea);
+  }
+  .flecha { display: flex; flex-direction: column; align-items: center; }
+
+  .ramas { display: flex; align-items: flex-start; justify-content: center; gap: 24px; width: 100%; position: relative; padding-top: 22px; }
+  .ramas::before {
+    content: ''; position: absolute; top: 0; height: 11px; border-left: 2px solid var(--linea);
+    left: 50%;
+  }
+  .rama { display: flex; flex-direction: column; align-items: center; position: relative; flex: 1; max-width: 300px; }
+  .rama::before {
+    content: ''; position: absolute; top: -22px; height: 22px; width: 0; border-left: 2px solid var(--linea);
+  }
+  .barra { position: absolute; top: 0; height: 0; border-top: 2px solid var(--linea); }
+  .etq { font-size: 11px; font-weight: 700; color: var(--violeta); margin-bottom: 4px; }
+
+  .lista { text-align: left; }
+  .lista span { margin-top: 4px; }
+  .nota { font-size: 11.5px; color: var(--tinta-suave); margin-top: 8px; text-align: center; max-width: 560px; }
+
+  .leyenda {
+    margin-top: 28px; border: 1.6px solid var(--borde); border-radius: 11px; padding: 11px 14px;
+    display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; font-size: 11.5px; color: var(--tinta);
+  }
+  .leyenda i { display: inline-block; width: 15px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .l-proc { background: #fff; border: 1.5px solid var(--borde); }
+  .l-dec { background: #fff; border: 1.5px solid var(--borde); transform: rotate(45deg); width: 10px; height: 10px; border-radius: 2px; }
+  .l-db { background: #fff; border: 1.5px solid var(--borde); border-left: 5px solid var(--violeta); }
+  .l-err { background: var(--ambar-bg); border: 1.5px dashed var(--ambar-bd); }
+  .l-bot { background: var(--verde-bg); border: 1.5px solid var(--verde-bd); }
+  .l-fin { background: var(--violeta); }
+</style>
+
+<h1 class="titulo-doc">FINA — cómo funciona</h1>
+<p class="sub-doc">Del primer ingreso a la app al hábito diario · versión de octubre de 2026</p>
+
+<!-- 1 -->
+<div class="banda">1 · Entrada y acceso</div>
+<div class="col">
+  <div class="caja"><b>Entrada a FINA</b><span>somosfina.com.ar · se puede sumar a la pantalla de inicio</span></div>
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="rombo"><i></i><p>¿Ya tiene cuenta?</p></div>
+
+  <div class="ramas">
+    <div class="barra" style="left:25%; right:25%"></div>
+    <div class="rama">
+      <div class="etq">No</div>
+      <div class="caja"><b>Registro</b><span>mail · contraseña · teléfono (optativo)</span></div>
+      <div class="flecha"><div class="baja corta"></div><div class="punta"></div></div>
+      <div class="caja"><b>Acepta términos y privacidad</b><span>obligatorio · Ley 25.326 · queda la fecha guardada</span></div>
+    </div>
+    <div class="rama">
+      <div class="etq">Sí</div>
+      <div class="caja"><b>Iniciar sesión</b><span>mail · contraseña</span></div>
+      <div class="flecha"><div class="baja corta"></div><div class="punta"></div></div>
+      <div class="caja"><b>PIN o Face ID</b><span>si lo activó · la traba se guarda en el propio teléfono</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 2 -->
+<div class="banda">2 · Onboarding — se puede saltear entero</div>
+<div class="col">
+  <div class="caja"><b>Bienvenida con Fini</b><span>“Llegó tu momento de cambiar la historia de tus finanzas”</span></div>
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="caja"><b>Datos personales</b><span>nombre · edad · zona · con quién vive</span></div>
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="rombo"><i></i><p>¿Cómo le entra la plata?<em>fijo · freelance · mixto</em></p></div>
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="caja ancha"><b>En qué se le va</b><span>elige sus secciones: súper · transporte · salidas · deporte… → se crean en la app</span></div>
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="caja ancha"><b>Primer objetivo</b><span>nombre · monto exacto, un rango, o “todavía no sé” · fecha</span></div>
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="caja datos ancha"><span class="tag">SUPABASE</span><b>Guarda el perfil</b><span>user_profiles · expense_sections · goals — cada fila sólo la ve su dueña (RLS)</span></div>
+</div>
+
+<!-- 3 -->
+<div class="banda">3 · El día a día — registrar</div>
+<div class="col">
+  <div class="rombo"><i></i><p>¿Desde dónde registra?</p></div>
+  <div class="ramas">
+    <div class="barra" style="left:25%; right:25%"></div>
+    <div class="rama">
+      <div class="etq">Desde la app</div>
+      <div class="caja lista"><b>Carga en un toque</b><span>• Gasto: monto · sección · tipo · medio (puede dividirse en varios)<br>• Ingreso, o plata que “ya tenía”<br>• Gasto fijo: cada cuánto y cuándo vence<br>• Aporte a un objetivo</span></div>
+    </div>
+    <div class="rama">
+      <div class="etq">Por WhatsApp</div>
+      <div class="caja bot"><b>Le escribe a Fini</b><span>“gasté 8.500 en el súper” · el bot pregunta sección y medio entre los que ya usa</span></div>
+      <div class="flecha"><div class="baja corta"></div><div class="punta"></div></div>
+      <div class="caja bot"><b>Confirma recién cuando guardó</b><span>el teléfono se verificó antes con un código de un solo uso</span></div>
+    </div>
+  </div>
+
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="rombo"><i></i><p>¿El monto es en dólares?</p></div>
+  <div class="ramas">
+    <div class="barra" style="left:25%; right:25%"></div>
+    <div class="rama">
+      <div class="etq">Sí</div>
+      <div class="caja datos"><span class="tag">API</span><b>Cotización del blue</b><span>dolarapi · se cachea 1 hora · se congela con el movimiento</span></div>
+      <div class="flecha"><div class="baja corta"></div><div class="punta"></div></div>
+      <div class="caja error"><b>Si la API no responde</b><span>se usa la última guardada; si no hay ninguna, se avisa y no se inventa un número</span></div>
+    </div>
+    <div class="rama">
+      <div class="etq">No</div>
+      <div class="caja"><b>Sigue en pesos</b><span>el monto se guarda tal cual</span></div>
+    </div>
+  </div>
+
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="caja datos ancha"><span class="tag">SUPABASE</span><b>Se guarda el movimiento</b><span>transactions · balance_loads · recurring_expenses · goal_contributions<br>y se mueve el saldo del medio de pago con el que se pagó</span></div>
+</div>
+
+<!-- 4 -->
+<div class="banda">4 · El motor diario — una llamada a la IA por día</div>
+<div class="col">
+  <div class="caja ancha"><b>Arma un resumen agregado de la persona</b><span>totales por sección, por tipo y por mes · rachas · objetivos · qué recomendaciones tachó<br>no se mandan las descripciones de los gastos</span></div>
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="caja datos ancha"><span class="tag">CLAUDE</span><b>Claude Sonnet devuelve tres cosas</b><span>el paso de mañana con su mensaje · una recomendación para hoy, la semana y el mes · el plan semanal de cada objetivo</span></div>
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="caja datos ancha"><span class="tag">SUPABASE</span><b>Queda guardado y vuelve a entrar</b><span>recommendations · recommendation_checks — lo que cumple y lo que no alimenta la decisión del día siguiente</span></div>
+</div>
+
+<!-- 5 -->
+<div class="banda">5 · Avisos al celular — como mucho dos por día</div>
+<div class="col">
+  <div class="caja ancha"><b>Dos tareas programadas (Vercel Cron)</b><span>cada tipo de aviso se apaga por separado desde Perfil</span></div>
+  <div class="ramas">
+    <div class="barra" style="left:25%; right:25%"></div>
+    <div class="rama">
+      <div class="etq">10 hs</div>
+      <div class="caja lista"><b>El primero que aplique</b><span>1. vence un gasto fijo hoy o mañana<br>2. es su día de cobro → “buen día para separar”<br>3. lunes → resumen de la semana</span></div>
+    </div>
+    <div class="rama">
+      <div class="etq">19 hs</div>
+      <div class="caja lista"><b>Sólo si hoy todavía no sumó</b><span>• con racha de 2 días o más → el de la racha<br>• si no → el paso del día<br>Nunca “vas a perder tu racha”: recuerda, no reta</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 6 -->
+<div class="banda">6 · Lo que ve, cada vez que entra</div>
+<div class="col">
+  <div class="ramas" style="gap:14px">
+    <div class="barra" style="left:16.6%; right:16.6%"></div>
+    <div class="rama">
+      <div class="caja"><b>Home</b><span>el paso de hoy · la racha · una recomendación</span></div>
+    </div>
+    <div class="rama">
+      <div class="caja"><b>Gastos</b><span>disponible del mes · en qué se le va · lo que entra y lo que sale · gastos fijos</span></div>
+    </div>
+    <div class="rama">
+      <div class="caja"><b>Objetivos e inversiones</b><span>avance con las monedas convertidas · plan semanal · perfil inversor</span></div>
+    </div>
+  </div>
+  <div class="flecha"><div class="baja"></div><div class="punta"></div></div>
+  <div class="caja final ancha"><b>El hábito: un paso chiquito por día</b><span>FINA nunca mueve la plata. Muestra, acompaña y sugiere — decidir es siempre de la persona.</span></div>
+</div>
+
+<div class="leyenda">
+  <span><i class="l-proc"></i>Proceso</span>
+  <span><i class="l-dec"></i>Decisión</span>
+  <span><i class="l-db"></i>Base de datos o API</span>
+  <span><i class="l-err"></i>Ruta de error</span>
+  <span><i class="l-bot"></i>Bot de WhatsApp</span>
+  <span><i class="l-fin"></i>Destino final</span>
+</div>
