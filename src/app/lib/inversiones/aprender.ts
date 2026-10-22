@@ -251,3 +251,22 @@ export function rachaDeAprendizaje(aprendidas: string[], tarjetas: Tarjeta[] = T
     faltan: completada ? 0 : META_DE_RACHA - resto,
   };
 }
+
+// ── Un ritmo por día ─────────────────────────────────────────────────────
+/** Cuántas lecciones se pueden marcar como aprendidas por día: poco y bien, no todo de golpe. */
+export const LIMITE_DIARIO = 5;
+
+/** Una lección aprendida y el día (en Argentina, 'YYYY-MM-DD') en que se marcó. '' = no se sabe (datos viejos). */
+export type Aprendida = { id: string; dia: string };
+
+/** El día en Argentina de un momento: el día de las lecciones no cambia a las 21 hs de UTC. */
+export const diaAR = (ts: number = Date.now()): string =>
+  new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
+
+/** Cuántas marcó hoy. */
+export function aprendidasHoy(aprendidas: Aprendida[], hoy: string): number {
+  return new Set(aprendidas.filter((a) => a.dia === hoy).map((a) => a.id)).size;
+}
+
+/** Se puede marcar otra si hoy no llegó al límite. */
+export const puedeMarcarHoy = (aprendidas: Aprendida[], hoy: string): boolean => aprendidasHoy(aprendidas, hoy) < LIMITE_DIARIO;

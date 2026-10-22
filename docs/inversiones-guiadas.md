@@ -168,5 +168,6 @@ conexión con Objetivos, más proveedores y fondos, y la revisión legal (CNV).
 
 - Debajo de las recomendaciones: cards que se deslizan para el costado (se asoma la siguiente). 15 lecciones de tres clases: diferencias ("Diferencia entre TNA y TEA"), conceptos ("¿Qué es la inflación?") y mitos. Contenido en `lib/inversiones/aprender.ts`; los ejemplos con plata dicen "de juguete" y tienen test de cuentas.
 - Cada una se marca con "Ya lo aprendí" (y se puede desmarcar). **Cada 5 aprendidas se completa una racha** (`rachaDeAprendizaje`). No está ligada a la racha diaria de pasos: ésa mide algo que se hace, y un botón la inflaría.
+- **Máximo 5 por día** (`LIMITE_DIARIO`, día de Argentina): con 5 marcadas hoy, el botón dice "Mañana seguís"; ver y leer las cards no tiene límite. Desmarcar una de hoy libera un lugar. El límite se aplica en la app (no hay regla en la base): se cuenta con el día en que se marcó cada una (`learned_at`).
 - Se guarda en el dispositivo siempre y en `learned_cards` (migración 0042) para que pase de un dispositivo a otro; sin la migración andan igual.
 - El orden se arma al entrar (lo que se recomienda hoy y falta aprender, primero; lo aprendido, al final) y no cambia después.

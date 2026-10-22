@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { leerAprendidas, leerAprendidasLocal, marcarAprendida } from '../../../api/v2/aprendizaje';
 import type { ProductoId } from '../../../lib/inversiones/catalogo';
-import { META_DE_RACHA, ordenarTarjetas, rachaDeAprendizaje, TARJETAS, type Tarjeta } from '../../../lib/inversiones/aprender';
+import { aprendidasHoy, diaAR, LIMITE_DIARIO, META_DE_RACHA, ordenarTarjetas, puedeMarcarHoy, rachaDeAprendizaje, TARJETAS, type Aprendida, type Tarjeta } from '../../../lib/inversiones/aprender';
 import { COLORS, TituloSeccion } from '../shared';
 
 const ETIQUETA: Record<Tarjeta['clase'], string> = { diferencia: 'Diferencia', concepto: 'Concepto', mito: 'Mito' };
@@ -10,8 +10,8 @@ const ETIQUETA: Record<Tarjeta['clase'], string> = { diferencia: 'Diferencia', c
 // la que sigue), cada una se marca con "Ya lo aprendí" y cada 5 aprendidas se completa una racha.
 // El orden se arma al entrar y no se mueve después: si no, la card saltaría al marcarla.
 export function AprendeCards({ recomendados }: { recomendados: ProductoId[] }) {
-  const [aprendidas, setAprendidas] = useState<string[]>(() => leerAprendidasLocal());
-  const [orden] = useState<Tarjeta[]>(() => ordenarTarjetas(TARJETAS, recomendados, leerAprendidasLocal()));
+  const [aprendidas, setAprendidas] = useState<Aprendida[]>(() => leerAprendidasLocal());
+  const [orden] = useState<Tarjeta[]>(() => ordenarTarjetas(TARJETAS, recomendados, leerAprendidasLocal().map((a) => a.id)));
   const carrusel = useRef<HTMLDivElement>(null);
 
   // Lo del dispositivo se ve al instante; después se actualiza con lo que hay guardado en la cuenta.
@@ -21,11 +21,16 @@ export function AprendeCards({ recomendados }: { recomendados: ProductoId[] }) {
     return () => { vivo = false; };
   }, []);
 
-  const racha = rachaDeAprendizaje(aprendidas);
+  const ids = aprendidas.map((a) => a.id);
+  const racha = rachaDeAprendizaje(ids);
+  const hoy = diaAR();
+  const marcadasHoy = aprendidasHoy(aprendidas, hoy);
+  const cupoLleno = !puedeMarcarHoy(aprendidas, hoy);
 
   function marcar(t: Tarjeta, indice: number, aprendida: boolean) {
-    setAprendidas((prev) => (aprendida ? [...prev.filter((x) => x !== t.id), t.id] : prev.filter((x) => x !== t.id)));
-    void marcarAprendida(t.id, aprendida);
+    if (aprendida && cupoLleno) return;
+    setAprendidas((prev) => (aprendida ? [...prev.filter((x) => x.id !== t.id), { id: t.id, dia: hoy }] : prev.filter((x) => x.id !== t.id)));
+    void marcarAprendida(t.id, aprendida, hoy);
     // Al marcarla, se pasa a la que sigue.
     if (aprendida) {
       const sigue = carrusel.current?.children[indice + 1];
@@ -41,7 +46,7 @@ export function AprendeCards({ recomendados }: { recomendados: ProductoId[] }) {
       <div className="flex flex-col gap-1">
         <TituloSeccion>Aprendé en una card</TituloSeccion>
         <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>
-          Mini lecciones para entender las palabras y las opciones. Deslizá para ver la que sigue y marcá las que ya aprendiste.
+          Mini lecciones para entender las palabras y las opciones. Deslizá para ver la que sigue y marcá las que ya aprendiste: hasta {LIMITE_DIARIO} por día.
         </p>
       </div>
 
@@ -58,6 +63,10 @@ export function AprendeCards({ recomendados }: { recomendados: ProductoId[] }) {
             : ` · ${racha.faltan === 1 ? 'te falta 1' : `te faltan ${racha.faltan}`} para ${racha.completas === 0 ? 'tu primera racha' : 'la próxima racha'}`}
         </p>
       </div>
+      <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }} role="status">
+        Hoy: <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{marcadasHoy}</span> de {LIMITE_DIARIO}
+        {cupoLleno ? '. Por hoy alcanza: mañana podés seguir con las que faltan.' : '.'}
+      </p>
 
       <div
         ref={carrusel}
@@ -68,7 +77,7 @@ export function AprendeCards({ recomendados }: { recomendados: ProductoId[] }) {
         style={{ scrollbarWidth: 'none' }}
       >
         {orden.map((t, i) => {
-          const aprendida = aprendidas.includes(t.id);
+          const aprendida = ids.includes(t.id);
           return (
             <article
               key={t.id}
@@ -106,10 +115,13 @@ export function AprendeCards({ recomendados }: { recomendados: ProductoId[] }) {
                   <button
                     type="button"
                     onClick={() => marcar(t, i, true)}
-                    className="v2-focus w-full min-h-[48px] rounded-2xl text-[16px] font-bold transition-all duration-100 active:scale-[0.98]"
-                    style={{ background: COLORS.brand, color: COLORS.surface }}
+                    aria-disabled={cupoLleno || undefined}
+                    className={`v2-focus w-full min-h-[48px] rounded-2xl text-[16px] font-bold transition-all duration-100 ${cupoLleno ? 'cursor-not-allowed' : 'active:scale-[0.98]'}`}
+                    style={cupoLleno
+                      ? { background: COLORS.tint, color: COLORS.inkSoft, border: `1.5px solid ${COLORS.lineStrong}` }
+                      : { background: COLORS.brand, color: COLORS.surface }}
                   >
-                    Ya lo aprendí
+                    {cupoLleno ? 'Mañana seguís' : 'Ya lo aprendí'}
                   </button>
                 )}
               </div>

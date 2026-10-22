@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { ordenarTarjetas, TARJETAS } from '../../src/app/lib/inversiones/aprender';
 
-import { META_DE_RACHA, rachaDeAprendizaje } from '../../src/app/lib/inversiones/aprender';
+import { aprendidasHoy, diaAR, LIMITE_DIARIO, META_DE_RACHA, puedeMarcarHoy, rachaDeAprendizaje, type Aprendida } from '../../src/app/lib/inversiones/aprender';
 
 describe('mini lecciones para aprender', () => {
   it('todas tienen la misma forma y un id único', () => {
@@ -87,5 +87,36 @@ describe('la racha de aprendizaje: cada 5 lecciones aprendidas', () => {
   it('desmarcar una vuelve atrás', () => {
     assert.equal(rachaDeAprendizaje(ids(5)).completas, 1);
     assert.equal(rachaDeAprendizaje(ids(4)).completas, 0);
+  });
+});
+
+describe('un máximo de 5 lecciones por día', () => {
+  const marcadas = (n: number, dia: string): Aprendida[] => TARJETAS.slice(0, n).map((t) => ({ id: t.id, dia }));
+  it('el límite es 5', () => assert.equal(LIMITE_DIARIO, 5));
+  it('se puede marcar hasta llegar a 5 hoy, y la sexta no', () => {
+    assert.ok(puedeMarcarHoy([], '2026-10-22'));
+    assert.ok(puedeMarcarHoy(marcadas(4, '2026-10-22'), '2026-10-22'));
+    assert.ok(!puedeMarcarHoy(marcadas(5, '2026-10-22'), '2026-10-22'));
+  });
+  it('sólo cuentan las de hoy: las de ayer y las de datos viejos no', () => {
+    const lista = [...marcadas(5, '2026-10-21'), { id: TARJETAS[6].id, dia: '' }, { id: TARJETAS[7].id, dia: '2026-10-22' }];
+    assert.equal(aprendidasHoy(lista, '2026-10-22'), 1);
+    assert.ok(puedeMarcarHoy(lista, '2026-10-22'));
+  });
+  it('al día siguiente se puede de nuevo', () => {
+    assert.ok(!puedeMarcarHoy(marcadas(5, '2026-10-22'), '2026-10-22'));
+    assert.ok(puedeMarcarHoy(marcadas(5, '2026-10-22'), '2026-10-23'));
+  });
+  it('desmarcar una de hoy libera un lugar', () => {
+    const cinco = marcadas(5, '2026-10-22');
+    assert.ok(puedeMarcarHoy(cinco.slice(1), '2026-10-22'));
+  });
+  it('el día es el de Argentina: a las 23:30 de allá todavía es el mismo día, a las 00:30 ya es otro', () => {
+    assert.equal(diaAR(Date.parse('2026-10-23T02:30:00Z')), '2026-10-22');
+    assert.equal(diaAR(Date.parse('2026-10-23T03:30:00Z')), '2026-10-23');
+  });
+  it('con el máximo diario se completa justo una racha por día', () => {
+    assert.equal(LIMITE_DIARIO, META_DE_RACHA);
+    assert.equal(rachaDeAprendizaje(marcadas(5, '2026-10-22').map((a) => a.id)).completas, 1);
   });
 });

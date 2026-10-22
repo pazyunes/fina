@@ -1,26 +1,36 @@
+import { diaAR, type Aprendida } from '../../lib/inversiones/aprender';
 import { idUsuaria, supabase } from './cliente';
 
-// Las mini lecciones que la persona marcó como "ya lo aprendí". Van a `learned_cards`
-// (migración 0042) para que pasen de un dispositivo a otro, y SIEMPRE se guardan también
-// en el dispositivo: sin la migración corrida la tabla no existe y las cards tienen que
-// seguir funcionando igual.
+// Las mini lecciones que la persona marcó como "ya lo aprendí", con el día en que lo hizo (hay
+// un límite de cuántas por día). Van a `learned_cards` (migración 0042) para que pasen de un
+// dispositivo a otro, y SIEMPRE se guardan también en el dispositivo: sin la migración corrida
+// la tabla no existe y las cards tienen que seguir funcionando igual.
 
 const CLAVE = 'fina_inv_tarjetas_aprendidas';
 
-function leerLocal(): string[] {
+function leerLocal(): Aprendida[] {
   try {
     const crudo = localStorage.getItem(CLAVE);
     if (!crudo) return [];
     const j: unknown = JSON.parse(crudo);
-    return Array.isArray(j) ? j.filter((x): x is string => typeof x === 'string') : [];
+    if (!Array.isArray(j)) return [];
+    const salida: Aprendida[] = [];
+    for (const x of j) {
+      // Lo guardado antes de que hubiera límite eran sólo ids: no se sabe qué día, así que no cuentan para hoy.
+      if (typeof x === 'string') salida.push({ id: x, dia: '' });
+      else if (typeof x === 'object' && x !== null && typeof (x as Aprendida).id === 'string') {
+        salida.push({ id: (x as Aprendida).id, dia: typeof (x as Aprendida).dia === 'string' ? (x as Aprendida).dia : '' });
+      }
+    }
+    return salida;
   } catch {
     return [];
   }
 }
 
-function escribirLocal(ids: string[]) {
+function escribirLocal(lista: Aprendida[]) {
   try {
-    localStorage.setItem(CLAVE, JSON.stringify(ids));
+    localStorage.setItem(CLAVE, JSON.stringify(lista));
   } catch {
     /* el almacenamiento puede estar bloqueado: se ve igual en pantalla */
   }
@@ -29,25 +39,25 @@ function escribirLocal(ids: string[]) {
 /** Lo que hay en el dispositivo, al instante (para no mostrar la pantalla vacía mientras se consulta la base). */
 export const leerAprendidasLocal = leerLocal;
 
-/** Los ids de las lecciones que ya marcó como aprendidas. */
-export async function leerAprendidas(): Promise<string[]> {
+/** Las lecciones que ya marcó como aprendidas, con el día de cada una. */
+export async function leerAprendidas(): Promise<Aprendida[]> {
   const local = leerLocal();
   try {
     const uid = await idUsuaria();
     if (!uid) return local;
-    const { data, error } = await supabase.from('learned_cards').select('card_id');
+    const { data, error } = await supabase.from('learned_cards').select('card_id, learned_at');
     if (error || !data) return local;
-    const ids = data.map((f) => String(f.card_id));
-    escribirLocal(ids);
-    return ids;
+    const lista = data.map((f) => ({ id: String(f.card_id), dia: f.learned_at ? diaAR(Date.parse(String(f.learned_at))) : '' }));
+    escribirLocal(lista);
+    return lista;
   } catch {
     return local;
   }
 }
 
-export async function marcarAprendida(id: string, aprendida: boolean): Promise<void> {
-  const ahora = leerLocal().filter((x) => x !== id);
-  escribirLocal(aprendida ? [...ahora, id] : ahora);
+export async function marcarAprendida(id: string, aprendida: boolean, dia: string = diaAR()): Promise<void> {
+  const resto = leerLocal().filter((x) => x.id !== id);
+  escribirLocal(aprendida ? [...resto, { id, dia }] : resto);
   try {
     const uid = await idUsuaria();
     if (!uid) return;
