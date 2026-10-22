@@ -9,7 +9,7 @@ import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
 import { IconChat, IconChevron, IconEditar } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
-import { lunesAtras } from './IngresosVsGastos';
+import { FilaIngreso, lunesAtras } from './IngresosVsGastos';
 import { ListaGastosFijos } from './GastosFijos';
 import { FUENTES_INGRESO, type FuenteIngreso } from '../../api/v2/tipos';
 import { FilaGasto } from './FilaGasto';
@@ -51,6 +51,7 @@ export function GastosV2() {
   const [openCatId, setOpenCatId] = useState<string | null>(null);
   // Lo desplegado en Tus gastos (editar o borrar), de a un gasto por vez.
   const [gastoAbierto, setGastoAbierto] = useState<{ id: string; que: 'editar' | 'borrar' } | null>(null);
+  const [ingresoBorrando, setIngresoBorrando] = useState<string | null>(null);
 
   const [addingGasto, setAddingGasto] = useState(false);
   // Popup al tocar "+ Agregar gasto": registrarlo Desde FINA (a mano) o Desde
@@ -123,9 +124,8 @@ export function GastosV2() {
   // Lo que entró EN EL PERÍODO, sólo con lo registrado (los ingresos y las
   // cargas de saldo que ya existían). No se arrastra lo que sobró del mes anterior: que haya sobrado no
   // quiere decir que siga estando.
-  const ingresosDelPeriodo = db.ingresos.filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana).reduce((t, i) => t + i.montoArs, 0);
   const plataDelPeriodo =
-    ingresosDelPeriodo
+    db.ingresos.filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana).reduce((t, i) => t + i.montoArs, 0)
     + db.cargas.filter((c) => c.ts >= desdeVentana && c.ts < hastaVentana).reduce((t, c) => t + c.montoArs, 0);
   // Un período que ya terminó se cuenta en pasado: "te quedó", no "te queda".
   const periodoCerrado = offsetVentana > 0;
@@ -187,6 +187,10 @@ export function GastosV2() {
   // ── Tus gastos: los 5 más recientes del período (el 1 de un mes nuevo la
   // lista arranca vacía). La lista completa está en Todos tus gastos.
   const ultimosGastos = [...gastosVentana].sort((a, b) => b.ts - a.ts).slice(0, 5);
+  const ultimosIngresos = db.ingresos
+    .filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana)
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 5);
 
   // ── Con qué pagaste en el período: cada medio con lo que salió de él. Un
   // gasto dividido suma a cada medio su parte. No es el dato principal: va abajo.
@@ -373,18 +377,12 @@ export function GastosV2() {
                   <Monto value={disponibleVentana} className="text-[13px] font-semibold" />
                 </li>
               )}
-              {/* De dónde sale el disponible: lo que entró y la suma de las
-                  secciones de abajo. Sin ingresos no van: el centro del anillo
-                  ya dice cuánto gastaste. Sólo ingresos: las cargas de "Ya la
-                  tenía" suman al disponible pero no son ingresos. */}
-              {conIngreso && ingresosDelPeriodo > 0 && (
-                <li className="flex items-center gap-2.5 text-[13px] font-semibold pl-[22px]">
-                  <span className="flex-1 min-w-0" style={{ color: COLORS.ink }}>Ingresos registrados</span>
-                  <Monto value={ingresosDelPeriodo} className="text-[13px] font-semibold" />
-                </li>
-              )}
+              {/* La suma de las secciones de abajo, con punto en tinta: los
+                  gastos son neutrales. Sin ingresos no va: el centro del
+                  anillo ya dice cuánto gastaste. */}
               {conIngreso && (
-                <li className="flex items-center gap-2.5 text-[13px] font-semibold pl-[22px]">
+                <li className="flex items-center gap-2.5 text-[13px] font-semibold">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.ink }} aria-hidden />
                   <span className="flex-1 min-w-0" style={{ color: COLORS.ink }}>Total gastado</span>
                   <Monto value={totalGastado} className="text-[13px] font-semibold" />
                 </li>
@@ -669,6 +667,37 @@ export function GastosV2() {
           <button
             type="button"
             onClick={() => navigate('/onboarding-v2/gastos/todos')}
+            className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
+            style={{ color: COLORS.brand }}
+          >
+            Ver todos
+          </button>
+        )}
+      </section>
+
+      {/* Tus ingresos: los 5 más recientes del período, igual que los gastos.
+          La lista completa está en Todos tus ingresos. */}
+      <section className="flex flex-col gap-1" aria-label="Últimos ingresos">
+        <TituloSeccion>Últimos ingresos</TituloSeccion>
+        {db.ingresos.length === 0 && <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste ingresos.</p>}
+        {db.ingresos.length > 0 && ultimosIngresos.length === 0 && (
+          <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>No hay ingresos {referenciaPeriodo}.</p>
+        )}
+        <div className="flex flex-col">
+          {ultimosIngresos.map((i) => (
+            <FilaIngreso
+              key={i.id}
+              ingreso={i}
+              abierto={ingresoBorrando === i.id}
+              onAbrir={() => setIngresoBorrando(ingresoBorrando === i.id ? null : i.id)}
+              onCerrar={() => setIngresoBorrando(null)}
+            />
+          ))}
+        </div>
+        {db.ingresos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => navigate('/onboarding-v2/gastos/ingresos')}
             className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
             style={{ color: COLORS.brand }}
           >

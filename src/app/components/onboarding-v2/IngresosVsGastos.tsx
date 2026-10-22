@@ -321,7 +321,8 @@ function Leyenda({ color, texto }: { color: string; texto: string }) {
   );
 }
 
-function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingreso; abierto: boolean; onAbrir: () => void; onCerrar: () => void }) {
+/** Un ingreso con editar y borrar. La usan este gráfico, Gastos y Todos tus ingresos. */
+export function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingreso; abierto: boolean; onAbrir: () => void; onCerrar: () => void }) {
   const fuente = i.fuente === 'otro' && i.fuenteOtra ? i.fuenteOtra : FUENTES_INGRESO.find((f) => f.id === i.fuente)?.label;
   const titulo = i.descripcion || fuente || 'Ingreso';
   const monto = i.moneda === 'USD' ? `US$${i.monto.toLocaleString('es-AR')}` : fmtMoney(i.monto);
