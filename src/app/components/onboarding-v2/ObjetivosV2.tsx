@@ -1238,16 +1238,6 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
   const fechaPlan = (o: Objetivo) => parsearHorizonte(o.horizonte, hoyAR) ?? '9999-12-31';
   const gastosQueVienen = enLista.filter((o) => o.clase === 'gasto').sort((a, b) => fechaPlan(a).localeCompare(fechaPlan(b)));
   const deAhorro = enLista.filter((o) => o.clase !== 'gasto');
-  const reservaTotal = (() => {
-    let min = 0; let max = 0; let cuantos = 0;
-    for (const o of enLista) {
-      const r = reservaDe(o);
-      const aPesos = o.moneda === 'ARS' ? 1 : o.moneda === 'USD' && dolar ? dolar : null;
-      if (!r || aPesos === null) continue;
-      min += r.porMes.min * aPesos; max += r.porMes.max * aPesos; cuantos++;
-    }
-    return cuantos > 0 ? { min, max, cuantos } : null;
-  })();
 
   function abrirAlta(clase: 'ahorro' | 'gasto', ejemplo: string) {
     setNombre('');
@@ -1505,17 +1495,10 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
       {confirmarBorrarModal}
       {hojaPago}
 
-      {/* Debajo del título, sin cartel: cuánto conviene apartar por mes en
-          total (estimado, como rango, regla 4) y las sugerencias, que abren el
-          alta en la parte que les corresponde. */}
-      <header data-franja className="pb-1 flex flex-col gap-2">
+      {/* En el encabezado, sólo el título (pedido de diseño, oct 2026). Cuánto
+          apartar por mes se dice en cada plan, en su fila. */}
+      <header data-franja className="pb-1">
         <Titulo>Mis planes</Titulo>
-        {reservaTotal && (
-          <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }} aria-live="polite">
-            Para llegar a tiempo con tus planes, apartá <span className="font-bold tabular-nums">entre {fmtMoney(reservaTotal.min)} y {fmtMoney(reservaTotal.max)} por mes</span>
-            <EstadoConfianza estado="estimado" className="ml-2 align-middle" />
-          </p>
-        )}
       </header>
 
       {/* Agregar, arriba y lado a lado, como en Gastos: con muchos planes, los

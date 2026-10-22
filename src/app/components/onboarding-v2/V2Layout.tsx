@@ -130,7 +130,9 @@ function Cargando() {
 const FRANJA: { ruta: string; color: string }[] = [
   { ruta: '/onboarding-v2/home', color: COLORS.brandSoft },     // violeta — la identidad
   { ruta: '/onboarding-v2/gastos', color: COLORS.tint },        // neutro cálido — un gasto no es un error
-  { ruta: '/onboarding-v2/objetivos', color: COLORS.limaSoft }, // lima — valor, algo que avanza
+  // Lila: es el color de lo apartado para tus planes en el anillo de Gastos
+  // (pedido de diseño, oct 2026; antes era lima).
+  { ruta: '/onboarding-v2/objetivos', color: COLORS.brandSoft },
   { ruta: '/onboarding-v2/inversiones', color: COLORS.skySoft }, // estructural — plata seria, sin ruido
 ];
 
