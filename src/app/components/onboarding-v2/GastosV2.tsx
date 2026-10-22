@@ -347,6 +347,7 @@ export function GastosV2() {
               <IconChevron size={18} style={{ transform: 'rotate(180deg)' }} />
             </button>
             <Donut
+              separados
               size={132}
               segments={segmentosAnillo}
               centerLabel={conIngreso ? teQueda : 'Gastaste'}

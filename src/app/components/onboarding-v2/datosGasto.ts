@@ -59,14 +59,26 @@ export function seccionesDeLaBase(db: EstadoV2): { categorias: Categoria[]; tope
 
 // Hues categóricos por sección, para el anillo, la torta de Inicio y el punto
 // de cada gasto. Los montos nunca toman estos colores: siempre tinta neutral.
-// Seis colores bien distintos entre sí: con violetas parecidos, con seis
-// secciones la mitad de la rueda terminaba emparentada.
-const CAT_COLORS = [COLORS.brand, COLORS.naranja, COLORS.star, COLORS.lima, COLORS.azul, COLORS.magenta];
+//
+// Ocho colores, uno por sección, que no se repiten (antes eran seis en ronda: la
+// séptima volvía al color de la primera). Fuera de la paleta a propósito: el
+// lima (es el Disponible en el anillo), el lila (lo apartado), la tinta (Total
+// gastado) y el gris (Sin categoría). El orden no es estético: validado con
+// dataviz/validate sobre blanco, dos vecinos se distinguen también con
+// daltonismo (ΔE 9,1) y los que quedan a un lugar, también (14,6), que es lo
+// que pasa en el anillo cuando la sección del medio no tuvo gastos. Conserva el
+// color de las secciones 1, 2, 5 y 6 de la paleta anterior.
+const CAT_COLORS = [COLORS.brand, COLORS.naranja, COLORS.cian, COLORS.bordo, COLORS.azul, COLORS.magenta, COLORS.aqua, COLORS.amarilloDato];
 
-/** El color de una sección, atado al orden en que se creó: no cambia si cambia lo gastado. */
+/**
+ * El color de una sección, atado al orden en que se creó: no cambia si cambia
+ * lo gastado. De la novena en adelante van en gris, como "otras": un noveno
+ * color ya no se distingue de los demás (guía de dataviz), y repetir uno haría
+ * que dos secciones parezcan la misma.
+ */
 export function colorDeSeccion(id: string, categorias: Categoria[]): string {
   const i = categorias.findIndex((c) => c.id === id);
-  return i < 0 ? COLORS.lineStrong : CAT_COLORS[i % CAT_COLORS.length];
+  return i < 0 || i >= CAT_COLORS.length ? COLORS.lineStrong : CAT_COLORS[i];
 }
 
 /** Inicio del mes en curso: las listas de secciones muestran lo gastado este mes. */

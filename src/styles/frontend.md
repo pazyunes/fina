@@ -156,7 +156,7 @@ y que soporta texto blanco encima. Tiene `--fina-violeta-suave` para bandas y re
 | Salida de dinero | `--fina-gastos` (igual a tinta, neutral) | **los gastos no se pintan de alerta** |
 | Atención real | `--fina-naranja` + `--fina-naranja-texto` | solo cuando hay algo que hacer ya |
 | Personaje / destacado | `--fina-star` + `--fina-star-texto` | Fini, medallitas, momentos de marca |
-| Distinguir secciones de gastos | `--fina-purpura`, `--fina-azul`, `--fina-magenta`, `--fina-lila` | sólo para que dos secciones no se confundan; no dicen nada bueno ni malo |
+| Distinguir categorías de gastos | en este orden: `--fina-violeta`, `--fina-naranja`, `--fina-cian`, `--fina-bordo`, `--fina-azul`, `--fina-magenta`, `--fina-aqua`, `--fina-amarillo-dato` (`CAT_COLORS` en `datosGasto.ts`) | sólo para que dos categorías no se confundan; no dicen nada bueno ni malo. Ocho que no se repiten, por orden de creación; de la novena en adelante, gris. El orden está validado con dataviz para daltonismo; no se reordena a ojo. Afuera a propósito: lima (Disponible), lila (apartado), tinta (Total gastado) |
 | Inversiones | `--fina-noche` y familia | la sección vive sobre fondo oscuro, sin ruido de color |
 
 **Un gasto es un dato neutral y se muestra en tinta.** Si cada gasto se pintara de naranja
@@ -279,6 +279,8 @@ Fuente de verdad de color, tipografía, espacio y forma. **Ningún componente es
   --fina-purpura: #7E5DA8;  --fina-purpura-suave: #EEE7F6;
   --fina-azul:    #3D6FF5;  --fina-azul-suave:    #E2EAFF;
   --fina-magenta: #C23FA8;  --fina-magenta-suave: #F9E1F2;
+  --fina-cian:    #0E9FB8;  --fina-bordo: #8C2F5A;
+  --fina-aqua:    #1BAF7A;  --fina-amarillo-dato: #EDA100;
 
   /* Secciones: gastos es neutral */
   --fina-gastos:      var(--fina-tinta);         --fina-gastos-suave:      #F1EBDF;

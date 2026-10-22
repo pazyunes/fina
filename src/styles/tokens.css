@@ -47,6 +47,12 @@
   --fina-azul-suave: #E2EAFF;
   --fina-magenta: #C23FA8;
   --fina-magenta-suave: #F9E1F2;
+  /* Cuatro más, sólo para las categorías de gastos (frontend.md §3.3): con
+     ellos son 8 colores que no se repiten. Validados con dataviz/validate. */
+  --fina-cian: #0E9FB8;
+  --fina-bordo: #8C2F5A;
+  --fina-aqua: #1BAF7A;
+  --fina-amarillo-dato: #EDA100;  /* el star es muy claro para una marca de datos */
 
   /* Secciones. Gastos es neutral a propósito: un gasto no es un error. */
   --fina-gastos: var(--fina-tinta);

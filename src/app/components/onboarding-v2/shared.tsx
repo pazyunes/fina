@@ -91,6 +91,12 @@ export const COLORS = {
   // emparentadas entre sí.
   azul: '#3D6FF5', azulSoft: '#E2EAFF',
   magenta: '#C23FA8', magentaSoft: '#F9E1F2',
+  // Cuatro más, sólo para las categorías de gastos (ver CAT_COLORS en
+  // datosGasto.ts): con ellos son 8 que no se repiten.
+  cian: '#0E9FB8',
+  bordo: '#8C2F5A',
+  aqua: '#1BAF7A',
+  amarilloDato: '#EDA100', // el star es muy claro para una marca de datos
 
   // ── Aliases de compatibilidad: keys viejas → paleta de la guía ──
   green: '#B0E150', greenSoft: '#EAF5D0',                  // éxito/valor → lima
@@ -741,26 +747,37 @@ export function loadV2NivelFinanciero(): string | null {
 }
 
 // Donut de progreso/distribución (conic-gradient, sin librerías de charts).
+//
+// `separados`: un corte de 2px del color del fondo entre segmento y segmento
+// (guía de dataviz). Sin él, dos categorías de colores cercanos que quedan
+// pegadas se leen como una sola.
 export function Donut({
   segments,
   centerLabel,
   centerValue,
   size = 132,
   dark = false,
+  separados = false,
 }: {
   segments: { color: string; pct: number }[];
   centerLabel: string;
   centerValue: string;
   size?: number;
   dark?: boolean;
+  separados?: boolean;
 }) {
+  const visibles = segments.filter((s) => s.pct > 0);
+  // 2px medidos en el borde de afuera, pasados a porcentaje de la vuelta.
+  const corte = separados && visibles.length > 1 ? 200 / (Math.PI * size) : 0;
+  const fondo = dark ? COLORS.darkCard : COLORS.surface;
   let acc = 0;
-  const stops = segments
-    .filter((s) => s.pct > 0)
+  const stops = visibles
     .map((s) => {
       const start = acc;
       acc += s.pct;
-      return `${s.color} ${start}% ${acc}%`;
+      if (!corte) return `${s.color} ${start}% ${acc}%`;
+      const fin = Math.max(start, acc - corte);
+      return `${s.color} ${start}% ${fin}%, ${fondo} ${fin}% ${acc}%`;
     })
     .join(', ');
   const inset = Math.round(size * 0.13);
