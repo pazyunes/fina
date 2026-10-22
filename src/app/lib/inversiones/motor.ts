@@ -409,8 +409,31 @@ export type Resultado = {
 
 const puntaje = (e: Evaluacion): number => (e.real ? e.real.max : -1);
 
-/** Cuántas recomendaciones se marcan como máximo: más de eso deja de ser una recomendación. */
-const MAX_RECOMENDADAS = 4;
+/** Cuántas recomendaciones se marcan: más de tres abruma y deja de ser una recomendación. */
+const MAX_RECOMENDADAS = 3;
+const MIN_RECOMENDADAS = 2;
+
+/** Desde cuántos meses se compara lo que rinde cada opción a ese plazo. */
+const PLAZO_PARA_COMPARAR = 24;
+/** Cuánto menos por año (real, fracción) tiene que rendir una opción para decir que es "mucho peor". */
+const BRECHA_MUCHO_PEOR = 0.015;
+
+/**
+ * Lo que se espera que rinda por año, por encima de la inflación, para comparar opciones a
+ * largo plazo. null cuando no se puede decir con honestidad (el dólar): esa opción no se
+ * descarta por comparación.
+ *  · Las que pagan tasa o UVA: el rendimiento real de hoy, sostenido un año.
+ *  · Los CEDEARs: lo que rindió el S&P 500 en 10 años, en dólares (histórico, no promesa).
+ */
+function realAnualEsperado(i: ItemProducto, m: Mercado): number | null {
+  const e = i.rec.mejor;
+  if (e.real) return Math.pow(1 + (e.real.min + e.real.max) / 2, 12) - 1;
+  if (i.rec.producto.id === 'cedear') {
+    const h = m.spy?.valor.anualizado10a;
+    return typeof h === 'number' ? h / 100 : null;
+  }
+  return null;
+}
 
 export function recomendar(ctx: Contexto): Resultado {
   const ahora = ctx.ahora ?? Date.now();
@@ -481,6 +504,27 @@ export function recomendar(ctx: Contexto): Resultado {
     }
   }
 
+  // A largo plazo se compara lo que rinde cada opción: una que a ese plazo es mucho peor que
+  // otras dos no se recomienda, aunque hoy "empate" con la inflación. Lo que se necesita tener a
+  // mano (la caja, si todavía no hay colchón) no se descarta: ahí importa la disponibilidad.
+  if (ctx.horizonteMeses !== null && ctx.horizonteMeses >= PLAZO_PARA_COMPARAR) {
+    const proyectadas = candidatos
+      .filter((c) => c.recomendado)
+      .map((c) => ({ c, anual: realAnualEsperado(c, ctx.mercado) }))
+      .filter((x): x is { c: ItemProducto; anual: number } => x.anual !== null)
+      .sort((a, b) => b.anual - a.anual);
+    if (proyectadas.length >= 3) {
+      const [primera, segunda] = proyectadas;
+      for (const { c, anual } of proyectadas.slice(2)) {
+        if (c.rec.rol === 'caja' && ctx.necesitaCaja) continue;
+        if (segunda.anual - anual > BRECHA_MUCHO_PEOR) {
+          c.recomendado = false;
+          c.motivo = `A ${enMeses(ctx.horizonteMeses)} rinde bastante menos que ${primera.c.rec.producto.nombre.toLowerCase()} y ${segunda.c.rec.producto.nombre.toLowerCase()}.`;
+        }
+      }
+    }
+  }
+
   // Primero lo que necesita: sin colchón, la caja; con colchón, el ahorro.
   const ordenRol: Record<Rol, number> = ctx.necesitaCaja
     ? { caja: 0, ahorro: 1, crecimiento: 2 }
@@ -493,18 +537,23 @@ export function recomendar(ctx: Contexto): Resultado {
       if (a.rec.yaLoHace !== b.rec.yaLoHace) return Number(a.rec.yaLoHace) - Number(b.rec.yaLoHace);
       return puntaje(b.rec.mejor) - puntaje(a.rec.mejor);
     });
-  // Se marcan hasta MAX_RECOMENDADAS, pero siempre la mejor de cada rol: si alguien puede dejar
-  // la plata cinco años, los CEDEARs (el único que crece a largo plazo) no pueden quedar afuera
-  // sólo porque hay cuatro opciones de ahorro delante.
+  // Se marcan entre 2 y 3, pero siempre la mejor de cada rol: si alguien puede dejar la plata
+  // cinco años, los CEDEARs (el único que crece a largo plazo) no pueden quedar afuera sólo
+  // porque hay otras opciones de ahorro delante.
   const elegidas = new Set<ItemProducto>();
+  // A largo plazo y con colchón armado no hace falta tener plata a mano: la caja no entra por rol.
+  const largoSinCaja = ctx.horizonteMeses !== null && ctx.horizonteMeses >= PLAZO_PARA_COMPARAR && !ctx.necesitaCaja;
   for (const rol of ['caja', 'ahorro', 'crecimiento'] as const) {
+    if (rol === 'caja' && largoSinCaja) continue;
     const mejorDelRol = recomendadas.find((c) => c.rec.rol === rol);
     if (mejorDelRol) elegidas.add(mejorDelRol);
   }
   for (const c of recomendadas) {
-    if (elegidas.size >= MAX_RECOMENDADAS) break;
+    if (elegidas.size >= MIN_RECOMENDADAS) break;
     elegidas.add(c);
   }
+  // Nunca más que el máximo: si hubiera más roles que lugares, quedan los primeros por orden.
+  while (elegidas.size > MAX_RECOMENDADAS) elegidas.delete([...elegidas][elegidas.size - 1]);
   const marcadas = recomendadas.filter((c) => elegidas.has(c));
   const resto = [
     ...recomendadas.filter((c) => !elegidas.has(c)).map((c) => ({ ...c, recomendado: false, motivo: null })),

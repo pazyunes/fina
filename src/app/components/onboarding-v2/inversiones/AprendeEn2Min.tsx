@@ -6,10 +6,10 @@ import { BotonFantasma, COLORS, Cta } from '../shared';
 import { GlobitoCuando, GlobitoDonde, GlobitoGarantia, GlobitoQueEs, GlobitoRiesgo, GlobitoRinde, GlosarioNecesario } from './Ficha';
 import { Hoja } from './Hoja';
 
-// "Aprendé en 2 minutos": lo esencial de una inversión en tres pantallas cortas,
-// siempre las mismas preguntas en el mismo orden. Arriba de todo va el glosario
-// necesario: si en el texto aparece una palabra que no se entiende, se sube y se
-// busca. Al final, "¡Empecemos!".
+// "Aprendé en 2 minutos": lo esencial de una inversión en cuatro pantallas cortas,
+// siempre en el mismo orden. La primera es el glosario: las palabras que se van a
+// usar, antes de usarlas. En las otras sigue arriba, cerrado, por si hay que volver
+// a buscar una. Al final, "¡Empecemos!".
 export function AprendeEn2Min({
   producto, ficha, confianza, onEmpezar, onCerrar,
 }: {
@@ -20,12 +20,16 @@ export function AprendeEn2Min({
   onCerrar: () => void;
 }) {
   const [pantalla, setPantalla] = useState(0);
-  const ultima = pantalla === 2;
+  // Sin palabras técnicas que explicar, no hay pantalla de glosario.
+  const conGlosario = producto.glosario.length > 0;
+  const pantallas = conGlosario ? ['glosario', 'que-es', 'rinde', 'cuando'] as const : ['que-es', 'rinde', 'cuando'] as const;
+  const actual = pantallas[pantalla];
+  const ultima = pantalla === pantallas.length - 1;
   return (
     <Hoja titulo={`Aprendé en 2 minutos: ${producto.nombre}`} onCerrar={onCerrar}>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex gap-2" role="img" aria-label={`Pantalla ${pantalla + 1} de 3`}>
-          {[0, 1, 2].map((i) => (
+        <div className="flex gap-2" role="img" aria-label={`Pantalla ${pantalla + 1} de ${pantallas.length}`}>
+          {pantallas.map((_, i) => (
             <span key={i} className="w-2.5 h-2.5 rounded-full" style={{ background: i <= pantalla ? COLORS.brand : COLORS.lineStrong }} />
           ))}
         </div>
@@ -35,10 +39,15 @@ export function AprendeEn2Min({
       </div>
 
       <div className="flex flex-col gap-3.5">
-        <GlosarioNecesario p={producto} abierto={pantalla === 0} />
-        {pantalla === 0 && (<><GlobitoQueEs p={producto} /><GlobitoDonde p={producto} /></>)}
-        {pantalla === 1 && (<><GlobitoRinde ficha={ficha} confianza={confianza} /><GlobitoRiesgo p={producto} /></>)}
-        {pantalla === 2 && (<><GlobitoCuando p={producto} /><GlobitoGarantia p={producto} /></>)}
+        {actual === 'glosario' && (
+          <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>
+            Antes de empezar, estas son las palabras que vas a ver. Si más adelante alguna se te escapa, las encontrás de nuevo arriba de cada pantalla.
+          </p>
+        )}
+        <GlosarioNecesario p={producto} abierto={actual === 'glosario'} />
+        {actual === 'que-es' && (<><GlobitoQueEs p={producto} /><GlobitoDonde p={producto} /></>)}
+        {actual === 'rinde' && (<><GlobitoRinde ficha={ficha} confianza={confianza} /><GlobitoRiesgo p={producto} /></>)}
+        {actual === 'cuando' && (<><GlobitoCuando p={producto} /><GlobitoGarantia p={producto} /></>)}
       </div>
 
       <div className="flex flex-col gap-2">

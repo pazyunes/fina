@@ -17,7 +17,7 @@ import { PasosNumerados } from './PasosNumerados';
 type Fase = 'aprende' | 'donde' | 'monto' | 'pasos';
 
 // De "me interesa" a "ya lo hice", en este orden:
-//   1. Aprendé en 2 minutos (tres pantallas, con el glosario arriba)
+//   1. Aprendé en 2 minutos (cuatro pantallas: la primera es el glosario)
 //   2. Dónde lo hacés (las opciones una al lado de la otra)
 //   3. Con cuánto empezás (lo que cada inversión realmente pide)
 //   4. Los pasos, numerados

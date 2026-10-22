@@ -34,8 +34,8 @@ fuentes públicas ─► api/mercado.ts ─► src/app/api/v2/mercado.ts ─► 
   convienen. Arriba, la persona puede decir cuánto quiere invertir y en cuánto tiempo lo quiere sacar
   (o elegir directo una inversión). El monto y el plazo cambian qué se recomienda (por ejemplo, con
   $10.000 un CEDEAR no alcanza).
-- **Al tocar una inversión empieza el flujo** (`FlujoInversion.tsx`): "Aprendé en 2 minutos" (3 pantallas,
-  con el **glosario necesario arriba**) → dónde hacerlo (las opciones una al lado de la otra, con un mini
+- **Al tocar una inversión empieza el flujo** (`FlujoInversion.tsx`): "Aprendé en 2 minutos" (4 pantallas:
+  la primera es el **glosario necesario**, después qué es / cuánto rinde / cuándo la sacás) → dónde hacerlo (las opciones una al lado de la otra, con un mini
   comentario sólo si las distingue) → con cuánto empezar → los pasos numerados, que se pueden recorrer
   para adelante y para atrás.
 - **Lo que se decide al empezar es lo mismo que se pregunta al registrar** (`lib/inversiones/limites.ts`
@@ -152,3 +152,10 @@ se usa "ayer contra hoy" con un rango ancho.
 
 Ver el cierre de la conversación en la que se armó: avisos fuera de la app (WhatsApp/push),
 conexión con Objetivos, más proveedores y fondos, y la revisión legal (CNV).
+
+## Cuántas recomendaciones y con qué criterio
+
+- Se marcan **entre 2 y 3** (`MIN_RECOMENDADAS` / `MAX_RECOMENDADAS` en `motor.ts`), siempre la mejor de cada rol (caja, ahorro, crecimiento).
+- **Desde 24 meses de plazo se compara lo que rinde cada opción al año** (real, sobre la inflación): las que pagan tasa o UVA con su rendimiento real de hoy, los CEDEARs con lo que rindió el S&P 500 en 10 años (dato histórico, no promesa), el dólar no se compara. Si hay al menos tres comparables y una rinde más de 1,5 puntos por año menos que la segunda mejor, **no se recomienda** y dice por qué.
+- Con plazo largo y colchón armado, la **caja** (cuenta para tener plata a mano) no entra por ser "la caja". Si todavía no hay colchón, sigue.
+- Sólo se compara lo que está en el catálogo. Lo que el mercado usa y hoy no está (obligaciones negociables, bonos CER, fondos de renta fija o CER, acciones) necesita fuente de datos y revisión de un asesor.

@@ -329,3 +329,61 @@ describe('cuando los datos fallan, la persona sólo ve "hubo un error"', () => {
     assert.equal(MENSAJE_DE_ERROR.texto, 'Probá de nuevo más tarde.');
   });
 });
+
+describe('pocas recomendaciones, con criterio a largo plazo', () => {
+  const m = mercadoFixture();
+  const marcadas = (c: Partial<Contexto>) => recomendar(ctx(m, c)).items.filter((i) => i.recomendado);
+
+  it('nunca se recomiendan más de 3, para ningún perfil ni plazo', () => {
+    for (const perfil of ['conservador', 'moderado', 'arriesgado'] as const) {
+      for (const horizonteMeses of [1, 6, 12, 36, 60, null]) {
+        for (const necesitaCaja of [true, false]) {
+          const n = marcadas({ perfil, horizonteMeses, necesitaCaja }).length;
+          assert.ok(n <= 3, `${perfil} ${horizonteMeses} caja=${necesitaCaja}: ${n}`);
+        }
+      }
+    }
+  });
+
+  it('se recomiendan al menos 2 cuando hay con qué', () => {
+    assert.ok(marcadas({ perfil: 'moderado', horizonteMeses: 12, necesitaCaja: false }).length >= 2);
+  });
+
+  it('con 5 años y perfil arriesgado, los CEDEARs entran', () => {
+    assert.ok(marcadas({ perfil: 'arriesgado', horizonteMeses: 60, necesitaCaja: false }).some((i) => i.rec.producto.id === 'cedear'));
+  });
+
+  it('a 3 años y con colchón armado, la cuenta para tener plata a mano no entra por ser "la caja"', () => {
+    const ids = marcadas({ perfil: 'arriesgado', horizonteMeses: 36, necesitaCaja: false }).map((i) => i.rec.producto.id);
+    assert.ok(!ids.includes('cuenta_remunerada'), ids.join(','));
+  });
+
+  it('pero si todavía no tiene colchón, la cuenta sigue, aunque el plazo sea largo', () => {
+    const ids = marcadas({ perfil: 'arriesgado', horizonteMeses: 36, necesitaCaja: true }).map((i) => i.rec.producto.id);
+    assert.ok(ids.includes('cuenta_remunerada'), ids.join(','));
+  });
+
+  it('una opción que a 3 años rinde mucho menos que otras dos no se recomienda, y dice por qué', () => {
+    // Plazo fijo con tasas muy dispares: "empata" hoy por la mejor del mercado, pero lo típico queda bien debajo de la UVA.
+    const flojo: Mercado = {
+      ...m,
+      plazoFijo: m.plazoFijo && {
+        ...m.plazoFijo,
+        valor: m.plazoFijo.valor.map((b) => (b.tnaClientes >= 0.2375 ? b : { ...b, tnaClientes: 0.14, tasas: [] })),
+      },
+    };
+    const sin = recomendar(ctx(flojo, { perfil: 'arriesgado', horizonteMeses: 12, necesitaCaja: false }));
+    assert.equal(item(sin, 'plazo_fijo')!.rec.mejor.veredicto, 'empata');
+
+    const r = recomendar(ctx(flojo, { perfil: 'arriesgado', horizonteMeses: 36, necesitaCaja: false }));
+    const pf = item(r, 'plazo_fijo')!;
+    assert.equal(pf.recomendado, false);
+    assert.match(pf.motivo ?? '', /rinde bastante menos que/);
+    assert.ok(r.items.filter((i) => i.recomendado).length >= 2);
+  });
+
+  it('con plazos cortos no se compara por plazo: manda la disponibilidad', () => {
+    const ids = marcadas({ perfil: 'arriesgado', horizonteMeses: 6, necesitaCaja: true }).map((i) => i.rec.producto.id);
+    assert.ok(ids.includes('cuenta_remunerada'));
+  });
+});
