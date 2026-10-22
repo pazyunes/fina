@@ -3,18 +3,20 @@ import type { Producto } from '../../../lib/inversiones/catalogo';
 import type { FichaRinde } from '../../../lib/inversiones/rinde';
 import type { Confianza } from '../shared';
 import { BotonFantasma, COLORS, Cta } from '../shared';
-import { GlobitoCuando, GlobitoDonde, GlobitoGarantia, GlobitoQueEs, GlobitoRiesgo, GlobitoRinde, GlosarioNecesario } from './Ficha';
+import { GlobitoBaja, GlobitoCuando, GlobitoDonde, GlobitoGarantia, GlobitoQueEs, GlobitoRiesgo, GlobitoRinde, GlosarioNecesario } from './Ficha';
 import { Hoja } from './Hoja';
 
 // "Aprendé en 2 minutos": lo esencial de una inversión en cuatro pantallas cortas,
 // siempre en el mismo orden. La primera es el glosario: las palabras que se van a
 // usar, antes de usarlas, y no se repite en las demás. Al final, "¡Empecemos!".
 export function AprendeEn2Min({
-  producto, ficha, confianza, onEmpezar, onCerrar,
+  producto, ficha, confianza, aviso, onEmpezar, onCerrar,
 }: {
   producto: Producto;
   ficha: FichaRinde | null;
   confianza: Confianza;
+  /** Si lo que eligió no encaja con su plazo, se lo decimos antes de empezar. */
+  aviso?: string | null;
   onEmpezar: () => void;
   onCerrar: () => void;
 }) {
@@ -38,6 +40,9 @@ export function AprendeEn2Min({
       </div>
 
       <div className="flex flex-col gap-3.5">
+        {aviso && (
+          <p role="note" className="text-[15px] leading-relaxed pl-3.5 border-l-2 max-w-[62ch]" style={{ color: COLORS.ink, borderColor: COLORS.star }}>{aviso}</p>
+        )}
         {actual === 'glosario' && (
           <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>
             Antes de empezar, estas son las palabras que vas a ver.
@@ -45,7 +50,7 @@ export function AprendeEn2Min({
         )}
         {actual === 'glosario' && <GlosarioNecesario p={producto} abierto />}
         {actual === 'que-es' && (<><GlobitoQueEs p={producto} /><GlobitoDonde p={producto} /></>)}
-        {actual === 'rinde' && (<><GlobitoRinde ficha={ficha} confianza={confianza} /><GlobitoRiesgo p={producto} /></>)}
+        {actual === 'rinde' && (<><GlobitoRinde ficha={ficha} confianza={confianza} /><GlobitoRiesgo p={producto} /><GlobitoBaja p={producto} /></>)}
         {actual === 'cuando' && (<><GlobitoCuando p={producto} /><GlobitoGarantia p={producto} /></>)}
       </div>
 

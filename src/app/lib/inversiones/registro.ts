@@ -15,9 +15,9 @@
 
 import type { LecturaCaptura } from '../../api/v2/capturas.js';
 import type { PosicionInversion, TipoPosicion } from '../../api/v2/tipos.js';
-import { ALIAS_PROVEEDOR } from './catalogo.js';
+import { ALIAS_PROVEEDOR, BROKERS, PROVEEDORES } from './catalogo.js';
 import { diaMes, fmtPesos, nombrePropio, pct } from './formato.js';
-import { CEDEARS_DISPONIBLES, avisoDeMonto, explicarTicker, limitesDe, precioCedear } from './limites.js';
+import { avisoDeMonto, explicarTicker, limitesDe, listaDeCedears, precioCedear } from './limites.js';
 import { bancosOrdenados } from './motor.js';
 import type { Mercado } from './mercadoTipos.js';
 
@@ -30,12 +30,19 @@ export type CampoDef = {
   etiqueta: string;
   tipo: TipoCampo;
   obligatorio: boolean;
+  /** Si está, manda sobre `obligatorio`: el dato sólo se pide cuando se cumple (la tasa de un fondo sólo en los money market). */
+  obligatorioSi?: (v: Valores) => boolean;
   /** Dónde se encuentra este dato en la app, o qué significa si es una palabra técnica. */
   ayuda: string;
   /** Una lista fija, o una que depende de lo ya elegido (por ejemplo, el fondo depende de dónde lo compró). */
   opciones?: Opcion[] | ((v: Valores, m: Mercado | null) => Opcion[]);
   placeholder?: string;
+  /** Sugerencias mientras se escribe, sin cerrar la lista: se puede anotar algo que no figure (una acción argentina, por ejemplo). */
+  sugerencias?: (v: Valores, m: Mercado | null) => Opcion[];
 };
+
+/** ¿Hay que completarlo, con lo ya cargado? */
+export const esObligatorio = (c: CampoDef, v: Valores): boolean => (c.obligatorioSi ? c.obligatorioSi(v) : c.obligatorio);
 
 export type FormDef = {
   tipo: TipoPosicion;
@@ -49,8 +56,15 @@ const SI_NO: Opcion[] = [{ id: 'si', label: 'Sí' }, { id: 'no', label: 'No' }];
 const opc = (xs: string[]): Opcion[] => xs.map((x) => ({ id: x, label: x }));
 
 const BILLETERAS = opc(['Mercado Pago', 'Ualá', 'Naranja X', 'Otra']);
-const BROKERS = opc(['Cocos Capital', 'Balanz', 'Otro']);
-const PARA_FONDOS = opc(['Cocos Capital', 'Balanz', 'Mercado Pago', 'Otro']);
+const BROKERS_OPC = opc([...BROKERS.map((b) => PROVEEDORES[b].nombre), 'Otro']);
+const PARA_FONDOS = opc([...BROKERS.map((b) => PROVEEDORES[b].nombre), 'Mercado Pago', 'Otro']);
+const ES_MONEY_MARKET = (v: Valores): boolean => (v.tipoFondo ?? 'money_market') === 'money_market';
+const TIPOS_DE_FONDO: Opcion[] = [
+  { id: 'money_market', label: 'Money market (liquidez)' },
+  { id: 'renta_fija', label: 'Renta fija (bonos)' },
+  { id: 'renta_variable', label: 'Renta variable (acciones)' },
+  { id: 'mixto', label: 'Mixto u otro' },
+];
 
 /** Los fondos que ofrece cada lugar. Si eligió "Otro", la lista queda vacía y se escribe a mano. */
 const FONDOS_DE: Record<string, string> = {
@@ -77,7 +91,7 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     titulo: 'Cuenta remunerada',
     campos: [
       { id: 'proveedor', etiqueta: '¿En qué billetera?', tipo: 'opcion', obligatorio: true, ayuda: 'La app donde tenés la plata.', opciones: BILLETERAS },
-      { id: 'monto', etiqueta: '¿Cuánto tenés en la cuenta?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es el saldo que ves en la sección donde se muestra lo que rinde.' },
+      { id: 'monto', etiqueta: '¿Cuánto tenés en la cuenta?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es el saldo de hoy en la sección donde se muestra lo que rinde. Cambia cada vez que cobrás o pagás algo, así que anotá el de hoy y actualizalo de vez en cuando.' },
       { id: 'tna', etiqueta: 'Tasa que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. La ves en la sección de tu cuenta donde se muestra lo que rinde. Con ese número calculamos cuánto crece tu plata. Si solo ves la TEA (la tasa efectiva anual, parecida a la TNA), anotá ese número.', placeholder: 'Ej: 19' },
       inicio(),
     ],
@@ -89,12 +103,13 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
       { id: 'proveedor', etiqueta: '¿Dónde lo compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o broker (la plataforma donde comprás inversiones) desde donde invertiste.', opciones: PARA_FONDOS },
       {
         id: 'fondo', etiqueta: 'Nombre del fondo', tipo: 'opcion', obligatorio: true,
-        ayuda: 'Está arriba, en la pantalla del fondo.',
+        ayuda: 'Está arriba, en la pantalla del fondo. Hay cientos de fondos: si no figura en la lista, escribilo tal cual aparece.',
         opciones: (v) => (FONDOS_DE[v.proveedor] ? opc([FONDOS_DE[v.proveedor]]) : []),
       },
+      { id: 'tipoFondo', etiqueta: '¿Qué tipo de fondo es?', tipo: 'opcion', obligatorio: true, ayuda: 'Money market: presta a muy corto plazo y casi no baja. Renta fija: invierte en bonos y puede bajar según el plazo. Renta variable: invierte en acciones y puede bajar bastante. Figura en la descripción del fondo.', opciones: TIPOS_DE_FONDO },
       { id: 'clase', etiqueta: 'Clase', tipo: 'opcion', obligatorio: false, ayuda: 'Una letra (A, B, C…) que figura junto al nombre. Cambia las comisiones, no lo que rinde. Si no la ves, dejala vacía.', opciones: opc(['A', 'B', 'C', 'Otra']) },
       { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. El monto que compraste.' },
-      { id: 'tna', etiqueta: 'Rendimiento que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. La ves en la pantalla del fondo. Con ese número calculamos cuánto crece tu plata, y ayuda a que las recomendaciones sean más precisas para todos.', placeholder: 'Ej: 19' },
+      { id: 'tna', etiqueta: 'Rendimiento que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: true, obligatorioSi: ES_MONEY_MARKET, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. La ves en la pantalla del fondo. Con ese número calculamos cuánto crece tu plata, y ayuda a que las alternativas sean más precisas para todos. En los fondos de renta fija o variable no se pide: su valor sube y baja, y no hay una tasa fija para anotar.', placeholder: 'Ej: 19' },
       { id: 'cantidad', etiqueta: 'Cuotapartes que recibiste', tipo: 'numero', obligatorio: true, ayuda: 'Las cuotapartes son los pedacitos del fondo que te tocaron. Las ves en la pantalla donde se muestra lo que tenés invertido. Con esto calculamos cuánto vale hoy tu inversión.', placeholder: 'Ej: 41,17' },
       { id: 'precio', etiqueta: 'Valor de cada cuotaparte al comprar', tipo: 'numero', obligatorio: true, ayuda: 'En pesos. Figura en el comprobante de la compra. Con esto calculamos cuánto ganaste.', placeholder: 'Ej: 2.428,729' },
       { id: 'rescate', etiqueta: '¿En cuánto tiempo podés sacar tu plata?', tipo: 'opcion', obligatorio: false, ayuda: 'Figura en la pantalla del fondo como “plazo de rescate” (rescatar es pedir que te devuelvan la plata).', opciones: [{ id: 'mismo-dia', label: 'El mismo día' }, { id: '24hs', label: '24 hs' }, { id: '48hs', label: '48 hs' }, { id: 'otro', label: 'Otro' }] },
@@ -130,7 +145,7 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'letra',
     titulo: 'Letra del Tesoro',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o plataforma desde donde la compraste.', opciones: BROKERS },
+      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o plataforma desde donde la compraste.', opciones: BROKERS_OPC },
       { id: 'ticker', etiqueta: 'Nombre de la letra (ticker)', tipo: 'texto', obligatorio: true, ayuda: `${explicarTicker} En las letras, el nombre ya indica el vencimiento. Ej: S13N6.`, placeholder: 'Ej: S13N6' },
       { id: 'monto', etiqueta: '¿Cuánto pagaste en total?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos, con la comisión si la hubo.' },
       { id: 'cantidad', etiqueta: 'Cantidad comprada', tipo: 'numero', obligatorio: true, ayuda: 'Figura en el comprobante o en lo que tenés invertido. Con esto calculamos cuánto cobrás al vencimiento.', placeholder: 'Ej: 1.000' },
@@ -142,7 +157,7 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'dolar',
     titulo: 'Dólares',
     campos: [
-      { id: 'proveedor', etiqueta: '¿Dónde los compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'En qué broker, o sea la plataforma donde comprás inversiones.', opciones: BROKERS },
+      { id: 'proveedor', etiqueta: '¿Dónde los compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'En qué broker, o sea la plataforma donde comprás inversiones.', opciones: BROKERS_OPC },
       { id: 'cantidad', etiqueta: '¿Cuántos dólares compraste?', tipo: 'numero', obligatorio: true, ayuda: 'En dólares (US$). Es el saldo en dólares que recibiste.', placeholder: 'Ej: 100' },
       { id: 'precio', etiqueta: '¿A cuánto compraste cada dólar?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos por cada dólar. Figura en el comprobante.' },
       { id: 'tipo', etiqueta: 'Tipo de dólar', tipo: 'opcion', obligatorio: false, ayuda: 'El comprobante dice si fue MEP (la forma legal de comprar desde un broker), oficial u otro.', opciones: [{ id: 'mep', label: 'MEP' }, { id: 'oficial', label: 'Oficial' }, { id: 'otro', label: 'Otro' }] },
@@ -153,14 +168,16 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'cedear',
     titulo: 'CEDEAR',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué broker (la plataforma donde comprás inversiones)?', tipo: 'opcion', obligatorio: true, ayuda: 'La app desde donde lo compraste.', opciones: BROKERS },
+      { id: 'proveedor', etiqueta: '¿En qué broker (la plataforma donde comprás inversiones)?', tipo: 'opcion', obligatorio: true, ayuda: 'La app desde donde lo compraste.', opciones: BROKERS_OPC },
       {
-        id: 'ticker', etiqueta: '¿Cuál compraste? (ticker)', tipo: 'opcion', obligatorio: true, ayuda: explicarTicker,
-        opciones: () => CEDEARS_DISPONIBLES.map((c) => ({ id: c.ticker, label: `${c.ticker} · ${c.nombre}` })),
+        id: 'ticker', etiqueta: '¿Cuál compraste? (ticker)', tipo: 'texto', obligatorio: true,
+        ayuda: `${explicarTicker} Escribilo o elegilo de la lista. También podés anotar una acción argentina (por ejemplo GGAL).`,
+        placeholder: 'Ej: SPY',
+        sugerencias: (_v, m) => listaDeCedears(m).map((c) => ({ id: c.ticker, label: `${c.ticker}${c.nombre ? ` · ${c.nombre}` : ''}` })),
       },
       { id: 'cantidad', etiqueta: '¿Cuántos compraste?', tipo: 'numero', obligatorio: true, ayuda: 'Se compran de a uno entero. Figura en el comprobante.', placeholder: 'Ej: 2' },
       { id: 'precio', etiqueta: 'Precio de cada uno', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. El precio por unidad al que se hizo la compra.' },
-      { id: 'comision', etiqueta: 'Comisión que te cobraron', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es lo que cobra el broker (la plataforma) por comprar. Figura en el comprobante; si no cobraron, poné 0. Cuenta para saber cuánto ganaste de verdad.' },
+      { id: 'comision', etiqueta: 'Comisión que te cobraron (%)', tipo: 'porcentaje', obligatorio: true, ayuda: 'Es un porcentaje de lo que operaste, no un monto en pesos. Es lo que cobra el broker (la plataforma) por comprar; figura en el comprobante o en sus tarifas. Si no cobraron, poné 0. Cuenta para saber cuánto ganaste de verdad.', placeholder: 'Ej: 0,6' },
       inicio('¿Cuándo lo compraste?'),
     ],
   },
@@ -230,7 +247,7 @@ export function procesarRegistro(
   for (const c of def.campos) {
     const valor = (v[c.id] ?? '').trim();
     if (c.id === 'vencimiento' && letraConocida && !valor) continue;
-    if (c.obligatorio && !valor) errores[c.id] = 'Completá este dato.';
+    if (esObligatorio(c, v) && !valor) errores[c.id] = 'Completá este dato.';
     else if (valor && (c.tipo === 'monto' || c.tipo === 'numero' || c.tipo === 'porcentaje') && leerNumero(valor) === null) {
       errores[c.id] = 'Escribilo con números.';
     } else if (valor && c.tipo === 'fecha' && !fechaValida(valor)) errores[c.id] = 'La fecha no es válida.';
@@ -256,9 +273,13 @@ export function procesarRegistro(
     if (cantidad !== null && precio !== null) monto = Math.round(cantidad * precio);
   }
   if (tipo === 'cedear') {
-    const comision = num('comision') ?? 0;
+    // La comisión es un % de lo operado: se pasa a pesos para saber el costo total.
+    const comisionPct = num('comision') ?? 0;
+    if (comisionPct < 0 || comisionPct > 100) errores.comision = 'Revisá el porcentaje.';
+    else if (comisionPct > 5) avisos.push(`Una comisión de ${pct(comisionPct, 1)} es mucho más alta que la habitual en los brokers. Revisá que sea un porcentaje y no pesos.`);
+    const comision = cantidad !== null && precio !== null ? Math.round(cantidad * precio * (comisionPct / 100)) : 0;
     if (cantidad !== null && precio !== null) monto = Math.round(cantidad * precio + comision);
-    if (comision) detalle.comision = comision;
+    if (comisionPct) { detalle.comisionPct = comisionPct; detalle.comision = comision; }
   }
 
   if (monto !== null && monto <= 0) errores[tipo === 'dolar' || tipo === 'cedear' ? 'cantidad' : 'monto'] = 'Tiene que ser mayor a cero.';
@@ -321,6 +342,8 @@ export function procesarRegistro(
     const fondo = (v.fondo ?? '').trim();
     if (fondo) detalle.fondo = fondo;
     if (v.clase?.trim()) detalle.clase = v.clase.trim().toUpperCase();
+    if (v.tipoFondo) detalle.tipoFondo = v.tipoFondo;
+    if (v.tipoFondo && v.tipoFondo !== 'money_market') resumen.push('Este tipo de fondo puede bajar de valor: no es plata que quede quieta. Mirá su valor de vez en cuando, pero sin vender con miedo por una caída.');
     if (v.rescate) detalle.rescate = v.rescate;
     if (cantidad !== null && precio !== null && monto !== null) {
       const calculado = cantidad * precio;
@@ -339,9 +362,12 @@ export function procesarRegistro(
     const ticker = (v.ticker ?? '').trim().toUpperCase();
     if (ticker) detalle.ticker = ticker;
     if (cantidad !== null && !Number.isInteger(cantidad)) errores.cantidad = 'Los CEDEARs se compran de a uno entero.';
+    if (ticker && mercado?.cedears && !mercado.cedears.valor.some((c) => c.simbolo === ticker)) {
+      avisos.push(`No encontramos ${ticker} entre los CEDEARs que operan hoy. Si es una acción argentina o una que cotiza de otra forma, está bien.`);
+    }
     const actual = ticker ? { precio: precioCedear(mercado, ticker) } : null;
     if (actual?.precio && precio !== null && Math.abs(precio - actual.precio) / actual.precio > 0.5) avisos.push(`El precio de hoy de ${ticker} es ${fmtPesos(actual.precio ?? 0)}. Si compraste hace tiempo puede ser distinto; si no, revisalo.`);
-    if (monto !== null) resumen.push(`El costo total fue ${fmtPesos(monto)}${detalle.comision ? ' (con comisión)' : ''}.`);
+    if (monto !== null) resumen.push(`El costo total fue ${fmtPesos(monto)}${detalle.comisionPct ? ` (con la comisión de ${pct(Number(detalle.comisionPct), 1)})` : ''}.`);
   }
 
   if (tipo === 'plazo_fijo' || tipo === 'plazo_fijo_uva') proveedor = proveedor || '';

@@ -5,7 +5,7 @@ import type { TipoPosicion } from '../../../api/v2/tipos';
 import { nombreProducto, ORDEN_PRODUCTOS } from '../../../lib/inversiones/catalogo';
 import type { Mercado } from '../../../lib/inversiones/mercadoTipos';
 import {
-  FORMULARIOS, hoyISO, lecturaAValores, opcionesDe, procesarRegistro, soloNumeros, valoresIniciales,
+  FORMULARIOS, esObligatorio, hoyISO, lecturaAValores, opcionesDe, procesarRegistro, soloNumeros, valoresIniciales,
   type CampoDef, type Opcion, type Valores,
 } from '../../../lib/inversiones/registro';
 import { BotonFantasma, COLORS, Cta, formatThousands, OpcionesGrid, TituloSeccion } from '../shared';
@@ -136,6 +136,8 @@ export function RegistroPosicion({
                 campo={c}
                 valor={valores[c.id] ?? ''}
                 opciones={opcionesDe(c, valores, mercado)}
+                sugerencias={c.sugerencias ? c.sugerencias(valores, mercado) : []}
+                obligatorio={esObligatorio(c, valores)}
                 error={intentado ? resultado.errores[c.id] : undefined}
                 leido={leidos.includes(c.id)}
                 onCambiar={(v) => cambiar(c.id, v)}
@@ -170,11 +172,13 @@ export function RegistroPosicion({
 }
 
 function Campo({
-  campo, valor, opciones, error, leido, onCambiar,
+  campo, valor, opciones, sugerencias, obligatorio, error, leido, onCambiar,
 }: {
   campo: CampoDef;
   valor: string;
   opciones: Opcion[];
+  sugerencias: Opcion[];
+  obligatorio: boolean;
   error?: string;
   leido: boolean;
   onCambiar: (v: string) => void;
@@ -187,7 +191,7 @@ function Campo({
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-[16px] font-bold" style={{ color: COLORS.ink }}>
-        {campo.etiqueta}{!campo.obligatorio && <span className="font-normal" style={{ color: COLORS.inkFaint }}> (opcional)</span>}
+        {campo.etiqueta}{!obligatorio && <span className="font-normal" style={{ color: COLORS.inkFaint }}> (opcional)</span>}
       </label>
 
       {campo.tipo === 'opcion' && opciones.length > 6 ? (
@@ -209,6 +213,7 @@ function Campo({
           <input
             id={id}
             value={valor}
+            list={sugerencias.length > 0 ? `${id}-lista` : undefined}
             placeholder={campo.placeholder}
             inputMode={numerico ? 'decimal' : 'text'}
             onChange={(e) => onCambiar(campo.tipo === 'monto' ? formatThousands(e.target.value) : numerico ? soloNumeros(e.target.value) : e.target.value)}
@@ -217,6 +222,11 @@ function Campo({
             aria-invalid={error ? true : undefined}
           />
           {campo.tipo === 'porcentaje' && <span className="absolute top-1/2 -translate-y-1/2 right-4" style={{ color: COLORS.inkSoft }}>%</span>}
+          {sugerencias.length > 0 && (
+            <datalist id={`${id}-lista`}>
+              {sugerencias.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </datalist>
+          )}
         </div>
       )}
 

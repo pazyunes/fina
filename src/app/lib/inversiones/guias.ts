@@ -20,7 +20,7 @@
 // funcionan estas apps en general; no se pudieron verificar abriendo cada una.
 // `porVerificar` lista lo que hay que confirmar en la app real.
 
-import { PROVEEDORES, type ProductoId, type ProveedorId } from './catalogo.js';
+import { PROVEEDORES, type BrokerId, type ProductoId, type ProveedorId } from './catalogo.js';
 import { diaMes, fmtPesos, nombrePropio, pct } from './formato.js';
 import { CEDEARS_DISPONIBLES, FONDOS_POR_PROVEEDOR, origenDeclarable, precioCedear } from './limites.js';
 import { bancosOrdenados, type Evaluacion } from './motor.js';
@@ -131,7 +131,7 @@ function pasoRegistrar(): PasoGuia {
     titulo: 'Anotala en FINA',
     haces: 'Cargá en FINA lo que acabás de hacer, con los datos que te muestra la app.',
     loVes: 'Te vamos a pedir lo mismo que acabás de hacer: el monto, la tasa y, si corresponde, la fecha de vencimiento (el día en que termina). También podés subir una captura y la leemos por vos.',
-    lograras: 'Que FINA te cuente cuándo vence, cuánto vas ganando de verdad y qué te conviene hacer después. FINA no mueve ni toca tu plata: anotar es solo anotar.',
+    lograras: 'Que FINA te cuente cuándo vence, cuánto vas ganando de verdad y qué alternativas tenés después. FINA no mueve ni toca tu plata: anotar es solo anotar.',
     chequeo: 'La inversión aparece en “Mis inversiones”.',
     registra: true,
   };
@@ -209,7 +209,7 @@ function guiaCuentaAutomatica(prov: 'uala' | 'naranja_x', ctx: ContextoGuia): Gu
       titulo: 'Dejá el saldo en la cuenta',
       haces: 'No hay que activar nada: el saldo que tenés en la cuenta rinde solo.',
       loVes: 'Entrá a la sección de rendimientos o de tu saldo y buscá la tasa (el interés que te pagan) y las condiciones.',
-      lograras: 'Que tu plata genere intereses mientras la tenés quieta, sin comprar ningún producto.',
+      lograras: 'Que tu plata genere intereses mientras la tenés quieta, sin comprar ningún producto. Ojo: tu saldo cambia con lo que cobrás y pagás, y la tasa se aplica sobre el saldo de cada día; la tasa también puede cambiar y depende de las condiciones de cada billetera.',
       chequeo: 'Ves el rendimiento diario en tu cuenta.',
       datos: notas.map((n) => ({ etiqueta: 'Condiciones de hoy', valor: n })),
       declara: origenDeclarable('cuenta_remunerada', prov, nombre) ?? undefined,
@@ -283,7 +283,7 @@ function guiaFondoBroker(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
   };
 }
 
-function guiaLetras(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
+function guiaLetras(prov: BrokerId, ctx: ContextoGuia): Guia {
   const nombre = PROVEEDORES[prov].nombre;
   const letras = (ctx.mercado?.letras?.valor ?? []).filter((l) => l.dias >= 15 && l.dias <= 200).slice(0, 3);
   return {
@@ -309,7 +309,7 @@ function guiaLetras(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
         titulo: 'Comprala',
         haces: 'Tocá “Comprar”, poné el monto y confirmá. Si te pregunta el tipo de orden, elegí “a precio de mercado” (se compra al precio del momento).',
         loVes: 'Antes de confirmar la app muestra cuántas letras comprás y el precio. La ganancia es la diferencia entre lo que pagás hoy y lo que cobrás al vencimiento.',
-        lograras: 'Le prestás tu plata al Estado hasta el vencimiento y ya sabés cuánto vas a cobrar, siempre que esperes hasta esa fecha.',
+        lograras: 'Le prestás tu plata al Estado hasta el vencimiento y ya sabés cuánto vas a cobrar, siempre que esperes hasta esa fecha. Está garantizada por el Tesoro de la Nación (no por un seguro de depósitos) y la podés vender antes si necesitás la plata.',
         chequeo: 'La letra aparece en “Mi cartera” (lo que tenés invertido) con su fecha de vencimiento.',
         datos: filaMonto(ctx.monto),
       },
@@ -324,7 +324,7 @@ function guiaLetras(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
   };
 }
 
-function guiaDolar(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
+function guiaDolar(prov: BrokerId, ctx: ContextoGuia): Guia {
   const nombre = PROVEEDORES[prov].nombre;
   const mep = ctx.mercado?.dolar.mep?.valor ?? null;
   const datos = [
@@ -359,7 +359,7 @@ function guiaDolar(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
   };
 }
 
-function guiaCedear(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
+function guiaCedear(prov: BrokerId, ctx: ContextoGuia): Guia {
   const nombre = PROVEEDORES[prov].nombre;
   const ticker = ctx.ticker ?? 'SPY';
   const info = CEDEARS_DISPONIBLES.find((c) => c.ticker === ticker);
@@ -392,7 +392,7 @@ function guiaCedear(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
         titulo: 'Comprá',
         haces: `Tocá “Comprar”${cantidad ? ` y poné ${cantidad} ${cantidad === 1 ? 'unidad' : 'unidades'}` : ' y elegí cuántos'}. Fijate la comisión (lo que cobra el broker) antes de confirmar.`,
         loVes: 'La app te muestra el costo total, con la comisión incluida. Solo se ejecuta cuando el mercado está abierto (de lunes a viernes, más o menos de 11 a 17 hs): si lo hacés fuera de ese horario, la orden queda esperando hasta que abra.',
-        lograras: 'Empezar a participar del crecimiento de esa empresa. El precio va a subir y bajar todos los días: lo que importa es el largo plazo.',
+        lograras: 'Empezar a participar del crecimiento de esa empresa. El precio va a subir y bajar todos los días: lo que importa es el largo plazo. No es para comprar cuando sube ni para vender asustándote cuando cae.',
         chequeo: 'El CEDEAR aparece en “Mi cartera” (lo que tenés invertido) con la cantidad que compraste.',
         datos: [
           ...(cantidad ? [{ etiqueta: 'Cantidad', valor: String(cantidad) }] : []),
@@ -456,7 +456,7 @@ function guiaPlazoFijo(uva: boolean, ctx: ContextoGuia): Guia {
           : 'En la app o la web del banco buscá “Inversiones” → “Plazo fijo” → “Constituir” (hacerlo) y elegí el plazo en días.',
         loVes: 'Te pide el monto, el plazo y si querés que se renueve solo al vencer (cuando termina el plazo). Antes de confirmar te muestra cuánto vas a cobrar y en qué fecha.',
         lograras: uva
-          ? 'Tu plata se actualiza con la inflación (lo que suben los precios) durante el plazo. Protege lo que ahorraste, no está pensado para ganarle por mucho.'
+          ? 'Tu plata se actualiza con la inflación (lo que suben los precios) durante el plazo. Protege lo que ahorraste, no está pensado para ganarle por mucho. Los bancos lo dicen como “UVA + 2”: ese 2 es el extra, los puntos por encima de la inflación. A veces el banco limita este producto, así que preguntalo.'
           : 'Bloquear tu plata hasta la fecha a una tasa que ya conocés. Si elegís que NO se renueve solo, decidís de nuevo cada vez con la tasa del momento.',
         chequeo: 'Tenés el comprobante con el monto, la tasa y el vencimiento (el día en que termina el plazo).',
         datos: [
@@ -485,16 +485,18 @@ export function armarGuia(proveedor: ProveedorId, producto: ProductoId, ctx: Con
     case 'naranja_x:cuenta_remunerada': return guiaCuentaAutomatica('naranja_x', ctx);
     case 'cocos:fci': return guiaFondoBroker('cocos', ctx);
     case 'balanz:fci': return guiaFondoBroker('balanz', ctx);
-    case 'cocos:letra': return guiaLetras('cocos', ctx);
-    case 'balanz:letra': return guiaLetras('balanz', ctx);
-    case 'cocos:dolar': return guiaDolar('cocos', ctx);
-    case 'balanz:dolar': return guiaDolar('balanz', ctx);
-    case 'cocos:cedear': return guiaCedear('cocos', ctx);
-    case 'balanz:cedear': return guiaCedear('balanz', ctx);
     case 'banco:plazo_fijo': return guiaPlazoFijo(false, ctx);
     case 'banco:plazo_fijo_uva': return guiaPlazoFijo(true, ctx);
-    default: return null;
+    default: break;
   }
+  // Los demás brokers comparten los mismos pasos: cambia el nombre de la app y dónde está cada botón.
+  if (PROVEEDORES[proveedor].tipo === 'broker') {
+    const broker = proveedor as BrokerId;
+    if (producto === 'letra') return guiaLetras(broker, ctx);
+    if (producto === 'dolar') return guiaDolar(broker, ctx);
+    if (producto === 'cedear') return guiaCedear(broker, ctx);
+  }
+  return null;
 }
 
 /**

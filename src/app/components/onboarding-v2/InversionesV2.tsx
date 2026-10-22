@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAlLlegar } from './alLlegar';
 import { BotonVolver, COLORS, Chip, Cta, OpcionesGrid, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
 import { ALIAS_PROVEEDOR, EN_QUE_A_PRODUCTO, type ProveedorId } from '../../lib/inversiones/catalogo';
-import { calcularSobrante, colchon as calcularColchon, horizonteDesdeQuiz, sugerirMonto } from '../../lib/inversiones/cuanto';
+import { calcularSobrante, hayGastoCercanoSinCubrir, horizonteDesdeQuiz, sugerirMonto } from '../../lib/inversiones/cuanto';
 import type { Valores } from '../../lib/inversiones/registro';
 import type { PosicionInversion } from '../../api/v2/tipos';
 import { calcularInflacionPersonal } from '../../lib/inversiones/inflacionPersonal';
 import { paraInvertir } from '../../lib/inversiones/objetivos';
-import { sumarEn } from '../../api/v2/conversion';
+import { enMoneda, sumarEn } from '../../api/v2/conversion';
+import { AvisoLegal } from './inversiones/AvisoLegal';
 import { Desplegable } from './inversiones/Desplegable';
 import { MisInversiones } from './inversiones/MisInversiones';
 import { RecomendacionesTab } from './inversiones/RecomendacionesTab';
@@ -35,7 +36,7 @@ type Paso = 'intro' | 'q1' | 'q2' | 'yaInvierte' | 'enQue' | 'bancos' | 'resulta
 type PerfilId = 'conservador' | 'moderado' | 'arriesgado';
 type Tab = 'mias' | 'recos' | 'evolucion';
 
-const BANCOS = ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank', 'Cocos Capital', 'Balanz', 'Banco tradicional', 'Efectivo', 'Otro'];
+const BANCOS = ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank', 'Cocos Capital', 'Balanz', 'IOL', 'Galicia Securities', 'PPI', 'IEB', 'Banco tradicional', 'Efectivo', 'Otro'];
 const EN_QUE_OPCIONES = ['Plazo fijo', 'Fondo común (FCI)', 'Dólar', 'CEDEARs / acciones', 'Cripto', 'Otro'];
 // Catálogo VIEJO: ya no recomienda nada (las recomendaciones salen de
 // lib/inversiones). Queda únicamente para ponerle nombre a los registros que se
@@ -302,7 +303,7 @@ export function InversionesV2() {
             personaje NO aparece en inversiones (plata seria). */}
         <header data-franja className="pb-1 mb-2">
           <Titulo>Inversiones</Titulo>
-          <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te decimos qué te conviene. Nunca movemos tu plata.</p>
+          <p className="text-[15px] mt-1.5" style={{ color: COLORS.inkSoft }}>Armá tu perfil y te mostramos alternativas. Nunca movemos tu plata.</p>
         </header>
         <button
           type="button"
@@ -314,7 +315,7 @@ export function InversionesV2() {
           <span className="text-[15px]" style={{ color: COLORS.inkSoft }}>
             {prefilledPerfil
               ? 'Ya nos contaste algo de esto en el onboarding — te faltan un par de preguntas más.'
-              : '2 minutos, para que las recomendaciones tengan que ver con vos — sin comprometerte a nada.'}
+              : '2 minutos, para que las alternativas tengan que ver con vos — sin comprometerte a nada.'}
           </span>
           <span className="self-end" style={{ color: COLORS.brand }}><IconChevron size={20} /></span>
         </button>
@@ -334,10 +335,13 @@ export function InversionesV2() {
     // cuánto le sobra, cuánto colchón tiene y para cuándo es la plata.
     const usa = [...new Set(bancos.map((b) => ALIAS_PROVEEDOR[b]).filter((x): x is ProveedorId => !!x))];
     const sobrante = calcularSobrante(db.ingresos, db.gastos);
-    const enCaja = db.posiciones
-      .filter((p) => p.estado === 'activa' && (p.tipo === 'cuenta_remunerada' || p.tipo === 'fci'))
-      .reduce((a, p) => a + p.monto, 0);
-    const colchon = sobrante ? calcularColchon(sobrante.gastoMensual, db.perfil.reserva, enCaja) : null;
+    // Un fondo de garantía sólo si hay un gasto cercano que no se cubre con lo que ingresa; si no, lo que sobra se invierte.
+    const gastoCercano = hayGastoCercanoSinCubrir(
+      db.gastosFijos.map((g) => ({ montoArs: enMoneda({ monto: g.monto, moneda: g.moneda, montoArs: null }, 'ARS', db.dolar) ?? 0, proximoPago: g.proximoPago })),
+      sobrante?.ingresoMensual ?? null,
+    );
+    // El dólar entra entre las alternativas sólo si hay un objetivo en dólares todavía sin juntar.
+    const objetivoEnDolares = db.objetivos.some((o) => o.moneda === 'USD' && (o.montoTotal === null || sumarEn(o.contribuciones, o.moneda, db.dolar).total < o.montoTotal));
     const sugerencia = sugerirMonto(sobrante);
     const horizonteMeses = horizonteDesdeQuiz(porQue);
     // Los objetivos de esta persona, listos para decirle cuánto separar por mes.
@@ -520,7 +524,7 @@ export function InversionesV2() {
               va cerca de un dato, y menos en inversiones. */}
           <header data-franja className="pb-1 mb-2">
             <Titulo>Inversiones</Titulo>
-            <p className="text-[15px] mt-1" style={{ color: COLORS.inkSoft }}>Con los números de hoy, esto es lo que te conviene y cómo hacerlo.</p>
+            <p className="text-[15px] mt-1" style={{ color: COLORS.inkSoft }}>Con los números de hoy, estas son tus alternativas y cómo hacerlas.</p>
           </header>
           <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
             Sos <span className="font-bold" style={{ color: pl.strong }}>perfil {perfil.label.toLowerCase()}</span>: {perfil.copy.charAt(0).toLowerCase() + perfil.copy.slice(1)}
@@ -528,7 +532,7 @@ export function InversionesV2() {
 
           <Tabs
             options={[
-              { id: 'recos' as Tab, label: 'Recomendaciones' },
+              { id: 'recos' as Tab, label: 'Alternativas' },
               { id: 'mias' as Tab, label: 'Mis inversiones' },
               { id: 'evolucion' as Tab, label: 'Simular' },
             ]}
@@ -544,7 +548,8 @@ export function InversionesV2() {
               posiciones={db.posiciones}
               productosQuiz={productosQuiz}
               sugerencia={sugerencia}
-              colchon={colchon}
+              gastoCercano={gastoCercano}
+              objetivoEnDolares={objetivoEnDolares}
               inflacionPersonal={inflacionPersonal}
               objetivos={objetivos}
               reabrir={volverAGuia}
@@ -591,6 +596,8 @@ export function InversionesV2() {
           )}
 
           {tab === 'evolucion' && <Simulador />}
+
+          <AvisoLegal />
         </div>
       </div>
     );

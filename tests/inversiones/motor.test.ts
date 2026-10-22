@@ -6,9 +6,12 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { PRODUCTOS, PROVEEDORES, type PerfilRiesgo } from '../../src/app/lib/inversiones/catalogo';
 import { armarGuia, CONTEXTO_VACIO, previosParaRegistro } from '../../src/app/lib/inversiones/guias';
-import { FORMULARIOS, opcionesDe, procesarRegistro, valoresIniciales } from '../../src/app/lib/inversiones/registro';
+import { esObligatorio, FORMULARIOS, opcionesDe, procesarRegistro, valoresIniciales } from '../../src/app/lib/inversiones/registro';
 import { entradaDe } from '../../src/app/lib/inversiones/limites';
 import { evaluar, inflacionDeReferencia, recomendar, type Contexto } from '../../src/app/lib/inversiones/motor';
+import { armarCartera, PESO_CEDEAR_A_LARGO_PLAZO, tramoDe } from '../../src/app/lib/inversiones/cartera';
+import { AVISO_LEGAL } from '../../src/app/lib/inversiones/legal';
+import { avisoDePlazo } from '../../src/app/lib/inversiones/plazo';
 import type { Mercado } from '../../src/app/lib/inversiones/mercadoTipos';
 import { AHORA, mercadoFixture } from './fixture';
 import { chequear } from '../../api/_mercado/chequeos';
@@ -16,9 +19,20 @@ import { agregarDeclaradas } from '../../src/app/lib/inversiones/declaradas';
 import { hayFallaEsencial, MENSAJE_DE_ERROR } from '../../src/app/lib/inversiones/estadoDatos';
 
 const ctx = (m: Mercado, c: Partial<Contexto> = {}): Contexto => ({
-  mercado: m, perfil: 'moderado', horizonteMeses: 12, monto: null, usa: [], yaInvierteEn: [], necesitaCaja: true, ahora: AHORA, ...c,
+  mercado: m, perfil: 'moderado', horizonteMeses: 12, monto: null, usa: [], yaInvierteEn: [], necesitaCaja: false, ahora: AHORA, ...c,
 });
 const item = (r: ReturnType<typeof recomendar>, id: string) => r.items.find((i) => i.rec.producto.id === id);
+// Con letras del Tesoro en el mercado (el fixture base no las trae).
+const conLetras = (m: Mercado): Mercado => ({
+  ...m,
+  letras: {
+    valor: [
+      { ticker: 'S13N6', tna: 0.30, tem: 0.025, vencimiento: '2026-11-13', dias: 23, precio: 1000 },
+      { ticker: 'S30A7', tna: 0.29, tem: 0.0238, vencimiento: '2027-04-30', dias: 191, precio: 1000 },
+    ],
+    fecha: '2026-10-21', fuente: 'letras',
+  },
+});
 const conInflacion = (m: Mercado, mensualPct: number): Mercado => ({
   ...m,
   inflacion: { ...m.inflacion, meses: m.inflacion.meses.map((x) => ({ ...x, valor: mensualPct })), esperada12m: null, uva30d: null, control: null },
@@ -31,14 +45,14 @@ describe('recomendaciones con los datos de hoy', () => {
     assert.deepEqual(cuenta.rec.opciones.map((o) => o.proveedor), ['uala']);
     assert.ok(cuenta.rec.opciones.every((o) => o.veredicto !== 'pierde'));
   });
-  it('el fondo común no se recomienda si hay otra opción igual de disponible que rinde más', () => {
-    const fci = item(recomendar(ctx(m)), 'fci')!;
+  it('el fondo común no se sugiere si hay otra opción igual de disponible que rinde más', () => {
+    const fci = item(recomendar(ctx(m, { horizonteMeses: 6 })), 'fci')!;
     assert.equal(fci.recomendado, false);
-    assert.match(fci.motivo ?? '', /inflación/);
+    assert.match(fci.motivo ?? '', /hoy rinden más/);
   });
   it('se pueden elegir TODAS las inversiones: las no recomendadas igual aparecen, con su motivo', () => {
-    const r = recomendar(ctx(m));
-    for (const id of ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'dolar', 'cedear']) assert.ok(item(r, id), `falta ${id}`);
+    const r = recomendar(ctx(conLetras(m)));
+    for (const id of ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'dolar', 'cedear']) assert.ok(item(r, id), `falta ${id}`);
     assert.equal(item(r, 'cedear')!.recomendado, false);
     assert.ok(item(r, 'cedear')!.motivo);
   });
@@ -47,13 +61,17 @@ describe('recomendaciones con los datos de hoy', () => {
     const primerNo = r.items.findIndex((i) => !i.recomendado);
     assert.ok(r.items.slice(primerNo).every((i) => !i.recomendado));
   });
-  it('sin colchón, entre las recomendadas está la caja (plata disponible)', () => {
-    const r = recomendar(ctx(m, { necesitaCaja: true }));
-    assert.ok(r.items.filter((i) => i.recomendado).some((i) => i.rec.rol === 'caja'));
+  it('sin un gasto cercano que no se cubra, no se aparta nada por las dudas: no se fuerza la caja', () => {
+    const r = recomendar(ctx(m, { perfil: 'arriesgado', horizonteMeses: 60, necesitaCaja: false }));
+    assert.ok(!r.items.some((i) => i.recomendado && i.rec.rol === 'caja'));
+  });
+  it('con un gasto cercano que los ingresos no cubren, se suma la mejor opción para tener plata disponible', () => {
+    const r = recomendar(ctx(m, { perfil: 'arriesgado', horizonteMeses: 60, necesitaCaja: true }));
+    assert.ok(r.items.some((i) => i.recomendado && i.rec.rol === 'caja'));
   });
 });
 
-describe('monto y plazo cambian lo que se recomienda', () => {
+describe('el plazo y el perfil cambian lo que se sugiere; el monto, no', () => {
   const m = mercadoFixture();
   const ar = (c: Partial<Contexto>) => recomendar(ctx(m, { perfil: 'arriesgado', horizonteMeses: 60, ...c }));
   it('CEDEARs con $10.000: no alcanza (un CEDEAR cuesta $21.000)', () => {
@@ -92,8 +110,8 @@ describe('la regla anti-pérdida: para ahorrar, nunca algo que pierde contra la 
       });
     }
   }
-  it('si la inflación es muy alta (10%), nada de ahorro en pesos queda recomendado', () => {
-    const r = recomendar(ctx(conInflacion(base, 10), { monto: 500000 }));
+  it('si la inflación es muy alta (10%), el plazo fijo no se sugiere (a 6 meses)', () => {
+    const r = recomendar(ctx(conInflacion(base, 10), { monto: 500000, horizonteMeses: 6 }));
     assert.equal(item(r, 'plazo_fijo')!.recomendado, false);
   });
 });
@@ -190,6 +208,10 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
     ['balanz', 'dolar', { dolares: 40, monto: 62000 }],
     ['cocos', 'cedear', { ticker: 'SPY', cantidad: 2, monto: 42000 }],
     ['balanz', 'cedear', { ticker: 'AAPL', cantidad: 1, monto: 28280 }],
+    ['iol', 'cedear', { ticker: 'SPY', cantidad: 1, monto: 21000 }],
+    ['galicia_securities', 'dolar', { monto: 80000 }],
+    ['ppi', 'dolar', { monto: 50000 }],
+    ['ieb', 'cedear', { ticker: 'QQQ', cantidad: 1, monto: 58700 }],
   ];
   for (const [prov, prod, extra] of casos) {
     it(`${PROVEEDORES[prov].nombre} · ${PRODUCTOS[prod].nombre}`, () => {
@@ -198,7 +220,7 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
       // Lo que no se decide al empezar (la tasa, las cuotapartes, si se renueva solo) lo agrega la persona al registrar.
       const valores = valoresIniciales(prod, previos, AHORA);
       for (const campo of FORMULARIOS[prod].campos) {
-        if (!campo.obligatorio || valores[campo.id]) continue;
+        if (!esObligatorio(campo, valores) || valores[campo.id]) continue;
         const lista = opcionesDe(campo, valores, m);
         valores[campo.id] = campo.tipo === 'opcion' ? (lista[0]?.id ?? 'x') : campo.tipo === 'porcentaje' ? '19' : '1000';
       }
@@ -214,7 +236,7 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
     });
   }
   it('cada inversión que se ofrece tiene guía y registro, con la misma forma de decidir', () => {
-    for (const prod of ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'dolar', 'cedear'] as const) {
+    for (const prod of ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'dolar', 'cedear'] as const) {
       const algunProveedor = Object.values(PROVEEDORES).find((p) => p.productos[prod]);
       assert.ok(algunProveedor, `ningún proveedor para ${prod}`);
       assert.ok(armarGuia(algunProveedor.id, prod, { ...CONTEXTO_VACIO, mercado: m }), `sin guía para ${prod}`);
@@ -337,58 +359,122 @@ describe('cuando los datos fallan, la persona sólo ve "hubo un error"', () => {
   });
 });
 
-describe('las dos mejores para el monto y el plazo', () => {
-  const m = mercadoFixture();
-  const ids = (c: Partial<Contexto>) => recomendar(ctx(m, c)).items.filter((i) => i.recomendado).map((i) => i.rec.producto.id);
+describe('la cartera: el plazo decide en qué, el perfil cuánto, el monto nada', () => {
+  const m = conLetras(mercadoFixture());
+  const perfiles = ['conservador', 'moderado', 'arriesgado'] as const;
+  const plazos = [1, 2, 6, 11, 12, 24, 35, 36, 48, 60];
+  const alternativas = (c: Partial<Contexto>, mercado: Mercado = m) => recomendar(ctx(mercado, c)).items.filter((i) => i.recomendado);
+  const ids = (c: Partial<Contexto>, mercado: Mercado = m) => alternativas(c, mercado).map((i) => i.rec.producto.id);
 
-  it('son dos, ni más ni menos, para cualquier perfil, plazo y monto', () => {
-    for (const perfil of ['conservador', 'moderado', 'arriesgado'] as const) {
-      for (const horizonteMeses of [1, 2, 6, 24, 48, 60, null]) {
-        for (const necesitaCaja of [true, false]) {
-          for (const monto of [null, 50_000, 5_000_000]) {
-            const n = ids({ perfil, horizonteMeses, necesitaCaja, monto, faltaColchon: necesitaCaja ? 1_500_000 : null }).length;
-            assert.equal(n, 2, `${perfil} ${horizonteMeses}m caja=${necesitaCaja} $${monto}: ${n}`);
-          }
-        }
+  it('los tramos de plazo', () => {
+    assert.equal(tramoDe(2), 'corto');
+    assert.equal(tramoDe(3), 'medio');
+    assert.equal(tramoDe(11), 'medio');
+    assert.equal(tramoDe(12), 'largo');
+    assert.equal(tramoDe(35), 'largo');
+    assert.equal(tramoDe(36), 'mlargo');
+    assert.equal(tramoDe(null), 'medio');
+  });
+
+  it('el monto no cambia nada: lo mismo con $50.000 que con $5.000.000', () => {
+    for (const perfil of perfiles) for (const horizonteMeses of plazos) {
+      const poco = ids({ perfil, horizonteMeses, monto: 50_000 });
+      assert.deepEqual(ids({ perfil, horizonteMeses, monto: 5_000_000 }), poco, `${perfil} ${horizonteMeses}m`);
+      assert.deepEqual(ids({ perfil, horizonteMeses, monto: null }), poco, `${perfil} ${horizonteMeses}m sin monto`);
+    }
+  });
+
+  it('las partes de la plata (según la cartera) suman 100%, y se muestran entre 1 y 3 alternativas', () => {
+    for (const perfil of perfiles) for (const horizonteMeses of [...plazos, null]) {
+      const cartera = armarCartera(perfil, horizonteMeses);
+      assert.ok(Math.abs(cartera.reduce((a, gr) => a + gr.peso, 0) - 1) < 1e-9, `${perfil} ${horizonteMeses}m`);
+      const marcadas = alternativas({ perfil, horizonteMeses });
+      // Cada parte puede tener varias alternativas a elegir: su porcentaje se repite en cada una.
+      const permitidos = cartera.map((gr) => gr.peso);
+      for (const i of marcadas) assert.ok(i.peso !== null && permitidos.some((x) => Math.abs(x - i.peso!) < 1e-9), `${perfil} ${horizonteMeses}m: ${i.peso}`);
+      assert.ok(marcadas.length >= 1 && marcadas.length <= 3, `${perfil} ${horizonteMeses}m: ${marcadas.length}`);
+    }
+  });
+
+  it('menos de 3 meses: todo lo mismo para cualquier perfil (plata a mano), sin UVA ni CEDEARs', () => {
+    for (const horizonteMeses of [1, 2]) {
+      const base = ids({ perfil: 'conservador', horizonteMeses });
+      for (const perfil of perfiles) assert.deepEqual(ids({ perfil, horizonteMeses }), base);
+      assert.ok(!base.includes('plazo_fijo_uva') && !base.includes('cedear') && !base.includes('dolar'));
+      assert.ok(alternativas({ horizonteMeses }).every((i) => i.peso === 1));
+    }
+  });
+
+  it('a muy corto plazo, lo que rinde menos que la inflación igual sirve: es mejor que nada', () => {
+    const r = recomendar(ctx(conInflacion(mercadoFixture(), 6), { horizonteMeses: 2 }));
+    assert.ok(r.items.some((i) => i.recomendado && i.rec.rol === 'caja'));
+  });
+
+  it('3 a 12 meses: el conservador, todo a mano; moderado y arriesgado, mitad a mano y mitad en renta fija, sin CEDEARs', () => {
+    for (const horizonteMeses of [3, 6, 11]) {
+      assert.ok(alternativas({ perfil: 'conservador', horizonteMeses }).every((i) => i.peso === 1));
+      for (const perfil of ['moderado', 'arriesgado'] as const) {
+        const marcadas = alternativas({ perfil, horizonteMeses });
+        assert.deepEqual([...new Set(marcadas.map((i) => i.peso))].sort(), [0.5], `${perfil} ${horizonteMeses}m`);
+        assert.ok(marcadas.some((i) => i.rec.producto.id === 'letra' || i.rec.producto.id === 'plazo_fijo_uva'), 'una parte es renta fija');
+        assert.ok(!marcadas.some((i) => i.rec.producto.id === 'cedear'));
       }
     }
   });
 
-  it('el plazo cambia lo que se recomienda: la UVA pide al menos 3 meses', () => {
-    const corto = ids({ horizonteMeses: 2, necesitaCaja: false });
-    const medio = ids({ horizonteMeses: 6, necesitaCaja: false });
-    assert.ok(!corto.includes('plazo_fijo_uva'));
-    assert.ok(medio.includes('plazo_fijo_uva'));
-  });
-
-  it('el monto cambia lo que se recomienda: pasado el tope de la cuenta, lo que sobra no rinde', () => {
-    const poco = ids({ horizonteMeses: 12, necesitaCaja: true, monto: 50_000, faltaColchon: 1_500_000 });
-    const mucho = ids({ horizonteMeses: 12, necesitaCaja: true, monto: 5_000_000, faltaColchon: 1_500_000 });
-    assert.ok(poco.includes('cuenta_remunerada'));
-    assert.ok(!mucho.includes('cuenta_remunerada'));
-  });
-
-  it('sin colchón y con un monto que no lo supera, la cuenta para tener plata a mano va siempre', () => {
-    for (const horizonteMeses of [2, 12, 48]) {
-      assert.ok(ids({ perfil: 'arriesgado', horizonteMeses, necesitaCaja: true, monto: 100_000, faltaColchon: 1_500_000 }).includes('cuenta_remunerada'), `${horizonteMeses}`);
+  it('1 a 3 años: plazo fijo UVA y cuenta remunerada, para cualquier perfil', () => {
+    for (const perfil of perfiles) for (const horizonteMeses of [12, 24, 35]) {
+      const x = ids({ perfil, horizonteMeses });
+      assert.ok(x.length > 0 && x.every((id) => id === 'plazo_fijo_uva' || id === 'cuenta_remunerada'), `${perfil} ${horizonteMeses}m: ${x}`);
     }
   });
 
-  it('los CEDEARs sólo para quien acepta más altibajos y puede dejar la plata años', () => {
-    assert.ok(ids({ perfil: 'arriesgado', horizonteMeses: 60, necesitaCaja: false }).includes('cedear'));
-    assert.ok(!ids({ perfil: 'arriesgado', horizonteMeses: 12, necesitaCaja: false }).includes('cedear'));
-    assert.ok(!ids({ perfil: 'conservador', horizonteMeses: 60, necesitaCaja: false }).includes('cedear'));
+  it('más de 3 años: la parte de CEDEARs depende del perfil (10%, 50% y 100%)', () => {
+    for (const perfil of perfiles) {
+      const cedear = alternativas({ perfil, horizonteMeses: 60 }).find((i) => i.rec.producto.id === 'cedear');
+      assert.ok(cedear, perfil);
+      assert.equal(cedear.peso, PESO_CEDEAR_A_LARGO_PLAZO[perfil]);
+    }
+    assert.deepEqual(armarCartera('arriesgado', 60).map((g) => g.id), ['crecimiento']);
+    assert.ok(!ids({ perfil: 'conservador', horizonteMeses: 60 }).every((id) => id === 'cedear'), 'el conservador no queda todo en CEDEARs');
   });
 
-  it('a las que quedan afuera se les dice cuáles rinden más', () => {
-    const r = recomendar(ctx(m, { horizonteMeses: 12, necesitaCaja: false, monto: 100_000 }));
-    const afuera = r.items.filter((i) => !i.recomendado && i.motivo && /hoy rinden más/.test(i.motivo));
+  it('nunca CEDEARs a menos de 3 años, ni siquiera para el arriesgado', () => {
+    for (const perfil of perfiles) for (const horizonteMeses of [1, 2, 6, 11, 12, 24, 35, null]) {
+      assert.ok(!ids({ perfil, horizonteMeses }).includes('cedear'), `${perfil} ${horizonteMeses}m`);
+    }
+  });
+
+  it('si no hay datos de CEDEARs, su parte pasa a lo demás y sigue sumando 100%', () => {
+    const sinCedears = { ...m, cedears: null };
+    const marcadas = alternativas({ perfil: 'moderado', horizonteMeses: 60 }, sinCedears);
+    assert.ok(marcadas.length > 0 && marcadas.every((i) => i.peso === 1));
+  });
+
+  it('las letras del Tesoro se ofrecen en los mismos casos que el plazo fijo (y rinden más que él hoy)', () => {
+    assert.ok(ids({ horizonteMeses: 2 }).includes('letra'));
+    assert.ok(ids({ perfil: 'moderado', horizonteMeses: 6 }).includes('letra'));
+  });
+
+  it('el dólar no es una inversión: sólo con un objetivo en dólares, y sólo si está bajo', () => {
+    for (const perfil of perfiles) for (const horizonteMeses of plazos) assert.ok(!ids({ perfil, horizonteMeses }).includes('dolar'), 'sin objetivo en dólares, nunca');
+    assert.ok(ids({ horizonteMeses: 6, objetivoEnDolares: true }).includes('dolar'), 'MEP +1,1% en el mes contra 1,9% de inflación: está bajo');
+    const alto = { ...m, dolar: { ...m.dolar, mep30d: 6 } };
+    const r = recomendar(ctx(alto, { horizonteMeses: 6, objetivoEnDolares: true }));
+    assert.equal(item(r, 'dolar')!.recomendado, false);
+    assert.match(item(r, 'dolar')!.motivo ?? '', /no está bajo/);
+  });
+
+  it('el dólar no tiene un porcentaje de la cartera (no es una inversión)', () => {
+    const d = alternativas({ horizonteMeses: 6, objetivoEnDolares: true }).find((i) => i.rec.producto.id === 'dolar');
+    assert.equal(d?.peso, null);
+  });
+
+  it('a las que quedan afuera se les dice por qué: o cuáles rinden más', () => {
+    const r = recomendar(ctx(m, { horizonteMeses: 12 }));
+    for (const i of r.items.filter((x) => !x.recomendado)) assert.ok(i.motivo, i.rec.producto.nombre);
     const marcadas = r.items.filter((i) => i.recomendado).map((i) => i.rec.producto.nombre.toLowerCase());
-    for (const i of afuera) for (const n of marcadas) assert.ok(i.motivo!.includes(n), i.motivo!);
-  });
-
-  it('una opción que no puede puntuarse (el dólar) no desplaza a las que rinden', () => {
-    assert.ok(!ids({ perfil: 'arriesgado', horizonteMeses: 12, necesitaCaja: false }).includes('dolar'));
+    for (const i of r.items.filter((x) => !x.recomendado && x.motivo && /hoy rinden más/.test(x.motivo))) for (const n of marcadas) assert.ok(i.motivo!.includes(n), i.motivo!);
   });
 });
 
@@ -402,13 +488,13 @@ describe('es obligatorio todo dato sin el cual no se ve cómo crece la plata ni 
     const ok = registrar('cuenta_remunerada', { ...cuenta, tna: '19' });
     assert.deepEqual(ok.errores, {});
     assert.equal(ok.borrador?.tna, 0.19);
-    const fondo = { proveedor: 'Cocos Capital', fondo: 'Cocos Ahorro', monto: '50000', cantidad: '20', precio: '2500' };
+    const fondo = { proveedor: 'Cocos Capital', fondo: 'Cocos Ahorro', tipoFondo: 'money_market', monto: '50000', cantidad: '20', precio: '2500' };
     assert.ok(registrar('fci', { ...fondo, tna: '' }).errores.tna);
     assert.deepEqual(registrar('fci', { ...fondo, tna: '19' }).errores, {});
   });
 
   it('fondo: las cuotapartes y su valor son obligatorios (sin ellos no se calcula cuánto vale hoy)', () => {
-    const e = registrar('fci', { proveedor: 'Cocos Capital', fondo: 'Cocos Ahorro', monto: '50000', tna: '19' }).errores;
+    const e = registrar('fci', { proveedor: 'Cocos Capital', fondo: 'Cocos Ahorro', tipoFondo: 'money_market', monto: '50000', tna: '19' }).errores;
     assert.ok(e.cantidad && e.precio);
   });
 
@@ -425,6 +511,31 @@ describe('es obligatorio todo dato sin el cual no se ve cómo crece la plata ni 
     assert.equal(ok.borrador?.detalle.renuevaSolo, true);
   });
 
+  it('fondo: la tasa sólo se pide en un money market; en renta fija o variable no hay una tasa para anotar', () => {
+    const base = { proveedor: 'Otro', fondo: 'Un fondo de acciones', monto: '50000', cantidad: '20', precio: '2500' };
+    assert.ok(registrar('fci', { ...base, tipoFondo: 'money_market' }).errores.tna);
+    for (const tipoFondo of ['renta_fija', 'renta_variable', 'mixto']) assert.deepEqual(registrar('fci', { ...base, tipoFondo }).errores, {}, tipoFondo);
+    const r = registrar('fci', { ...base, tipoFondo: 'renta_variable' });
+    assert.equal(r.borrador?.detalle.tipoFondo, 'renta_variable');
+    assert.ok(r.resumen.some((t) => /puede bajar/.test(t)), 'se avisa que este fondo puede bajar');
+  });
+
+  it('CEDEAR: la comisión es un porcentaje de lo operado, no pesos', () => {
+    const r = registrar('cedear', { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '2', precio: '21000', comision: '1' });
+    assert.deepEqual(r.errores, {});
+    assert.equal(r.borrador?.detalle.comisionPct, 1);
+    assert.equal(r.borrador?.detalle.comision, 420, '1% de 2 × $21.000');
+    assert.equal(r.borrador?.monto, 42420);
+    assert.ok(registrar('cedear', { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '1', precio: '21000', comision: '150' }).errores.comision, 'más de 100% no puede ser');
+  });
+
+  it('CEDEAR: cualquier ticker se puede anotar (hay cientos y también acciones argentinas), con un aviso si no lo conocemos', () => {
+    const r = registrar('cedear', { proveedor: 'IOL (InvertirOnline)', ticker: 'GGAL', cantidad: '10', precio: '5000', comision: '0,6' });
+    assert.deepEqual(r.errores, {});
+    assert.equal(r.borrador?.detalle.ticker, 'GGAL');
+    assert.ok(r.avisos.some((a) => /GGAL/.test(a)));
+  });
+
   it('CEDEAR: la comisión es obligatoria (0 si no cobraron) y letra: la cantidad', () => {
     const base = { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '1', precio: '21000' };
     assert.ok(registrar('cedear', base).errores.comision);
@@ -435,7 +546,37 @@ describe('es obligatorio todo dato sin el cual no se ve cómo crece la plata ni 
   it('lo que no cambia ningún cálculo sigue siendo opcional: clase y plazo de rescate del fondo, tipo de dólar', () => {
     const opcionales = (t: keyof typeof FORMULARIOS) => FORMULARIOS[t].campos.filter((c) => !c.obligatorio).map((c) => c.id).sort();
     assert.deepEqual(opcionales('fci'), ['clase', 'rescate']);
+    assert.equal(esObligatorio(FORMULARIOS.fci.campos.find((c) => c.id === 'tna')!, { tipoFondo: 'renta_fija' }), false);
     assert.deepEqual(opcionales('dolar'), ['tipo']);
     for (const t of ['cuenta_remunerada', 'plazo_fijo', 'plazo_fijo_uva', 'cedear', 'letra'] as const) assert.deepEqual(opcionales(t), [], t);
+  });
+});
+
+describe('criterio del asesor: aviso legal, "¿puede bajar?", plazo que no encaja', () => {
+  it('el aviso legal dice que todas las inversiones pueden perder capital y que FINA no garantiza rendimientos', () => {
+    const texto = AVISO_LEGAL.join(' ');
+    assert.match(texto, /pérdida de capital/);
+    assert.match(texto, /no garantiza ningún rendimiento/);
+  });
+  it('cada inversión responde si su plata puede bajar', () => {
+    for (const p of Object.values(PRODUCTOS)) assert.ok(p.puedeBajar.length > 20, p.id);
+    for (const id of ['plazo_fijo', 'plazo_fijo_uva', 'cuenta_remunerada'] as const) assert.match(PRODUCTOS[id].puedeBajar, /^No/, id);
+    for (const id of ['cedear', 'dolar'] as const) assert.match(PRODUCTOS[id].puedeBajar, /^Sí/, id);
+  });
+  it('si lo elegido no encaja con el plazo, se avisa; si encaja, no', () => {
+    assert.match(avisoDePlazo(PRODUCTOS.cedear, 3) ?? '', /vendés con pérdida/);
+    assert.ok(avisoDePlazo(PRODUCTOS.cedear, 60) === null);
+    assert.match(avisoDePlazo(PRODUCTOS.plazo_fijo, 120) ?? '', /más de 3 años/);
+    assert.ok(avisoDePlazo(PRODUCTOS.cedear, null) === null);
+  });
+  it('el dólar se aclara como "no es una inversión"', () => {
+    assert.match(PRODUCTOS.dolar.resumen, /no es una inversión/);
+    assert.match(PRODUCTOS.dolar.queEs, /no es una inversión/);
+  });
+  it('las letras se garantizan por el Tesoro, y todos los brokers ofrecen CEDEARs, letras y dólar', () => {
+    assert.match(PRODUCTOS.letra.garantia, /Tesoro/);
+    for (const b of ['cocos', 'balanz', 'iol', 'galicia_securities', 'ppi', 'ieb'] as const) {
+      for (const prod of ['cedear', 'letra', 'dolar'] as const) assert.ok(PROVEEDORES[b].productos[prod], `${b} ${prod}`);
+    }
   });
 });

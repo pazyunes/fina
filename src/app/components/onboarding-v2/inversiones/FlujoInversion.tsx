@@ -6,6 +6,7 @@ import type { SugerenciaMonto } from '../../../lib/inversiones/cuanto';
 import { armarGuia, CONTEXTO_VACIO, previosParaRegistro, type ContextoGuia } from '../../../lib/inversiones/guias';
 import type { Mercado } from '../../../lib/inversiones/mercadoTipos';
 import type { Recomendacion } from '../../../lib/inversiones/motor';
+import { avisoDePlazo } from '../../../lib/inversiones/plazo';
 import { describirRinde } from '../../../lib/inversiones/rinde';
 import type { Valores } from '../../../lib/inversiones/registro';
 import { AprendeEn2Min } from './AprendeEn2Min';
@@ -23,13 +24,15 @@ type Fase = 'aprende' | 'donde' | 'monto' | 'pasos';
 //   4. Los pasos, numerados
 // El avance se guarda: si lo deja a la mitad y vuelve, sigue donde estaba.
 export function FlujoInversion({
-  rec, mercado, usa, sugerencia, montoDeseado, onRegistrar, onCerrar,
+  rec, mercado, usa, sugerencia, montoDeseado, horizonteMeses, onRegistrar, onCerrar,
 }: {
   rec: Recomendacion;
   mercado: Mercado;
   usa: ProveedorId[];
   sugerencia: SugerenciaMonto;
   montoDeseado: number | null;
+  /** Para cuándo es la plata, si lo dijo: sirve para avisar si la inversión no encaja con ese plazo. */
+  horizonteMeses: number | null;
   onRegistrar: (previos: Partial<Valores>) => void;
   onCerrar: () => void;
 }) {
@@ -109,6 +112,7 @@ export function FlujoInversion({
         producto={producto}
         ficha={ficha}
         confianza={rec.mejor.confianza}
+        aviso={avisoDePlazo(producto, horizonteMeses)}
         onEmpezar={() => setFase(rec.opciones.length > 1 || producto.id === 'plazo_fijo' || producto.id === 'plazo_fijo_uva' ? 'donde' : 'monto')}
         onCerrar={onCerrar}
       />

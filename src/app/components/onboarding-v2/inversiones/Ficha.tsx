@@ -49,6 +49,10 @@ export function GlobitoRiesgo({ p }: { p: Producto }) {
   );
 }
 
+export function GlobitoBaja({ p }: { p: Producto }) {
+  return <Globito pregunta="¿Puede bajar mi plata?"><p className={TEXTO} style={{ color: COLORS.inkSoft }}>{p.puedeBajar}</p></Globito>;
+}
+
 export function GlobitoCuando({ p }: { p: Producto }) {
   return <Globito pregunta="¿Cuándo la podés sacar?"><p className={TEXTO} style={{ color: COLORS.inkSoft }}>{p.cuandoLaSacas}</p></Globito>;
 }

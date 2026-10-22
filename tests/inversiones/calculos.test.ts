@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { calcularSobrante, colchon, sugerirMonto } from '../../src/app/lib/inversiones/cuanto';
+import { calcularSobrante, hayGastoCercanoSinCubrir, sugerirMonto } from '../../src/app/lib/inversiones/cuanto';
 import { enMeses, fmtPesos, nombrePropio, pct, pctConSigno, rangoPctConSigno, redondearMonto } from '../../src/app/lib/inversiones/formato';
 import { calcularInflacionPersonal } from '../../src/app/lib/inversiones/inflacionPersonal';
 import { regionDeZona, rubroDeSeccion } from '../../src/app/lib/inversiones/ipc';
@@ -146,17 +146,19 @@ describe('mínimos, máximos y monedas', () => {
 describe('cuánto poner', () => {
   const mes = (a: number, m: number, d: number) => new Date(a, m - 1, d, 12).getTime();
   const ahora = mes(2026, 10, 21);
-  it('parte del PEOR mes y no del promedio', () => {
+  it('sugiere invertir TODO lo que sobró el mes pasado, no un porcentaje', () => {
     const s = calcularSobrante(
       [{ montoArs: 600000, ts: mes(2026, 9, 5) }, { montoArs: 600000, ts: mes(2026, 8, 5) }, { montoArs: 600000, ts: mes(2026, 7, 5) }],
       [{ montoArs: 450000, ts: mes(2026, 9, 9) }, { montoArs: 500000, ts: mes(2026, 8, 9) }, { montoArs: 580000, ts: mes(2026, 7, 9) }],
       ahora,
     )!;
+    assert.equal(s.ultimoMes, 150000);
     assert.equal(s.piso, 20000);
     assert.equal(s.mediana, 100000);
     const sug = sugerirMonto(s);
     assert.equal(sug.tipo, 'regular');
-    assert.equal(sug.primero, 3000, '15% del peor mes ($20.000), redondeado');
+    assert.equal(sug.primero, 150000, 'todo lo del mes pasado ($600.000 − $450.000)');
+    assert.match(sug.mensajes[0], /invertirlo todo/);
   });
   it('el mes en curso no cuenta (está a medias)', () => {
     const s = calcularSobrante(
@@ -171,14 +173,30 @@ describe('cuánto poner', () => {
   });
   it('si no se sabe o no sobra, no se dice nada (sin mensajes)', () => {
     assert.deepEqual(sugerirMonto(null).mensajes, []);
-    assert.deepEqual(sugerirMonto({ piso: -5, mediana: -1, meses: 3, gastoMensual: 1 }).mensajes, []);
+    assert.deepEqual(sugerirMonto({ ultimoMes: -5, piso: -5, mediana: -1, meses: 3, gastoMensual: 1, ingresoMensual: 1 }).mensajes, []);
   });
-  it('el colchón son tres meses de gastos', () => {
-    const c = colchon(500000, 100000, 50000);
-    assert.equal(c.meta, 1500000);
-    assert.equal(c.falta, 1350000);
-    assert.equal(c.cubierto, false);
-    assert.equal(colchon(500000, 1500000, 0).cubierto, true);
+  it('lo sugerido nunca es más de lo que sobró (se redondea para abajo)', () => {
+    const s = calcularSobrante(
+      [{ montoArs: 600000, ts: mes(2026, 9, 5) }, { montoArs: 600000, ts: mes(2026, 8, 5) }],
+      [{ montoArs: 450_350, ts: mes(2026, 9, 9) }, { montoArs: 500000, ts: mes(2026, 8, 9) }],
+      ahora,
+    )!;
+    assert.equal(sugerirMonto(s).primero, 149_600);
+  });
+});
+
+describe('gasto cercano que no se cubre (único caso en que se aparta plata)', () => {
+  const ahora = new Date('2026-10-21T15:00:00-03:00').getTime();
+  it('sólo si los gastos de los próximos 30 días superan lo que ingresa por mes', () => {
+    assert.equal(hayGastoCercanoSinCubrir([{ montoArs: 300_000, proximoPago: '2026-11-05' }], 600_000, ahora), false);
+    assert.equal(hayGastoCercanoSinCubrir([{ montoArs: 900_000, proximoPago: '2026-11-05' }], 600_000, ahora), true);
+  });
+  it('lo que vence dentro de más de 30 días o ya venció no cuenta', () => {
+    assert.equal(hayGastoCercanoSinCubrir([{ montoArs: 900_000, proximoPago: '2026-12-30' }], 600_000, ahora), false);
+    assert.equal(hayGastoCercanoSinCubrir([{ montoArs: 900_000, proximoPago: '2026-10-01' }], 600_000, ahora), false);
+  });
+  it('sin ingresos conocidos no se puede decir: no se aparta nada', () => {
+    assert.equal(hayGastoCercanoSinCubrir([{ montoArs: 900_000, proximoPago: '2026-11-05' }], null, ahora), false);
   });
 });
 
@@ -202,8 +220,8 @@ describe('registro: lo que se deduce de lo cargado', () => {
   });
   it('CEDEAR: se compran enteros, y el total = cantidad × precio + comisión', () => {
     assert.ok(proceso('cedear', { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '1,5', precio: '21.000' }).errores.cantidad);
-    const ok = proceso('cedear', { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '2', precio: '21.000', comision: '500' });
-    assert.equal(ok.borrador?.monto, 42500);
+    const ok = proceso('cedear', { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '2', precio: '21.000', comision: '1' });
+    assert.equal(ok.borrador?.monto, 42420, '2 × $21.000 + 1% de comisión');
   });
   it('dólares: los pesos que costaron = dólares × precio', () => {
     assert.equal(proceso('dolar', { proveedor: 'Balanz', cantidad: '100', precio: '1.550' }).borrador?.monto, 155000);

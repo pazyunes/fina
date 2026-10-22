@@ -1,29 +1,34 @@
 // ¿Cuánto poner? Sale de lo que a la persona realmente le queda cada mes, no de
 // un número genérico.
 //
-// Principios:
-//   · Se parte del PISO (el mes en que menos sobró), no del promedio: un monto
-//     que sólo se puede sostener en los meses buenos termina en abandono.
+// Principios (criterio del asesor):
+//   · Se sugiere invertir TODO lo que sobró el mes pasado: no un porcentaje, no tres
+//     meses de espera. Con el mes anterior alcanza para empezar. Si además hay algo
+//     ahorrado, se puede sumar.
+//   · Nada de "reserva" por las dudas: lo que sobra, se invierte. (Sólo si hay un gasto
+//     cercano que no alcanza a cubrirse con lo que ingresa, aparece un fondo de garantía.)
 //   · Nunca se bloquea: si hoy no sobra, se dice con claridad y se deja explorar
-//     y simular. Sólo cambia la recomendación de cuánto.
-//   · El primer monto es chico a propósito: la primera vez es para aprender cómo
-//     se siente, no para ganar plata.
+//     y simular.
 //   · Un dato que no se puede saber (porque faltan ingresos cargados) se muestra
 //     como "todavía no lo sabemos", no como cero.
 
-import { fmtPesos, redondearMonto } from './formato.js';
+import { fmtPesos } from './formato.js';
 import type { Rango } from './motor.js';
 
 type Movimiento = { montoArs: number; ts: number };
 
 export type Sobrante = {
+  /** Lo que sobró el último mes completo con ingresos (puede ser negativo). */
+  ultimoMes: number;
   /** El mes en que menos sobró (puede ser negativo). */
   piso: number;
   mediana: number;
   /** Cuántos meses completos entraron en la cuenta. */
   meses: number;
-  /** Promedio mensual de gastos, para calcular el colchón. */
+  /** Promedio mensual de gastos. */
   gastoMensual: number;
+  /** Promedio mensual de ingresos. */
+  ingresoMensual: number;
 };
 
 const clave = (ts: number): string => {
@@ -61,27 +66,39 @@ export function calcularSobrante(ingresos: Movimiento[], gastos: Movimiento[], a
   const netos = validos.map(([, v]) => v.ing - v.gas).sort((a, b) => a - b);
   const mediana = netos.length % 2 === 1 ? netos[(netos.length - 1) / 2] : (netos[netos.length / 2 - 1] + netos[netos.length / 2]) / 2;
   const gastoMensual = validos.reduce((a, [, v]) => a + v.gas, 0) / validos.length;
-  return { piso: netos[0], mediana, meses: validos.length, gastoMensual };
+  const ultimoMes = validos[0][1].ing - validos[0][1].gas;
+  const ingresoMensual = validos.reduce((a, [, v]) => a + v.ing, 0) / validos.length;
+  return { ultimoMes, piso: netos[0], mediana, meses: validos.length, gastoMensual, ingresoMensual };
 }
 
-// ── El colchón ───────────────────────────────────────────────────────────
-export type Colchon = { meta: number; actual: number; falta: number; cubierto: boolean };
+// ── Gasto cercano que no se cubre ────────────────────────────────────────
+/** Los días hacia adelante que cuentan como "cercano". */
+export const DIAS_DE_GASTO_CERCANO = 30;
 
-/** Tres meses de gastos a mano es el colchón mínimo antes de pensar en inversiones más largas. */
-export const MESES_DE_COLCHON = 3;
+const MS_DIA = 24 * 60 * 60 * 1000;
+const aISO = (ts: number): string => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
 
-export function colchon(gastoMensual: number, reserva: number, enCaja: number): Colchon {
-  const meta = gastoMensual * MESES_DE_COLCHON;
-  const actual = Math.max(0, reserva) + Math.max(0, enCaja);
-  return { meta, actual, falta: Math.max(0, meta - actual), cubierto: meta > 0 && actual >= meta * 0.9 };
+/**
+ * ¿Hay en los próximos 30 días gastos fijos (ya cargados, con su fecha) que sumados superan lo que
+ * ingresa por mes? Sólo en ese caso conviene tener plata disponible (un fondo de garantía): en
+ * cualquier otro, no se aparta nada "por las dudas". Sin ingresos conocidos no se puede decir: false.
+ */
+export function hayGastoCercanoSinCubrir(
+  gastosFijos: { montoArs: number; proximoPago: string }[], ingresoMensual: number | null, ahora: number = Date.now(),
+): boolean {
+  if (!ingresoMensual || ingresoMensual <= 0) return false;
+  const desde = aISO(ahora);
+  const hasta = aISO(ahora + DIAS_DE_GASTO_CERCANO * MS_DIA);
+  const suma = gastosFijos.filter((g) => g.proximoPago >= desde && g.proximoPago <= hasta).reduce((a, g) => a + g.montoArs, 0);
+  return suma > ingresoMensual;
 }
 
 // ── La sugerencia ────────────────────────────────────────────────────────
 export type SugerenciaMonto = {
-  tipo: 'por-descubrir' | 'todavia-no' | 'empezar-poco' | 'regular';
-  /** Rango mensual sugerido. null si no hay base para sugerirlo. */
+  tipo: 'por-descubrir' | 'todavia-no' | 'regular';
+  /** Lo que se sugiere invertir (todo lo que sobró el mes pasado). null si no hay base para sugerirlo. */
   monto: Rango | null;
-  /** El monto de la primera vez, redondeado. null = que lo elija la persona. */
+  /** El monto con el que arranca, redondeado. null = que lo elija la persona. */
   primero: number | null;
   mensajes: string[];
 };
@@ -90,25 +107,15 @@ export function sugerirMonto(sobrante: Sobrante | null): SugerenciaMonto {
   // Si no se sabe cuánto le sobra, no se dice nada: no hay nada que mostrar. La
   // pantalla simplemente no trae esta sección.
   if (!sobrante) return { tipo: 'por-descubrir', monto: null, primero: null, mensajes: [] };
-  if (sobrante.mediana <= 0) return { tipo: 'todavia-no', monto: null, primero: null, mensajes: [] };
+  // Se redondea para abajo, a la centena: lo sugerido nunca es más de lo que sobró.
+  const monto = Math.floor(sobrante.ultimoMes / 100) * 100;
+  if (monto <= 0) return { tipo: 'todavia-no', monto: null, primero: null, mensajes: [] };
 
-  if (sobrante.piso <= 0) {
-    const min = redondearMonto(sobrante.mediana * 0.05);
-    const max = Math.max(min, redondearMonto(sobrante.mediana * 0.15));
-    return {
-      tipo: 'empezar-poco',
-      monto: { min, max },
-      primero: min,
-      mensajes: [`Te conviene empezar con poco: ${fmtPesos(min)} por mes. Es lo que podés separar sin que te falte en un mes flojo.`],
-    };
-  }
-  const min = redondearMonto(sobrante.piso * 0.15);
-  const max = Math.max(min, redondearMonto(sobrante.piso * 0.4));
   return {
     tipo: 'regular',
-    monto: { min, max },
-    primero: min,
-    mensajes: [`Te conviene empezar con ${fmtPesos(min)} por mes. Es lo que te suele sobrar${max > min ? `, y de a poco podés llegar a ${fmtPesos(max)}` : ''}.`],
+    monto: { min: monto, max: monto },
+    primero: monto,
+    mensajes: [`El mes pasado te sobraron ${fmtPesos(monto)}. Una alternativa es invertirlo todo: no hace falta esperar tres meses ni invertir un pedacito. Si además tenés plata ahorrada, también la podés sumar.`],
   };
 }
 

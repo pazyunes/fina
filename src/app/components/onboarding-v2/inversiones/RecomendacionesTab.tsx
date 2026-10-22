@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { PosicionInversion } from '../../../api/v2/tipos';
 import type { PerfilRiesgo, ProductoId, ProveedorId } from '../../../lib/inversiones/catalogo';
-import type { Colchon, SugerenciaMonto } from '../../../lib/inversiones/cuanto';
+import { TRAMOS } from '../../../lib/inversiones/cartera';
+import type { SugerenciaMonto } from '../../../lib/inversiones/cuanto';
 import type { InflacionPersonal } from '../../../lib/inversiones/inflacionPersonal';
 import { RUBROS } from '../../../lib/inversiones/ipc';
 import { pct } from '../../../lib/inversiones/formato';
@@ -27,12 +28,12 @@ const TIEMPOS: { id: string; label: string; meses: number }[] = [
   { id: 'mlargo', label: 'Más de 3 años', meses: 48 },
 ];
 
-// La pestaña de recomendaciones. La persona puede contar cuánto quiere invertir y
-// en cuánto tiempo lo quiere sacar, y las inversiones que hoy le convienen se
-// marcan con un cartelito verde. O puede elegir directo una inversión.
-// Todo sale de los datos de mercado de hoy: si no hay datos, no hay recomendación.
+// La pestaña de alternativas. La persona puede contar cuánto quiere invertir y en cuánto
+// tiempo lo quiere sacar, y las alternativas que hoy encajan con su plazo y su perfil se
+// marcan con un cartelito verde y con la parte de la plata que les corresponde. O puede
+// elegir directo una inversión. Todo sale de los datos de mercado de hoy: sin datos, no hay nada que sugerir.
 export function RecomendacionesTab({
-  perfil, horizonteMeses, usa, posiciones, productosQuiz, sugerencia, colchon, inflacionPersonal, objetivos, reabrir, onReabierto, onRegistrar,
+  perfil, horizonteMeses, usa, posiciones, productosQuiz, sugerencia, gastoCercano, objetivoEnDolares, inflacionPersonal, objetivos, reabrir, onReabierto, onRegistrar,
 }: {
   perfil: PerfilRiesgo;
   horizonteMeses: number | null;
@@ -41,7 +42,10 @@ export function RecomendacionesTab({
   /** Lo que dijo en el quiz que ya hace, además de lo que tiene registrado. */
   productosQuiz: ProductoId[];
   sugerencia: SugerenciaMonto;
-  colchon: Colchon | null;
+  /** Tiene un gasto cercano que no alcanza a cubrir con lo que ingresa: se suma un fondo de garantía. */
+  gastoCercano: boolean;
+  /** Tiene un objetivo en dólares: sólo así el dólar entra entre las alternativas. */
+  objetivoEnDolares: boolean;
   /** Lo que subió lo que esta persona consume, si se pudo calcular. */
   inflacionPersonal: InflacionPersonal | null;
   /** Los objetivos para los que se podría invertir (en pesos, con algo por juntar). */
@@ -53,7 +57,8 @@ export function RecomendacionesTab({
   onRegistrar: (tipo: PosicionInversion['tipo'], previos: Partial<Valores>, desdeGuia?: boolean) => void;
 }) {
   const { estado, reintentar } = useMercado();
-  const [montoTxt, setMontoTxt] = useState('');
+  // Arranca con lo que sobró el mes pasado: lo sugerido es invertirlo todo.
+  const [montoTxt, setMontoTxt] = useState(() => (sugerencia.primero ? formatThousands(String(sugerencia.primero)) : ''));
   const [tiempo, setTiempo] = useState<string | null>(null);
   const [objetivoId, setObjetivoId] = useState<string | null>(null);
   const objetivo = objetivos.find((o) => o.id === objetivoId) ?? null;
@@ -70,9 +75,9 @@ export function RecomendacionesTab({
   );
   const resultado = useMemo(
     () => (mercado
-      ? recomendar({ mercado, perfil, horizonteMeses: horizonte, monto, usa, yaInvierteEn, necesitaCaja: !colchon?.cubierto, faltaColchon: colchon && !colchon.cubierto ? colchon.falta : null, inflacionPersonal: inflacionPersonal?.mensual ?? null })
+      ? recomendar({ mercado, perfil, horizonteMeses: horizonte, monto, usa, yaInvierteEn, necesitaCaja: gastoCercano, objetivoEnDolares, inflacionPersonal: inflacionPersonal?.mensual ?? null })
       : null),
-    [mercado, perfil, horizonte, monto, usa, yaInvierteEn, colchon, inflacionPersonal],
+    [mercado, perfil, horizonte, monto, usa, yaInvierteEn, gastoCercano, objetivoEnDolares, inflacionPersonal],
   );
 
   // Al volver del registro, el paso a paso se retoma donde estaba (el avance ya está guardado).
@@ -118,6 +123,12 @@ export function RecomendacionesTab({
         <span className="flex-1 min-w-0 flex flex-col gap-1 pr-24">
           <span className="font-bold text-[17px]" style={{ color: COLORS.ink }}>{r.producto.nombre}</span>
           <span className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.producto.resumen}</span>
+          {it.recomendado && it.peso !== null && (
+            <span className="text-[14px] font-semibold leading-snug" style={{ color: COLORS.ink }}>
+              Para el <span className="font-mono tabular-nums">{Math.round(it.peso * 100)}%</span> de tu plata
+              {monto ? <> (unos <span className="font-mono tabular-nums">{fmtPesos(monto * it.peso)}</span>)</> : null}
+            </span>
+          )}
           {it.motivo && <span className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>{it.motivo}</span>}
         </span>
         {it.recomendado && (
@@ -125,7 +136,7 @@ export function RecomendacionesTab({
             className="absolute top-3 right-0 text-[12px] font-bold rounded-full px-2.5 py-1"
             style={{ background: COLORS.lima, color: COLORS.ink }}
           >
-            Recomendado
+            Alternativa
           </span>
         )}
         <span className="shrink-0 self-end mb-1" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
@@ -138,7 +149,7 @@ export function RecomendacionesTab({
       <section className="flex flex-col gap-3" aria-label="Contanos qué querés hacer">
         <TituloSeccion>¿Cuánto querés invertir?</TituloSeccion>
         <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-          Contanos cuánto y en cuánto tiempo lo querés sacar, y te marcamos en qué te conviene. O elegí directo una inversión de la lista.
+          Contanos cuánto y en cuánto tiempo lo querés sacar, y te mostramos alternativas para tu plazo y tu perfil. O elegí directo una inversión de la lista.
         </p>
         <div className="relative">
           <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
@@ -201,12 +212,17 @@ export function RecomendacionesTab({
       </section>
 
       <section className="flex flex-col" aria-label="Inversiones">
+        <p className="text-[14px] leading-snug pb-2" style={{ color: COLORS.inkSoft }}>
+          {resultado.items.some((i) => i.recomendado)
+            ? <>Para plata que querés sacar en {TRAMOS[resultado.tramo]}, con tu perfil, estas son las alternativas y cómo repartirla. En cada parte elegís una. El plazo define en qué; tu perfil, cuánto. Con $50.000 o con $5.000.000, es lo mismo.</>
+            : <>Hoy no tenemos alternativas para sugerirte con los datos al día. Igual podés mirar cada inversión.</>}
+        </p>
         {resultado.items.map(fila)}
       </section>
 
       <AprendeCards recomendados={resultado.items.filter((i) => i.recomendado).map((i) => i.rec.producto.id)} />
 
-      <CuantoPoner sugerencia={sugerencia} colchon={colchon} />
+      <CuantoPoner sugerencia={sugerencia} />
 
       {inflacionPersonal && (
         <section className="flex flex-col gap-2" aria-label="Tu inflación personal">
@@ -217,17 +233,13 @@ export function RecomendacionesTab({
             El promedio oficial {inflacionPersonal.region === 'gba' ? 'de CABA y GBA' : 'del país'} fue{' '}
             <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{pct(inflacionPersonal.oficial * 100, 1)}</span>.
             Lo que más pesa en tus gastos: {inflacionPersonal.pesos.filter((p) => p.rubro !== 'general').slice(0, 2).map((p) => RUBROS.find((r) => r.id === p.rubro)?.nombre.toLowerCase()).join(' y ')}.
-            Por eso, para recomendarte, comparamos contra la más alta de las dos.
+            Por eso comparamos contra la más alta de las dos.
           </p>
           <EstadoConfianza estado="estimado" />
         </section>
       )}
 
       <MercadoHoy mercado={mercado} />
-
-      <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
-        FINA nunca mueve tu plata: te mostramos qué conviene y por qué, y vos decidís y lo hacés en tu propia app. Los rendimientos pasados no garantizan los futuros.
-      </p>
 
       {abierta && (
         <FlujoInversion
@@ -236,6 +248,7 @@ export function RecomendacionesTab({
           usa={usa}
           sugerencia={sugerencia}
           montoDeseado={monto}
+          horizonteMeses={horizonte}
           onCerrar={() => setAbierta(null)}
           onRegistrar={(previos) => { const t = abierta.producto.id; setAbierta(null); onRegistrar(t, objetivo ? { ...previos, objetivo: objetivo.id } : previos, true); }}
         />
@@ -246,7 +259,7 @@ export function RecomendacionesTab({
 
 /**
  * Qué hay que separar por mes para llegar al objetivo a tiempo, sin invertir y invirtiendo en
- * lo que hoy más rinde de lo recomendado. Siempre un rango y marcado como estimado.
+ * lo que hoy más rinde de las alternativas. Siempre un rango y marcado como estimado.
  */
 function PlanDelObjetivo({
   objetivo, resultado, onUsar,

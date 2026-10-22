@@ -57,6 +57,20 @@ export const CEDEARS_DISPONIBLES: CedearDisponible[] = [
   { ticker: 'MELI', nombre: 'Mercado Libre', explicacion: 'Mercado Libre' },
 ];
 
+/**
+ * Todos los CEDEARs que operan hoy: primero los más conocidos (con su explicación) y después
+ * el resto, que viene del mercado (BYMA) y se muestra sólo con su ticker. Son cientos.
+ */
+export function listaDeCedears(m: Mercado | null): CedearDisponible[] {
+  const conocidos = new Set(CEDEARS_DISPONIBLES.map((c) => c.ticker));
+  const otros = (m?.cedears?.valor ?? [])
+    .map((c) => c.simbolo)
+    .filter((t) => !conocidos.has(t))
+    .sort((a, b) => a.localeCompare(b, 'es'))
+    .map((ticker) => ({ ticker, nombre: '', explicacion: `${ticker}: un CEDEAR que hoy cotiza en el mercado` }));
+  return [...CEDEARS_DISPONIBLES, ...otros];
+}
+
 export const explicarTicker =
   'El ticker es el código corto de cada inversión, como un apodo. Por ejemplo, SPY es el de las 500 empresas más grandes de EE.UU.';
 

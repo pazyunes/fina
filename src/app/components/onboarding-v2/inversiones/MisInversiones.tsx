@@ -14,13 +14,16 @@ import { DatoFila, Hoja, Parrafo } from './Hoja';
 
 const ETIQUETAS_DETALLE: Record<string, string> = {
   fondo: 'Fondo', clase: 'Clase', ticker: 'Ticker', renuevaSolo: 'Se renueva solo', precancelable: 'Precancelable',
-  tipoDolar: 'Tipo de dólar', comision: 'Comisión', rescate: 'Plazo de rescate',
+  tipoDolar: 'Tipo de dólar', comision: 'Comisión (en pesos)', comisionPct: 'Comisión', tipoFondo: 'Tipo de fondo', rescate: 'Plazo de rescate',
 };
+const TIPOS_DE_FONDO: Record<string, string> = { money_market: 'Money market', renta_fija: 'Renta fija', renta_variable: 'Renta variable', mixto: 'Mixto u otro' };
 const RESCATES: Record<string, string> = { 'mismo-dia': 'El mismo día', '24hs': '24 hs', '48hs': '48 hs', otro: 'Otro' };
 
 function valorDetalle(clave: string, v: string | number | boolean): string {
   if (typeof v === 'boolean') return v ? 'Sí' : 'No';
   if (clave === 'comision' && typeof v === 'number') return fmtPesos(v);
+  if (clave === 'comisionPct' && typeof v === 'number') return pct(v, 1);
+  if (clave === 'tipoFondo') return TIPOS_DE_FONDO[String(v)] ?? String(v);
   if (clave === 'rescate') return RESCATES[String(v)] ?? String(v);
   if (clave === 'tipoDolar') return String(v).toUpperCase() === 'MEP' ? 'MEP' : String(v).charAt(0).toUpperCase() + String(v).slice(1);
   return String(v);
@@ -143,7 +146,7 @@ export function MisInversiones({
           <div className="flex flex-col gap-2">
             <TituloSeccion>Todavía no registraste ninguna inversión</TituloSeccion>
             <Parrafo>
-              Cuando hagas la primera, acá vas a ver cuándo vence, cuánto va rindiendo y qué te conviene hacer después. Podés empezar por Recomendaciones, o anotar algo que ya tengas.
+              Cuando hagas la primera, acá vas a ver cuándo vence, cuánto va rindiendo y qué alternativas tenés después. Podés empezar por Alternativas, o anotar algo que ya tengas.
             </Parrafo>
           </div>
         )}

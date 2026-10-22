@@ -3,7 +3,7 @@ import type { ProductoId, ProveedorId } from '../../../lib/inversiones/catalogo'
 import type { SugerenciaMonto } from '../../../lib/inversiones/cuanto';
 import { fmtPesos, nombrePropio, pct } from '../../../lib/inversiones/formato';
 import { tasaDeBanco } from '../../../lib/inversiones/guias';
-import { CEDEARS_DISPONIBLES, avisoDeMonto, entradaDe, explicarTicker, limitesDe, plazosDe, precioCedear } from '../../../lib/inversiones/limites';
+import { CEDEARS_DISPONIBLES, avisoDeMonto, entradaDe, explicarTicker, limitesDe, listaDeCedears, plazosDe, precioCedear } from '../../../lib/inversiones/limites';
 import type { Mercado } from '../../../lib/inversiones/mercadoTipos';
 import { soloNumeros } from '../../../lib/inversiones/registro';
 import { BotonFantasma, COLORS, Cta, formatMontoInicial, formatThousands, parseMoneyInput, TituloSeccion } from '../shared';
@@ -70,10 +70,10 @@ export function ElegirMonto({
   const listo = total !== null && total > 0 && !(aviso?.bloquea);
 
   const recomendado = sugerencia.primero
-    ? `Te conviene empezar con ${fmtPesos(sugerencia.primero)}: es lo que te suele sobrar.`
+    ? `El mes pasado te sobraron ${fmtPesos(sugerencia.primero)}: una alternativa es invertirlo todo.`
     : entrada === 'cantidad' && precio
-      ? `Te recomendamos empezar con 1 (${fmtPesos(precio)}) para probar cómo funciona.`
-      : `Te recomendamos empezar con ${fmtPesos(MONTO_DE_PRUEBA)} para probar cómo funciona.`;
+      ? `Una forma de probar cómo funciona es empezar con 1 (${fmtPesos(precio)}).`
+      : `Una forma de probar cómo funciona es empezar con ${fmtPesos(MONTO_DE_PRUEBA)}.`;
 
   const tna = entrada === 'monto_plazo' ? tasaDeBanco(mercado, banco, plazo) : null;
   const interes = producto === 'plazo_fijo' && total && tna ? total * tna * (plazo / 365) : null;
@@ -107,12 +107,19 @@ export function ElegirMonto({
               value={ticker}
               onChange={(e) => setTicker(e.target.value)}
             >
-              {CEDEARS_DISPONIBLES.map((c) => (
-                <option key={c.ticker} value={c.ticker}>{c.ticker} · {c.nombre}</option>
-              ))}
+              <optgroup label="Los más conocidos">
+                {CEDEARS_DISPONIBLES.map((c) => (
+                  <option key={c.ticker} value={c.ticker}>{c.ticker} · {c.nombre}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Todos los demás que operan hoy">
+                {listaDeCedears(mercado).slice(CEDEARS_DISPONIBLES.length).map((c) => (
+                  <option key={c.ticker} value={c.ticker}>{c.ticker}</option>
+                ))}
+              </optgroup>
             </select>
             <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
-              {CEDEARS_DISPONIBLES.find((c) => c.ticker === ticker)?.explicacion}. {explicarTicker}
+              {listaDeCedears(mercado).find((c) => c.ticker === ticker)?.explicacion}. {explicarTicker}
             </p>
           </div>
           <div className="flex flex-col gap-2">

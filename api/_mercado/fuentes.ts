@@ -221,14 +221,22 @@ async function cedearsByma(hoy: string): Promise<Dato<CedearMercado[]> | null> {
     });
     if (!res.ok) throw new Error(`BYMA respondió ${res.status}`);
     const filas = (await res.json()) as FilaByma[];
-    const salida: CedearMercado[] = [];
-    for (const s of CEDEARS_DE_REFERENCIA) {
-      const candidatas = filas.filter((f) => f.symbol === s && f.denominationCcy === 'ARS' && esNum(f.trade) && f.trade > 0);
-      if (candidatas.length === 0) continue;
-      const f = candidatas.reduce((a, c) => (c.tradeVolume > a.tradeVolume ? c : a));
-      const variacion = esNum(f.previousClosingPrice) && f.previousClosingPrice > 0 ? (f.trade / f.previousClosingPrice - 1) * 100 : 0;
-      salida.push({ simbolo: s, precio: f.trade, variacionDia: variacion });
+    // Todos los CEDEARs que operan en pesos (son cientos), los de referencia primero. De cada uno, la fila más operada.
+    const mejorPorSimbolo = new Map<string, FilaByma>();
+    for (const f of filas) {
+      if (f.denominationCcy !== 'ARS' || !esNum(f.trade) || f.trade <= 0 || typeof f.symbol !== 'string' || !/^[A-Z0-9.]{1,8}$/.test(f.symbol)) continue;
+      const previa = mejorPorSimbolo.get(f.symbol);
+      if (!previa || f.tradeVolume > previa.tradeVolume) mejorPorSimbolo.set(f.symbol, f);
     }
+    const aMercado = (f: FilaByma): CedearMercado => ({
+      simbolo: f.symbol,
+      precio: f.trade,
+      variacionDia: esNum(f.previousClosingPrice) && f.previousClosingPrice > 0 ? (f.trade / f.previousClosingPrice - 1) * 100 : 0,
+    });
+    const salida: CedearMercado[] = [
+      ...CEDEARS_DE_REFERENCIA.map((s) => mejorPorSimbolo.get(s)).filter((f): f is FilaByma => !!f).map(aMercado),
+      ...[...mejorPorSimbolo.values()].filter((f) => !CEDEARS_DE_REFERENCIA.includes(f.symbol)).sort((a, b) => a.symbol.localeCompare(b.symbol)).map(aMercado),
+    ];
     if (salida.length === 0) return null;
     return { valor: salida, fecha: hoy, fuente: 'BYMA (el mercado), última operación' };
   } finally {

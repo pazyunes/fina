@@ -4,7 +4,7 @@ import type { ProductoId } from '../../../lib/inversiones/catalogo';
 import { aprendidasHoy, diaAR, LIMITE_DIARIO, META_DE_RACHA, ordenarTarjetas, puedeMarcarHoy, rachaDeAprendizaje, TARJETAS, type Aprendida, type Tarjeta } from '../../../lib/inversiones/aprender';
 import { COLORS, TituloSeccion } from '../shared';
 
-const ETIQUETA: Record<Tarjeta['clase'], string> = { diferencia: 'Diferencia', concepto: 'Concepto', mito: 'Mito' };
+const ETIQUETA: Record<Tarjeta['clase'], string> = { diferencia: 'Diferencia', concepto: 'Concepto', mito: 'Mito', error: 'Error común' };
 
 // Mini lecciones debajo de las recomendaciones: cards que se deslizan para el costado (se asoma
 // la que sigue), cada una se marca con "Ya lo aprendí" y cada 5 aprendidas se completa una racha.

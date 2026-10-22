@@ -21,8 +21,10 @@ fuentes públicas ─► api/mercado.ts ─► src/app/api/v2/mercado.ts ─► 
   o crecer, si todas las opciones de un producto rinden menos que la inflación, no se
   recomienda. Para tener plata a mano se permite una que pierda sólo si no hay otra mejor.
   Un dato vencido saca la opción de la lista.
-- **`lib/inversiones/cuanto.ts`**: cuánto poner, a partir del PEOR de los últimos 3 meses
-  (no el promedio), y el colchón de 3 meses de gastos.
+- **`lib/inversiones/cartera.ts`**: cómo se reparte la plata según el **plazo** (en qué) y el
+  **perfil** (cuánto). Ver "Criterio del asesor" abajo.
+- **`lib/inversiones/cuanto.ts`**: cuánto invertir = todo lo que sobró el mes pasado, y si hay un
+  gasto cercano que los ingresos no cubren (`hayGastoCercanoSinCubrir`).
 - **`lib/inversiones/guias.ts`**: los pasos a paso (proveedor × producto) con datos de hoy.
 - **`lib/inversiones/registro.ts`**: un formulario por tipo, con validaciones que avisan y
   no bloquean, y el armado desde una captura.
@@ -30,10 +32,11 @@ fuentes públicas ─► api/mercado.ts ─► src/app/api/v2/mercado.ts ─► 
 
 ## Cómo se ve (decisiones de producto)
 
-- **La lista de inversiones muestra todas** y marca con un cartelito verde "Recomendado" las que hoy
-  convienen. Arriba, la persona puede decir cuánto quiere invertir y en cuánto tiempo lo quiere sacar
-  (o elegir directo una inversión). El monto y el plazo cambian qué se recomienda (por ejemplo, con
-  $10.000 un CEDEAR no alcanza).
+- **La lista de inversiones muestra todas** y marca con un cartelito verde "Alternativa" las que hoy
+  encajan, con la parte de la plata que le toca a cada una ("Para el 50% de tu plata"). Se habla de
+  **alternativas**, no de recomendaciones (criterio legal del asesor). Arriba, la persona puede decir
+  cuánto quiere invertir (arranca con lo que sobró el mes pasado) y en cuánto tiempo lo quiere sacar.
+  El **plazo y el perfil** cambian qué se muestra; el **monto no** (sólo si un CEDEAR físicamente no alcanza).
 - **Al tocar una inversión empieza el flujo** (`FlujoInversion.tsx`): "Aprendé en 2 minutos" (4 pantallas:
   la primera es el **glosario necesario**, después qué es / cuánto rinde / cuándo la sacás) → dónde hacerlo (las opciones una al lado de la otra, con un mini
   comentario sólo si las distingue) → con cuánto empezar → los pasos numerados, que se pueden recorrer
@@ -49,9 +52,20 @@ fuentes públicas ─► api/mercado.ts ─► src/app/api/v2/mercado.ts ─► 
   su aclaración entre paréntesis y está en el glosario.
 - **Un proveedor que hoy rinde menos que la inflación no se ofrece** si hay otro que no (hoy Mercado
   Pago y Naranja X quedan afuera de "cuenta remunerada").
-- **Se recomienda sólo lo conocido**: cuenta remunerada, fondo común (money market), plazo fijo (y UVA),
-  dólar y CEDEARs. Las letras del Tesoro siguen en el motor pero no se ofrecen.
+- **Se ofrece**: cuenta remunerada, fondo común (money market), plazo fijo (y UVA), **letras del Tesoro**
+  (en los mismos casos que el plazo fijo), dólar (sólo con un objetivo en dólares y el dólar bajo) y
+  CEDEARs (los ~400 que operan hoy en BYMA; también se puede anotar una acción argentina).
+- **Brokers**: Cocos, Balanz, IOL, Galicia Securities, PPI e IEB para letras, CEDEARs y dólar (los
+  precios son los mismos en todos; cambian las comisiones). Los fondos siguen siendo sólo de Cocos y
+  Balanz (cada broker tiene los suyos). Los pasos de los brokers nuevos son genéricos y están **por verificar**.
 - **Si no se sabe cuánto le sobra a la persona, no se dice nada.**
+- **Aviso legal** (`lib/inversiones/legal.ts`, `AvisoLegal.tsx`): "Todas las inversiones pueden generar pérdida de
+  capital" y "FINA no garantiza ningún rendimiento", siempre visible en Inversiones, aunque llegue a haber matrícula.
+- **"¿Puede bajar mi plata?"** en cada ficha (`puedeBajar` en el catálogo): plazo fijo, cuenta y money market no
+  bajan; renta fija y variable sí.
+- **Errores comunes a evitar** (comprar y vender seguido, comprar cuando sube y vender cuando cae, asustarse, no
+  entender el riesgo, no hacer coincidir plazo e instrumento): cards de clase "Error común" y un aviso antes del
+  paso a paso cuando lo elegido no encaja con el plazo dicho (`lib/inversiones/plazo.ts`).
 - **Las novedades viven dentro de cada inversión** ("Mis inversiones" → tocar una): qué pasa hoy con esa
   inversión, novedades (vencimientos, cuánto va ganando), y **noticias del día** (`/api/noticias`).
   Arriba, cómo se reparte la plata y un recordatorio de que la evolución día a día se ve en la app de
@@ -153,20 +167,44 @@ se usa "ayer contra hoy" con un rango ancho.
 Ver el cierre de la conversación en la que se armó: avisos fuera de la app (WhatsApp/push),
 conexión con Objetivos, más proveedores y fondos, y la revisión legal (CNV).
 
-## Cuántas recomendaciones y con qué criterio
+## Criterio del asesor (reunión del 22/10/2026)
 
-- Se marcan **las 2 mejores para ese monto y ese plazo** (`RECOMENDADAS` y `puntajeAnual` en `motor.ts`). Las demás se listan igual, con "para X y $Y hoy rinden más A y B".
-- El puntaje es lo que se espera que rinda **por año, por encima de la inflación**:
-  - Tasas (cuentas, plazo fijo): el centro del rango a plazos cortos; a medida que el plazo crece (hasta 24 meses) pesa más la peor tasa posible, porque no sabemos qué tasa pagará un banco dentro de un año.
-  - Si el monto pasa el **tope** de la cuenta, lo que sobra no rinde: la tasa se diluye (`tope / monto`).
-  - La **UVA** sigue a la inflación con ~3 meses de rezago: ese atraso pesa a corto plazo y se diluye a largo.
-  - Los **CEDEARs** se miden con lo que rindió el S&P 500 en 10 años, en dólares (histórico, no promesa). El **dólar** no puntúa: no desplaza a lo que rinde.
-- Excepción: **sin colchón** (menos de 3 meses de gastos a mano) y con un monto que no supera lo que falta para completarlo, una de las dos es la mejor opción para tener plata disponible.
-- Sólo se compara lo que está en el catálogo. Lo que el mercado usa y hoy no está (obligaciones negociables, bonos CER, fondos de renta fija o CER, acciones) necesita fuente de datos y revisión de un asesor.
+El plazo decide **en qué**; el perfil, **cuánto**; el monto, nada ("no guiarse por montos"). Cada tramo
+arma partes de la plata, y en cada parte la persona elige una alternativa (`cartera.ts`):
+
+| Plazo | Conservador | Moderado | Arriesgado |
+|---|---|---|---|
+| Menos de 3 meses | todo a mano (plazo fijo, cuenta, fondo, letras): aunque rinda menos que la inflación, es mejor que nada | igual | igual |
+| 3 a 12 meses | todo a mano | 50% a mano + 50% renta fija (letras, UVA) | igual que el moderado |
+| 1 a 3 años | plazo fijo UVA y cuenta | igual | igual |
+| Más de 3 años | 10% CEDEARs, 90% UVA/cuenta | 50% / 50% | 100% CEDEARs |
+
+- Nunca CEDEARs a menos de 3 años. Se muestran entre 1 y 3 alternativas en total.
+- Dentro de cada parte se ordena por lo que se espera que rinda **por año sobre la inflación** (`puntajeAnual`): el centro del rango a plazos cortos y, a más plazo (hasta 24 meses), la peor tasa; la UVA pierde peso por su rezago de ~3 meses; los CEDEARs, con lo que rindió el S&P 500 en 10 años en dólares (histórico, no promesa). **El tope de la cuenta ya no desplaza**: es un dato que se informa.
+- Fuera de los 3 meses, no se ofrece lo que pierde contra la inflación si hay otra opción igual de disponible que no.
+- Una parte sin datos (por ejemplo, sin CEDEARs) pasa su porcentaje a las demás.
+- **Cuánto invertir**: todo lo que sobró el mes pasado, no un porcentaje ni tres meses de espera. Si además hay plata ahorrada, también se puede sumar.
+- **Sin reserva por las dudas**: sólo si en los próximos 30 días hay gastos fijos que superan lo que ingresa por mes, se suma la mejor opción para tener plata disponible.
+- **Dólar**: no es una inversión. Sólo aparece con un objetivo en dólares sin juntar y si el MEP subió menos que la inflación en el último mes ("bajo").
+- **Comisión de CEDEARs**: es un % de lo operado, no pesos.
+- **Fondos comunes**: al registrar se pide el tipo (money market, renta fija, renta variable, mixto). La tasa sólo se pide en el money market; renta fija o variable sube y baja.
+- Sólo se compara lo que está en el catálogo. Lo que el mercado usa y hoy no está (obligaciones negociables, bonos CER, fondos de renta fija o CER) necesita fuente de datos.
+
+### Dudas que quedan para el asesor
+
+- **Conservador a más de 3 años**: en la tabla puso 10% CEDEARs y en sus notas "conservador, largo plazo, 70 y 30". Hoy está en 10% (`PESO_CEDEAR_A_LARGO_PLAZO`).
+- **Arriesgado de 3 a 12 meses**: en la tabla puso 50% CEDEARs, pero también dijo "menos de 1 año, CEDEARs no va". Se siguió la segunda regla (50% renta fija + 50% a mano).
+- **Tope del seguro de depósitos**: dijo hasta $50 millones; fuentes públicas hablan de $25–30 millones. No se escribió ninguna cifra en la app: verificar en SEDESA/BCRA.
+- **CAFCI**: dice que es público; desde el servidor sigue respondiendo 403. Hace falta probarlo desde Vercel o con otra ruta (la fuente comunitaria sigue siendo la que se usa).
+- **"Dólar bajo"**: hoy es "subió menos que la inflación en 30 días". Si él usa otra vara (brecha, promedio histórico), cambiarla en `dolarEstaBajo`.
+- **Renta fija**: hoy son las letras y el plazo fijo UVA. Bonos CER y ONs necesitan fuente de datos.
+- **Cuenta remunerada**: dijo que "depende de cada billetera" (condiciones de Ualá y compañía): hay que revisar billetera por billetera que el texto de las condiciones sea el correcto.
+- **Modelo de negocio**: confirmó que cobrarle a las marcas "es el modelo correcto" (como dolarhoy.com, que está pautado). Pendiente decidir cómo se muestra lo pautado.
+- **Legal**: sigue abierto el encuadre con la CNV (su primo abogado/asesor: "tiene que estar filtrado por alguien matriculado").
 
 ## Mini lecciones (cards)
 
-- Debajo de las recomendaciones: cards que se deslizan para el costado (se asoma la siguiente). 15 lecciones de tres clases: diferencias ("Diferencia entre TNA y TEA"), conceptos ("¿Qué es la inflación?") y mitos. Contenido en `lib/inversiones/aprender.ts`; los ejemplos con plata dicen "de juguete" y tienen test de cuentas.
+- Debajo de las alternativas: cards que se deslizan para el costado (se asoma la siguiente). 24 lecciones de cuatro clases: diferencias ("Diferencia entre TNA y TEA"), conceptos ("¿Qué es la inflación?"), mitos y errores comunes. Contenido en `lib/inversiones/aprender.ts`; los ejemplos con plata dicen "de juguete" y tienen test de cuentas.
 - Cada una se marca con "Ya lo aprendí" (y se puede desmarcar). **Cada 5 aprendidas se completa una racha** (`rachaDeAprendizaje`). No está ligada a la racha diaria de pasos: ésa mide algo que se hace, y un botón la inflaría.
 - **Máximo 5 por día** (`LIMITE_DIARIO`, día de Argentina): con 5 marcadas hoy, el botón dice "Mañana seguís"; ver y leer las cards no tiene límite. Desmarcar una de hoy libera un lugar. El límite se aplica en la app (no hay regla en la base): se cuenta con el día en que se marcó cada una (`learned_at`).
 - Se guarda en el dispositivo siempre y en `learned_cards` (migración 0042) para que pase de un dispositivo a otro; sin la migración andan igual.

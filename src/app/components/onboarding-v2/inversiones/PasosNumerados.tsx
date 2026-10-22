@@ -139,7 +139,7 @@ function DeclararTasa({ anotada, onAnotar }: { anotada: boolean; onAnotar: (tna:
   const [txt, setTxt] = useState('');
   const n = txt.trim() ? leerNumero(txt) : null;
   const valida = n !== null && n >= 1 && n <= 200;
-  if (anotada) return <p className="text-[14px]" style={{ color: COLORS.limaText }}>Anotada. Con ese número calculamos cuánto crece tu plata, y lo que ves en tu app ayuda a que las recomendaciones sean más precisas para todos.</p>;
+  if (anotada) return <p className="text-[14px]" style={{ color: COLORS.limaText }}>Anotada. Con ese número calculamos cuánto crece tu plata, y lo que ves en tu app ayuda a que las alternativas sean más precisas para todos.</p>;
   return (
     <div className="flex flex-col gap-2 rounded-2xl p-3" style={{ background: COLORS.tint }}>
       <label htmlFor="declarar-tasa" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Qué tasa te muestra la app? (obligatorio para seguir)</label>

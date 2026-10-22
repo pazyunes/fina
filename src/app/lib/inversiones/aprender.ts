@@ -10,7 +10,7 @@ export type Lado = { nombre: string; texto: string };
 export type Tarjeta = {
   id: string;
   /** Qué clase de lección es, para la etiqueta de arriba. */
-  clase: 'diferencia' | 'concepto' | 'mito';
+  clase: 'diferencia' | 'concepto' | 'mito' | 'error';
   titulo: string;
   /** La idea en una línea. */
   idea: string;
@@ -164,13 +164,13 @@ export const TARJETAS: Tarjeta[] = [
   {
     id: 'colchon',
     clase: 'concepto',
-    titulo: '¿Qué es el colchón de emergencia?',
-    idea: 'Es plata separada para imprevistos, antes de invertir en cosas a largo plazo.',
+    titulo: '¿Hace falta una reserva antes de invertir?',
+    idea: 'No hace falta apartar plata "por las dudas": lo que te sobra se puede invertir.',
     bloques: [
-      { nombre: 'De cuánto', texto: 'Una regla común es tener el equivalente a 3 meses de gastos. FINA lo calcula con lo que gastás por mes.' },
-      { nombre: 'Dónde va', texto: 'En algo que puedas sacar rápido, como una cuenta remunerada, y no bloqueado por meses.' },
+      { nombre: 'La regla general', texto: 'Si todos los meses tus ingresos cubren tus gastos, lo que te sobra se puede invertir. Si necesitás la plata, la sacás: por eso importa elegir algo que puedas retirar rápido.' },
+      { nombre: 'La excepción', texto: 'Si viene un gasto cercano que tus ingresos no alcanzan a cubrir (un viaje, un arreglo grande), ahí sí conviene tener esa plata disponible, en algo que puedas sacar rápido, como un fondo de garantía.' },
     ],
-    retener: 'Primero el colchón; después, lo demás.',
+    retener: 'Reserva sólo cuando vas a tener más gastos que ingresos; el resto, a trabajar.',
     productos: ['cuenta_remunerada', 'fci'],
   },
   {
@@ -208,6 +208,126 @@ export const TARJETAS: Tarjeta[] = [
     ],
     retener: 'Antes de mirar cuánto rinde, mirá qué riesgo toma y cuándo podés sacar la plata.',
     productos: ['fci', 'cuenta_remunerada'],
+  },
+  {
+    id: 'cedear-es-accion',
+    clase: 'concepto',
+    titulo: 'Un CEDEAR es una acción, y un ETF también se compra como CEDEAR',
+    idea: 'Todo esto es renta variable: su precio sube y baja.',
+    bloques: [
+      { nombre: 'CEDEAR', texto: 'Empresas del exterior que cotizan en la bolsa argentina. Es como comprar una acción, pero desde acá y en pesos. También hay acciones de empresas argentinas, según el ticker.' },
+      { nombre: 'ETF', texto: 'Un paquete de muchas empresas. Podés tener un CEDEAR de un ETF, como SPY: así comprás las 500 más grandes de EE.UU. de una vez.' },
+    ],
+    retener: 'Si no la vas a usar por mucho tiempo, es un lugar posible; si la necesitás pronto, no.',
+    productos: ['cedear'],
+  },
+  {
+    id: 'tipos-de-fondos',
+    clase: 'concepto',
+    titulo: '¿Qué tipos de fondos comunes hay?',
+    idea: 'Hay cientos de fondos, pero casi todos son de tres clases.',
+    bloques: [
+      { nombre: 'Money market', texto: 'Presta a muy corto plazo. Es el más estable y sirve para tener la plata a mano: rinde mucho mejor que nada y casi nunca baja.' },
+      { nombre: 'Renta fija y renta variable', texto: 'Renta fija invierte en bonos y renta variable en acciones. Pueden dar más, pero su valor sube y baja, y pueden perder.' },
+    ],
+    retener: 'Antes de elegir un fondo, fijate de qué clase es.',
+    productos: ['fci'],
+  },
+  {
+    id: 'baja-o-no',
+    clase: 'concepto',
+    titulo: '¿Qué inversiones pueden bajar y cuáles no?',
+    idea: 'Algunas nunca bajan en pesos; otras sí, y conviene saber cuáles.',
+    bloques: [
+      { nombre: 'Casi nunca bajan', texto: 'Plazo fijo, cuenta remunerada y money market. Sirven para quien no quiere tener pérdida de capital: su riesgo tiende a cero.' },
+      { nombre: 'Sí pueden bajar', texto: 'La renta fija (bonos, según el plazo) y la renta variable (acciones y CEDEARs). Cuanto más tiempo podés esperar, mejor se aguantan los altibajos.' },
+    ],
+    retener: 'Que una inversión pueda bajar no la hace mala: hay que ponerla en el plazo que corresponde.',
+    productos: ['cuenta_remunerada', 'fci', 'plazo_fijo', 'cedear'],
+  },
+  {
+    id: 'uva-mas-dos',
+    clase: 'concepto',
+    titulo: '¿Qué quiere decir “UVA + 2”?',
+    idea: 'Es el extra que un banco suma a la inflación en un plazo fijo UVA.',
+    bloques: [
+      { nombre: 'El margen', texto: 'Tu plata sube con la UVA (que sigue la inflación) y el banco suma un margen. En “UVA + 2”, ese 2 son los puntos extra por encima de la inflación.' },
+      { nombre: 'Un límite', texto: 'A veces los bancos limitan este producto (montos, plazos o cupos), por eso no se usa tanto: conviene preguntar antes.' },
+    ],
+    retener: 'Cuanto más alto el margen, mejor, pero preguntá siempre si hay límites.',
+    productos: ['plazo_fijo_uva'],
+  },
+  {
+    id: 'mejor-que-nada',
+    clase: 'concepto',
+    titulo: '¿Sirve algo que rinde menos que la inflación?',
+    idea: 'Depende del plazo: a muy corto plazo, todo es mejor que dejar la plata quieta.',
+    bloques: [
+      { nombre: 'Menos de 3 meses', texto: 'Si vas a usar la plata pronto, plazo fijo, cuenta remunerada o money market son parecidos y mucho mejor que nada, aunque rindan menos que la inflación.' },
+      { nombre: 'Más de 3 meses', texto: 'Cuanto más tiempo, más pesa la inflación: ahí hay que mirar que la inversión le gane o, al menos, no pierda.' },
+    ],
+    retener: 'Lo que rinde menos que la inflación sirve para plazos cortos, no para largos.',
+    productos: ['cuenta_remunerada', 'fci', 'plazo_fijo'],
+  },
+  {
+    id: 'garantia-tesoro',
+    clase: 'concepto',
+    titulo: '¿Quién garantiza cada inversión?',
+    idea: 'No todas tienen el mismo respaldo.',
+    bloques: [
+      { nombre: 'Con respaldo', texto: 'Plazo fijo: el seguro de depósitos (hasta un tope por banco). Letras del Tesoro: el Tesoro de la Nación, o sea el Estado.' },
+      { nombre: 'Sin respaldo de nadie', texto: 'Bonos corporativos, CEDEARs y acciones: nadie te garantiza que no pierdas. Los fondos los controla la CNV, pero tampoco garantiza el rendimiento.' },
+    ],
+    retener: 'Que algo esté garantizado no significa que rinda más, sólo que tiene un respaldo si algo sale mal.',
+    productos: ['plazo_fijo', 'letra', 'cedear', 'fci'],
+  },
+  {
+    id: 'error-comprar-vender',
+    clase: 'error',
+    titulo: 'Error: comprar y vender todo el tiempo',
+    idea: 'Mover la plata seguido suele salir caro y rara vez mejora el resultado.',
+    bloques: [
+      { nombre: 'Qué pasa', texto: 'Cada compra y cada venta puede traer comisiones, y decidir con apuro suele llevar a decisiones peores.' },
+      { nombre: 'Qué conviene', texto: 'Elegir con calma, con el plazo en mente, y dejar que el tiempo trabaje. Mirar el precio todos los días da más ansiedad que información.' },
+    ],
+    retener: 'Una inversión pensada para años se mira de vez en cuando, no todos los días.',
+    productos: ['cedear', 'fci'],
+  },
+  {
+    id: 'error-subir-bajar',
+    clase: 'error',
+    titulo: 'Error: comprar cuando sube y vender cuando cae',
+    idea: 'Es la forma más común de perder: se hace al revés de lo que conviene.',
+    bloques: [
+      { nombre: 'El error', texto: 'Entusiasmarte y comprar cuando todo sube (ya está caro), y asustarte y vender cuando todo cae (se concreta la pérdida).' },
+      { nombre: 'Qué conviene', texto: 'Antes de vender algo que cayó, analizar si cambió la razón por la que lo compraste. Una baja no es, por sí sola, un motivo para vender.' },
+    ],
+    retener: 'Si bajó y no cambió nada importante, venderlo con miedo es lo que convierte una baja en una pérdida.',
+    productos: ['cedear'],
+  },
+  {
+    id: 'error-riesgo',
+    clase: 'error',
+    titulo: 'Error: no entender cuánto riesgo aceptás',
+    idea: 'Si no sabés cuánta baja aguantarías, conviene saberlo antes de invertir.',
+    bloques: [
+      { nombre: 'El error', texto: 'Poner plata en algo que puede bajar 20% o 30% sin haber pensado cómo te sentirías si pasa.' },
+      { nombre: 'Qué conviene', texto: 'Preguntarte cuánto podés perder sin que te cambie la vida, y elegir en base a eso. Por eso existen los perfiles: conservador, moderado y arriesgado.' },
+    ],
+    retener: 'Invertí en lo que entendés y en lo que aguantarías ver bajar.',
+    productos: ['cedear', 'fci'],
+  },
+  {
+    id: 'error-plazo',
+    clase: 'error',
+    titulo: 'Error: no hacer coincidir el plazo con la inversión',
+    idea: 'La plata y la inversión tienen que tener el mismo plazo.',
+    bloques: [
+      { nombre: 'Dos ejemplos del error', texto: 'Invertir en acciones algo que vas a necesitar en 3 meses, o dejar en un plazo fijo plata que no vas a necesitar en 10 años.' },
+      { nombre: 'Qué conviene', texto: 'Primero preguntarte para cuándo es la plata, y recién después elegir. El plazo define en qué invertir; tu perfil define cuánto.' },
+    ],
+    retener: 'Plata para pronto, en algo que no baje; plata para dentro de muchos años, en algo que pueda crecer.',
+    productos: ['cuenta_remunerada', 'plazo_fijo', 'cedear'],
   },
 ];
 

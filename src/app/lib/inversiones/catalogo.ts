@@ -21,7 +21,10 @@ export type ProductoId =
   | 'dolar'
   | 'cedear';
 
-export type ProveedorId = 'mercado_pago' | 'uala' | 'naranja_x' | 'cocos' | 'balanz' | 'banco';
+export type ProveedorId = 'mercado_pago' | 'uala' | 'naranja_x' | 'cocos' | 'balanz' | 'iol' | 'galicia_securities' | 'ppi' | 'ieb' | 'banco';
+
+/** Los brokers (plataformas donde se compran fondos, CEDEARs, letras y dólares). */
+export type BrokerId = 'cocos' | 'balanz' | 'iol' | 'galicia_securities' | 'ppi' | 'ieb';
 export type PerfilRiesgo = 'conservador' | 'moderado' | 'arriesgado';
 export type Riesgo = 'Bajo' | 'Medio' | 'Alto';
 
@@ -59,6 +62,8 @@ export type Producto = {
   riesgoTexto: string;
   cuandoLaSacas: string;
   garantia: string;
+  /** ¿Puede bajar la plata que pusiste? Una respuesta corta y sincera. */
+  puedeBajar: string;
   glosario: Termino[];
 };
 
@@ -108,6 +113,7 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     riesgoTexto: 'Casi no se mueve: lo que cambia es el interés (la tasa) que te pagan.',
     cuandoLaSacas: 'Cuando quieras, en el momento.',
     garantia: 'Depende de la billetera. Si queda en un fondo de inversión, no tiene el seguro de depósitos (la protección que tienen las cuentas de los bancos).',
+    puedeBajar: 'No: lo que tenés en pesos no baja, sólo suma intereses. Lo que cambia de un día para el otro es la tasa que te pagan, y tu saldo, que sube y baja con lo que cobrás y pagás.',
     glosario: [G.tna, G.tope, G.inflacion, G.segDepositos],
   },
 
@@ -125,6 +131,7 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     riesgoTexto: 'Casi no baja. Si un fondo promete mucho más que el resto, preguntá qué riesgo toma.',
     cuandoLaSacas: 'Entre el mismo día y 2 días hábiles (días de semana sin feriados), según el fondo.',
     garantia: 'No tiene seguro de depósitos (la protección de las cuentas de los bancos), pero lo controla la CNV (el organismo del Estado que regula las inversiones) y la plata del fondo está separada de la de la empresa que lo administra.',
+    puedeBajar: 'El money market casi nunca baja: cada día suma un poquito. Ojo: hay fondos de renta fija (bonos) y de renta variable (acciones) que sí pueden bajar, y mucho.',
     glosario: [G.broker, G.fci, G.cuotaparte, G.moneyMarket, G.rescate, G.custodio, G.cnv, G.tna],
   },
 
@@ -142,6 +149,7 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     riesgoTexto: 'Cobrás lo pactado. El riesgo es que la inflación (lo que suben los precios) sea mayor que tu interés y con esa plata compres menos.',
     cuandoLaSacas: 'Al vencimiento (el día en que termina el plazo). Antes, solo si es precancelable (se puede retirar antes) y con menos interés.',
     garantia: 'Sí: los depósitos en bancos tienen seguro de depósitos (si el banco quiebra, el Estado te devuelve la plata hasta un tope, o sea un monto máximo, por persona y por banco).',
+    puedeBajar: 'No: cobrás lo pactado. El riesgo es que los precios suban más que tu interés, no que pierdas lo que pusiste.',
     glosario: [G.tna, G.vencimiento, G.precancelable, G.inflacion, G.segDepositos],
   },
 
@@ -159,57 +167,61 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     riesgoTexto: 'Si la inflación (lo que suben los precios) sube, cobrás más pesos; si baja, cobrás menos. Siempre cobrás en pesos.',
     cuandoLaSacas: 'Al vencimiento (el día en que termina el plazo), como mínimo a los 90 días.',
     garantia: 'Sí: es un depósito en un banco, con seguro de depósitos (el Estado te devuelve la plata hasta un tope, o sea un monto máximo, si el banco quiebra).',
+    puedeBajar: 'No: en pesos tu capital no baja, se actualiza con la inflación. Lo que no sabés de antemano es cuántos pesos vas a cobrar.',
     glosario: [G.uva, G.vencimiento, G.inflacion, G.segDepositos],
   },
 
   letra: {
     id: 'letra',
     nombre: 'Letras del Tesoro',
-    resumen: 'Un préstamo al Estado por unos meses, con un monto fijo a cobrar en una fecha.',
+    resumen: 'Un préstamo al Estado por unos meses, con un monto fijo a cobrar en una fecha. Se puede vender antes.',
     rol: 'ahorro',
     riesgo: 'Medio',
     horizonteMinimoMeses: 1,
     plazoMinimoDias: null,
-    perfiles: ['moderado', 'arriesgado'],
+    perfiles: ['conservador', 'moderado', 'arriesgado'],
     queEs: 'Un préstamo que le hacés al Estado por unos meses. Pagás hoy un precio y en una fecha fija te devuelve un monto mayor. Se compra desde un broker (una app o empresa donde comprás inversiones).',
     dondeQuedaTuPlata: 'En el Tesoro Nacional. Lo que comprás queda a tu nombre en tu cuenta del broker (la plataforma donde lo comprás).',
     riesgoTexto: 'Si esperás hasta el vencimiento cobrás lo que figuraba; si vendés antes, el precio puede ser menor.',
     cuandoLaSacas: 'Al vencimiento, o antes vendiéndola: se acredita en 1 o 2 días hábiles (de lunes a viernes, sin feriados).',
-    garantia: 'No tiene seguro de depósitos: el respaldo es el compromiso de pago del Estado.',
+    garantia: 'No tiene seguro de depósitos. Está garantizada por el Tesoro de la Nación: el respaldo es el compromiso de pago del Estado argentino.',
+    puedeBajar: 'Si esperás al vencimiento, no: cobrás lo que figuraba al comprar. Si la vendés antes, el precio puede ser menor y ahí sí perdés.',
     glosario: [G.broker, G.letra, G.vencimiento, G.tna],
   },
 
   dolar: {
     id: 'dolar',
     nombre: 'Dólar MEP',
-    resumen: 'Comprar dólares legalmente, para cuidar tus ahorros de una suba del dólar.',
+    resumen: 'Comprar dólares no es una inversión: no rinde. Sirve si vas a necesitar dólares.',
     rol: 'ahorro',
     riesgo: 'Medio',
     horizonteMinimoMeses: 3,
     plazoMinimoDias: null,
-    perfiles: ['moderado', 'arriesgado'],
-    queEs: 'Comprar dólares de forma legal desde un broker (una app o empresa donde comprás inversiones) para cuidar tus ahorros si el dólar sube. Se llama dólar MEP (es el nombre de esta forma de comprarlos).',
+    perfiles: ['conservador', 'moderado', 'arriesgado'],
+    queEs: 'Comprar dólares no es una inversión: es tener dólares guardados. Sirve si necesitás dólares más adelante (para un viaje, una compra, un objetivo en dólares); para plata de corto plazo suelen convenir los pesos, y para largo plazo, los dólares. Se hace de forma legal desde un broker (una app o empresa donde comprás inversiones). Se llama dólar MEP (es el nombre de esta forma de comprarlos).',
     dondeQuedaTuPlata: 'Los dólares quedan a tu nombre en tu cuenta del broker (la plataforma donde los compraste). Los podés pasar a una cuenta en dólares de tu banco.',
     riesgoTexto: 'No genera intereses y lo que valen en pesos sube o baja con el dólar. Sirve para cuidar tus ahorros, no para que crezcan.',
     cuandoLaSacas: 'Cuando quieras: vendés los dólares y los pesos llegan en 1 o 2 días hábiles (días de semana sin feriados).',
     garantia: 'Ninguna sobre su valor: el dólar puede subir o bajar.',
+    puedeBajar: 'Sí: lo que valen tus dólares en pesos sube y baja con el precio del dólar.',
     glosario: [G.broker, G.mep, G.brecha, G.habil],
   },
 
   cedear: {
     id: 'cedear',
     nombre: 'CEDEARs',
-    resumen: 'Pedacitos de empresas grandes del exterior. Para dejar varios años, no para retirar ya.',
+    resumen: 'Pedacitos de empresas grandes del exterior (también hay acciones argentinas). Para dejar varios años, no para retirar ya.',
     rol: 'crecimiento',
     riesgo: 'Alto',
     horizonteMinimoMeses: 36,
     plazoMinimoDias: null,
-    perfiles: ['arriesgado'],
+    perfiles: ['conservador', 'moderado', 'arriesgado'],
     queEs: 'Un CEDEAR es un papel en pesos que representa un pedacito de una empresa del exterior (como Apple). Se compra desde un broker (una app o empresa donde comprás inversiones). Un ETF como SPY (un “paquete” que reúne a las 500 empresas más grandes de EE.UU.) te evita elegir una sola. Este tipo de inversión se suele dejar a largo plazo, por varios años: así es como puede crecer. No es para retirar pronto.',
     dondeQuedaTuPlata: 'Está respaldado por acciones reales (pedacitos de empresas) que guarda un banco en el exterior. Queda a tu nombre en tu cuenta del broker (la “cuenta comitente”).',
     riesgoTexto: 'Sube y baja todos los días y puede haber años de pérdida. Por eso es para plata que no vas a necesitar en 3 años o más.',
     cuandoLaSacas: 'Cuando quieras, pero solo cuando el mercado está abierto (de lunes a viernes, más o menos de 11 a 17 hs). La plata llega en 1 o 2 días hábiles (de lunes a viernes, sin feriados). Si vendés cuando el precio está bajo, perdés.',
     garantia: 'Ninguna.',
+    puedeBajar: 'Sí, y puede bajar bastante: hay años de pérdida. Por eso es para plata que no vas a necesitar en 3 años o más, y no para vender con miedo cuando cae.',
     glosario: [G.broker, G.cedear, G.etf, G.ticker, G.accion, G.comitente, G.diversificar, G.volatilidad],
   },
 };
@@ -233,6 +245,11 @@ export type Proveedor = {
   /** Qué te piden para empezar, en una línea. */
   paraEmpezar: string;
 };
+
+const PARA_EMPEZAR_BROKER = 'Una cuenta de inversión con tu DNI, una selfie y un breve test de perfil de inversor (unas preguntas para saber cuánto riesgo aceptás).';
+
+/** Los brokers, en el orden en que se ofrecen. Los precios del mercado son los mismos en todos: cambian las comisiones. */
+export const BROKERS: BrokerId[] = ['cocos', 'balanz', 'iol', 'galicia_securities', 'ppi', 'ieb'];
 
 export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
   mercado_pago: {
@@ -280,6 +297,34 @@ export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
     },
     paraEmpezar: 'Una cuenta de inversión con tu DNI, una selfie y un breve test de perfil de inversor (unas preguntas para saber cuánto riesgo aceptás).',
   },
+  iol: {
+    id: 'iol',
+    nombre: 'IOL (InvertirOnline)',
+    tipo: 'broker',
+    productos: { letra: { tipo: 'letras' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
+    paraEmpezar: PARA_EMPEZAR_BROKER,
+  },
+  galicia_securities: {
+    id: 'galicia_securities',
+    nombre: 'Galicia Securities',
+    tipo: 'broker',
+    productos: { letra: { tipo: 'letras' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
+    paraEmpezar: PARA_EMPEZAR_BROKER,
+  },
+  ppi: {
+    id: 'ppi',
+    nombre: 'PPI (Portfolio Personal)',
+    tipo: 'broker',
+    productos: { letra: { tipo: 'letras' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
+    paraEmpezar: PARA_EMPEZAR_BROKER,
+  },
+  ieb: {
+    id: 'ieb',
+    nombre: 'IEB',
+    tipo: 'broker',
+    productos: { letra: { tipo: 'letras' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
+    paraEmpezar: PARA_EMPEZAR_BROKER,
+  },
   banco: {
     id: 'banco',
     nombre: 'Tu banco',
@@ -290,11 +335,11 @@ export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
 };
 
 /**
- * Lo que se recomienda y se puede registrar, empezando por lo conocido. Las
- * letras del Tesoro siguen en el catálogo (el motor las sabe evaluar) pero no se
- * ofrecen: nadie las conoce, y para empezar alcanza con lo de abajo.
+ * Lo que se muestra y se puede registrar, empezando por lo conocido. Las letras del Tesoro
+ * se ofrecen en los mismos casos que el plazo fijo: son parecidas, se pueden vender antes
+ * y a veces pagan una tasa mejor.
  */
-export const ORDEN_PRODUCTOS: ProductoId[] = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'dolar', 'cedear'];
+export const ORDEN_PRODUCTOS: ProductoId[] = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'dolar', 'cedear'];
 
 /** Los nombres con los que la persona dice que usa cada proveedor (campo "bancos" del perfil inversor). */
 export const ALIAS_PROVEEDOR: Record<string, ProveedorId> = {
@@ -304,6 +349,11 @@ export const ALIAS_PROVEEDOR: Record<string, ProveedorId> = {
   'Cocos Capital': 'cocos',
   Cocos: 'cocos',
   Balanz: 'balanz',
+  IOL: 'iol',
+  InvertirOnline: 'iol',
+  'Galicia Securities': 'galicia_securities',
+  PPI: 'ppi',
+  IEB: 'ieb',
   'Banco tradicional': 'banco',
 };
 

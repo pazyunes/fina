@@ -24,6 +24,7 @@ import {
   type FuenteDato, type PerfilRiesgo, type Producto, type ProductoId, type ProveedorId, type Rol,
 } from './catalogo.js';
 import { diaMes, enMeses, fmtPesos, listaConY, nombreCuenta, nombrePropio, pct, pctConSigno, rangoPct, rangoPctConSigno } from './formato.js';
+import { armarCartera, maximoPorGrupo, TRAMOS, tramoDe, type Tramo } from './cartera.js';
 import { claveDeclarada, limitesDe, origenDeclarable } from './limites.js';
 import { edadEnDias, estaVigente, type Dato, type Mercado } from './mercadoTipos.js';
 
@@ -366,16 +367,20 @@ export type Contexto = {
   perfil: PerfilRiesgo;
   /** Cuántos meses puede dejar la plata quieta. null = no lo dijo. */
   horizonteMeses: number | null;
-  /** Cuánta plata quiere invertir, si lo dijo. */
+  /** Cuánta plata quiere invertir, si lo dijo. Sólo cuenta para lo que físicamente no alcanza (un CEDEAR cuesta lo que cuesta): no cambia qué se muestra. */
   monto?: number | null;
   /** Proveedores que la persona dijo que ya usa. */
   usa: ProveedorId[];
   /** Productos en los que ya invierte. */
   yaInvierteEn: ProductoId[];
-  /** Todavía no tiene unos meses de gastos a mano. */
+  /**
+   * Tiene un gasto inmediato o cercano que no alcanza a cubrir con lo que ingresa: sólo en ese caso
+   * se suma a las alternativas la mejor opción para tener plata disponible (un fondo de garantía).
+   * Si no, no se aparta nada "por las dudas": todo lo que sobra se puede invertir.
+   */
   necesitaCaja: boolean;
-  /** Cuánto le falta para completar el colchón (3 meses de gastos), si se sabe. */
-  faltaColchon?: number | null;
+  /** Tiene un objetivo en dólares: sólo entonces el dólar entra entre las alternativas (y sólo si está bajo). */
+  objetivoEnDolares?: boolean;
   /** La inflación de esta persona (fracción mensual), si se pudo calcular. */
   inflacionPersonal?: number | null;
   ahora?: number;
@@ -393,49 +398,49 @@ export type Recomendacion = {
   yaLoHace: boolean;
 };
 
-/** Una inversión de la lista: se puede elegir cualquiera, y las que hoy convienen van marcadas. */
+/** Una inversión de la lista: se puede elegir cualquiera, y las que hoy encajan van marcadas. */
 export type ItemProducto = {
   rec: Recomendacion;
+  /** Es una de las alternativas que se sugieren hoy para este plazo y este perfil. */
   recomendado: boolean;
-  /** Por qué no se recomienda hoy, en una frase corta. null si se recomienda o si no hay nada que decir. */
+  /** Qué parte de la plata va a esto según el plazo y el perfil (fracción), si se sugiere. null = no corresponde un porcentaje. */
+  peso: number | null;
+  /** Por qué no se sugiere hoy, en una frase corta. null si se sugiere o si no hay nada que decir. */
   motivo: string | null;
 };
 
 export type Resultado = {
   inflacion: Inflacion | null;
-  /** Primero las recomendadas, después las demás. */
+  /** Primero las que se sugieren, después las demás. */
   items: ItemProducto[];
-  /** Sin inflación vigente no se recomienda nada: no hay contra qué comparar. */
+  /** Sin inflación vigente no se sugiere nada: no hay contra qué comparar. */
   sinBase: boolean;
+  /** El plazo, dicho en palabras ("entre 3 y 12 meses"). */
+  tramo: Tramo;
 };
 
 const puntaje = (e: Evaluacion): number => (e.real ? e.real.max : -1);
-
-/** Se recomiendan las dos mejores para ese monto y ese plazo: con más opciones, la persona no elige. */
-const RECOMENDADAS = 2;
 
 /** Desde cuántos meses se mira el peor caso de una tasa, no el del medio (a ese plazo no se sabe qué tasa habrá). */
 const PLAZO_TASA_INCIERTA = 24;
 
 /**
- * Cuánto se espera que rinda por año por encima de la inflación esta opción, PARA ESTE monto y
- * este plazo. Es lo que ordena las recomendaciones. null = no se puede decir con honestidad (el
- * dólar): esa opción no entra a la comparación.
+ * Cuánto se espera que rinda por año por encima de la inflación esta opción, PARA ESTE plazo. Es lo
+ * que ordena las alternativas dentro de cada parte de la plata. null = no se puede decir con
+ * honestidad (el dólar): esa opción no entra a la comparación.
  *  · Cuanto más largo el plazo, más pesa la peor tasa posible: a un año o dos no sabemos qué
  *    tasa va a pagar un banco, y sí lo que sigue a la inflación (UVA).
- *  · Si el monto pasa el tope de la cuenta, lo que sobra no rinde: la tasa se diluye.
  *  · La UVA sigue a la inflación pero con un rezago de unos 3 meses: ese atraso pesa a corto plazo
  *    y se diluye a largo, donde rinde cerca de la inflación más su adicional.
  *  · Los CEDEARs se miden con lo que rindió el S&P 500 en 10 años, en dólares (histórico, no promesa).
+ *  · El monto NO entra: el criterio es que no hay que guiarse por montos.
  */
 export function puntajeAnual(i: ItemProducto, ctx: Contexto, inflMensual: number): number | null {
   const e = i.rec.mejor;
   if (e.tem) {
     const peso = ctx.horizonteMeses === null ? 0 : Math.min(1, ctx.horizonteMeses / PLAZO_TASA_INCIERTA);
     const medio = (e.tem.min + e.tem.max) / 2;
-    let tem = medio - peso * (medio - e.tem.min);
-    const tope = limitesDe(i.rec.producto.id, e.proveedor, ctx.mercado).max;
-    if (ctx.monto && tope && ctx.monto > tope) tem *= tope / ctx.monto;
+    const tem = medio - peso * (medio - e.tem.min);
     let real = (1 + tem) / (1 + inflMensual) - 1;
     if (i.rec.producto.id === 'plazo_fijo_uva' && ctx.horizonteMeses !== null && ctx.horizonteMeses > 3) real *= 3 / ctx.horizonteMeses;
     return Math.pow(1 + real, 12) - 1;
@@ -447,10 +452,32 @@ export function puntajeAnual(i: ItemProducto, ctx: Contexto, inflMensual: number
   return null;
 }
 
+/** El dólar está "bajo" si en el último mes subió menos que la inflación: no le ganó a los precios. */
+export function dolarEstaBajo(m: Mercado, inflMensual: number): boolean {
+  return m.dolar.mep30d !== null && m.dolar.mep30d / 100 <= inflMensual;
+}
+
+/** Por qué una inversión no entra en la cartera de este plazo y este perfil. */
+function motivoFueraDeCartera(id: ProductoId, tramo: Tramo, ctx: Contexto): string {
+  switch (id) {
+    case 'cedear':
+      return ctx.horizonteMeses === null || tramo !== 'mlargo'
+        ? 'Pide dejar la plata al menos 3 años: a menos tiempo, una baja te agarra sin margen para esperar.'
+        : 'Para tu perfil no corresponde.';
+    case 'plazo_fijo_uva':
+      return tramo === 'corto' ? 'Pide dejar la plata al menos 3 meses.' : 'A ese plazo hay otras opciones que encajan mejor.';
+    case 'dolar':
+      return 'No es una inversión: no rinde. Te lo mostramos cuando tenés un objetivo en dólares y el dólar está bajo.';
+    default:
+      return `Para ${TRAMOS[tramo]} hay otras opciones que encajan mejor.`;
+  }
+}
+
 export function recomendar(ctx: Contexto): Resultado {
   const ahora = ctx.ahora ?? Date.now();
+  const tramo = tramoDe(ctx.horizonteMeses);
   const infl = inflacionDeReferencia(ctx.mercado, ahora, ctx.inflacionPersonal ?? null);
-  if (!infl) return { inflacion: null, items: [], sinBase: true };
+  if (!infl) return { inflacion: null, items: [], sinBase: true, tramo };
 
   const candidatos: ItemProducto[] = [];
 
@@ -466,7 +493,7 @@ export function recomendar(ctx: Contexto): Resultado {
     // Un proveedor que hoy rinde menos que la inflación no se ofrece si hay otro
     // que no: la misma regla que para el producto, aplicada a cada opción.
     const conRendimiento = vigentes.filter((e) => e.veredicto !== 'variable');
-    const todasPierden = conRendimiento.length > 0 && conRendimiento.every((e) => e.veredicto === 'pierde');
+    const pierdenTodas = conRendimiento.length > 0 && conRendimiento.every((e) => e.veredicto === 'pierde');
     const noPierden = vigentes.filter((e) => e.veredicto !== 'pierde');
     const candidatas = noPierden.length > 0 ? noPierden : vigentes;
     const opciones = [...candidatas].sort((a, b) => {
@@ -477,7 +504,7 @@ export function recomendar(ctx: Contexto): Resultado {
     const mejor = opciones[0];
     const conLoQueUsa = opciones.find((o) => ctx.usa.includes(o.proveedor)) ?? null;
     const avisos: string[] = [];
-    if (todasPierden) avisos.push('Hoy todas las opciones de este tipo rinden menos que la inflación. Sirven para tener la plata a mano, no para que crezca.');
+    if (pierdenTodas) avisos.push('Hoy todas las opciones de este tipo rinden menos que la inflación. Sirven para tener la plata a mano, no para que crezca.');
 
     const rec: Recomendacion = {
       producto: p,
@@ -489,64 +516,84 @@ export function recomendar(ctx: Contexto): Resultado {
       yaLoHace: ctx.yaInvierteEn.includes(id),
     };
 
-    // Por qué NO se recomienda hoy (la primera razón que aplique).
+    // Lo que no se puede sugerir hoy, por razones duras (la primera que aplique).
     let motivo: string | null = null;
     const minimo = limitesDe(id, mejor.proveedor, ctx.mercado);
     if (!p.perfiles.includes(ctx.perfil)) {
       motivo = 'Es para quien acepta más altibajos que los que dijiste que aceptás.';
-    } else if (ctx.horizonteMeses === null && p.horizonteMinimoMeses >= 12) {
-      motivo = 'Pide dejar la plata varios años.';
     } else if (ctx.horizonteMeses !== null && ctx.horizonteMeses < p.horizonteMinimoMeses) {
       motivo = `Pide dejar la plata al menos ${enMeses(p.horizonteMinimoMeses)}.`;
     } else if (ctx.monto && minimo.min !== null && minimo.minDuro && ctx.monto < minimo.min) {
       motivo = `Con ese monto no alcanza: lo mínimo es ${fmtPesos(minimo.min)}.`;
-    } else if (todasPierden && p.rol !== 'caja') {
+    } else if (pierdenTodas && p.rol !== 'caja' && tramo !== 'corto') {
       motivo = 'Hoy rinde menos que la inflación (lo que suben los precios).';
     }
-    candidatos.push({ rec, recomendado: motivo === null, motivo });
+    candidatos.push({ rec, recomendado: false, peso: null, motivo });
   }
 
-  // Para tener plata a mano se permite una opción que pierde contra la inflación
-  // sólo si NO hay otra opción disponible mejor. Si la hay, la que pierde sobra.
-  const hayCajaQueNoPierde = candidatos.some((c) => c.recomendado && c.rec.rol === 'caja' && c.rec.mejor.veredicto !== 'pierde');
-  for (const c of candidatos) {
-    if (c.recomendado && c.rec.rol === 'caja' && c.rec.mejor.veredicto === 'pierde' && hayCajaQueNoPierde) {
-      c.recomendado = false;
-      c.motivo = 'Hoy rinde menos que la inflación (lo que suben los precios) y hay otra opción igual de disponible que rinde más.';
+  const puntajes = new Map<ItemProducto, number | null>(candidatos.map((c) => [c, puntajeAnual(c, ctx, infl.mensual)]));
+  const porId = (id: ProductoId) => candidatos.find((c) => c.rec.producto.id === id);
+  const sirve = (c: ItemProducto | undefined): c is ItemProducto => !!c && c.motivo === null;
+  const puntajeDe = (c: ItemProducto) => puntajes.get(c) ?? -Infinity;
+
+  // ── La cartera de este plazo y este perfil ──
+  const grupos = armarCartera(ctx.perfil, ctx.horizonteMeses);
+  const candidatosDeGrupo = grupos.map((gr) => {
+    let lista = gr.productos.map(porId).filter(sirve);
+    // Para tener la plata a mano o fijar un plazo, no se ofrece lo que pierde contra la inflación si hay
+    // otra opción igual de disponible que no. A menos de 3 meses sí: todo es mejor que nada.
+    if (tramo !== 'corto' && lista.some((c) => c.rec.mejor.veredicto !== 'pierde')) lista = lista.filter((c) => c.rec.mejor.veredicto !== 'pierde');
+    return [...lista].sort((a, b) => puntajeDe(b) - puntajeDe(a));
+  });
+
+  // Una parte sin nada para ofrecer (por ejemplo, sin datos de CEDEARs) pasa su porcentaje a las demás.
+  const conAlgo = grupos.map((gr, i) => ({ gr, lista: candidatosDeGrupo[i] })).filter((x) => x.lista.length > 0);
+  const elegidas: ItemProducto[] = [];
+  const puestasPorGrupo = conAlgo.map(({ lista }, i) => {
+    const max = maximoPorGrupo(conAlgo.length, i === 0);
+    const picks: ItemProducto[] = [];
+    for (const c of lista) {
+      if (picks.length >= max) break;
+      if (!elegidas.includes(c)) { picks.push(c); elegidas.push(c); }
+    }
+    return picks;
+  });
+  const pesoTotal = conAlgo.reduce((a, x, i) => a + (puestasPorGrupo[i].length > 0 ? x.gr.peso : 0), 0);
+  conAlgo.forEach(({ gr }, i) => {
+    for (const c of puestasPorGrupo[i]) { c.recomendado = true; c.peso = gr.peso / pesoTotal; }
+  });
+
+  // Un gasto cercano que no se cubre con lo que ingresa: se suma lo mejor para tener plata disponible.
+  if (ctx.necesitaCaja && !elegidas.some((c) => c.rec.rol === 'caja')) {
+    const caja = candidatos
+      .filter((c) => c.rec.rol === 'caja' && c.motivo === null)
+      .sort((a, b) => puntajeDe(b) - puntajeDe(a))[0];
+    if (caja) { caja.recomendado = true; caja.peso = null; elegidas.push(caja); }
+  }
+
+  // El dólar no es una inversión: se muestra cuando hay un objetivo en dólares y el dólar está bajo.
+  const dolar = porId('dolar');
+  if (dolar) {
+    if (ctx.objetivoEnDolares && dolar.motivo === null) {
+      if (dolarEstaBajo(ctx.mercado, infl.mensual)) { dolar.recomendado = true; dolar.peso = null; elegidas.push(dolar); }
+      else dolar.motivo = 'Hoy no está bajo: en el último mes subió más que la inflación. Para tu objetivo en dólares, mejor esperar a que baje.';
     }
   }
 
-  // Entre lo que se puede recomendar, las dos que más rinden para ESTE monto y ESTE plazo.
-  // Única excepción: sin colchón (menos de 3 meses de gastos a mano) y con un monto que no lo
-  // supera, una de las dos es la mejor opción para tener plata disponible: antes de invertir hay que poder sacarla.
-  const puntaje2 = new Map<ItemProducto, number | null>(candidatos.map((c) => [c, puntajeAnual(c, ctx, infl.mensual)]));
-  const porPuntaje = candidatos
-    .filter((c) => c.recomendado && puntaje2.get(c) !== null)
-    .sort((a, b) => (puntaje2.get(b) as number) - (puntaje2.get(a) as number));
-  const sinPuntaje = candidatos.filter((c) => c.recomendado && puntaje2.get(c) === null);
-
-  const elegidas: ItemProducto[] = [];
-  // Si el monto alcanza para más que el colchón que falta, no hace falta forzar la caja: lo que sobra se elige por rendimiento.
-  const alcanzaSoloParaElColchon = !ctx.monto || ctx.faltaColchon == null || ctx.monto <= ctx.faltaColchon;
-  if (ctx.necesitaCaja && alcanzaSoloParaElColchon) {
-    const caja = porPuntaje.find((c) => c.rec.rol === 'caja');
-    if (caja) elegidas.push(caja);
-  }
-  for (const c of [...porPuntaje, ...sinPuntaje]) {
-    if (elegidas.length >= RECOMENDADAS) break;
-    if (!elegidas.includes(c)) elegidas.push(c);
-  }
-  // Primero la que más rinde (la de caja, si la hay, no se pone adelante por serlo).
-  const marcadas = elegidas.sort((a, b) => (puntaje2.get(b) ?? -Infinity) - (puntaje2.get(a) ?? -Infinity));
-  const nombresMarcados = marcadas.map((c) => c.rec.producto.nombre.toLowerCase());
-  const plazo = ctx.horizonteMeses === null ? 'ese plazo' : enMeses(ctx.horizonteMeses);
-  const resto = [
-    ...candidatos
-      .filter((c) => c.recomendado && !elegidas.includes(c))
-      .map((c) => ({ ...c, recomendado: false, motivo: `Para ${plazo}${ctx.monto ? ` y ${fmtPesos(ctx.monto)}` : ''} hoy rinden más ${nombresMarcados.join(' y ')}.` })),
-    ...candidatos.filter((c) => !c.recomendado),
-  ];
-  return { inflacion: infl, items: [...marcadas, ...resto], sinBase: false };
+  // Lo que se sugiere: primero lo que lleva más parte de la plata, y a igual parte, lo que más rinde.
+  const marcadas = [...elegidas].sort((a, b) => ((b.peso ?? 0) - (a.peso ?? 0)) || (puntajeDe(b) - puntajeDe(a)));
+  const nombresMarcados = marcadas.filter((c) => c.peso !== null).map((c) => c.rec.producto.nombre.toLowerCase());
+  const resto = candidatos
+    .filter((c) => !c.recomendado)
+    .map((c): ItemProducto => {
+      if (c.motivo) return c;
+      const enAlgunGrupo = grupos.some((gr) => gr.productos.includes(c.rec.producto.id));
+      const motivo = enAlgunGrupo && nombresMarcados.length > 0
+        ? `Para ${TRAMOS[tramo]} hoy rinden más ${listaConY(nombresMarcados)}.`
+        : motivoFueraDeCartera(c.rec.producto.id, tramo, ctx);
+      return { ...c, motivo };
+    });
+  return { inflacion: infl, items: [...marcadas, ...resto], sinBase: false, tramo };
 }
 
 // ── Resumen del estado del mercado, para mostrarlo ───────────────────────
