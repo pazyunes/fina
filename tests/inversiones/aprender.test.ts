@@ -2,18 +2,26 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { ordenarTarjetas, TARJETAS } from '../../src/app/lib/inversiones/aprender';
 
-describe('cards para aprender la diferencia entre dos cosas', () => {
+import { META_DE_RACHA, rachaDeAprendizaje } from '../../src/app/lib/inversiones/aprender';
+
+describe('mini lecciones para aprender', () => {
   it('todas tienen la misma forma y un id único', () => {
     assert.equal(new Set(TARJETAS.map((t) => t.id)).size, TARJETAS.length);
     for (const t of TARJETAS) {
-      for (const campo of [t.titulo, t.idea, t.izq.nombre, t.izq.texto, t.der.nombre, t.der.texto, t.retener]) assert.ok(campo.trim().length > 0, t.id);
+      for (const campo of [t.titulo, t.idea, t.retener, ...t.bloques.flatMap((b) => [b.nombre, b.texto])]) assert.ok(campo.trim().length > 0, t.id);
       assert.ok(t.productos.length > 0, t.id);
-      assert.match(t.titulo, /^Diferencia entre /, t.id);
+      assert.ok(t.bloques.length >= 1 && t.bloques.length <= 2, t.id);
+      if (t.clase === 'diferencia') assert.match(t.titulo, /^Diferencia entre /, t.id);
     }
   });
 
+  it('hay de más de una clase, no sólo diferencias', () => {
+    assert.ok(new Set(TARJETAS.map((t) => t.clase)).size >= 3);
+    assert.ok(TARJETAS.length >= META_DE_RACHA * 2);
+  });
+
   it('explican sin dar órdenes ni prometer rendimientos', () => {
-    const texto = TARJETAS.flatMap((t) => [t.idea, t.izq.texto, t.der.texto, t.retener, t.ejemplo ?? '']).join(' ');
+    const texto = TARJETAS.flatMap((t) => [t.idea, ...t.bloques.map((b) => b.texto), t.retener, t.ejemplo ?? '']).join(' ');
     assert.doesNotMatch(texto, /tenés que|deberías|no te olvides|garantizad[oa] (que )?(ganás|rinde)/i);
   });
 
@@ -34,11 +42,50 @@ describe('cards para aprender la diferencia entre dos cosas', () => {
     assert.ok(e.includes('$102.000') && e.includes('$102.500'));
   });
 
-  it('las que tienen que ver con lo recomendado van primero, sin perder ninguna ni mezclar el orden del resto', () => {
-    const o = ordenarTarjetas(TARJETAS, ['dolar']);
+  it('el ejemplo de interés compuesto es correcto: $100.000 al 2% por mes, tres meses', () => {
+    const m1 = 100_000 * 1.02;
+    const m2 = m1 * 1.02;
+    const m3 = m2 * 1.02;
+    assert.deepEqual([m1, m2, m3].map(Math.round), [102_000, 104_040, 106_121]);
+    const e = TARJETAS.find((t) => t.id === 'interes-compuesto')!.ejemplo!;
+    assert.ok(e.includes('$102.000') && e.includes('$104.040') && e.includes('$106.121'));
+  });
+
+  it('el ejemplo de inflación es correcto: $1.000 con 2,5% pasan a $1.025', () => {
+    assert.equal(Math.round(1000 * 1.025), 1025);
+    assert.ok(TARJETAS.find((t) => t.id === 'inflacion')!.ejemplo!.includes('$1.025'));
+  });
+});
+
+describe('el orden de las cards', () => {
+  it('lo recomendado y no aprendido va primero; lo aprendido, al final; el resto conserva su orden', () => {
+    const o = ordenarTarjetas(TARJETAS, ['dolar'], ['tna-tea']);
     assert.equal(o.length, TARJETAS.length);
     assert.equal(o[0].id, 'oficial-mep');
-    assert.deepEqual(o.slice(1).map((t) => t.id), TARJETAS.filter((t) => t.id !== 'oficial-mep').map((t) => t.id));
+    assert.equal(o[o.length - 1].id, 'tna-tea');
+    const medio = o.slice(0, -1).map((t) => t.id).filter((id) => id !== 'oficial-mep' && !TARJETAS.find((t) => t.id === id)!.productos.includes('dolar'));
+    assert.deepEqual(medio, TARJETAS.map((t) => t.id).filter((id) => medio.includes(id)));
+  });
+  it('sin recomendados ni aprendidas, queda como está', () => {
     assert.deepEqual(ordenarTarjetas(TARJETAS, []).map((t) => t.id), TARJETAS.map((t) => t.id));
+  });
+});
+
+describe('la racha de aprendizaje: cada 5 lecciones aprendidas', () => {
+  const ids = (n: number) => TARJETAS.slice(0, n).map((t) => t.id);
+  it('cuenta en rachas de 5', () => {
+    assert.deepEqual(rachaDeAprendizaje(ids(0)), { aprendidas: 0, completas: 0, enCurso: 0, faltan: 5 });
+    assert.deepEqual(rachaDeAprendizaje(ids(3)), { aprendidas: 3, completas: 0, enCurso: 3, faltan: 2 });
+    assert.deepEqual(rachaDeAprendizaje(ids(5)), { aprendidas: 5, completas: 1, enCurso: 5, faltan: 0 });
+    assert.deepEqual(rachaDeAprendizaje(ids(7)), { aprendidas: 7, completas: 1, enCurso: 2, faltan: 3 });
+    assert.deepEqual(rachaDeAprendizaje(ids(10)), { aprendidas: 10, completas: 2, enCurso: 5, faltan: 0 });
+  });
+  it('no cuenta dos veces la misma ni ids que ya no existen', () => {
+    assert.equal(rachaDeAprendizaje(['tna-tea', 'tna-tea', 'tna-tea']).aprendidas, 1);
+    assert.equal(rachaDeAprendizaje(['no-existe', 'tna-tea']).aprendidas, 1);
+  });
+  it('desmarcar una vuelve atrás', () => {
+    assert.equal(rachaDeAprendizaje(ids(5)).completas, 1);
+    assert.equal(rachaDeAprendizaje(ids(4)).completas, 0);
   });
 });

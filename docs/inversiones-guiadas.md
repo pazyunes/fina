@@ -163,3 +163,10 @@ conexión con Objetivos, más proveedores y fondos, y la revisión legal (CNV).
   - Los **CEDEARs** se miden con lo que rindió el S&P 500 en 10 años, en dólares (histórico, no promesa). El **dólar** no puntúa: no desplaza a lo que rinde.
 - Excepción: **sin colchón** (menos de 3 meses de gastos a mano) y con un monto que no supera lo que falta para completarlo, una de las dos es la mejor opción para tener plata disponible.
 - Sólo se compara lo que está en el catálogo. Lo que el mercado usa y hoy no está (obligaciones negociables, bonos CER, fondos de renta fija o CER, acciones) necesita fuente de datos y revisión de un asesor.
+
+## Mini lecciones (cards)
+
+- Debajo de las recomendaciones: cards que se deslizan para el costado (se asoma la siguiente). 15 lecciones de tres clases: diferencias ("Diferencia entre TNA y TEA"), conceptos ("¿Qué es la inflación?") y mitos. Contenido en `lib/inversiones/aprender.ts`; los ejemplos con plata dicen "de juguete" y tienen test de cuentas.
+- Cada una se marca con "Ya lo aprendí" (y se puede desmarcar). **Cada 5 aprendidas se completa una racha** (`rachaDeAprendizaje`). No está ligada a la racha diaria de pasos: ésa mide algo que se hace, y un botón la inflaría.
+- Se guarda en el dispositivo siempre y en `learned_cards` (migración 0042) para que pase de un dispositivo a otro; sin la migración andan igual.
+- El orden se arma al entrar (lo que se recomienda hoy y falta aprender, primero; lo aprendido, al final) y no cambia después.
