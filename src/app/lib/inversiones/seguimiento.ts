@@ -14,7 +14,6 @@ import { nombreProducto } from './catalogo';
 import { diaMes, fmtPesos, nombreCuenta, nombrePropio, pct, rangoPctConSigno } from './formato';
 import { bancosOrdenados, inflacionDeReferencia, realMensual, temDeTna, type Confianza } from './motor';
 import { estaVigente, type Mercado } from './mercadoTipos';
-import type { SugerenciaMonto } from './cuanto';
 
 export type Novedad = {
   id: string;
@@ -35,15 +34,16 @@ function diasEntre(desde: string, hasta: string): number {
   return Math.round((new Date(`${hasta}T12:00:00Z`).getTime() - new Date(`${desde}T12:00:00Z`).getTime()) / MS_DIA);
 }
 
+const diaMe = diaMes;
 const hoyDe = (ahora: number) => new Date(ahora).toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
 
 /** Qué pasa ahora que ya lo hiciste: lo que no hay que hacer, y lo que sí a futuro. */
 const QUE_SIGUE: Record<PosicionInversion['tipo'], string> = {
-  cuenta_remunerada: 'No tenés que hacer nada: el saldo rinde solo todos los días. Lo único para mirar de vez en cuando es la tasa, porque cambia seguido.',
-  fci: 'Cada día el valor de tu cuotaparte se actualiza, y ahí se ve tu ganancia. No hace falta mirarlo todos los días: sirve verlo una vez por semana.',
-  plazo_fijo: 'No tenés que hacer nada hasta el vencimiento. Ese día el banco te devuelve el capital más el interés; ahí decidís si lo renovás o lo usás.',
-  plazo_fijo_uva: 'No tenés que hacer nada hasta el vencimiento. Tu capital se va actualizando con la inflación; el día que vence cobrás ese capital ajustado más el interés.',
-  letra: 'Podés olvidarte hasta el vencimiento: el Estado paga solo y la plata entra a tu cuenta del broker. El precio en el medio puede moverse, pero no cambia lo que cobrás si esperás.',
+  cuenta_remunerada: 'No tenés que hacer nada: el saldo rinde solo todos los días. Lo único para mirar de vez en cuando es la tasa (el interés que te pagan), porque cambia seguido.',
+  fci: 'Cada día el valor de tu cuotaparte (cada pedacito del fondo) se actualiza, y ahí se ve tu ganancia. No hace falta mirarlo todos los días: sirve verlo una vez por semana.',
+  plazo_fijo: 'No tenés que hacer nada hasta el vencimiento (el día en que termina el plazo). Ese día el banco te devuelve la plata más el interés; ahí decidís si lo renovás o lo usás.',
+  plazo_fijo_uva: 'No tenés que hacer nada hasta el vencimiento (el día en que termina el plazo). Tu plata se va actualizando con la inflación; ese día cobrás lo actualizado más el interés.',
+  letra: 'Podés olvidarte hasta el vencimiento (el día en que el Estado te devuelve la plata): paga solo y entra a tu cuenta del broker. El precio en el medio puede moverse, pero no cambia lo que cobrás si esperás.',
   dolar: 'Los dólares no generan interés: lo que cambia es cuántos pesos valen. Mirarlo seguido no cambia nada; lo importante es para qué los guardaste.',
   cedear: 'El precio va a subir y bajar todos los días, y eso es normal. Está pensado para dejarlo varios años: mirarlo todos los días suele dar más ansiedad que información.',
 };
@@ -51,12 +51,10 @@ const QUE_SIGUE: Record<PosicionInversion['tipo'], string> = {
 export function generarNovedades(args: {
   posiciones: PosicionInversion[];
   mercado: Mercado | null;
-  sugerencia?: SugerenciaMonto | null;
   ahora?: number;
 }): Novedad[] {
   const ahora = args.ahora ?? Date.now();
   const hoy = hoyDe(ahora);
-  const mes = hoy.slice(0, 7);
   const m = args.mercado;
   const infl = m ? inflacionDeReferencia(m, ahora) : null;
   const activas = args.posiciones.filter((p) => p.estado === 'activa');
@@ -164,7 +162,7 @@ export function generarNovedades(args: {
         salida.push({
           id: `valor-${p.id}`, tono: 'info', posicionId: p.id, confianza: 'confirmado',
           titulo: `Tus ${ticker} valen hoy ${fmtPesos(valor)}`,
-          texto: `A precio de hoy, sin contar comisiones de venta. Pagaste ${fmtPesos(p.monto)}: estás ${pct(Math.abs(dif) * 100, 1)} ${dif >= 0 ? 'arriba' : 'abajo'}. Es normal que cambie todos los días: está pensado para dejarlo años.`,
+          texto: `A precio de hoy, sin contar la comisión de venta (lo que cobra el broker). Pagaste ${fmtPesos(p.monto)}: estás ${pct(Math.abs(dif) * 100, 1)} ${dif >= 0 ? 'arriba' : 'abajo'}. Es normal que cambie todos los días: está pensado para dejarlo años.`,
         });
       }
     }
@@ -184,19 +182,64 @@ export function generarNovedades(args: {
     }
   }
 
-  // 8) Un mes sin poner nada, sólo si ya empezó (no se le insiste a quien nunca invirtió).
-  const suger = args.sugerencia;
-  if (activas.length > 0 && suger?.monto && (suger.tipo === 'regular' || suger.tipo === 'empezar-poco')) {
-    const pusoEsteMes = args.posiciones.some((p) => p.inicio.startsWith(mes));
-    if (!pusoEsteMes) {
-      salida.push({
-        id: `mes-${mes}`, tono: 'info', confianza: 'estimado',
-        titulo: 'Este mes todavía no sumaste nada',
-        texto: `Si te sobra algo, te sugerimos entre ${fmtPesos(suger.monto.min)} y ${fmtPesos(suger.monto.max)}. Si este mes no se puede, no pasa nada: seguís con lo que ya tenés.`,
-      });
-    }
-  }
-
   const prioridad = (n: Novedad) => (n.id.startsWith('vence') || n.id.startsWith('vencio') ? 0 : n.tono === 'decision' ? 1 : n.id.startsWith('sigue') ? 2 : 3);
   return salida.sort((a, b) => prioridad(a) - prioridad(b)).slice(0, 6);
+}
+
+/**
+ * Qué hay hoy para esta inversión, en una o dos frases cada cosa: lo que dice el
+ * mercado de hoy sobre lo que la persona tiene. Es la parte "del día" de la ficha
+ * de cada inversión.
+ */
+export function queHayHoy(p: PosicionInversion, m: Mercado | null, ahora: number = Date.now()): string[] {
+  if (!m) return [];
+  const salida: string[] = [];
+  switch (p.tipo) {
+    case 'plazo_fijo':
+    case 'plazo_fijo_uva': {
+      const lista = bancosOrdenados(m);
+      if (p.tipo === 'plazo_fijo' && lista.length > 0 && estaVigente('plazoFijo', m.plazoFijo?.fecha, ahora)) {
+        salida.push(`Hoy los bancos pagan entre ${pct(lista[lista.length - 1].tna * 100, 1)} y ${pct(lista[0].tna * 100, 1)} anual a 30 días. La mejor tasa es la de ${nombrePropio(lista[0].entidad)}.`);
+      }
+      if (p.tipo === 'plazo_fijo_uva' && m.inflacion.uva30d) {
+        salida.push(`En el último mes la UVA subió ${pct(m.inflacion.uva30d.valor, 1)}: eso es lo que se sumó a tu plata por la inflación.`);
+      }
+      break;
+    }
+    case 'cuenta_remunerada': {
+      const conocidas = (m.cuentas?.valor ?? []).filter((c) => CUENTAS_CONOCIDAS.includes(c.id) && estaVigente('cuenta', c.fecha, ahora));
+      if (conocidas.length > 0) {
+        const mejor = conocidas.reduce((a, c) => (c.tna > a.tna ? c : a));
+        salida.push(`Hoy la cuenta que más paga es ${nombreCuenta(mejor.id)}: ${pct(mejor.tna * 100, 0)} anual${mejor.condiciones ? ` (${mejor.condiciones.replace(/\.$/, '')})` : ''}.`);
+      }
+      break;
+    }
+    case 'fci': {
+      const fondo = String(p.detalle.fondo ?? '').toLowerCase();
+      const f = m.fondos?.valor.find((x) => fondo && x.id.toLowerCase().startsWith(fondo));
+      if (f && f.tna1 !== null && estaVigente('fondo', f.fecha, ahora)) {
+        salida.push(`Al ${diaMe(f.fecha)} tu fondo rindió cerca de ${pct(f.tna1 * 100, 0)} anual (calculado con cómo cambió el valor de su cuotaparte).`);
+      }
+      break;
+    }
+    case 'dolar': {
+      const mep = m.dolar.mep;
+      if (mep && estaVigente('dolar', mep.fecha, ahora)) {
+        const v = m.dolar.mep30d;
+        salida.push(`Hoy el dólar MEP está a ${fmtPesos(mep.valor)}${v !== null ? `; en el último mes ${v >= 0 ? 'subió' : 'bajó'} ${pct(Math.abs(v), 1)}` : ''}.`);
+      }
+      break;
+    }
+    case 'cedear': {
+      const ticker = String(p.detalle.ticker ?? '').toUpperCase();
+      const c = m.cedears?.valor.find((x) => x.simbolo === ticker);
+      if (c && estaVigente('cedears', m.cedears?.fecha, ahora)) {
+        salida.push(`Hoy ${ticker} cotiza a ${fmtPesos(c.precio)} y ${c.variacionDia >= 0 ? 'subió' : 'bajó'} ${pct(Math.abs(c.variacionDia), 1)} en el día.`);
+      }
+      break;
+    }
+    case 'letra':
+      break;
+  }
+  return salida;
 }

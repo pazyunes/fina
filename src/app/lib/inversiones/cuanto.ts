@@ -112,13 +112,6 @@ export function sugerirMonto(sobrante: Sobrante | null): SugerenciaMonto {
   };
 }
 
-/** Meses que tarda en juntar el colchón poniendo `porMes`. null si no se puede saber. */
-export function mesesParaColchon(falta: number, porMes: number | null): number | null {
-  if (falta <= 0) return 0;
-  if (!porMes || porMes <= 0) return null;
-  return Math.ceil(falta / porMes);
-}
-
 /** Qué horizonte tiene la plata según lo que contestó en el quiz. */
 export function horizonteDesdeQuiz(porQue: string | null | undefined): number | null {
   if (!porQue) return null;

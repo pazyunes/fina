@@ -15,20 +15,25 @@
 
 import type { LecturaCaptura } from '../../api/v2/capturas';
 import type { PosicionInversion, TipoPosicion } from '../../api/v2/tipos';
-import { diaMes, fmtPesos, pct } from './formato';
+import { ALIAS_PROVEEDOR } from './catalogo';
+import { diaMes, fmtPesos, nombrePropio, pct } from './formato';
+import { CEDEARS_DISPONIBLES, avisoDeMonto, explicarTicker, limitesDe, precioCedear } from './limites';
 import { bancosOrdenados } from './motor';
 import type { Mercado } from './mercadoTipos';
 
 export type TipoCampo = 'texto' | 'monto' | 'numero' | 'porcentaje' | 'fecha' | 'opcion';
+
+export type Opcion = { id: string; label: string };
 
 export type CampoDef = {
   id: string;
   etiqueta: string;
   tipo: TipoCampo;
   obligatorio: boolean;
-  /** Dónde se encuentra este dato en la app. */
+  /** Dónde se encuentra este dato en la app, o qué significa si es una palabra técnica. */
   ayuda: string;
-  opciones?: { id: string; label: string }[];
+  /** Una lista fija, o una que depende de lo ya elegido (por ejemplo, el fondo depende de dónde lo compró). */
+  opciones?: Opcion[] | ((v: Valores, m: Mercado | null) => Opcion[]);
   placeholder?: string;
 };
 
@@ -40,11 +45,26 @@ export type FormDef = {
 
 export type Valores = Record<string, string>;
 
-const SI_NO = [{ id: 'si', label: 'Sí' }, { id: 'no', label: 'No' }];
+const SI_NO: Opcion[] = [{ id: 'si', label: 'Sí' }, { id: 'no', label: 'No' }];
+const opc = (xs: string[]): Opcion[] => xs.map((x) => ({ id: x, label: x }));
 
-const PROVEEDORES_BILLETERA = ['Mercado Pago', 'Ualá', 'Naranja X', 'Brubank', 'Otra'].map((x) => ({ id: x, label: x }));
-const PROVEEDORES_BROKER = ['Cocos Capital', 'Balanz', 'Mercado Pago', 'Ualá', 'Otro'].map((x) => ({ id: x, label: x }));
-const BROKERS = ['Cocos Capital', 'Balanz', 'Otro'].map((x) => ({ id: x, label: x }));
+const BILLETERAS = opc(['Mercado Pago', 'Ualá', 'Naranja X', 'Otra']);
+const BROKERS = opc(['Cocos Capital', 'Balanz', 'Otro']);
+const PARA_FONDOS = opc(['Cocos Capital', 'Balanz', 'Mercado Pago', 'Otro']);
+
+/** Los fondos que ofrece cada lugar. Si eligió "Otro", la lista queda vacía y se escribe a mano. */
+const FONDOS_DE: Record<string, string> = {
+  'Mercado Pago': 'Mercado Fondo',
+  'Cocos Capital': 'Cocos Ahorro',
+  Balanz: 'Balanz Capital Money Market',
+};
+
+/** Los bancos con tasa publicada hoy. Si no hay lista, el campo se escribe a mano. */
+function bancosDe(_v: Valores, m: Mercado | null): Opcion[] {
+  if (!m) return [];
+  const nombres = [...new Set(bancosOrdenados(m).map((b) => nombrePropio(b.entidad)))].sort((a, b) => a.localeCompare(b, 'es'));
+  return nombres.length > 0 ? [...opc(nombres), { id: 'Otro banco', label: 'Otro banco' }] : [];
+}
 
 const inicio = (etiqueta = '¿Desde cuándo?'): CampoDef => ({
   id: 'inicio', etiqueta, tipo: 'fecha', obligatorio: true,
@@ -56,9 +76,9 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'cuenta_remunerada',
     titulo: 'Cuenta remunerada',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué billetera?', tipo: 'opcion', obligatorio: true, ayuda: 'La app donde tenés la plata.', opciones: PROVEEDORES_BILLETERA },
-      { id: 'monto', etiqueta: '¿Cuánto tenés en la cuenta?', tipo: 'monto', obligatorio: true, ayuda: 'Es el saldo que ves en la sección de rendimientos.' },
-      { id: 'tna', etiqueta: 'Tasa que te muestra la app', tipo: 'porcentaje', obligatorio: false, ayuda: 'Aparece junto a “Rinde”, en porcentaje anual (TNA). Si solo ves TEA, anotá ese número.', placeholder: 'Ej: 19' },
+      { id: 'proveedor', etiqueta: '¿En qué billetera?', tipo: 'opcion', obligatorio: true, ayuda: 'La app donde tenés la plata.', opciones: BILLETERAS },
+      { id: 'monto', etiqueta: '¿Cuánto tenés en la cuenta?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es el saldo que ves en la sección donde se muestra lo que rinde.' },
+      { id: 'tna', etiqueta: 'Tasa que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: false, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. Si solo ves la TEA (la tasa efectiva anual, parecida a la TNA), anotá ese número.', placeholder: 'Ej: 19' },
       inicio(),
     ],
   },
@@ -66,13 +86,17 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'fci',
     titulo: 'Fondo común de inversión',
     campos: [
-      { id: 'proveedor', etiqueta: '¿Dónde lo compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o broker desde donde invertiste.', opciones: PROVEEDORES_BROKER },
-      { id: 'fondo', etiqueta: 'Nombre del fondo', tipo: 'texto', obligatorio: true, ayuda: 'Arriba en la ficha del fondo. Ej: Cocos Ahorro.', placeholder: 'Ej: Cocos Ahorro' },
-      { id: 'clase', etiqueta: 'Clase', tipo: 'texto', obligatorio: false, ayuda: 'Una letra (A, B, C…) que figura junto al nombre.', placeholder: 'Ej: A' },
-      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'El monto que suscribiste, en pesos.' },
-      { id: 'cantidad', etiqueta: 'Cuotapartes que recibiste', tipo: 'numero', obligatorio: false, ayuda: 'En “Mi cartera” o “Tenencias”, dentro del fondo.', placeholder: 'Ej: 1.250,35' },
-      { id: 'precio', etiqueta: 'Valor de la cuotaparte al comprar', tipo: 'numero', obligatorio: false, ayuda: 'Figura en el comprobante de la suscripción.', placeholder: 'Ej: 2.428,729' },
-      { id: 'rescate', etiqueta: '¿En cuánto tiempo podés rescatarlo?', tipo: 'opcion', obligatorio: false, ayuda: 'Figura en la ficha del fondo como “plazo de rescate”.', opciones: [{ id: 'mismo-dia', label: 'El mismo día' }, { id: '24hs', label: '24 hs' }, { id: '48hs', label: '48 hs' }, { id: 'otro', label: 'Otro' }] },
+      { id: 'proveedor', etiqueta: '¿Dónde lo compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o broker (la plataforma donde comprás inversiones) desde donde invertiste.', opciones: PARA_FONDOS },
+      {
+        id: 'fondo', etiqueta: 'Nombre del fondo', tipo: 'opcion', obligatorio: true,
+        ayuda: 'Está arriba, en la pantalla del fondo.',
+        opciones: (v) => (FONDOS_DE[v.proveedor] ? opc([FONDOS_DE[v.proveedor]]) : []),
+      },
+      { id: 'clase', etiqueta: 'Clase', tipo: 'opcion', obligatorio: false, ayuda: 'Una letra (A, B, C…) que figura junto al nombre. Cambia las comisiones, no lo que rinde. Si no la ves, dejala vacía.', opciones: opc(['A', 'B', 'C', 'Otra']) },
+      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. El monto que compraste.' },
+      { id: 'cantidad', etiqueta: 'Cuotapartes que recibiste', tipo: 'numero', obligatorio: false, ayuda: 'Las cuotapartes son los pedacitos del fondo que te tocaron. Las ves en la pantalla donde se muestra lo que tenés invertido.', placeholder: 'Ej: 41,17' },
+      { id: 'precio', etiqueta: 'Valor de cada cuotaparte al comprar', tipo: 'numero', obligatorio: false, ayuda: 'En pesos. Figura en el comprobante de la compra.', placeholder: 'Ej: 2.428,729' },
+      { id: 'rescate', etiqueta: '¿En cuánto tiempo podés sacar tu plata?', tipo: 'opcion', obligatorio: false, ayuda: 'Figura en la pantalla del fondo como “plazo de rescate” (rescatar es pedir que te devuelvan la plata).', opciones: [{ id: 'mismo-dia', label: 'El mismo día' }, { id: '24hs', label: '24 hs' }, { id: '48hs', label: '48 hs' }, { id: 'otro', label: 'Otro' }] },
       inicio('¿Cuándo lo compraste?'),
     ],
   },
@@ -80,35 +104,35 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'plazo_fijo',
     titulo: 'Plazo fijo',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué banco?', tipo: 'texto', obligatorio: true, ayuda: 'El banco donde lo constituiste.', placeholder: 'Ej: Banco Nación' },
-      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'El capital que figura en el comprobante.' },
-      { id: 'tna', etiqueta: 'Tasa (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'En el comprobante, como “TNA” o “tasa nominal anual”.', placeholder: 'Ej: 20' },
-      { id: 'plazo', etiqueta: 'Plazo en días', tipo: 'numero', obligatorio: true, ayuda: 'En el comprobante: 30, 60, 90…', placeholder: 'Ej: 30' },
-      inicio('¿Cuándo lo constituiste?'),
-      { id: 'renueva', etiqueta: '¿Se renueva solo al vencer?', tipo: 'opcion', obligatorio: false, ayuda: 'En el comprobante: “renovación automática”.', opciones: SI_NO },
-      { id: 'precancelable', etiqueta: '¿Es precancelable?', tipo: 'opcion', obligatorio: false, ayuda: 'Si lo podés retirar antes del vencimiento (con tasa menor).', opciones: SI_NO },
+      { id: 'proveedor', etiqueta: '¿En qué banco?', tipo: 'opcion', obligatorio: true, ayuda: 'El banco donde lo hiciste.', opciones: bancosDe, placeholder: 'Ej: Banco Nación' },
+      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es el capital que figura en el comprobante.' },
+      { id: 'tna', etiqueta: 'Tasa (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'En el comprobante figura como “TNA” o “tasa nominal anual”: cuánto rinde en un año.', placeholder: 'Ej: 20' },
+      { id: 'plazo', etiqueta: 'Plazo en días', tipo: 'numero', obligatorio: true, ayuda: 'Por cuántos días lo hiciste. Figura en el comprobante: 30, 60, 90…', placeholder: 'Ej: 30' },
+      inicio('¿Cuándo lo hiciste?'),
+      { id: 'renueva', etiqueta: '¿Se renueva solo al vencer?', tipo: 'opcion', obligatorio: false, ayuda: 'Vencer es cuando termina el plazo. En el comprobante dice “renovación automática”.', opciones: SI_NO },
+      { id: 'precancelable', etiqueta: '¿Es precancelable?', tipo: 'opcion', obligatorio: false, ayuda: 'Precancelable quiere decir que lo podés retirar antes del vencimiento, cobrando menos interés.', opciones: SI_NO },
     ],
   },
   plazo_fijo_uva: {
     tipo: 'plazo_fijo_uva',
     titulo: 'Plazo fijo UVA',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué banco?', tipo: 'texto', obligatorio: true, ayuda: 'El banco donde lo constituiste.', placeholder: 'Ej: Banco Galicia' },
-      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'El capital que figura en el comprobante.' },
-      { id: 'plazo', etiqueta: 'Plazo en días', tipo: 'numero', obligatorio: true, ayuda: 'En el comprobante. Suelen pedir al menos 90.', placeholder: 'Ej: 90' },
-      { id: 'tna', etiqueta: 'Adicional sobre la UVA', tipo: 'porcentaje', obligatorio: false, ayuda: 'Si el banco te informa un interés extra sobre la UVA. Si no figura, dejalo vacío.', placeholder: 'Ej: 1' },
-      inicio('¿Cuándo lo constituiste?'),
+      { id: 'proveedor', etiqueta: '¿En qué banco?', tipo: 'opcion', obligatorio: true, ayuda: 'El banco donde lo hiciste.', opciones: bancosDe, placeholder: 'Ej: Banco Galicia' },
+      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es el capital que figura en el comprobante.' },
+      { id: 'plazo', etiqueta: 'Plazo en días', tipo: 'numero', obligatorio: true, ayuda: 'Por cuántos días lo hiciste. En los plazos fijos UVA (los que se actualizan con la inflación) el mínimo es 90.', placeholder: 'Ej: 90' },
+      { id: 'tna', etiqueta: 'Interés extra sobre la UVA', tipo: 'porcentaje', obligatorio: false, ayuda: 'Algunos bancos suman un interés chico además de la inflación (lo que suben los precios). Si no figura, dejalo vacío.', placeholder: 'Ej: 1' },
+      inicio('¿Cuándo lo hiciste?'),
     ],
   },
   letra: {
     tipo: 'letra',
     titulo: 'Letra del Tesoro',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app desde donde la compraste.', opciones: BROKERS },
-      { id: 'ticker', etiqueta: 'Nombre de la letra (ticker)', tipo: 'texto', obligatorio: true, ayuda: 'En “Mi cartera”. Ej: S13N6. El nombre ya indica el vencimiento.', placeholder: 'Ej: S13N6' },
-      { id: 'monto', etiqueta: '¿Cuánto pagaste en total?', tipo: 'monto', obligatorio: true, ayuda: 'El costo total de la compra, con comisión si la hubo.' },
-      { id: 'cantidad', etiqueta: 'Cantidad comprada', tipo: 'numero', obligatorio: false, ayuda: 'En el comprobante o en “Mi cartera”.', placeholder: 'Ej: 1.000' },
-      { id: 'vencimiento', etiqueta: 'Fecha de vencimiento', tipo: 'fecha', obligatorio: true, ayuda: 'La fecha en que el Estado te devuelve la plata. Figura en la ficha de la letra.' },
+      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o plataforma desde donde la compraste.', opciones: BROKERS },
+      { id: 'ticker', etiqueta: 'Nombre de la letra (ticker)', tipo: 'texto', obligatorio: true, ayuda: `${explicarTicker} En las letras, el nombre ya indica el vencimiento. Ej: S13N6.`, placeholder: 'Ej: S13N6' },
+      { id: 'monto', etiqueta: '¿Cuánto pagaste en total?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos, con la comisión si la hubo.' },
+      { id: 'cantidad', etiqueta: 'Cantidad comprada', tipo: 'numero', obligatorio: false, ayuda: 'Figura en el comprobante o en lo que tenés invertido.', placeholder: 'Ej: 1.000' },
+      { id: 'vencimiento', etiqueta: 'Fecha de vencimiento', tipo: 'fecha', obligatorio: true, ayuda: 'El día en que el Estado te devuelve la plata.' },
       inicio('¿Cuándo la compraste?'),
     ],
   },
@@ -116,10 +140,10 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'dolar',
     titulo: 'Dólares',
     campos: [
-      { id: 'proveedor', etiqueta: '¿Dónde los compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o broker.', opciones: BROKERS },
-      { id: 'cantidad', etiqueta: '¿Cuántos dólares?', tipo: 'numero', obligatorio: true, ayuda: 'El saldo en dólares que recibiste.', placeholder: 'Ej: 100' },
-      { id: 'precio', etiqueta: '¿A cuánto compraste cada dólar?', tipo: 'monto', obligatorio: true, ayuda: 'Figura en el comprobante de la operación, en pesos por dólar.' },
-      { id: 'tipo', etiqueta: 'Tipo de dólar', tipo: 'opcion', obligatorio: false, ayuda: 'El comprobante dice si fue MEP, oficial u otro.', opciones: [{ id: 'mep', label: 'MEP' }, { id: 'oficial', label: 'Oficial' }, { id: 'otro', label: 'Otro' }] },
+      { id: 'proveedor', etiqueta: '¿Dónde los compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'En qué broker, o sea la plataforma donde comprás inversiones.', opciones: BROKERS },
+      { id: 'cantidad', etiqueta: '¿Cuántos dólares compraste?', tipo: 'numero', obligatorio: true, ayuda: 'En dólares (US$). Es el saldo en dólares que recibiste.', placeholder: 'Ej: 100' },
+      { id: 'precio', etiqueta: '¿A cuánto compraste cada dólar?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos por cada dólar. Figura en el comprobante.' },
+      { id: 'tipo', etiqueta: 'Tipo de dólar', tipo: 'opcion', obligatorio: false, ayuda: 'El comprobante dice si fue MEP (la forma legal de comprar desde un broker), oficial u otro.', opciones: [{ id: 'mep', label: 'MEP' }, { id: 'oficial', label: 'Oficial' }, { id: 'otro', label: 'Otro' }] },
       inicio('¿Cuándo los compraste?'),
     ],
   },
@@ -127,15 +151,29 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'cedear',
     titulo: 'CEDEAR',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app desde donde lo compraste.', opciones: BROKERS },
-      { id: 'ticker', etiqueta: 'Ticker', tipo: 'texto', obligatorio: true, ayuda: 'El código del CEDEAR. Ej: SPY, AAPL.', placeholder: 'Ej: SPY' },
-      { id: 'cantidad', etiqueta: '¿Cuántos compraste?', tipo: 'numero', obligatorio: true, ayuda: 'Figura en el comprobante.', placeholder: 'Ej: 2' },
-      { id: 'precio', etiqueta: 'Precio de cada uno', tipo: 'monto', obligatorio: true, ayuda: 'El precio por unidad al que se ejecutó la compra, en pesos.' },
-      { id: 'comision', etiqueta: 'Comisión que te cobraron', tipo: 'monto', obligatorio: false, ayuda: 'Figura en el comprobante. Si no la ves, dejalo vacío.' },
+      { id: 'proveedor', etiqueta: '¿En qué broker (la plataforma donde comprás inversiones)?', tipo: 'opcion', obligatorio: true, ayuda: 'La app desde donde lo compraste.', opciones: BROKERS },
+      {
+        id: 'ticker', etiqueta: '¿Cuál compraste? (ticker)', tipo: 'opcion', obligatorio: true, ayuda: explicarTicker,
+        opciones: () => CEDEARS_DISPONIBLES.map((c) => ({ id: c.ticker, label: `${c.ticker} · ${c.nombre}` })),
+      },
+      { id: 'cantidad', etiqueta: '¿Cuántos compraste?', tipo: 'numero', obligatorio: true, ayuda: 'Se compran de a uno entero. Figura en el comprobante.', placeholder: 'Ej: 2' },
+      { id: 'precio', etiqueta: 'Precio de cada uno', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. El precio por unidad al que se hizo la compra.' },
+      { id: 'comision', etiqueta: 'Comisión que te cobraron', tipo: 'monto', obligatorio: false, ayuda: 'En pesos. Es lo que cobra el broker (la plataforma) por comprar. Figura en el comprobante; si no la ves, dejalo vacío.' },
       inicio('¿Cuándo lo compraste?'),
     ],
   },
 };
+
+/** Las opciones de un campo, ya resueltas. Una lista vacía significa "que lo escriba a mano". */
+export function opcionesDe(c: CampoDef, v: Valores, m: Mercado | null): Opcion[] {
+  if (!c.opciones) return [];
+  return typeof c.opciones === 'function' ? c.opciones(v, m) : c.opciones;
+}
+
+/** Deja pasar sólo lo que cabe en un campo numérico: nada de letras. */
+export function soloNumeros(texto: string): string {
+  return texto.replace(/[^\d.,]/g, '');
+}
 
 // ── lectura de números ───────────────────────────────────────────────────
 /** Convención argentina: '.' separa miles y ',' los decimales. Admite "21.5" como 21,5. */
@@ -259,8 +297,9 @@ export function procesarRegistro(
       const mx = Math.max(...mercado.cuentas.valor.map((c) => c.tna));
       if (tna > mx + 0.05) avisos.push(`Esa tasa es más alta que cualquiera que veamos hoy en billeteras (${pct(mx * 100, 0)}). Revisá si es TNA.`);
     }
-    const tope = mercado?.cuentas?.valor.find((c) => c.id.toLowerCase() === proveedor.toLowerCase().replace('ualá', 'uala'))?.tope;
-    if (tope && monto !== null && monto > tope) avisos.push(`Muchas cuentas pagan la tasa sólo hasta ${fmtPesos(tope)} de saldo. Lo que pasa de ahí puede rendir menos.`);
+    const pid = ALIAS_PROVEEDOR[proveedor];
+    const aviso = pid ? avisoDeMonto(limitesDe('cuenta_remunerada', pid, mercado), monto) : null;
+    if (aviso) avisos.push(aviso.texto);
   }
 
   if (tipo === 'letra') {
@@ -295,8 +334,9 @@ export function procesarRegistro(
   if (tipo === 'cedear') {
     const ticker = (v.ticker ?? '').trim().toUpperCase();
     if (ticker) detalle.ticker = ticker;
-    const actual = mercado?.cedears?.valor.find((c) => c.simbolo === ticker);
-    if (actual && precio !== null && Math.abs(precio - actual.precio) / actual.precio > 0.5) avisos.push(`El precio de hoy de ${ticker} es ${fmtPesos(actual.precio)}. Si compraste hace tiempo puede ser distinto; si no, revisalo.`);
+    if (cantidad !== null && !Number.isInteger(cantidad)) errores.cantidad = 'Los CEDEARs se compran de a uno entero.';
+    const actual = ticker ? { precio: precioCedear(mercado, ticker) } : null;
+    if (actual?.precio && precio !== null && Math.abs(precio - actual.precio) / actual.precio > 0.5) avisos.push(`El precio de hoy de ${ticker} es ${fmtPesos(actual.precio ?? 0)}. Si compraste hace tiempo puede ser distinto; si no, revisalo.`);
     if (monto !== null) resumen.push(`El costo total fue ${fmtPesos(monto)}${detalle.comision ? ' (con comisión)' : ''}.`);
   }
 
@@ -362,7 +402,7 @@ export function lecturaAValores(l: LecturaCaptura, ahora: number = Date.now()): 
   };
 
   const campoProv = def.campos.find((c) => c.id === 'proveedor');
-  poner('proveedor', proveedorDeOpciones(l.proveedor, campoProv?.opciones));
+  poner('proveedor', proveedorDeOpciones(l.proveedor, campoProv ? opcionesDe(campoProv, {}, null) : undefined));
   if (l.monto !== null) poner('monto', formatearEntero(l.monto));
   if (l.tnaPorcentaje !== null) poner('tna', formatearDecimal(l.tnaPorcentaje));
   if (l.plazoDias !== null) poner('plazo', String(Math.round(l.plazoDias)));
@@ -373,5 +413,16 @@ export function lecturaAValores(l: LecturaCaptura, ahora: number = Date.now()): 
   poner('clase', l.clase ? l.clase.toUpperCase() : null);
   if (l.cantidad !== null) poner('cantidad', formatearDecimal(l.cantidad));
   if (l.precioUnitario !== null) poner('precio', l.tipo === 'fci' ? formatearDecimal(l.precioUnitario) : formatearEntero(l.precioUnitario));
+
+  // Los campos con lista cerrada (el fondo, el ticker) sólo aceptan lo que la lista tiene:
+  // si lo que se leyó no está, se deja vacío para que lo elija la persona.
+  for (const c of def.campos) {
+    const lista = opcionesDe(c, valores, null);
+    if (c.tipo === 'opcion' && lista.length > 0 && valores[c.id] && !lista.some((o) => o.id === valores[c.id])) {
+      valores[c.id] = '';
+      const i = leidos.indexOf(c.id);
+      if (i >= 0) leidos.splice(i, 1);
+    }
+  }
   return { tipo: l.tipo, valores, leidos };
 }

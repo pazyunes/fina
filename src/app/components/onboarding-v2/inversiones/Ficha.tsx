@@ -56,10 +56,23 @@ export function GlobitoGarantia({ p }: { p: Producto }) {
   return <Globito pregunta="¿Alguien la garantiza?"><p className={TEXTO} style={{ color: COLORS.inkSoft }}>{p.garantia}</p></Globito>;
 }
 
-export function GlobitoGlosario({ p }: { p: Producto }) {
+/**
+ * El glosario necesario: las palabras que aparecen en la explicación, explicadas.
+ * Va ARRIBA de todo para que, si alguien se tropieza con una palabra, suba y la
+ * encuentre. Se abre solo en la primera pantalla.
+ */
+export function GlosarioNecesario({ p, abierto = false }: { p: Producto; abierto?: boolean }) {
+  if (p.glosario.length === 0) return null;
   return (
-    <Globito pregunta="Palabras que vas a ver">
-      <dl className="flex flex-col gap-2.5">
+    <details
+      open={abierto}
+      className="rounded-[28px] px-5 py-3"
+      style={{ background: COLORS.surface, border: `2px solid ${COLORS.lima}` }}
+    >
+      <summary className="v2-focus cursor-pointer min-h-[44px] flex items-center text-[17px] font-bold" style={{ color: COLORS.ink }}>
+        Glosario necesario
+      </summary>
+      <dl className="flex flex-col gap-2.5 pb-2 pt-1">
         {p.glosario.map((g) => (
           <div key={g.termino}>
             <dt className="text-[15px] font-bold" style={{ color: COLORS.ink }}>{g.termino}</dt>
@@ -67,7 +80,7 @@ export function GlobitoGlosario({ p }: { p: Producto }) {
           </div>
         ))}
       </dl>
-    </Globito>
+    </details>
   );
 }
 

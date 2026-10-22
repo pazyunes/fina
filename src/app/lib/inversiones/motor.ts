@@ -23,7 +23,8 @@ import {
   ORDEN_PRODUCTOS, PRODUCTOS, PROVEEDORES, proveedoresDe,
   type FuenteDato, type PerfilRiesgo, type Producto, type ProductoId, type ProveedorId, type Rol,
 } from './catalogo';
-import { diaMes, fmtPesos, listaConY, nombreCuenta, nombrePropio, pct, pctConSigno, rangoPct, rangoPctConSigno } from './formato';
+import { diaMes, enMeses, fmtPesos, listaConY, nombreCuenta, nombrePropio, pct, pctConSigno, rangoPct, rangoPctConSigno } from './formato';
+import { limitesDe } from './limites';
 import { edadEnDias, estaVigente, type Dato, type Mercado } from './mercadoTipos';
 
 export type Rango = { min: number; max: number };
@@ -315,39 +316,14 @@ export function evaluar(
   }
 }
 
-// ── Cómo se lee una evaluación ───────────────────────────────────────────
-/** La frase que compara el rendimiento con la inflación, con los números a la vista. */
-export function lecturaContraInflacion(ev: Evaluacion, infl: Inflacion): string | null {
-  if (!ev.tem || !ev.real) return null;
-  const rinde = rangoPct(ev.tem.min, ev.tem.max, 1);
-  const neto = rangoPctConSigno(ev.real.min, ev.real.max, 1);
-  const base = `Rinde ${rinde} por mes. La inflación de referencia es ${pct(infl.mensual * 100, 1)} por mes. Neto, ${neto} por mes.`;
-  switch (ev.veredicto) {
-    case 'le-gana': return `${base} Hoy le gana a la inflación.`;
-    case 'pierde': return `${base} Hoy rinde menos que la inflación: con el tiempo comprarías un poco menos que hoy.`;
-    default:
-      return ev.real.min < -EPS
-        ? `${base} Según cuál elijas, queda a la par o apenas por debajo.`
-        : `${base} Queda a la par: conserva el valor de tu plata, no la hace crecer.`;
-  }
-}
-
-export function textoVeredicto(v: Veredicto): string {
-  switch (v) {
-    case 'le-gana': return 'Le gana a la inflación';
-    case 'empata': return 'Empata con la inflación';
-    case 'pierde': return 'Rinde menos que la inflación';
-    case 'variable': return 'Sin rendimiento fijo';
-    case 'sin-dato': return 'Sin dato vigente';
-  }
-}
-
 // ── Recomendar ───────────────────────────────────────────────────────────
 export type Contexto = {
   mercado: Mercado;
   perfil: PerfilRiesgo;
-  /** Cuántos meses puede dejar la plata quieta. null = no lo sabemos. */
+  /** Cuántos meses puede dejar la plata quieta. null = no lo dijo. */
   horizonteMeses: number | null;
+  /** Cuánta plata quiere invertir, si lo dijo. */
+  monto?: number | null;
   /** Proveedores que la persona dijo que ya usa. */
   usa: ProveedorId[];
   /** Productos en los que ya invierte. */
@@ -365,66 +341,51 @@ export type Recomendacion = {
   mejor: Evaluacion;
   /** La mejor opción entre los proveedores que ya usa, si no es la misma que `mejor`. */
   mejorConLoQueUsa: Evaluacion | null;
-  motivos: string[];
   avisos: string[];
   yaLoHace: boolean;
 };
 
-export type Descartada = { producto: ProductoId; motivo: string };
+/** Una inversión de la lista: se puede elegir cualquiera, y las que hoy convienen van marcadas. */
+export type ItemProducto = {
+  rec: Recomendacion;
+  recomendado: boolean;
+  /** Por qué no se recomienda hoy, en una frase corta. null si se recomienda o si no hay nada que decir. */
+  motivo: string | null;
+};
 
 export type Resultado = {
   inflacion: Inflacion | null;
-  recomendaciones: Recomendacion[];
-  descartadas: Descartada[];
+  /** Primero las recomendadas, después las demás. */
+  items: ItemProducto[];
   /** Sin inflación vigente no se recomienda nada: no hay contra qué comparar. */
   sinBase: boolean;
 };
 
 const puntaje = (e: Evaluacion): number => (e.real ? e.real.max : -1);
 
+/** Cuántas recomendaciones se marcan como máximo: más de eso deja de ser una recomendación. */
+const MAX_RECOMENDADAS = 4;
+
 export function recomendar(ctx: Contexto): Resultado {
   const ahora = ctx.ahora ?? Date.now();
   const infl = inflacionDeReferencia(ctx.mercado, ahora);
-  if (!infl) return { inflacion: null, recomendaciones: [], descartadas: [], sinBase: true };
+  if (!infl) return { inflacion: null, items: [], sinBase: true };
 
-  const recomendaciones: Recomendacion[] = [];
-  const descartadas: Descartada[] = [];
+  const candidatos: ItemProducto[] = [];
 
   for (const id of ORDEN_PRODUCTOS) {
     const p = PRODUCTOS[id];
-    if (!p.perfiles.includes(ctx.perfil)) continue; // no encaja con el perfil: ni se menciona
-
-    if (ctx.horizonteMeses === null && p.horizonteMinimoMeses >= 12) {
-      descartadas.push({ producto: id, motivo: 'No sabemos para cuándo necesitás esta plata, y esta opción pide dejarla varios años.' });
-      continue;
-    }
-    if (ctx.horizonteMeses !== null && ctx.horizonteMeses < p.horizonteMinimoMeses) {
-      descartadas.push({ producto: id, motivo: `Conviene dejarla al menos ${p.horizonteMinimoMeses} meses y vos podrías necesitarla antes.` });
-      continue;
-    }
-
     const evals = proveedoresDe(id)
       .map((pr) => evaluar(id, pr.id, ctx.mercado, infl, ahora))
       .filter((e): e is Evaluacion => e !== null);
-
     const vigentes = evals.filter((e) => e.vigente && e.veredicto !== 'sin-dato');
-    if (vigentes.length === 0) {
-      descartadas.push({ producto: id, motivo: 'No tenemos un dato de hoy para recomendarla con seguridad.' });
-      continue;
-    }
-
-    // EL FILTRO CLAVE. Para ahorrar o crecer, si todas las opciones rinden menos
-    // que la inflación, no se recomienda. Para tener plata a mano (caja) sí se
-    // permite —la necesitás líquida igual— pero se dice sin vueltas.
-    const conRendimiento = vigentes.filter((e) => e.veredicto !== 'variable');
-    const todasPierden = conRendimiento.length > 0 && conRendimiento.every((e) => e.veredicto === 'pierde');
-    if (todasPierden && p.rol !== 'caja') {
-      descartadas.push({ producto: id, motivo: 'Hoy rinde menos que la inflación: no te la recomendamos para ahorrar.' });
-      continue;
-    }
+    // Sin un dato de hoy no hay con qué armar la ficha ni el paso a paso: no se lista.
+    if (vigentes.length === 0) continue;
 
     // Un proveedor que hoy rinde menos que la inflación no se ofrece si hay otro
-    // que no: es la misma regla que para el producto, aplicada a cada opción.
+    // que no: la misma regla que para el producto, aplicada a cada opción.
+    const conRendimiento = vigentes.filter((e) => e.veredicto !== 'variable');
+    const todasPierden = conRendimiento.length > 0 && conRendimiento.every((e) => e.veredicto === 'pierde');
     const noPierden = vigentes.filter((e) => e.veredicto !== 'pierde');
     const candidatas = noPierden.length > 0 ? noPierden : vigentes;
     const opciones = [...candidatas].sort((a, b) => {
@@ -433,67 +394,65 @@ export function recomendar(ctx: Contexto): Resultado {
       return Number(ctx.usa.includes(b.proveedor)) - Number(ctx.usa.includes(a.proveedor));
     });
     const mejor = opciones[0];
-
-    const motivos: string[] = [];
-    const avisos: string[] = [];
-    const lectura = lecturaContraInflacion(mejor, infl);
-    if (lectura) motivos.push(lectura);
-    else motivos.push(mejor.detalle);
-
-    if (p.rol === 'caja' && ctx.necesitaCaja) {
-      motivos.push('Antes de ahorrar a largo plazo conviene tener unos meses de gastos a mano. Esta opción deja tu plata disponible.');
-    }
-    if (ctx.horizonteMeses !== null && ctx.horizonteMeses >= p.horizonteMinimoMeses && p.horizonteMinimoMeses >= 12) {
-      motivos.push('Dijiste que podés dejar esta plata mucho tiempo, y esta opción lo necesita.');
-    }
-    const quePodesUsar = opciones.filter((o) => ctx.usa.includes(o.proveedor));
-    if (quePodesUsar.length > 0) {
-      motivos.push(`Podés hacerlo desde ${listaConY(quePodesUsar.map((o) => PROVEEDORES[o.proveedor].nombre))}, que ya usás.`);
-    }
-
-    if (todasPierden) {
-      avisos.push('Hoy todas las opciones de este tipo rinden menos que la inflación. Sirven para tener la plata a mano, no para que crezca.');
-    }
-    if (mejor.veredicto === 'variable') {
-      avisos.push('No tiene un rendimiento que se pueda prometer: puede subir y bajar.');
-    }
-
     const conLoQueUsa = opciones.find((o) => ctx.usa.includes(o.proveedor)) ?? null;
-    recomendaciones.push({
+    const avisos: string[] = [];
+    if (todasPierden) avisos.push('Hoy todas las opciones de este tipo rinden menos que la inflación. Sirven para tener la plata a mano, no para que crezca.');
+
+    const rec: Recomendacion = {
       producto: p,
       rol: p.rol,
       opciones,
       mejor,
       mejorConLoQueUsa: conLoQueUsa && conLoQueUsa.proveedor !== mejor.proveedor ? conLoQueUsa : null,
-      motivos,
       avisos,
       yaLoHace: ctx.yaInvierteEn.includes(id),
-    });
+    };
+
+    // Por qué NO se recomienda hoy (la primera razón que aplique).
+    let motivo: string | null = null;
+    const minimo = limitesDe(id, mejor.proveedor, ctx.mercado);
+    if (!p.perfiles.includes(ctx.perfil)) {
+      motivo = 'Es para quien acepta más altibajos que los que dijiste que aceptás.';
+    } else if (ctx.horizonteMeses === null && p.horizonteMinimoMeses >= 12) {
+      motivo = 'Pide dejar la plata varios años.';
+    } else if (ctx.horizonteMeses !== null && ctx.horizonteMeses < p.horizonteMinimoMeses) {
+      motivo = `Pide dejar la plata al menos ${enMeses(p.horizonteMinimoMeses)}.`;
+    } else if (ctx.monto && minimo.min !== null && minimo.minDuro && ctx.monto < minimo.min) {
+      motivo = `Con ese monto no alcanza: lo mínimo es ${fmtPesos(minimo.min)}.`;
+    } else if (todasPierden && p.rol !== 'caja') {
+      motivo = 'Hoy rinde menos que la inflación (lo que suben los precios).';
+    }
+    candidatos.push({ rec, recomendado: motivo === null, motivo });
   }
 
   // Para tener plata a mano se permite una opción que pierde contra la inflación
-  // sólo si NO hay otra opción líquida mejor. Si la hay, la que pierde sobra.
-  const hayCajaQueNoPierde = recomendaciones.some((r) => r.rol === 'caja' && r.mejor.veredicto !== 'pierde');
-  const finales = recomendaciones.filter((r) => {
-    if (r.rol === 'caja' && r.mejor.veredicto === 'pierde' && hayCajaQueNoPierde) {
-      descartadas.push({ producto: r.producto.id, motivo: 'Hoy rinde menos que la inflación y hay otra opción igual de líquida que rinde más.' });
-      return false;
+  // sólo si NO hay otra opción disponible mejor. Si la hay, la que pierde sobra.
+  const hayCajaQueNoPierde = candidatos.some((c) => c.recomendado && c.rec.rol === 'caja' && c.rec.mejor.veredicto !== 'pierde');
+  for (const c of candidatos) {
+    if (c.recomendado && c.rec.rol === 'caja' && c.rec.mejor.veredicto === 'pierde' && hayCajaQueNoPierde) {
+      c.recomendado = false;
+      c.motivo = 'Hoy rinde menos que la inflación (lo que suben los precios) y hay otra opción igual de disponible que rinde más.';
     }
-    return true;
-  });
+  }
 
   // Primero lo que necesita: sin colchón, la caja; con colchón, el ahorro.
   const ordenRol: Record<Rol, number> = ctx.necesitaCaja
     ? { caja: 0, ahorro: 1, crecimiento: 2 }
     : { ahorro: 0, caja: 1, crecimiento: 2 };
-  finales.sort((a, b) => {
-    if (ordenRol[a.rol] !== ordenRol[b.rol]) return ordenRol[a.rol] - ordenRol[b.rol];
-    // Lo que ya hace va después de lo que todavía no: se prioriza diversificar.
-    if (a.yaLoHace !== b.yaLoHace) return Number(a.yaLoHace) - Number(b.yaLoHace);
-    return puntaje(b.mejor) - puntaje(a.mejor);
-  });
-
-  return { inflacion: infl, recomendaciones: finales.slice(0, 4), descartadas, sinBase: false };
+  const recomendadas = candidatos
+    .filter((c) => c.recomendado)
+    .sort((a, b) => {
+      if (ordenRol[a.rec.rol] !== ordenRol[b.rec.rol]) return ordenRol[a.rec.rol] - ordenRol[b.rec.rol];
+      // Lo que ya hace va después de lo que todavía no: se prioriza diversificar.
+      if (a.rec.yaLoHace !== b.rec.yaLoHace) return Number(a.rec.yaLoHace) - Number(b.rec.yaLoHace);
+      return puntaje(b.rec.mejor) - puntaje(a.rec.mejor);
+    });
+  const marcadas = recomendadas.slice(0, MAX_RECOMENDADAS);
+  const resto = [
+    ...recomendadas.slice(MAX_RECOMENDADAS).map((c) => ({ ...c, recomendado: false, motivo: null })),
+    ...candidatos.filter((c) => !c.recomendado),
+  ];
+  return { inflacion: infl, items: [...marcadas, ...resto], sinBase: false };
 }
 
 // ── Resumen del estado del mercado, para mostrarlo ───────────────────────

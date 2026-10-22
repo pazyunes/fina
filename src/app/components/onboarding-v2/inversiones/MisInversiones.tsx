@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as acciones from '../../../api/v2/acciones';
 import type { PosicionInversion } from '../../../api/v2/tipos';
-import { nombreProducto } from '../../../lib/inversiones/catalogo';
-import type { SugerenciaMonto } from '../../../lib/inversiones/cuanto';
-import { fmtPesos, pct } from '../../../lib/inversiones/formato';
-import { fechaLarga } from '../../../lib/inversiones/mercadoTipos';
-import { generarNovedades } from '../../../lib/inversiones/seguimiento';
+import { nombreProducto, type ProductoId } from '../../../lib/inversiones/catalogo';
+import { fmtPesos, listaConY, pct } from '../../../lib/inversiones/formato';
+import { fechaCorta, fechaLarga } from '../../../lib/inversiones/mercadoTipos';
+import { generarNovedades, queHayHoy } from '../../../lib/inversiones/seguimiento';
 import { useMercado } from '../../../lib/inversiones/useMercado';
+import { useNoticias } from '../../../lib/inversiones/useNoticias';
 import { IconChevron } from '../FinaIcons';
 import { COLORS, Cta, EstadoConfianza, TituloSeccion } from '../shared';
 import { DatoFila, Hoja, Parrafo } from './Hoja';
@@ -25,14 +25,25 @@ function valorDetalle(clave: string, v: string | number | boolean): string {
   return String(v);
 }
 
-// "Mis inversiones": lo que la persona registró, y lo que FINA tiene para
-// decirle sobre eso. Las novedades son el seguimiento: vencimientos que se
-// acercan, cuánto va ganando contra la inflación, una tasa que quedó atrás.
+// Un color por tipo para la barra. El nombre y el monto van siempre al lado: el
+// color solo no alcanza para distinguir (guía §11).
+const COLOR_TIPO: Record<PosicionInversion['tipo'], string> = {
+  cuenta_remunerada: COLORS.lima,
+  fci: COLORS.star,
+  plazo_fijo: COLORS.lila,
+  plazo_fijo_uva: COLORS.brandSoft,
+  letra: COLORS.naranja,
+  dolar: COLORS.limaViz,
+  cedear: COLORS.brand,
+};
+
+// "Mis inversiones": lo que la persona registró. Arriba, cómo se reparte su plata;
+// y al tocar cada una, todo lo que hay para decirle sobre ESA inversión: qué pasa
+// hoy, novedades, noticias del día y dónde ver cómo viene.
 export function MisInversiones({
-  posiciones, sugerencia, onRegistrar, legacy,
+  posiciones, onRegistrar, legacy,
 }: {
   posiciones: PosicionInversion[];
-  sugerencia: SugerenciaMonto;
   onRegistrar: () => void;
   /** Los registros viejos (sólo "cuánto y en qué"), que se siguen pudiendo ver y editar. */
   legacy: React.ReactNode;
@@ -54,7 +65,13 @@ export function MisInversiones({
   const activas = posiciones.filter((p) => p.estado === 'activa');
   const cerradas = posiciones.filter((p) => p.estado === 'cerrada');
   const total = activas.reduce((a, p) => a + p.monto, 0);
-  const novedades = useMemo(() => generarNovedades({ posiciones, mercado, sugerencia }), [posiciones, mercado, sugerencia]);
+
+  const porTipo = useMemo(() => {
+    const m = new Map<PosicionInversion['tipo'], number>();
+    for (const p of activas) m.set(p.tipo, (m.get(p.tipo) ?? 0) + p.monto);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [activas]);
+  const lugares = [...new Set(activas.map((p) => p.proveedor).filter(Boolean))];
 
   const fila = (p: PosicionInversion) => (
     <button
@@ -78,19 +95,6 @@ export function MisInversiones({
 
   return (
     <div className="flex flex-col gap-6">
-      {novedades.length > 0 && (
-        <section className="flex flex-col gap-3" aria-label="Novedades de tus inversiones">
-          <TituloSeccion>Novedades</TituloSeccion>
-          {novedades.map((n) => (
-            <article key={n.id} className="flex flex-col gap-1 pl-3.5 border-l-2" style={{ borderColor: n.tono === 'decision' ? COLORS.star : COLORS.brandSoft }}>
-              <h3 className="text-[16px] font-bold leading-snug" style={{ color: COLORS.ink }}>{n.titulo}</h3>
-              <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>{n.texto}</p>
-              <EstadoConfianza estado={n.confianza} />
-            </article>
-          ))}
-        </section>
-      )}
-
       <section className="flex flex-col gap-3">
         {activas.length > 0 ? (
           <>
@@ -99,13 +103,37 @@ export function MisInversiones({
               <p className="font-mono tabular-nums text-[32px] font-bold leading-none" style={{ color: COLORS.ink }}>{fmtPesos(total)}</p>
               <EstadoConfianza estado="declarado" />
             </div>
+
+            <div className="flex flex-col gap-2" aria-label="Cómo se reparte tu plata">
+              <div className="flex h-3 rounded-full overflow-hidden" style={{ background: COLORS.tint }} role="img"
+                aria-label={`Reparto: ${porTipo.map(([t, m]) => `${nombreProducto(t)} ${pct((m / total) * 100, 0)}`).join(', ')}`}>
+                {porTipo.map(([t, m]) => (
+                  <span key={t} style={{ width: `${(m / total) * 100}%`, background: COLOR_TIPO[t] }} />
+                ))}
+              </div>
+              <ul className="flex flex-col gap-1">
+                {porTipo.map(([t, m]) => (
+                  <li key={t} className="flex items-center justify-between gap-3 text-[14px]" style={{ color: COLORS.inkSoft }}>
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLOR_TIPO[t] }} aria-hidden />
+                      <span className="truncate">{nombreProducto(t)}</span>
+                    </span>
+                    <span className="font-mono tabular-nums shrink-0">{pct((m / total) * 100, 0)} · {fmtPesos(m)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
+                Cómo viene cada inversión, día a día, lo ves en la app donde la hiciste{lugares.length > 0 ? ` (${listaConY(lugares)})` : ''}. Acá te mostramos lo que anotaste vos y qué hacer con eso.
+              </p>
+            </div>
+
             <div className="flex flex-col">{activas.map(fila)}</div>
           </>
         ) : (
           <div className="flex flex-col gap-2">
             <TituloSeccion>Todavía no registraste ninguna inversión</TituloSeccion>
             <Parrafo>
-              Cuando hagas la primera, acá vas a ver cuándo vence, cuánto va rindiendo contra la inflación y qué te conviene hacer después. Podés empezar por Recomendaciones, o anotar algo que ya tengas.
+              Cuando hagas la primera, acá vas a ver cuándo vence, cuánto va rindiendo y qué te conviene hacer después. Podés empezar por Recomendaciones, o anotar algo que ya tengas.
             </Parrafo>
           </div>
         )}
@@ -146,67 +174,146 @@ export function MisInversiones({
       )}
 
       {abierta && (
-        <Hoja titulo={nombreProducto(abierta.tipo)} onCerrar={() => setAbierta(null)}>
-          <div className="flex flex-col">
-            <DatoFila etiqueta="Dónde" valor={abierta.proveedor || '—'} />
-            <DatoFila etiqueta="Monto" valor={fmtPesos(abierta.monto)} />
-            <DatoFila etiqueta="Desde" valor={fechaLarga(abierta.inicio)} />
-            {abierta.vencimiento && <DatoFila etiqueta="Vence" valor={fechaLarga(abierta.vencimiento)} />}
-            {abierta.plazoDias && <DatoFila etiqueta="Plazo" valor={`${abierta.plazoDias} días`} />}
-            {abierta.tna !== null && <DatoFila etiqueta="Tasa anual (TNA)" valor={pct(abierta.tna * 100, 2)} />}
-            {abierta.cantidad !== null && <DatoFila etiqueta="Cantidad" valor={abierta.cantidad.toLocaleString('es-AR', { maximumFractionDigits: 4 })} />}
-            {abierta.precioUnitario !== null && <DatoFila etiqueta="Precio por unidad" valor={fmtPesos(abierta.precioUnitario)} />}
-            {Object.entries(abierta.detalle).map(([k, v]) => (v === null || v === '' ? null : <DatoFila key={k} etiqueta={ETIQUETAS_DETALLE[k] ?? k} valor={valorDetalle(k, v)} />))}
-          </div>
-          <EstadoConfianza estado="declarado" />
-          <p className="text-[13px]" style={{ color: COLORS.inkFaint }}>
-            {abierta.origen === 'captura' ? 'Leído de una captura y confirmado por vos.' : 'Cargado por vos.'}
-          </p>
-
-          {abierta.estado === 'activa' && (
-            confirmarCerrar ? (
-              <div className="flex flex-col gap-2.5">
-                <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
-                  ¿Ya la cobraste o la cerraste? Si confirmás, esta inversión se va a borrar de tu lista. Si te arrepentís, vas a poder deshacerlo enseguida.
-                </p>
-                <div className="flex gap-2.5">
-                  <button type="button" onClick={() => setConfirmarCerrar(false)} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}>Cancelar</button>
-                  <button
-                    type="button"
-                    onClick={() => { acciones.cerrarPosicion(abierta.id); setDeshacer({ tipo: 'cerrada', pos: abierta }); setAbierta(null); }}
-                    className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold"
-                    style={{ background: COLORS.brand, color: COLORS.surface }}
-                  >
-                    Sí, confirmar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmarCerrar(true)}
-                className="v2-focus min-h-[48px] rounded-2xl text-[16px] font-bold"
-                style={{ border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
-              >
-                Ya la cobré / la cerré
-              </button>
-            )
-          )}
-          {confirmarBorrar ? (
-            <div className="flex flex-col gap-2.5">
-              <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>¿Borramos este registro? Es como si nunca lo hubieras anotado.</p>
-              <div className="flex gap-2.5">
-                <button type="button" onClick={() => setConfirmarBorrar(false)} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}>Cancelar</button>
-                <button type="button" onClick={() => { acciones.borrarPosicion(abierta.id); setDeshacer({ tipo: 'borrada', pos: abierta }); setAbierta(null); }} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ background: COLORS.naranja, color: COLORS.ink }}>Sí, borrar</button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" onClick={() => setConfirmarBorrar(true)} className="v2-focus min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.naranjaText }}>
-              Borrar este registro
-            </button>
-          )}
-        </Hoja>
+        <FichaPosicion
+          pos={abierta}
+          confirmarCerrar={confirmarCerrar}
+          confirmarBorrar={confirmarBorrar}
+          onConfirmarCerrar={setConfirmarCerrar}
+          onConfirmarBorrar={setConfirmarBorrar}
+          onCerrarla={() => { acciones.cerrarPosicion(abierta.id); setDeshacer({ tipo: 'cerrada', pos: abierta }); setAbierta(null); }}
+          onBorrarla={() => { acciones.borrarPosicion(abierta.id); setDeshacer({ tipo: 'borrada', pos: abierta }); setAbierta(null); }}
+          onSalir={() => setAbierta(null)}
+        />
       )}
     </div>
+  );
+}
+
+// Todo lo que hay para esta inversión, con ella adelante: sus datos, qué pasa hoy,
+// novedades, noticias del día y dónde ver cómo viene.
+function FichaPosicion({
+  pos, confirmarCerrar, confirmarBorrar, onConfirmarCerrar, onConfirmarBorrar, onCerrarla, onBorrarla, onSalir,
+}: {
+  pos: PosicionInversion;
+  confirmarCerrar: boolean;
+  confirmarBorrar: boolean;
+  onConfirmarCerrar: (v: boolean) => void;
+  onConfirmarBorrar: (v: boolean) => void;
+  onCerrarla: () => void;
+  onBorrarla: () => void;
+  onSalir: () => void;
+}) {
+  const { estado } = useMercado();
+  const mercado = estado.tipo === 'listo' ? estado.mercado : null;
+  const noticias = useNoticias(pos.tipo as ProductoId);
+  const hoy = useMemo(() => queHayHoy(pos, mercado), [pos, mercado]);
+  const novedades = useMemo(
+    () => generarNovedades({ posiciones: [pos], mercado }).filter((n) => n.posicionId === pos.id),
+    [pos, mercado],
+  );
+
+  return (
+    <Hoja titulo={nombreProducto(pos.tipo)} onCerrar={onSalir}>
+      <div className="flex flex-col">
+        <DatoFila etiqueta="Dónde" valor={pos.proveedor || '—'} />
+        <DatoFila etiqueta="Monto" valor={fmtPesos(pos.monto)} />
+        <DatoFila etiqueta="Desde" valor={fechaLarga(pos.inicio)} />
+        {pos.vencimiento && <DatoFila etiqueta="Vence" valor={fechaLarga(pos.vencimiento)} />}
+        {pos.plazoDias && <DatoFila etiqueta="Plazo" valor={`${pos.plazoDias} días`} />}
+        {pos.tna !== null && <DatoFila etiqueta="Tasa anual (TNA)" valor={pct(pos.tna * 100, 2)} />}
+        {pos.cantidad !== null && <DatoFila etiqueta="Cantidad" valor={pos.cantidad.toLocaleString('es-AR', { maximumFractionDigits: 4 })} />}
+        {pos.precioUnitario !== null && <DatoFila etiqueta="Precio por unidad" valor={fmtPesos(pos.precioUnitario)} />}
+        {Object.entries(pos.detalle).map(([k, v]) => (v === null || v === '' ? null : <DatoFila key={k} etiqueta={ETIQUETAS_DETALLE[k] ?? k} valor={valorDetalle(k, v)} />))}
+      </div>
+      <EstadoConfianza estado="declarado" />
+      <p className="text-[13px] -mt-3" style={{ color: COLORS.inkFaint }}>
+        {pos.origen === 'captura' ? 'Leído de una captura y confirmado por vos.' : 'Cargado por vos.'}
+      </p>
+
+      {(hoy.length > 0 || novedades.length > 0) && (
+        <section className="flex flex-col gap-3">
+          <TituloSeccion>Qué pasa hoy con esta inversión</TituloSeccion>
+          {hoy.map((t) => (
+            <p key={t} className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>{t}</p>
+          ))}
+          {novedades.map((n) => (
+            <article key={n.id} className="flex flex-col gap-1 pl-3.5 border-l-2" style={{ borderColor: n.tono === 'decision' ? COLORS.star : COLORS.brandSoft }}>
+              <h3 className="text-[16px] font-bold leading-snug" style={{ color: COLORS.ink }}>{n.titulo}</h3>
+              <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>{n.texto}</p>
+              <EstadoConfianza estado={n.confianza} />
+            </article>
+          ))}
+        </section>
+      )}
+
+      {noticias.length > 0 && (
+        <section className="flex flex-col gap-3" aria-label="Noticias de hoy">
+          <TituloSeccion>Noticias de hoy que pueden afectarla</TituloSeccion>
+          {noticias.map((n) => (
+            <article key={n.enlace} className="flex flex-col gap-1 pl-3.5 border-l-2" style={{ borderColor: COLORS.brandSoft }}>
+              {n.queSignifica && <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.ink }}>{n.queSignifica}</p>}
+              <a
+                href={n.enlace}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="v2-focus text-[14px] leading-snug underline underline-offset-2"
+                style={{ color: COLORS.inkSoft }}
+              >
+                {n.titular}
+              </a>
+              <span className="text-[12px]" style={{ color: COLORS.inkFaint }}>{n.fuente} · {fechaCorta(n.fecha.slice(0, 10))}</span>
+            </article>
+          ))}
+          <p className="text-[12px] leading-snug" style={{ color: COLORS.inkFaint }}>
+            Es un resumen automático de los titulares, no la nota completa: abrí el enlace para leerla. No es un consejo de qué hacer con tu plata.
+          </p>
+        </section>
+      )}
+
+      <section className="flex flex-col gap-1.5">
+        <TituloSeccion>Cómo viene</TituloSeccion>
+        <Parrafo>
+          La evolución día a día de esta inversión la ves en la app de {pos.proveedor || 'donde la hiciste'}. FINA no se conecta a tu cuenta: acá ves lo que anotaste.
+        </Parrafo>
+      </section>
+
+      {pos.estado === 'activa' && (
+        confirmarCerrar ? (
+          <div className="flex flex-col gap-2.5">
+            <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+              ¿Ya la cobraste o la cerraste? Si confirmás, esta inversión se va a borrar de tu lista. Si te arrepentís, vas a poder deshacerlo enseguida.
+            </p>
+            <div className="flex gap-2.5">
+              <button type="button" onClick={() => onConfirmarCerrar(false)} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}>Cancelar</button>
+              <button type="button" onClick={onCerrarla} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ background: COLORS.brand, color: COLORS.surface }}>
+                Sí, confirmar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onConfirmarCerrar(true)}
+            className="v2-focus min-h-[48px] rounded-2xl text-[16px] font-bold"
+            style={{ border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
+          >
+            Ya la cobré / la cerré
+          </button>
+        )
+      )}
+      {confirmarBorrar ? (
+        <div className="flex flex-col gap-2.5">
+          <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>¿Borramos este registro? Es como si nunca lo hubieras anotado. Vas a poder deshacerlo enseguida.</p>
+          <div className="flex gap-2.5">
+            <button type="button" onClick={() => onConfirmarBorrar(false)} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}>Cancelar</button>
+            <button type="button" onClick={onBorrarla} className="v2-focus flex-1 rounded-2xl py-3.5 text-[15px] font-bold" style={{ background: COLORS.naranja, color: COLORS.ink }}>Sí, borrar</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => onConfirmarBorrar(true)} className="v2-focus min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.naranjaText }}>
+          Borrar este registro
+        </button>
+      )}
+    </Hoja>
   );
 }

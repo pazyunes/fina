@@ -70,6 +70,11 @@ export function diaMes(fecha: string): string {
 
 const SIGLAS = new Set(['BBVA', 'CMF', 'ICBC', 'HSBC', 'BICA', 'VOII', 'REBA', 'BNA', 'IOL', 'CVU', 'CBU']);
 const MINUSCULAS = new Set(['de', 'del', 'la', 'y', 'e', 'los', 'las']);
+// Los nombres vienen en mayúsculas y sin tilde: se las devolvemos a las palabras que la llevan.
+const CON_TILDE: Record<string, string> = {
+  nacion: 'Nación', compania: 'Compañía', credito: 'Crédito', cordoba: 'Córdoba', rio: 'Río', rios: 'Ríos', tucuman: 'Tucumán',
+  patagonia: 'Patagonia', hipotecario: 'Hipotecario', santafe: 'Santa Fe', pampa: 'Pampa', ciudad: 'Ciudad',
+};
 
 /** "BANCO DE GALICIA Y BUENOS AIRES S.A." → "Banco de Galicia y Buenos Aires S.A." */
 export function nombrePropio(s: string): string {
@@ -80,6 +85,7 @@ export function nombrePropio(s: string): string {
       const bajo = w.toLowerCase();
       if (SIGLAS.has(w.toUpperCase()) || w.includes('.')) return w.toUpperCase();
       if (i > 0 && MINUSCULAS.has(bajo)) return bajo;
+      if (CON_TILDE[bajo]) return CON_TILDE[bajo];
       return bajo.charAt(0).toUpperCase() + bajo.slice(1);
     })
     .join(' ');

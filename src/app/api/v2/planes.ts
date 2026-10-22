@@ -12,6 +12,11 @@ export type PlanGuia = {
   monto: number | null;
   /** Índices (desde 0) de los pasos que ya marcó como hechos. */
   hechos: number[];
+  /**
+   * Lo demás que eligió al empezar (banco, plazo, ticker, cantidad…). Vive sólo
+   * en el dispositivo: la tabla de la base guarda monto y pasos, nada más.
+   */
+  extra?: Record<string, string>;
 };
 
 const clave = (producto: string, proveedor: string) => `fina_inv_plan_${producto}_${proveedor}`;
@@ -24,11 +29,16 @@ function leerLocal(producto: string, proveedor: string): PlanGuia | null {
     if (typeof j !== 'object' || j === null) return null;
     const o = j as Record<string, unknown>;
     if (!Array.isArray(o.hechos)) return null;
+    const extra: Record<string, string> = {};
+    if (typeof o.extra === 'object' && o.extra !== null) {
+      for (const [k, v] of Object.entries(o.extra as Record<string, unknown>)) if (typeof v === 'string') extra[k] = v;
+    }
     return {
       producto,
       proveedor,
       monto: typeof o.monto === 'number' ? o.monto : null,
       hechos: o.hechos.filter((x): x is number => typeof x === 'number'),
+      extra,
     };
   } catch {
     return null;
@@ -37,7 +47,7 @@ function leerLocal(producto: string, proveedor: string): PlanGuia | null {
 
 function escribirLocal(plan: PlanGuia) {
   try {
-    localStorage.setItem(clave(plan.producto, plan.proveedor), JSON.stringify({ monto: plan.monto, hechos: plan.hechos }));
+    localStorage.setItem(clave(plan.producto, plan.proveedor), JSON.stringify({ monto: plan.monto, hechos: plan.hechos, extra: plan.extra ?? {} }));
   } catch {
     /* el almacenamiento puede estar bloqueado: el avance vive igual en pantalla */
   }
@@ -61,6 +71,7 @@ export async function leerPlan(producto: string, proveedor: string): Promise<Pla
       proveedor,
       monto: data.amount === null ? null : Number(data.amount),
       hechos: Array.isArray(data.done_steps) ? data.done_steps.map(Number) : [],
+      extra: local?.extra ?? {},
     };
     escribirLocal(plan);
     return plan;

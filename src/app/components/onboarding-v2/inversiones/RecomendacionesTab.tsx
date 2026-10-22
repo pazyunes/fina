@@ -1,29 +1,29 @@
 import { useMemo, useState } from 'react';
 import type { PosicionInversion } from '../../../api/v2/tipos';
-import { PRODUCTOS, PROVEEDORES, type PerfilRiesgo, type ProductoId, type ProveedorId } from '../../../lib/inversiones/catalogo';
+import type { PerfilRiesgo, ProductoId, ProveedorId } from '../../../lib/inversiones/catalogo';
 import type { Colchon, SugerenciaMonto } from '../../../lib/inversiones/cuanto';
-import { pct } from '../../../lib/inversiones/formato';
-import { recomendar, textoVeredicto, type Recomendacion, type Veredicto } from '../../../lib/inversiones/motor';
+import { recomendar, type ItemProducto, type Recomendacion } from '../../../lib/inversiones/motor';
 import type { Valores } from '../../../lib/inversiones/registro';
 import { useMercado } from '../../../lib/inversiones/useMercado';
 import { IconChevron } from '../FinaIcons';
-import { COLORS, TituloSeccion } from '../shared';
+import { COLORS, formatThousands, parseMoneyInput, TituloSeccion } from '../shared';
 import { CuantoPoner } from './CuantoPoner';
-import { DetalleProducto } from './DetalleProducto';
-import { GuiaPasoAPaso } from './GuiaPasoAPaso';
+import { FlujoInversion } from './FlujoInversion';
 import { Parrafo } from './Hoja';
 import { MercadoHoy } from './MercadoHoy';
 
-const PUNTO: Record<Veredicto, string> = {
-  'le-gana': COLORS.lima,
-  empata: COLORS.star,
-  pierde: COLORS.naranja,
-  variable: COLORS.tint,
-  'sin-dato': COLORS.tint,
-};
+// Cuánto tiempo puede dejar la plata quieta, en meses (para recomendar).
+const TIEMPOS: { id: string; label: string; meses: number }[] = [
+  { id: 'corto', label: 'Menos de 3 meses', meses: 2 },
+  { id: 'medio', label: '3 a 12 meses', meses: 6 },
+  { id: 'largo', label: '1 a 3 años', meses: 24 },
+  { id: 'mlargo', label: 'Más de 3 años', meses: 48 },
+];
 
-// La pestaña de recomendaciones. Todo sale de los datos de mercado de hoy: si no
-// hay datos, no hay recomendación (se dice, no se inventa una).
+// La pestaña de recomendaciones. La persona puede contar cuánto quiere invertir y
+// en cuánto tiempo lo quiere sacar, y las inversiones que hoy le convienen se
+// marcan con un cartelito verde. O puede elegir directo una inversión.
+// Todo sale de los datos de mercado de hoy: si no hay datos, no hay recomendación.
 export function RecomendacionesTab({
   perfil, horizonteMeses, usa, posiciones, productosQuiz, sugerencia, colchon, onRegistrar,
 }: {
@@ -38,19 +38,23 @@ export function RecomendacionesTab({
   onRegistrar: (tipo: PosicionInversion['tipo'], previos: Partial<Valores>) => void;
 }) {
   const { estado, reintentar } = useMercado();
-  const [detalle, setDetalle] = useState<Recomendacion | null>(null);
-  const [guia, setGuia] = useState<{ rec: Recomendacion; proveedor: ProveedorId } | null>(null);
+  const [montoTxt, setMontoTxt] = useState('');
+  const [tiempo, setTiempo] = useState<string | null>(null);
+  const [abierta, setAbierta] = useState<Recomendacion | null>(null);
 
   const mercado = estado.tipo === 'listo' ? estado.mercado : null;
+  const monto = parseMoneyInput(montoTxt) || null;
+  const horizonte = tiempo ? (TIEMPOS.find((t) => t.id === tiempo)?.meses ?? null) : horizonteMeses;
+
   const yaInvierteEn = useMemo(
     () => [...new Set([...productosQuiz, ...posiciones.filter((p) => p.estado === 'activa').map((p) => p.tipo as ProductoId)])],
     [posiciones, productosQuiz],
   );
   const resultado = useMemo(
     () => (mercado
-      ? recomendar({ mercado, perfil, horizonteMeses, usa, yaInvierteEn, necesitaCaja: !colchon?.cubierto })
+      ? recomendar({ mercado, perfil, horizonteMeses: horizonte, monto, usa, yaInvierteEn, necesitaCaja: !colchon?.cubierto })
       : null),
-    [mercado, perfil, horizonteMeses, usa, yaInvierteEn, colchon],
+    [mercado, perfil, horizonte, monto, usa, yaInvierteEn, colchon],
   );
 
   if (estado.tipo === 'cargando') {
@@ -72,7 +76,7 @@ export function RecomendacionesTab({
       </div>
     );
   }
-  if (resultado.sinBase || !resultado.inflacion) {
+  if (resultado.sinBase) {
     return (
       <div className="flex flex-col gap-3">
         <TituloSeccion>Todavía no podemos recomendarte</TituloSeccion>
@@ -81,7 +85,34 @@ export function RecomendacionesTab({
       </div>
     );
   }
-  const inflacion = resultado.inflacion;
+
+  const fila = (it: ItemProducto) => {
+    const r = it.rec;
+    return (
+      <button
+        key={r.producto.id}
+        type="button"
+        onClick={() => setAbierta(r)}
+        className="v2-focus relative w-full text-left flex items-center gap-3 py-4 border-b last:border-b-0 transition-all duration-100 active:scale-[0.99]"
+        style={{ borderColor: COLORS.line }}
+      >
+        <span className="flex-1 min-w-0 flex flex-col gap-1 pr-24">
+          <span className="font-bold text-[17px]" style={{ color: COLORS.ink }}>{r.producto.nombre}</span>
+          <span className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.producto.resumen}</span>
+          {it.motivo && <span className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>{it.motivo}</span>}
+        </span>
+        {it.recomendado && (
+          <span
+            className="absolute top-3 right-0 text-[12px] font-bold rounded-full px-2.5 py-1"
+            style={{ background: COLORS.lima, color: COLORS.ink }}
+          >
+            Recomendado
+          </span>
+        )}
+        <span className="shrink-0 self-end mb-1" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
+      </button>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -91,88 +122,68 @@ export function RecomendacionesTab({
         </p>
       )}
 
-      <section className="flex flex-col gap-1">
+      <section className="flex flex-col gap-3" aria-label="Contanos qué querés hacer">
+        <TituloSeccion>¿Cuánto querés invertir?</TituloSeccion>
         <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-          Esto es lo que hoy tiene sentido para vos. La inflación de referencia es{' '}
-          <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{pct(inflacion.mensual * 100, 1)}</span> por mes, y solo te mostramos lo que no pierde contra eso.
+          Contanos cuánto y en cuánto tiempo lo querés sacar, y te marcamos en qué te conviene. O elegí directo una inversión de la lista.
         </p>
-        {resultado.recomendaciones.length === 0 && (
-          <Parrafo>Hoy no hay una opción que te recomendemos con seguridad. Abajo te contamos por qué.</Parrafo>
-        )}
-        {resultado.recomendaciones.map((r) => (
-          <button
-            key={r.producto.id}
-            type="button"
-            onClick={() => setDetalle(r)}
-            className="v2-focus w-full text-left flex items-center gap-3 py-4 border-b last:border-b-0 transition-all duration-100 active:scale-[0.99]"
-            style={{ borderColor: COLORS.line }}
-          >
-            <span className="flex-1 min-w-0 flex flex-col gap-1">
-              <span className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-[17px]" style={{ color: COLORS.ink }}>{r.producto.nombre}</span>
-                {r.yaLoHace && (
-                  <span className="text-[12px] font-semibold rounded-full px-2 py-0.5" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>Ya lo hacés</span>
-                )}
-              </span>
-              <span className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.producto.resumen}</span>
-              <span className="inline-flex items-center gap-2 text-[13px]" style={{ color: COLORS.inkFaint }}>
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PUNTO[r.mejor.veredicto] }} aria-hidden />
-                {textoVeredicto(r.mejor.veredicto)} · {r.mejorConLoQueUsa ? `con lo que usás: ${nombreProveedor(r.mejorConLoQueUsa.proveedor)}` : `hoy lo mejor: ${nombreProveedor(r.mejor.proveedor)}`}
-              </span>
-            </span>
-            <span className="shrink-0" style={{ color: COLORS.inkFaint }}><IconChevron size={18} /></span>
-          </button>
-        ))}
+        <div className="relative">
+          <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
+          <input
+            aria-label="Cuánto querés invertir, en pesos"
+            className="v2-focus w-full rounded-2xl pl-8 pr-4 py-3 text-[18px] font-mono tabular-nums outline-none"
+            style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+            inputMode="decimal"
+            placeholder="Monto en pesos (opcional)"
+            value={montoTxt}
+            onChange={(e) => setMontoTxt(formatThousands(e.target.value))}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿En cuánto tiempo lo querés sacar?</p>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="En cuánto tiempo lo querés sacar">
+            {TIEMPOS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="radio"
+                aria-checked={tiempo === t.id}
+                onClick={() => setTiempo(tiempo === t.id ? null : t.id)}
+                className="v2-focus min-h-[44px] rounded-full px-4 text-[15px] font-semibold transition-all duration-100 active:scale-[0.97]"
+                style={tiempo === t.id
+                  ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
+                  : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="flex flex-col" aria-label="Inversiones">
+        {resultado.items.map(fila)}
       </section>
 
       <CuantoPoner sugerencia={sugerencia} colchon={colchon} />
 
       <MercadoHoy mercado={mercado} />
 
-      {resultado.descartadas.length > 0 && (
-        <details>
-          <summary className="v2-focus cursor-pointer min-h-[44px] flex items-center text-[15px] font-bold" style={{ color: COLORS.brand }}>
-            Lo que hoy no te recomendamos, y por qué
-          </summary>
-          <ul className="flex flex-col gap-2 pt-1">
-            {resultado.descartadas.map((d) => (
-              <li key={d.producto} className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-                <span className="font-bold" style={{ color: COLORS.ink }}>{PRODUCTOS[d.producto].nombre}.</span> {d.motivo}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
       <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
         FINA nunca mueve tu plata: te mostramos qué conviene y por qué, y vos decidís y lo hacés en tu propia app. Los rendimientos pasados no garantizan los futuros.
       </p>
 
-      {detalle && (
-        <DetalleProducto
-          rec={detalle}
+      {abierta && (
+        <FlujoInversion
+          rec={abierta}
           mercado={mercado}
           usa={usa}
           sugerencia={sugerencia}
-          onCerrar={() => setDetalle(null)}
-          onElegir={(proveedor) => { setGuia({ rec: detalle, proveedor }); setDetalle(null); }}
-        />
-      )}
-      {guia && (
-        <GuiaPasoAPaso
-          producto={guia.rec.producto.id}
-          proveedor={guia.proveedor}
-          mercado={mercado}
-          evaluacion={guia.rec.opciones.find((o) => o.proveedor === guia.proveedor) ?? null}
-          sugerencia={sugerencia}
-          onCerrar={() => setGuia(null)}
-          onRegistrar={(previos) => { const t = guia.rec.producto.id; setGuia(null); onRegistrar(t, previos); }}
+          montoDeseado={monto}
+          onCerrar={() => setAbierta(null)}
+          onRegistrar={(previos) => { const t = abierta.producto.id; setAbierta(null); onRegistrar(t, previos); }}
         />
       )}
     </div>
   );
-}
-
-function nombreProveedor(id: ProveedorId): string {
-  return id === 'banco' ? 'tu banco' : PROVEEDORES[id].nombre;
 }

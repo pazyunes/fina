@@ -531,7 +531,6 @@ export function InversionesV2() {
           {tab === 'mias' && (
             <MisInversiones
               posiciones={db.posiciones}
-              sugerencia={sugerencia}
               onRegistrar={() => abrirRegistro()}
               legacy={aportes.length > 0 ? (
                 <details>

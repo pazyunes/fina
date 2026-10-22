@@ -198,7 +198,7 @@ async function letras(hoy: string): Promise<Dato<LetraMercado[]> | null> {
 }
 
 // ── CEDEARs ──────────────────────────────────────────────────────────────
-const CEDEARS_DE_REFERENCIA = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'GOOGL', 'MELI', 'NVDA', 'KO'];
+const CEDEARS_DE_REFERENCIA = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'KO', 'MELI'];
 type FilaCedear = { symbol: string; c: number; pct_change: number };
 
 async function cedears(hoy: string): Promise<Dato<CedearMercado[]> | null> {

@@ -17,39 +17,42 @@ function figmaAssetResolver() {
 }
 
 // En `npm run dev` las funciones de api/ no corren solas (Vite las serviría como
-// código fuente). Esta sirve SÓLO /api/mercado —datos públicos, sin sesión— para
-// poder probar las inversiones en local con datos reales. En producción lo
-// atiende la función de Vercel; esto no entra al build.
-type ReqDev = { method?: string };
+// código fuente). Esta sirve SÓLO las dos públicas de inversiones —datos de mercado
+// y noticias, sin sesión— para poder probarlas en local con datos reales. En
+// producción las atiende Vercel; esto no entra al build.
+type ReqDev = { method?: string; url?: string; query?: Record<string, string> };
 type ResDev = {
   statusCode: number;
   setHeader(nombre: string, valor: string): void;
   end(cuerpo: string): void;
 };
-type HandlerMercado = (
+type HandlerPublico = (
   req: ReqDev,
   res: { status(c: number): unknown; json(b: unknown): void; setHeader(n: string, v: string): void },
 ) => Promise<void>;
 
-function apiMercadoDev() {
+function apiPublicasDev() {
   return {
-    name: 'api-mercado-dev',
+    name: 'api-publicas-dev',
     configureServer(server: ViteDevServer) {
-      server.middlewares.use('/api/mercado', async (req: ReqDev, res: ResDev) => {
-        try {
-          const mod = (await server.ssrLoadModule('/api/mercado.ts')) as { default: HandlerMercado };
-          const shim = {
-            status(c: number) { res.statusCode = c; return shim; },
-            setHeader(n: string, v: string) { res.setHeader(n, v); },
-            json(b: unknown) { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(b)); },
-          };
-          await mod.default(req, shim);
-        } catch (e) {
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'error' }));
-        }
-      });
+      for (const ruta of ['mercado', 'noticias']) {
+        server.middlewares.use(`/api/${ruta}`, async (req: ReqDev, res: ResDev) => {
+          try {
+            const mod = (await server.ssrLoadModule(`/api/${ruta}.ts`)) as { default: HandlerPublico };
+            const shim = {
+              status(c: number) { res.statusCode = c; return shim; },
+              setHeader(n: string, v: string) { res.setHeader(n, v); },
+              json(b: unknown) { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(b)); },
+            };
+            const query = Object.fromEntries(new URL(req.url ?? '', 'http://localhost').searchParams);
+            await mod.default({ method: req.method, query }, shim);
+          } catch (e) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'error' }));
+          }
+        });
+      }
     },
   }
 }
@@ -57,7 +60,7 @@ function apiMercadoDev() {
 export default defineConfig({
   plugins: [
     figmaAssetResolver(),
-    apiMercadoDev(),
+    apiPublicasDev(),
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them
     react(),

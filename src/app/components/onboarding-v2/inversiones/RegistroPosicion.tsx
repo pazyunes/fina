@@ -5,8 +5,8 @@ import type { TipoPosicion } from '../../../api/v2/tipos';
 import { nombreProducto, ORDEN_PRODUCTOS } from '../../../lib/inversiones/catalogo';
 import type { Mercado } from '../../../lib/inversiones/mercadoTipos';
 import {
-  FORMULARIOS, hoyISO, lecturaAValores, procesarRegistro, valoresIniciales,
-  type CampoDef, type Valores,
+  FORMULARIOS, hoyISO, lecturaAValores, opcionesDe, procesarRegistro, soloNumeros, valoresIniciales,
+  type CampoDef, type Opcion, type Valores,
 } from '../../../lib/inversiones/registro';
 import { COLORS, Cta, formatThousands, OpcionesGrid, TituloSeccion } from '../shared';
 import { Hoja, Parrafo } from './Hoja';
@@ -45,7 +45,17 @@ export function RegistroPosicion({
   }
 
   function cambiar(id: string, val: string) {
-    setValores((v) => ({ ...v, [id]: val }));
+    setValores((v) => {
+      const nuevo = { ...v, [id]: val };
+      // Lo que depende de lo elegido (el fondo depende de dónde lo compró) se ajusta solo.
+      for (const c of tipo ? FORMULARIOS[tipo].campos : []) {
+        if (typeof c.opciones !== 'function' || c.id === id) continue;
+        const lista = opcionesDe(c, nuevo, mercado);
+        if (lista.length === 1) nuevo[c.id] = lista[0].id;
+        else if (lista.length > 1 && !lista.some((o) => o.id === nuevo[c.id])) nuevo[c.id] = '';
+      }
+      return nuevo;
+    });
     // Si ella corrige un campo leído de la captura, deja de ser "leído": ahora lo puso ella.
     setLeidos((l) => l.filter((x) => x !== id));
   }
@@ -123,6 +133,7 @@ export function RegistroPosicion({
                 key={c.id}
                 campo={c}
                 valor={valores[c.id] ?? ''}
+                opciones={opcionesDe(c, valores, mercado)}
                 error={intentado ? resultado.errores[c.id] : undefined}
                 leido={leidos.includes(c.id)}
                 onCambiar={(v) => cambiar(c.id, v)}
@@ -156,10 +167,11 @@ export function RegistroPosicion({
 }
 
 function Campo({
-  campo, valor, error, leido, onCambiar,
+  campo, valor, opciones, error, leido, onCambiar,
 }: {
   campo: CampoDef;
   valor: string;
+  opciones: Opcion[];
   error?: string;
   leido: boolean;
   onCambiar: (v: string) => void;
@@ -175,9 +187,14 @@ function Campo({
         {campo.etiqueta}{!campo.obligatorio && <span className="font-normal" style={{ color: COLORS.inkFaint }}> (opcional)</span>}
       </label>
 
-      {campo.tipo === 'opcion' ? (
+      {campo.tipo === 'opcion' && opciones.length > 6 ? (
+        <select id={id} value={valor} onChange={(e) => onCambiar(e.target.value)} className={claseInput} style={estilo}>
+          <option value="">Elegí una opción</option>
+          {opciones.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+        </select>
+      ) : campo.tipo === 'opcion' && opciones.length > 0 ? (
         <OpcionesGrid
-          opciones={campo.opciones ?? []}
+          opciones={opciones}
           valor={valor || null}
           onElegir={(v) => onCambiar(v)}
         />
@@ -191,7 +208,7 @@ function Campo({
             value={valor}
             placeholder={campo.placeholder}
             inputMode={numerico ? 'decimal' : 'text'}
-            onChange={(e) => onCambiar(campo.tipo === 'monto' ? formatThousands(e.target.value) : e.target.value)}
+            onChange={(e) => onCambiar(campo.tipo === 'monto' ? formatThousands(e.target.value) : numerico ? soloNumeros(e.target.value) : e.target.value)}
             className={`${claseInput} ${numerico ? 'font-mono tabular-nums' : ''} ${campo.tipo === 'monto' ? 'pl-8' : ''} ${campo.tipo === 'porcentaje' ? 'pr-10' : ''}`}
             style={estilo}
             aria-invalid={error ? true : undefined}

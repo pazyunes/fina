@@ -25,6 +25,9 @@
     },
     "api/leer-captura.ts": {
       "maxDuration": 30
+    },
+    "api/noticias.ts": {
+      "maxDuration": 30
     }
   },
   "crons": [

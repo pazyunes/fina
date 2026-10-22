@@ -27,9 +27,9 @@ export const BASE_EJEMPLO = 100_000;
 const aCien = (n: number): number => Math.round(n / 100) * 100;
 
 function chipDe(v: Veredicto): FichaRinde['chip'] {
-  if (v === 'le-gana') return { texto: 'Rinde más que la inflación', veredicto: v };
-  if (v === 'empata') return { texto: 'Rinde cerca de la inflación', veredicto: v };
-  if (v === 'pierde') return { texto: 'Hoy rinde menos que la inflación', veredicto: v };
+  if (v === 'le-gana') return { texto: 'Rinde más que la inflación (lo que suben los precios)', veredicto: v };
+  if (v === 'empata') return { texto: 'Rinde cerca de la inflación (lo que suben los precios)', veredicto: v };
+  if (v === 'pierde') return { texto: 'Hoy rinde menos que la inflación (lo que suben los precios)', veredicto: v };
   return null;
 }
 
@@ -62,7 +62,7 @@ export function describirRinde(producto: ProductoId, ev: Evaluacion | null, m: M
     const tem = uva / 100;
     return {
       titulo: 'Sigue a la inflación',
-      detalle: `La UVA subió ${pct(uva, 1)} el último mes`,
+      detalle: `La UVA (un número que sube con la inflación) subió ${pct(uva, 1)} el último mes`,
       ejemplo: `Si ponés ${fmtPesos(BASE_EJEMPLO)}, el mes que viene tenés aproximadamente ${fmtPesos(aCien(BASE_EJEMPLO * (1 + tem)))}. Cambia con la inflación.`,
       aclaracion: null,
       chip: chipDe(ev.veredicto),

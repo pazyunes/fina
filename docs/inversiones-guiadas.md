@@ -23,25 +23,51 @@ fuentes públicas ─► api/mercado.ts ─► src/app/api/v2/mercado.ts ─► 
   Un dato vencido saca la opción de la lista.
 - **`lib/inversiones/cuanto.ts`**: cuánto poner, a partir del PEOR de los últimos 3 meses
   (no el promedio), y el colchón de 3 meses de gastos.
-- **`lib/inversiones/guias.ts`**: 12 pasos a paso (proveedor × producto) con datos de hoy.
+- **`lib/inversiones/guias.ts`**: los pasos a paso (proveedor × producto) con datos de hoy.
 - **`lib/inversiones/registro.ts`**: un formulario por tipo, con validaciones que avisan y
   no bloquean, y el armado desde una captura.
 - **`lib/inversiones/seguimiento.ts`**: las "Novedades" de Mis inversiones.
 
 ## Cómo se ve (decisiones de producto)
 
-- **La ficha de cada inversión son "globitos"**, siempre los mismos y en el mismo orden: ¿Qué es?,
-  ¿Cuánto rinde? (porcentaje + un ejemplo con plata), ¿Dónde queda tu plata?, riesgo, ¿Cuándo la
-  podés sacar?, ¿Alguien la garantiza? y un glosario al final. El texto fijo vive en
-  `lib/inversiones/catalogo.ts`; el "cuánto rinde" se arma con datos de hoy en `lib/inversiones/rinde.ts`.
+- **La lista de inversiones muestra todas** y marca con un cartelito verde "Recomendado" las que hoy
+  convienen. Arriba, la persona puede decir cuánto quiere invertir y en cuánto tiempo lo quiere sacar
+  (o elegir directo una inversión). El monto y el plazo cambian qué se recomienda (por ejemplo, con
+  $10.000 un CEDEAR no alcanza).
+- **Al tocar una inversión empieza el flujo** (`FlujoInversion.tsx`): "Aprendé en 2 minutos" (3 pantallas,
+  con el **glosario necesario arriba**) → dónde hacerlo (las opciones una al lado de la otra, con un mini
+  comentario sólo si las distingue) → con cuánto empezar → los pasos numerados, que se pueden recorrer
+  para adelante y para atrás.
+- **Lo que se decide al empezar es lo mismo que se pregunta al registrar** (`lib/inversiones/limites.ts`
+  y `previosParaRegistro` en `guias.ts`): cuenta y fondo piden un monto; plazo fijo, monto y días;
+  CEDEAR, cuál y cuántos (se compran enteros, con su precio y mínimo); dólar, pesos o dólares. El
+  registro llega ya completado y la persona sólo corrige lo que salió distinto. Los tickers, fondos y
+  bancos son listas predeterminadas; los campos numéricos no aceptan letras; cada monto dice en qué
+  moneda es y su mínimo/máximo.
+- **El texto fijo** de cada inversión vive en `lib/inversiones/catalogo.ts`; **el "cuánto rinde"** (porcentaje
+  + un ejemplo con plata) se arma con datos de hoy en `lib/inversiones/rinde.ts`. Toda palabra técnica lleva
+  su aclaración entre paréntesis y está en el glosario.
 - **Un proveedor que hoy rinde menos que la inflación no se ofrece** si hay otro que no (hoy Mercado
   Pago y Naranja X quedan afuera de "cuenta remunerada").
 - **Se recomienda sólo lo conocido**: cuenta remunerada, fondo común (money market), plazo fijo (y UVA),
   dólar y CEDEARs. Las letras del Tesoro siguen en el motor pero no se ofrecen.
-- **Si no se sabe cuánto le sobra a la persona, no se dice nada**: la sección "¿Con cuánto empezar?" no aparece.
-- **El paso a paso** arranca con 3 pantallas ("Aprendé en 2 minutos"), después el monto, y los pasos
-  son numerados y se puede ir y volver. Los 12+ pasos a paso siguen sin verificarse en las apps reales.
+- **Si no se sabe cuánto le sobra a la persona, no se dice nada.**
+- **Las novedades viven dentro de cada inversión** ("Mis inversiones" → tocar una): qué pasa hoy con esa
+  inversión, novedades (vencimientos, cuánto va ganando), y **noticias del día** (`/api/noticias`).
+  Arriba, cómo se reparte la plata y un recordatorio de que la evolución día a día se ve en la app de
+  cada proveedor.
+- **Cerrar o borrar una inversión** pide confirmación y se puede deshacer unos segundos.
 - En Mercado Pago el rendimiento está en **Inversiones → Mercado Fondo**, no en "Reservas" (que no rinde).
+
+## Noticias
+
+`api/noticias.ts` baja los titulares de Ámbito, Infobae, iProfesional y BBC Mundo (RSS públicos), se
+queda con los que tienen que ver con cada tipo de inversión (o con algo que mueve a todas, como una
+guerra o el petróleo) y, si hay `ANTHROPIC_API_KEY`, un modelo elige hasta 3 y las explica en una o dos
+frases. Reglas: sólo se apoya en el titular, no da órdenes ni promete qué va a pasar, y cada explicación
+se revisa en código. Cada noticia lleva su fuente y enlace. Sin clave, muestra sólo los titulares
+relevantes con su enlace. Se cachea 30 minutos por tipo. **La parte con el modelo no se pudo probar sin
+la clave.**
 
 ## Fuentes (verificadas el 21/10/2026)
 
@@ -51,6 +77,7 @@ fuentes públicas ─► api/mercado.ts ─► src/app/api/v2/mercado.ts ─► 
 | TAMAR, BADLAR, inflación esperada (REM) | BCRA, API de estadísticas **v4** | La v3 fue dada de baja (410) |
 | Dólar | DolarAPI | |
 | Precios de CEDEARs | data912 | comunitaria |
+| Noticias | RSS de Ámbito, Infobae, iProfesional, BBC Mundo | titulares públicos |
 
 CAFCI bloquea las consultas automáticas (403). El histórico por fecha de ArgentinaDatos
 trae sólo algunos fondos, no los nuestros. Por eso el rendimiento de 7 y 30 días de los
@@ -71,10 +98,8 @@ se usa "ayer contra hoy" con un rango ancho.
 
 ## Hay que verificar a mano
 
-- **Los 12 paso a paso** se escribieron con información pública y NO se pudieron probar
-  abriendo cada app. Cada guía lista en `porVerificar` lo que hay que confirmar. En cada
-  paso hay un botón "No lo encuentro" que guarda el comentario en la tabla `feedback`
-  (contexto `guia:<proveedor>:<producto>:<paso>`).
+- **Los paso a paso** se escribieron con información pública y NO se pudieron probar abriendo
+  cada app. Cada guía lista en `porVerificar` (en `guias.ts`) lo que hay que confirmar.
 - Que el rendimiento de la cuenta de Mercado Pago venga del fondo Mercado Fondo.
 - La lectura de capturas con capturas reales de cada app.
 
