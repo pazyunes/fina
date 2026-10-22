@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAlLlegar } from './alLlegar';
 import { BotonVolver, COLORS, Chip, Cta, OpcionesGrid, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
 import { ALIAS_PROVEEDOR, EN_QUE_A_PRODUCTO, type ProveedorId } from '../../lib/inversiones/catalogo';
@@ -155,8 +155,11 @@ export function InversionesV2() {
 
   // Registrar una inversión (formulario específico por tipo). `previos` viene del
   // paso a paso: ya sabe el proveedor y el monto con el que empezó.
-  const [registro, setRegistro] = useState<{ tipo?: PosicionInversion['tipo']; previos?: Partial<Valores> } | null>(null);
-  const abrirRegistro = (tipo?: PosicionInversion['tipo'], previos?: Partial<Valores>) => setRegistro({ tipo, previos });
+  const [registro, setRegistro] = useState<{ tipo?: PosicionInversion['tipo']; previos?: Partial<Valores>; desdeGuia?: boolean } | null>(null);
+  const abrirRegistro = (tipo?: PosicionInversion['tipo'], previos?: Partial<Valores>, desdeGuia?: boolean) => setRegistro({ tipo, previos, desdeGuia });
+  // Si se volvió del registro al paso a paso, de cuál inversión.
+  const [volverAGuia, setVolverAGuia] = useState<PosicionInversion['tipo'] | null>(null);
+  const alReabrirGuia = useCallback(() => setVolverAGuia(null), []);
   const { estado: estadoMercado } = useMercado();
 
   // Los registros VIEJOS (sólo "cuánto y en qué") se siguen pudiendo corregir y
@@ -509,6 +512,7 @@ export function InversionesV2() {
             previos={registro.previos}
             mercado={estadoMercado.tipo === 'listo' ? estadoMercado.mercado : null}
             onCerrar={() => setRegistro(null)}
+            onVolver={registro.desdeGuia && registro.tipo ? () => { setVolverAGuia(registro.tipo ?? null); setRegistro(null); } : undefined}
           />
         )}
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
@@ -543,6 +547,8 @@ export function InversionesV2() {
               colchon={colchon}
               inflacionPersonal={inflacionPersonal}
               objetivos={objetivos}
+              reabrir={volverAGuia}
+              onReabierto={alReabrirGuia}
               onRegistrar={abrirRegistro}
             />
           )}

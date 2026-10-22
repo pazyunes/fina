@@ -8,7 +8,7 @@ import {
   FORMULARIOS, hoyISO, lecturaAValores, opcionesDe, procesarRegistro, soloNumeros, valoresIniciales,
   type CampoDef, type Opcion, type Valores,
 } from '../../../lib/inversiones/registro';
-import { COLORS, Cta, formatThousands, OpcionesGrid, TituloSeccion } from '../shared';
+import { BotonFantasma, COLORS, Cta, formatThousands, OpcionesGrid, TituloSeccion } from '../shared';
 import { Hoja, Parrafo } from './Hoja';
 
 // Registrar una inversión con lo que de verdad la define. Cada tipo pide sólo lo
@@ -16,12 +16,14 @@ import { Hoja, Parrafo } from './Hoja';
 // También se puede subir una captura: la leemos y la persona revisa antes de
 // guardar. La imagen no se guarda.
 export function RegistroPosicion({
-  tipoInicial, previos, mercado, onCerrar,
+  tipoInicial, previos, mercado, onCerrar, onVolver,
 }: {
   tipoInicial?: TipoPosicion;
   previos?: Partial<Valores>;
   mercado: Mercado | null;
   onCerrar: () => void;
+  /** Si se llegó desde el paso a paso: vuelve a los pasos, sin perder lo hecho. */
+  onVolver?: () => void;
 }) {
   const [tipo, setTipo] = useState<TipoPosicion | null>(tipoInicial ?? null);
   const [valores, setValores] = useState<Valores>(() => (tipoInicial ? valoresIniciales(tipoInicial, previos) : {}));
@@ -155,6 +157,7 @@ export function RegistroPosicion({
           {errorGuardado && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.naranjaText }}>{errorGuardado}</p>}
 
           <Cta label={guardando ? 'Guardando…' : 'Guardar'} disabled={guardando} onClick={() => void guardar()} />
+          {onVolver && <BotonFantasma label="← Volver a los pasos" onClick={onVolver} />}
           {!tipoInicial && (
             <button type="button" onClick={() => { setTipo(null); setLeidos([]); }} className="v2-focus min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>
               Cambiar el tipo de inversión

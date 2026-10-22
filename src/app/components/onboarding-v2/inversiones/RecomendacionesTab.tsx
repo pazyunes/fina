@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { PosicionInversion } from '../../../api/v2/tipos';
 import type { PerfilRiesgo, ProductoId, ProveedorId } from '../../../lib/inversiones/catalogo';
 import type { Colchon, SugerenciaMonto } from '../../../lib/inversiones/cuanto';
@@ -32,7 +32,7 @@ const TIEMPOS: { id: string; label: string; meses: number }[] = [
 // marcan con un cartelito verde. O puede elegir directo una inversión.
 // Todo sale de los datos de mercado de hoy: si no hay datos, no hay recomendación.
 export function RecomendacionesTab({
-  perfil, horizonteMeses, usa, posiciones, productosQuiz, sugerencia, colchon, inflacionPersonal, objetivos, onRegistrar,
+  perfil, horizonteMeses, usa, posiciones, productosQuiz, sugerencia, colchon, inflacionPersonal, objetivos, reabrir, onReabierto, onRegistrar,
 }: {
   perfil: PerfilRiesgo;
   horizonteMeses: number | null;
@@ -46,7 +46,11 @@ export function RecomendacionesTab({
   inflacionPersonal: InflacionPersonal | null;
   /** Los objetivos para los que se podría invertir (en pesos, con algo por juntar). */
   objetivos: ObjetivoParaInvertir[];
-  onRegistrar: (tipo: PosicionInversion['tipo'], previos: Partial<Valores>) => void;
+  /** Si no es null: reabre el paso a paso de esa inversión (se volvió desde el registro). */
+  reabrir: PosicionInversion['tipo'] | null;
+  onReabierto: () => void;
+  /** `desdeGuia`: se llegó desde el paso a paso, así el registro puede volver a él. */
+  onRegistrar: (tipo: PosicionInversion['tipo'], previos: Partial<Valores>, desdeGuia?: boolean) => void;
 }) {
   const { estado, reintentar } = useMercado();
   const [montoTxt, setMontoTxt] = useState('');
@@ -70,6 +74,14 @@ export function RecomendacionesTab({
       : null),
     [mercado, perfil, horizonte, monto, usa, yaInvierteEn, colchon, inflacionPersonal],
   );
+
+  // Al volver del registro, el paso a paso se retoma donde estaba (el avance ya está guardado).
+  useEffect(() => {
+    if (!reabrir || !resultado) return;
+    const item = resultado.items.find((i) => i.rec.producto.id === reabrir);
+    if (item) setAbierta(item.rec);
+    onReabierto();
+  }, [reabrir, resultado, onReabierto]);
 
   if (estado.tipo === 'cargando') {
     return (
@@ -225,7 +237,7 @@ export function RecomendacionesTab({
           sugerencia={sugerencia}
           montoDeseado={monto}
           onCerrar={() => setAbierta(null)}
-          onRegistrar={(previos) => { const t = abierta.producto.id; setAbierta(null); onRegistrar(t, objetivo ? { ...previos, objetivo: objetivo.id } : previos); }}
+          onRegistrar={(previos) => { const t = abierta.producto.id; setAbierta(null); onRegistrar(t, objetivo ? { ...previos, objetivo: objetivo.id } : previos, true); }}
         />
       )}
     </div>
