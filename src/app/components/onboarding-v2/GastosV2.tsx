@@ -360,8 +360,8 @@ export function GastosV2() {
           </div>
 
           {/* Abajo del anillo van sólo las referencias: el monto ya está en el
-              centro. Primero lo disponible, después las 3 secciones que más se
-              llevaron y lo apartado. El resto de las secciones está en Tus
+              centro. Primero lo disponible y el total gastado, después las 3
+              secciones que más se llevaron y lo apartado. El resto de las secciones está en Tus
               secciones, más abajo. */}
           {(porSeccion.length > 0 || conIngreso) && (
             <ul className="px-2 flex flex-col gap-1.5">
@@ -370,6 +370,14 @@ export function GastosV2() {
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lima }} aria-hidden />
                   <span className="flex-1 min-w-0" style={{ color: COLORS.limaText }}>{teQueda}</span>
                   <Monto value={disponibleVentana} className="text-[13px] font-semibold" />
+                </li>
+              )}
+              {/* La suma de las secciones de abajo. Sin ingresos no va: el
+                  centro del anillo ya dice cuánto gastaste. */}
+              {conIngreso && (
+                <li className="flex items-center gap-2.5 text-[13px] font-semibold pl-[22px]">
+                  <span className="flex-1 min-w-0" style={{ color: COLORS.ink }}>Total gastado</span>
+                  <Monto value={totalGastado} className="text-[13px] font-semibold" />
                 </li>
               )}
               {porSeccion.slice(0, 3).map((s) => (
