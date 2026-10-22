@@ -15,9 +15,8 @@ import { COLORS, FONTS } from './shared';
 // lo que hace falta para que el flujo no se sienta un formulario.
 //
 // La pregunta sigue siendo el <h1> de la pantalla. El globo acompaña, no
-// reemplaza: un título de 32px en Baloo 2 dentro de un globo, al lado de un
-// personaje, en 375px de ancho, no entra sin achicar la tipografía — y la
-// tipografía de los títulos es lo único que se conservó del diseño anterior.
+// reemplaza: un título de 32px dentro de un globo, al lado de un
+// personaje, en 375px de ancho, no entra sin achicar la tipografía.
 
 export function FiniDice({
   dice,
