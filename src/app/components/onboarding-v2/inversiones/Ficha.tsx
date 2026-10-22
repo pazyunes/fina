@@ -3,6 +3,7 @@ import { fechaCorta } from '../../../lib/inversiones/mercadoTipos';
 import type { Veredicto } from '../../../lib/inversiones/motor';
 import type { FichaRinde } from '../../../lib/inversiones/rinde';
 import { COLORS, EstadoConfianza, type Confianza } from '../shared';
+import { Desplegable } from './Desplegable';
 
 // Las piezas de la ficha de una inversión. Siempre las mismas, en el mismo
 // orden y con el mismo estilo: así la persona aprende a leerlas una vez y las
@@ -64,23 +65,18 @@ export function GlobitoGarantia({ p }: { p: Producto }) {
 export function GlosarioNecesario({ p, abierto = false }: { p: Producto; abierto?: boolean }) {
   if (p.glosario.length === 0) return null;
   return (
-    <details
-      open={abierto}
-      className="rounded-[28px] px-5 py-3"
-      style={{ background: COLORS.surface, border: `2px solid ${COLORS.lima}` }}
-    >
-      <summary className="v2-focus cursor-pointer min-h-[44px] flex items-center text-[17px] font-bold" style={{ color: COLORS.ink }}>
-        Glosario necesario
-      </summary>
-      <dl className="flex flex-col gap-2.5 pb-2 pt-1">
-        {p.glosario.map((g) => (
-          <div key={g.termino}>
-            <dt className="text-[15px] font-bold" style={{ color: COLORS.ink }}>{g.termino}</dt>
-            <dd className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{g.significado}</dd>
-          </div>
-        ))}
-      </dl>
-    </details>
+    <div className="rounded-[28px] px-5" style={{ background: COLORS.surface, border: `2px solid ${COLORS.lima}` }}>
+      <Desplegable titulo="Glosario necesario" abiertoInicial={abierto}>
+        <dl className="flex flex-col gap-2.5 pb-3">
+          {p.glosario.map((g) => (
+            <div key={g.termino}>
+              <dt className="text-[15px] font-bold" style={{ color: COLORS.ink }}>{g.termino}</dt>
+              <dd className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{g.significado}</dd>
+            </div>
+          ))}
+        </dl>
+      </Desplegable>
+    </div>
   );
 }
 

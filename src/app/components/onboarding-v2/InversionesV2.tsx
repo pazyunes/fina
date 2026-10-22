@@ -5,6 +5,7 @@ import { ALIAS_PROVEEDOR, EN_QUE_A_PRODUCTO, type ProveedorId } from '../../lib/
 import { calcularSobrante, colchon as calcularColchon, horizonteDesdeQuiz, sugerirMonto } from '../../lib/inversiones/cuanto';
 import type { Valores } from '../../lib/inversiones/registro';
 import type { PosicionInversion } from '../../api/v2/tipos';
+import { Desplegable } from './inversiones/Desplegable';
 import { MisInversiones } from './inversiones/MisInversiones';
 import { RecomendacionesTab } from './inversiones/RecomendacionesTab';
 import { RegistroPosicion } from './inversiones/RegistroPosicion';
@@ -533,10 +534,7 @@ export function InversionesV2() {
               posiciones={db.posiciones}
               onRegistrar={() => abrirRegistro()}
               legacy={aportes.length > 0 ? (
-                <details>
-                  <summary className="v2-focus cursor-pointer min-h-[44px] flex items-center text-[15px] font-bold" style={{ color: COLORS.brand }}>
-                    Registros anteriores ({aportes.length})
-                  </summary>
+                <Desplegable titulo={`Registros anteriores (${aportes.length})`}>
                   <p className="text-[14px] leading-snug pb-1" style={{ color: COLORS.inkSoft }}>
                     Son los que cargaste antes, con sólo el monto y el tipo. Podés corregirlos o borrarlos.
                   </p>
@@ -562,7 +560,7 @@ export function InversionesV2() {
                       </button>
                     ))}
                   </div>
-                </details>
+                </Desplegable>
               ) : null}
             />
           )}

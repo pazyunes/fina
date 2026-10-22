@@ -9,6 +9,7 @@ import { useMercado } from '../../../lib/inversiones/useMercado';
 import { useNoticias } from '../../../lib/inversiones/useNoticias';
 import { IconChevron } from '../FinaIcons';
 import { COLORS, Cta, EstadoConfianza, TituloSeccion } from '../shared';
+import { Desplegable } from './Desplegable';
 import { DatoFila, Hoja, Parrafo } from './Hoja';
 
 const ETIQUETAS_DETALLE: Record<string, string> = {
@@ -141,12 +142,9 @@ export function MisInversiones({
       </section>
 
       {cerradas.length > 0 && (
-        <details>
-          <summary className="v2-focus cursor-pointer min-h-[44px] flex items-center text-[15px] font-bold" style={{ color: COLORS.brand }}>
-            Inversiones cerradas ({cerradas.length})
-          </summary>
+        <Desplegable titulo={`Inversiones cerradas (${cerradas.length})`}>
           <div className="flex flex-col">{cerradas.map(fila)}</div>
-        </details>
+        </Desplegable>
       )}
 
       {legacy}
