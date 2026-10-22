@@ -123,8 +123,9 @@ export function GastosV2() {
   // Lo que entró EN EL PERÍODO, sólo con lo registrado (los ingresos y las
   // cargas de saldo que ya existían). No se arrastra lo que sobró del mes anterior: que haya sobrado no
   // quiere decir que siga estando.
+  const ingresosDelPeriodo = db.ingresos.filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana).reduce((t, i) => t + i.montoArs, 0);
   const plataDelPeriodo =
-    db.ingresos.filter((i) => i.ts >= desdeVentana && i.ts < hastaVentana).reduce((t, i) => t + i.montoArs, 0)
+    ingresosDelPeriodo
     + db.cargas.filter((c) => c.ts >= desdeVentana && c.ts < hastaVentana).reduce((t, c) => t + c.montoArs, 0);
   // Un período que ya terminó se cuenta en pasado: "te quedó", no "te queda".
   const periodoCerrado = offsetVentana > 0;
@@ -372,8 +373,16 @@ export function GastosV2() {
                   <Monto value={disponibleVentana} className="text-[13px] font-semibold" />
                 </li>
               )}
-              {/* La suma de las secciones de abajo. Sin ingresos no va: el
-                  centro del anillo ya dice cuánto gastaste. */}
+              {/* De dónde sale el disponible: lo que entró y la suma de las
+                  secciones de abajo. Sin ingresos no van: el centro del anillo
+                  ya dice cuánto gastaste. Sólo ingresos: las cargas de "Ya la
+                  tenía" suman al disponible pero no son ingresos. */}
+              {conIngreso && ingresosDelPeriodo > 0 && (
+                <li className="flex items-center gap-2.5 text-[13px] font-semibold pl-[22px]">
+                  <span className="flex-1 min-w-0" style={{ color: COLORS.ink }}>Ingresos registrados</span>
+                  <Monto value={ingresosDelPeriodo} className="text-[13px] font-semibold" />
+                </li>
+              )}
               {conIngreso && (
                 <li className="flex items-center gap-2.5 text-[13px] font-semibold pl-[22px]">
                   <span className="flex-1 min-w-0" style={{ color: COLORS.ink }}>Total gastado</span>
