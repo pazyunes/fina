@@ -38,13 +38,17 @@ const COLOR_TIPO: Record<PosicionInversion['tipo'], string> = {
   cedear: COLORS.brand,
 };
 
+type ObjetivoDeInversion = { nombre: string; montoTotal: number | null; juntado: number };
+
 // "Mis inversiones": lo que la persona registró. Arriba, cómo se reparte su plata;
 // y al tocar cada una, todo lo que hay para decirle sobre ESA inversión: qué pasa
 // hoy, novedades, noticias del día y dónde ver cómo viene.
 export function MisInversiones({
-  posiciones, onRegistrar, legacy,
+  posiciones, objetivosPorId, onRegistrar, legacy,
 }: {
   posiciones: PosicionInversion[];
+  /** Los objetivos por id, para decir para cuál es cada inversión. */
+  objetivosPorId: Record<string, ObjetivoDeInversion>;
   onRegistrar: () => void;
   /** Los registros viejos (sólo "cuánto y en qué"), que se siguen pudiendo ver y editar. */
   legacy: React.ReactNode;
@@ -74,6 +78,11 @@ export function MisInversiones({
   }, [activas]);
   const lugares = [...new Set(activas.map((p) => p.proveedor).filter(Boolean))];
 
+  const objetivoDe = (p: PosicionInversion): ObjetivoDeInversion | null => {
+    const id = p.detalle.objetivoId;
+    return typeof id === 'string' ? (objetivosPorId[id] ?? null) : null;
+  };
+
   const fila = (p: PosicionInversion) => (
     <button
       key={p.id}
@@ -86,7 +95,7 @@ export function MisInversiones({
       <span className="flex-1 min-w-0 flex flex-col">
         <span className="text-[16px] font-semibold truncate" style={{ color: COLORS.ink }}>{nombreProducto(p.tipo)}{p.proveedor ? ` · ${p.proveedor}` : ''}</span>
         <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>
-          Desde el {fechaLarga(p.inicio)}{p.vencimiento ? ` · vence el ${fechaLarga(p.vencimiento)}` : ''}
+          Desde el {fechaLarga(p.inicio)}{p.vencimiento ? ` · vence el ${fechaLarga(p.vencimiento)}` : ''}{objetivoDe(p) ? ` · para ${objetivoDe(p)!.nombre}` : ''}
         </span>
       </span>
       <span className="text-[16px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>{fmtPesos(p.monto)}</span>
@@ -174,6 +183,8 @@ export function MisInversiones({
       {abierta && (
         <FichaPosicion
           pos={abierta}
+          objetivo={objetivoDe(abierta)}
+          invertidoEnEl={objetivoDe(abierta) ? activas.filter((x) => x.detalle.objetivoId === abierta.detalle.objetivoId).reduce((a, x) => a + x.monto, 0) : 0}
           confirmarCerrar={confirmarCerrar}
           confirmarBorrar={confirmarBorrar}
           onConfirmarCerrar={setConfirmarCerrar}
@@ -190,9 +201,12 @@ export function MisInversiones({
 // Todo lo que hay para esta inversión, con ella adelante: sus datos, qué pasa hoy,
 // novedades, noticias del día y dónde ver cómo viene.
 function FichaPosicion({
-  pos, confirmarCerrar, confirmarBorrar, onConfirmarCerrar, onConfirmarBorrar, onCerrarla, onBorrarla, onSalir,
+  pos, objetivo, invertidoEnEl, confirmarCerrar, confirmarBorrar, onConfirmarCerrar, onConfirmarBorrar, onCerrarla, onBorrarla, onSalir,
 }: {
   pos: PosicionInversion;
+  objetivo: ObjetivoDeInversion | null;
+  /** Cuánto hay anotado en inversiones activas para ese mismo objetivo. */
+  invertidoEnEl: number;
   confirmarCerrar: boolean;
   confirmarBorrar: boolean;
   onConfirmarCerrar: (v: boolean) => void;
@@ -227,6 +241,16 @@ function FichaPosicion({
       <p className="text-[13px] -mt-3" style={{ color: COLORS.inkFaint }}>
         {pos.origen === 'captura' ? 'Leído de una captura y confirmado por vos.' : 'Cargado por vos.'}
       </p>
+
+      {objetivo && (
+        <section className="flex flex-col gap-1.5">
+          <TituloSeccion>Para tu objetivo “{objetivo.nombre}”</TituloSeccion>
+          <Parrafo>
+            Tenés anotado {fmtPesos(invertidoEnEl)} en inversiones para este objetivo
+            {objetivo.montoTotal ? `, de los ${fmtPesos(objetivo.montoTotal)} que necesitás` : ''}. Lo que ya aportaste a mano al objetivo: {fmtPesos(objetivo.juntado)}.
+          </Parrafo>
+        </section>
+      )}
 
       {(hoy.length > 0 || novedades.length > 0) && (
         <section className="flex flex-col gap-3">

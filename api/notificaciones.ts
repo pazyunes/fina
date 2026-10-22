@@ -21,6 +21,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { PASOS } from '../src/app/api/v2/pasos.js';
 import { diaAR, diaDeSemana, diasDelMes, lunesDe, sumarDias } from './_recomendaciones/fechas.js';
 import { configurarPush, enviarAviso, type Aviso, type Suscripcion } from './_notificaciones/enviar.js';
+import { avisoDeInversionQueVence, type InversionQueVence } from './_notificaciones/inversiones.js';
 
 type Req = { headers: Record<string, string | string[] | undefined>; query?: Record<string, string | string[] | undefined> };
 type Res = { status(code: number): Res; json(body: unknown): void; setHeader(nombre: string, valor: string): void };
@@ -130,6 +131,22 @@ const pesos = (n: number, moneda = 'ARS') =>
 
 async function armarVencimiento(supabase: SupabaseClient, uid: string, hoy: string): Promise<Aviso | null> {
   const manana = sumarDias(hoy, 1);
+  // Primero el gasto fijo (un pago atrasado cuesta); si no hay, una inversión que termina.
+  return (await armarGastoFijoQueVence(supabase, uid, hoy, manana)) ?? (await armarInversionQueVence(supabase, uid, hoy, manana));
+}
+
+async function armarInversionQueVence(supabase: SupabaseClient, uid: string, hoy: string, manana: string): Promise<Aviso | null> {
+  // Sin la migración 0039 la tabla no existe: error → sin aviso.
+  const { data, error } = await supabase
+    .from('investment_positions')
+    .select('kind, provider, amount, currency, end_date')
+    .eq('user_id', uid).eq('status', 'activa')
+    .in('end_date', [hoy, manana]);
+  if (error || !data) return null;
+  return avisoDeInversionQueVence(data as InversionQueVence[], hoy, manana);
+}
+
+async function armarGastoFijoQueVence(supabase: SupabaseClient, uid: string, hoy: string, manana: string): Promise<Aviso | null> {
   // Sin la migración 0034 la tabla no existe: error → sin aviso, sigue lo demás.
   const { data, error } = await supabase
     .from('recurring_expenses')

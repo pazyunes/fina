@@ -6,6 +6,8 @@ import type { InflacionPersonal } from '../../../lib/inversiones/inflacionPerson
 import { RUBROS } from '../../../lib/inversiones/ipc';
 import { pct } from '../../../lib/inversiones/formato';
 import { hayFallaEsencial, MENSAJE_DE_ERROR } from '../../../lib/inversiones/estadoDatos';
+import { planDeObjetivo, type ObjetivoParaInvertir } from '../../../lib/inversiones/objetivos';
+import { fmtPesos } from '../../../lib/inversiones/formato';
 import { recomendar, type ItemProducto, type Recomendacion } from '../../../lib/inversiones/motor';
 import type { Valores } from '../../../lib/inversiones/registro';
 import { useMercado } from '../../../lib/inversiones/useMercado';
@@ -29,7 +31,7 @@ const TIEMPOS: { id: string; label: string; meses: number }[] = [
 // marcan con un cartelito verde. O puede elegir directo una inversión.
 // Todo sale de los datos de mercado de hoy: si no hay datos, no hay recomendación.
 export function RecomendacionesTab({
-  perfil, horizonteMeses, usa, posiciones, productosQuiz, sugerencia, colchon, inflacionPersonal, onRegistrar,
+  perfil, horizonteMeses, usa, posiciones, productosQuiz, sugerencia, colchon, inflacionPersonal, objetivos, onRegistrar,
 }: {
   perfil: PerfilRiesgo;
   horizonteMeses: number | null;
@@ -41,16 +43,21 @@ export function RecomendacionesTab({
   colchon: Colchon | null;
   /** Lo que subió lo que esta persona consume, si se pudo calcular. */
   inflacionPersonal: InflacionPersonal | null;
+  /** Los objetivos para los que se podría invertir (en pesos, con algo por juntar). */
+  objetivos: ObjetivoParaInvertir[];
   onRegistrar: (tipo: PosicionInversion['tipo'], previos: Partial<Valores>) => void;
 }) {
   const { estado, reintentar } = useMercado();
   const [montoTxt, setMontoTxt] = useState('');
   const [tiempo, setTiempo] = useState<string | null>(null);
+  const [objetivoId, setObjetivoId] = useState<string | null>(null);
+  const objetivo = objetivos.find((o) => o.id === objetivoId) ?? null;
   const [abierta, setAbierta] = useState<Recomendacion | null>(null);
 
   const mercado = estado.tipo === 'listo' ? estado.mercado : null;
   const monto = parseMoneyInput(montoTxt) || null;
-  const horizonte = tiempo ? (TIEMPOS.find((t) => t.id === tiempo)?.meses ?? null) : horizonteMeses;
+  // Si la plata es para un objetivo con fecha, el plazo lo marca el objetivo; si no, lo que elija o lo del quiz.
+  const horizonte = objetivo?.meses ?? (tiempo ? (TIEMPOS.find((t) => t.id === tiempo)?.meses ?? null) : horizonteMeses);
 
   const yaInvierteEn = useMemo(
     () => [...new Set([...productosQuiz, ...posiciones.filter((p) => p.estado === 'activa').map((p) => p.tipo as ProductoId)])],
@@ -132,6 +139,31 @@ export function RecomendacionesTab({
             onChange={(e) => setMontoTxt(formatThousands(e.target.value))}
           />
         </div>
+        {objetivos.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿Es para un objetivo tuyo?</p>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Para qué objetivo">
+              {objetivos.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={objetivoId === o.id}
+                  onClick={() => setObjetivoId(objetivoId === o.id ? null : o.id)}
+                  className="v2-focus min-h-[44px] rounded-full px-4 text-[15px] font-semibold transition-all duration-100 active:scale-[0.97]"
+                  style={objetivoId === o.id
+                    ? { background: COLORS.brand, color: COLORS.surface, border: `1.5px solid ${COLORS.brand}` }
+                    : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                >
+                  {o.nombre}
+                </button>
+              ))}
+            </div>
+            {objetivo && <PlanDelObjetivo objetivo={objetivo} resultado={resultado} onUsar={(m) => setMontoTxt(formatThousands(String(Math.round(m))))} />}
+          </div>
+        )}
+
+        {!(objetivo && objetivo.meses !== null) && (
         <div className="flex flex-col gap-2">
           <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿En cuánto tiempo lo querés sacar?</p>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="En cuánto tiempo lo querés sacar">
@@ -152,6 +184,7 @@ export function RecomendacionesTab({
             ))}
           </div>
         </div>
+        )}
       </section>
 
       <section className="flex flex-col" aria-label="Inversiones">
@@ -189,8 +222,56 @@ export function RecomendacionesTab({
           sugerencia={sugerencia}
           montoDeseado={monto}
           onCerrar={() => setAbierta(null)}
-          onRegistrar={(previos) => { const t = abierta.producto.id; setAbierta(null); onRegistrar(t, previos); }}
+          onRegistrar={(previos) => { const t = abierta.producto.id; setAbierta(null); onRegistrar(t, objetivo ? { ...previos, objetivo: objetivo.id } : previos); }}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Qué hay que separar por mes para llegar al objetivo a tiempo, sin invertir y invirtiendo en
+ * lo que hoy más rinde de lo recomendado. Siempre un rango y marcado como estimado.
+ */
+function PlanDelObjetivo({
+  objetivo, resultado, onUsar,
+}: {
+  objetivo: ObjetivoParaInvertir;
+  resultado: ReturnType<typeof recomendar>;
+  onUsar: (monto: number) => void;
+}) {
+  const elegido = resultado.items.find((i) => i.recomendado && i.rec.mejor.tem);
+  const plan = objetivo.meses ? planDeObjetivo(objetivo.faltante, objetivo.meses, elegido?.rec.mejor.tem ?? null) : null;
+  return (
+    <div className="flex flex-col gap-1.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }}>
+      <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>
+        Para “{objetivo.nombre}” te faltan <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{fmtPesos(objetivo.faltante)}</span>
+        {plan ? <> y tenés <span className="font-semibold" style={{ color: COLORS.ink }}>{objetivo.meses} {objetivo.meses === 1 ? 'mes' : 'meses'}</span>.</> : '.'}
+      </p>
+      {plan ? (
+        <>
+          <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>
+            Guardándolo sin invertir, serían unos <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{fmtPesos(plan.sinInvertir)}</span> por mes.
+            {plan.invirtiendo && elegido && (
+              <> Si esa plata rinde en {elegido.rec.producto.nombre.toLowerCase()}, alcanzarían entre{' '}
+                <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{fmtPesos(plan.invirtiendo.min)}</span> y{' '}
+                <span className="font-mono tabular-nums font-semibold" style={{ color: COLORS.ink }}>{fmtPesos(plan.invirtiendo.max)}</span> por mes.</>
+            )}
+          </p>
+          <EstadoConfianza estado="estimado" />
+          {plan.invirtiendo && (
+            <button
+              type="button"
+              onClick={() => onUsar(plan.invirtiendo!.max)}
+              className="v2-focus self-start min-h-[44px] rounded-full px-4 text-[15px] font-bold"
+              style={{ border: `1.5px solid ${COLORS.brand}`, color: COLORS.brand }}
+            >
+              Usar {fmtPesos(plan.invirtiendo.max)} por mes
+            </button>
+          )}
+        </>
+      ) : (
+        <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>Ponele una fecha al objetivo y te decimos cuánto separar por mes.</p>
       )}
     </div>
   );

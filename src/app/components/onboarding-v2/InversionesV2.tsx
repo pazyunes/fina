@@ -6,6 +6,8 @@ import { calcularSobrante, colchon as calcularColchon, horizonteDesdeQuiz, suger
 import type { Valores } from '../../lib/inversiones/registro';
 import type { PosicionInversion } from '../../api/v2/tipos';
 import { calcularInflacionPersonal } from '../../lib/inversiones/inflacionPersonal';
+import { paraInvertir } from '../../lib/inversiones/objetivos';
+import { sumarEn } from '../../api/v2/conversion';
 import { Desplegable } from './inversiones/Desplegable';
 import { MisInversiones } from './inversiones/MisInversiones';
 import { RecomendacionesTab } from './inversiones/RecomendacionesTab';
@@ -335,6 +337,12 @@ export function InversionesV2() {
     const colchon = sobrante ? calcularColchon(sobrante.gastoMensual, db.perfil.reserva, enCaja) : null;
     const sugerencia = sugerirMonto(sobrante);
     const horizonteMeses = horizonteDesdeQuiz(porQue);
+    // Los objetivos de esta persona, listos para decirle cuánto separar por mes.
+    const juntadoDe = (o: (typeof db.objetivos)[number]) => sumarEn(o.contribuciones, o.moneda, db.dolar).total;
+    const objetivos = db.objetivos
+      .map((o) => paraInvertir(o, juntadoDe(o), o.horizonte))
+      .filter((o): o is NonNullable<typeof o> => o !== null);
+    const objetivosPorId = Object.fromEntries(db.objetivos.map((o) => [o.id, { nombre: o.nombre, montoTotal: o.montoTotal, juntado: juntadoDe(o) }]));
     // La inflación de esta persona: lo que subió lo que ella consume, con sus propios gastos y su zona.
     const ipc = estadoMercado.tipo === 'listo' ? estadoMercado.mercado.ipc?.valor ?? null : null;
     const inflacionPersonal = calcularInflacionPersonal(
@@ -534,6 +542,7 @@ export function InversionesV2() {
               sugerencia={sugerencia}
               colchon={colchon}
               inflacionPersonal={inflacionPersonal}
+              objetivos={objetivos}
               onRegistrar={abrirRegistro}
             />
           )}
@@ -541,6 +550,7 @@ export function InversionesV2() {
           {tab === 'mias' && (
             <MisInversiones
               posiciones={db.posiciones}
+              objetivosPorId={objetivosPorId}
               onRegistrar={() => abrirRegistro()}
               legacy={aportes.length > 0 ? (
                 <Desplegable titulo={`Registros anteriores (${aportes.length})`}>

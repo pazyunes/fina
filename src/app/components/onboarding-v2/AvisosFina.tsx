@@ -16,7 +16,7 @@ import {
 type Interruptor = 'paso' | 'racha' | 'separar' | 'resumen' | 'vencimientos';
 
 const AVISOS: { clave: Interruptor; titulo: string; detalle: string }[] = [
-  { clave: 'vencimientos', titulo: 'Gastos fijos', detalle: 'A las 10 hs, el día antes y el día que vence un gasto fijo.' },
+  { clave: 'vencimientos', titulo: 'Vencimientos', detalle: 'A las 10 hs, el día antes y el día que vence un gasto fijo o una inversión (plazo fijo, letra).' },
   { clave: 'paso', titulo: 'Tu paso del día', detalle: 'A las 19 hs, si todavía no lo hiciste.' },
   { clave: 'racha', titulo: 'Tu racha', detalle: 'A las 19 hs, si tenés una racha y ese día todavía no sumaste. Va en lugar del paso.' },
   { clave: 'separar', titulo: 'Día de separar', detalle: 'A las 10 hs del día que cobrás, para separar para tus objetivos apenas entra la plata.' },

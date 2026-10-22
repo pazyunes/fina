@@ -246,6 +246,8 @@ export function procesarRegistro(
   const precio = num('precio');
   let vencimiento: string | null = fechaValida(v.vencimiento ?? '') ? v.vencimiento : null;
   const detalle: Borrador['detalle'] = {};
+  // Si la plata es para un objetivo, queda anotado: así se ve en Mis inversiones para qué es.
+  if (v.objetivo) detalle.objetivoId = v.objetivo;
   let proveedor = (v.proveedor ?? '').trim();
 
   // Tipos que se arman distinto
