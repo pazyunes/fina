@@ -195,7 +195,10 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
     it(`${PROVEEDORES[prov].nombre} · ${PRODUCTOS[prod].nombre}`, () => {
       const c = { ...CONTEXTO_VACIO, mercado: m, ...extra };
       const previos = previosParaRegistro(prov, prod, c);
-      const r = procesarRegistro(prod, valoresIniciales(prod, previos, AHORA), m, 'manual', AHORA);
+      // La tasa no se decide al empezar: es lo que la persona ve en su app y anota al registrar.
+      const valores = valoresIniciales(prod, previos, AHORA);
+      if (FORMULARIOS[prod].campos.some((x) => x.id === 'tna' && x.obligatorio) && !valores.tna) valores.tna = '19';
+      const r = procesarRegistro(prod, valores, m, 'manual', AHORA);
       assert.deepEqual(r.errores, {}, JSON.stringify(previos));
       assert.ok(r.borrador);
       // Todo lo que trae precargado es una opción válida de su lista (no un valor suelto).
@@ -382,5 +385,26 @@ describe('las dos mejores para el monto y el plazo', () => {
 
   it('una opción que no puede puntuarse (el dólar) no desplaza a las que rinden', () => {
     assert.ok(!ids({ perfil: 'arriesgado', horizonteMeses: 12, necesitaCaja: false }).includes('dolar'));
+  });
+});
+
+describe('la tasa es obligatoria donde hace falta para calcular cuánto crece la plata', () => {
+  const m = mercadoFixture();
+  for (const [prod, prov, extra] of [
+    ['cuenta_remunerada', 'Ualá', {}],
+    ['fci', 'Cocos Capital', { fondo: 'Cocos Ahorro' }],
+  ] as const) {
+    it(`${PRODUCTOS[prod].nombre}: sin tasa no se puede registrar, con tasa sí`, () => {
+      const base = { ...valoresIniciales(prod, { proveedor: prov, ...extra }, AHORA), monto: '50000' };
+      const sin = procesarRegistro(prod, { ...base, tna: '' }, m, 'manual', AHORA);
+      assert.ok(sin.errores.tna, 'debería pedir la tasa');
+      assert.equal(sin.borrador, null);
+      const con = procesarRegistro(prod, { ...base, tna: '19' }, m, 'manual', AHORA);
+      assert.deepEqual(con.errores, {});
+      assert.equal(con.borrador?.tna, 0.19);
+    });
+  }
+  it('en el plazo fijo UVA el interés extra sigue siendo opcional (la UVA ya marca el crecimiento)', () => {
+    assert.equal(FORMULARIOS.plazo_fijo_uva.campos.find((c) => c.id === 'tna')?.obligatorio, false);
   });
 });

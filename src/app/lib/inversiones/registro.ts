@@ -78,7 +78,7 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     campos: [
       { id: 'proveedor', etiqueta: '¿En qué billetera?', tipo: 'opcion', obligatorio: true, ayuda: 'La app donde tenés la plata.', opciones: BILLETERAS },
       { id: 'monto', etiqueta: '¿Cuánto tenés en la cuenta?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es el saldo que ves en la sección donde se muestra lo que rinde.' },
-      { id: 'tna', etiqueta: 'Tasa que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: false, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. Si solo ves la TEA (la tasa efectiva anual, parecida a la TNA), anotá ese número.', placeholder: 'Ej: 19' },
+      { id: 'tna', etiqueta: 'Tasa que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. La ves en la sección de tu cuenta donde se muestra lo que rinde. Con ese número calculamos cuánto crece tu plata. Si solo ves la TEA (la tasa efectiva anual, parecida a la TNA), anotá ese número.', placeholder: 'Ej: 19' },
       inicio(),
     ],
   },
@@ -94,7 +94,7 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
       },
       { id: 'clase', etiqueta: 'Clase', tipo: 'opcion', obligatorio: false, ayuda: 'Una letra (A, B, C…) que figura junto al nombre. Cambia las comisiones, no lo que rinde. Si no la ves, dejala vacía.', opciones: opc(['A', 'B', 'C', 'Otra']) },
       { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. El monto que compraste.' },
-      { id: 'tna', etiqueta: 'Rendimiento que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: false, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. Si la app la muestra, anotala: ayuda a que las recomendaciones sean más precisas para todos.', placeholder: 'Ej: 19' },
+      { id: 'tna', etiqueta: 'Rendimiento que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. La ves en la pantalla del fondo. Con ese número calculamos cuánto crece tu plata, y ayuda a que las recomendaciones sean más precisas para todos.', placeholder: 'Ej: 19' },
       { id: 'cantidad', etiqueta: 'Cuotapartes que recibiste', tipo: 'numero', obligatorio: false, ayuda: 'Las cuotapartes son los pedacitos del fondo que te tocaron. Las ves en la pantalla donde se muestra lo que tenés invertido.', placeholder: 'Ej: 41,17' },
       { id: 'precio', etiqueta: 'Valor de cada cuotaparte al comprar', tipo: 'numero', obligatorio: false, ayuda: 'En pesos. Figura en el comprobante de la compra.', placeholder: 'Ej: 2.428,729' },
       { id: 'rescate', etiqueta: '¿En cuánto tiempo podés sacar tu plata?', tipo: 'opcion', obligatorio: false, ayuda: 'Figura en la pantalla del fondo como “plazo de rescate” (rescatar es pedir que te devuelvan la plata).', opciones: [{ id: 'mismo-dia', label: 'El mismo día' }, { id: '24hs', label: '24 hs' }, { id: '48hs', label: '48 hs' }, { id: 'otro', label: 'Otro' }] },
