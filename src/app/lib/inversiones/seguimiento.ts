@@ -93,7 +93,10 @@ export function generarNovedades(args: {
         salida.push({
           id: `vence-${p.id}`, tono: 'decision', posicionId: p.id, confianza: 'declarado',
           titulo: `Tu ${nombre.toLowerCase()}${donde} vence ${faltan === 0 ? 'hoy' : faltan === 1 ? 'mañana' : `en ${faltan} días`}`,
-          texto: `El ${diaMes(p.vencimiento)} te devuelven la plata.${cobro}${alternativas} Tenés tres caminos: renovarlo, usarlo, o pasarlo a otra inversión.`,
+          texto: `El ${diaMes(p.vencimiento)} te devuelven la plata.${cobro}${alternativas} ${
+            p.detalle.renuevaSolo === true ? 'Tal como lo anotaste, se renueva solo: si no querés que se renueve, tenés que avisarle al banco antes.'
+            : p.detalle.renuevaSolo === false ? 'Tal como lo anotaste, no se renueva solo: ese día decidís si renovarlo, usarlo o pasarlo a otra inversión.'
+            : 'Tenés tres caminos: renovarlo, usarlo, o pasarlo a otra inversión.'}`,
         });
       }
     }

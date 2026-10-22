@@ -43,3 +43,12 @@ test('en dólares muestra US$ y el texto no da órdenes', () => {
   assert.match(a!.body, /US\$1\.000/);
   assert.doesNotMatch(a!.body, /deberías|tenés que|no te olvides/i);
 });
+
+test('el aviso dice qué pasa según si se renueva solo o no (lo que la persona respondió al registrar)', () => {
+  const si = avisoDeInversionQueVence([{ ...pf, end_date: MANANA, details: { renuevaSolo: true } }], HOY, MANANA);
+  assert.match(si!.body, /Se renueva solo\. Si no querés que se renueve, tenés que avisarle al banco antes/);
+  const no = avisoDeInversionQueVence([{ ...pf, end_date: MANANA, details: { renuevaSolo: false } }], HOY, MANANA);
+  assert.match(no!.body, /No se renueva solo: la plata vuelve a tu cuenta/);
+  const sinDato = avisoDeInversionQueVence([{ ...pf, end_date: MANANA, details: {} }], HOY, MANANA);
+  assert.doesNotMatch(sinDato!.body, /renueva/);
+});

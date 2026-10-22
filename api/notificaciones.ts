@@ -139,7 +139,7 @@ async function armarInversionQueVence(supabase: SupabaseClient, uid: string, hoy
   // Sin la migración 0039 la tabla no existe: error → sin aviso.
   const { data, error } = await supabase
     .from('investment_positions')
-    .select('kind, provider, amount, currency, end_date')
+    .select('kind, provider, amount, currency, end_date, details')
     .eq('user_id', uid).eq('status', 'activa')
     .in('end_date', [hoy, manana]);
   if (error || !data) return null;

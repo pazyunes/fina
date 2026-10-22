@@ -186,13 +186,13 @@ describe('registro: lo que se deduce de lo cargado', () => {
   const m = mercadoFixture();
   const proceso = (tipo: Parameters<typeof procesarRegistro>[0], v: Record<string, string>) => procesarRegistro(tipo, valoresIniciales(tipo, v, AHORA), m, 'manual', AHORA);
   it('plazo fijo: vencimiento = inicio + días, e interés = capital × TNA × días ÷ 365', () => {
-    const r = proceso('plazo_fijo', { proveedor: 'Banco de la Nación Argentina', monto: '200.000', tna: '20', plazo: '30', inicio: '2026-10-21' });
+    const r = proceso('plazo_fijo', { proveedor: 'Banco de la Nación Argentina', monto: '200.000', tna: '20', plazo: '30', inicio: '2026-10-21', renueva: 'no', precancelable: 'si' });
     assert.equal(r.borrador?.vencimiento, '2026-11-20');
     assert.equal(r.borrador?.tna, 0.2);
     assert.ok(r.resumen.some((x) => x.includes('$3.288')), r.resumen.join(' | '));
   });
   it('un plazo fijo UVA a menos de 90 días avisa, pero se puede guardar', () => {
-    const r = proceso('plazo_fijo_uva', { proveedor: 'Banco Galicia', monto: '100.000', plazo: '60' });
+    const r = proceso('plazo_fijo_uva', { proveedor: 'Banco Galicia', monto: '100.000', plazo: '60', tna: '0', renueva: 'no' });
     assert.ok(r.borrador);
     assert.ok(r.avisos.some((a) => a.includes('90')));
   });

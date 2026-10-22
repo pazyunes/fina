@@ -195,9 +195,13 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
     it(`${PROVEEDORES[prov].nombre} · ${PRODUCTOS[prod].nombre}`, () => {
       const c = { ...CONTEXTO_VACIO, mercado: m, ...extra };
       const previos = previosParaRegistro(prov, prod, c);
-      // La tasa no se decide al empezar: es lo que la persona ve en su app y anota al registrar.
+      // Lo que no se decide al empezar (la tasa, las cuotapartes, si se renueva solo) lo agrega la persona al registrar.
       const valores = valoresIniciales(prod, previos, AHORA);
-      if (FORMULARIOS[prod].campos.some((x) => x.id === 'tna' && x.obligatorio) && !valores.tna) valores.tna = '19';
+      for (const campo of FORMULARIOS[prod].campos) {
+        if (!campo.obligatorio || valores[campo.id]) continue;
+        const lista = opcionesDe(campo, valores, m);
+        valores[campo.id] = campo.tipo === 'opcion' ? (lista[0]?.id ?? 'x') : campo.tipo === 'porcentaje' ? '19' : '1000';
+      }
       const r = procesarRegistro(prod, valores, m, 'manual', AHORA);
       assert.deepEqual(r.errores, {}, JSON.stringify(previos));
       assert.ok(r.borrador);
@@ -388,23 +392,50 @@ describe('las dos mejores para el monto y el plazo', () => {
   });
 });
 
-describe('la tasa es obligatoria donde hace falta para calcular cuánto crece la plata', () => {
+describe('es obligatorio todo dato sin el cual no se ve cómo crece la plata ni se avisa qué pasa al vencer', () => {
   const m = mercadoFixture();
-  for (const [prod, prov, extra] of [
-    ['cuenta_remunerada', 'Ualá', {}],
-    ['fci', 'Cocos Capital', { fondo: 'Cocos Ahorro' }],
-  ] as const) {
-    it(`${PRODUCTOS[prod].nombre}: sin tasa no se puede registrar, con tasa sí`, () => {
-      const base = { ...valoresIniciales(prod, { proveedor: prov, ...extra }, AHORA), monto: '50000' };
-      const sin = procesarRegistro(prod, { ...base, tna: '' }, m, 'manual', AHORA);
-      assert.ok(sin.errores.tna, 'debería pedir la tasa');
-      assert.equal(sin.borrador, null);
-      const con = procesarRegistro(prod, { ...base, tna: '19' }, m, 'manual', AHORA);
-      assert.deepEqual(con.errores, {});
-      assert.equal(con.borrador?.tna, 0.19);
-    });
-  }
-  it('en el plazo fijo UVA el interés extra sigue siendo opcional (la UVA ya marca el crecimiento)', () => {
-    assert.equal(FORMULARIOS.plazo_fijo_uva.campos.find((c) => c.id === 'tna')?.obligatorio, false);
+  const registrar = (prod: keyof typeof FORMULARIOS, v: Record<string, string>) => procesarRegistro(prod, { ...valoresIniciales(prod, {}, AHORA), ...v }, m, 'manual', AHORA);
+
+  it('cuenta remunerada y fondo: sin tasa no se puede registrar, con tasa sí', () => {
+    const cuenta = { proveedor: 'Ualá', monto: '50000' };
+    assert.ok(registrar('cuenta_remunerada', { ...cuenta, tna: '' }).errores.tna);
+    const ok = registrar('cuenta_remunerada', { ...cuenta, tna: '19' });
+    assert.deepEqual(ok.errores, {});
+    assert.equal(ok.borrador?.tna, 0.19);
+    const fondo = { proveedor: 'Cocos Capital', fondo: 'Cocos Ahorro', monto: '50000', cantidad: '20', precio: '2500' };
+    assert.ok(registrar('fci', { ...fondo, tna: '' }).errores.tna);
+    assert.deepEqual(registrar('fci', { ...fondo, tna: '19' }).errores, {});
+  });
+
+  it('fondo: las cuotapartes y su valor son obligatorios (sin ellos no se calcula cuánto vale hoy)', () => {
+    const e = registrar('fci', { proveedor: 'Cocos Capital', fondo: 'Cocos Ahorro', monto: '50000', tna: '19' }).errores;
+    assert.ok(e.cantidad && e.precio);
+  });
+
+  it('plazo fijo: si se renueva solo y si es precancelable son obligatorios', () => {
+    const e = registrar('plazo_fijo', { proveedor: 'Banco Nación', monto: '100000', tna: '20', plazo: '30' }).errores;
+    assert.ok(e.renueva && e.precancelable);
+  });
+
+  it('plazo fijo UVA: el interés extra (0 si no suma) y si se renueva solo son obligatorios', () => {
+    const e = registrar('plazo_fijo_uva', { proveedor: 'Banco Galicia', monto: '100000', plazo: '90' }).errores;
+    assert.ok(e.tna && e.renueva);
+    const ok = registrar('plazo_fijo_uva', { proveedor: 'Banco Galicia', monto: '100000', plazo: '90', tna: '0', renueva: 'si' });
+    assert.deepEqual(ok.errores, {});
+    assert.equal(ok.borrador?.detalle.renuevaSolo, true);
+  });
+
+  it('CEDEAR: la comisión es obligatoria (0 si no cobraron) y letra: la cantidad', () => {
+    const base = { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '1', precio: '21000' };
+    assert.ok(registrar('cedear', base).errores.comision);
+    assert.deepEqual(registrar('cedear', { ...base, comision: '0' }).errores, {});
+    assert.ok(registrar('letra', { proveedor: 'Cocos Capital', ticker: 'S13N6', monto: '100000' }).errores.cantidad);
+  });
+
+  it('lo que no cambia ningún cálculo sigue siendo opcional: clase y plazo de rescate del fondo, tipo de dólar', () => {
+    const opcionales = (t: keyof typeof FORMULARIOS) => FORMULARIOS[t].campos.filter((c) => !c.obligatorio).map((c) => c.id).sort();
+    assert.deepEqual(opcionales('fci'), ['clase', 'rescate']);
+    assert.deepEqual(opcionales('dolar'), ['tipo']);
+    for (const t of ['cuenta_remunerada', 'plazo_fijo', 'plazo_fijo_uva', 'cedear', 'letra'] as const) assert.deepEqual(opcionales(t), [], t);
   });
 });

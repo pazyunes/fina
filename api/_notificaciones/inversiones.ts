@@ -11,6 +11,8 @@ export type InversionQueVence = {
   amount: number;
   currency: string;
   end_date: string;
+  /** Lo propio de cada tipo; acá interesa `renuevaSolo` (plazo fijo). */
+  details?: { renuevaSolo?: boolean } | null;
 };
 
 const NOMBRE: Record<string, string> = {
@@ -35,9 +37,16 @@ export function avisoDeInversionQueVence(filas: InversionQueVence[], hoy: string
   if (delDia.length === 1) {
     const f = delDia[0];
     const que = NOMBRE[f.kind] ?? 'inversión';
+    // Qué pasa ese día depende de si se renueva solo: lo que la persona respondió al registrarlo.
+    const renueva = f.details?.renuevaSolo;
+    const queSigue = renueva === true
+      ? 'Se renueva solo. Si no querés que se renueve, tenés que avisarle al banco antes.'
+      : renueva === false
+        ? 'No se renueva solo: la plata vuelve a tu cuenta y ahí decidís qué hacer.'
+        : 'Fijate qué querés hacer con esa plata y, cuando la muevas, actualizalo en FINA.';
     return {
       title: `${cuando} vence tu ${que} en ${f.provider}`,
-      body: `Tenías ${monto(f.amount, f.currency)}. Fijate qué querés hacer con esa plata y, cuando la muevas, actualizalo en FINA.`.slice(0, 180),
+      body: `Tenías ${monto(f.amount, f.currency)}. ${queSigue}`.slice(0, 180),
       url: '/onboarding-v2/inversiones',
       tag: 'fina-vencimiento-inversion',
     };
