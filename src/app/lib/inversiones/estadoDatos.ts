@@ -1,4 +1,4 @@
-import type { Mercado } from './mercadoTipos';
+import type { Mercado } from './mercadoTipos.js';
 
 // Cuándo un problema con los datos es motivo para decirle a la persona "hubo un error".
 //

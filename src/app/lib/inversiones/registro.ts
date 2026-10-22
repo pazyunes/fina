@@ -13,13 +13,13 @@
 //     mercado, un plazo fijo UVA a menos de 90 días). No bloquean: la persona
 //     sabe lo que tiene en su app, pero merece que le avisemos que revise.
 
-import type { LecturaCaptura } from '../../api/v2/capturas';
-import type { PosicionInversion, TipoPosicion } from '../../api/v2/tipos';
-import { ALIAS_PROVEEDOR } from './catalogo';
-import { diaMes, fmtPesos, nombrePropio, pct } from './formato';
-import { CEDEARS_DISPONIBLES, avisoDeMonto, explicarTicker, limitesDe, precioCedear } from './limites';
-import { bancosOrdenados } from './motor';
-import type { Mercado } from './mercadoTipos';
+import type { LecturaCaptura } from '../../api/v2/capturas.js';
+import type { PosicionInversion, TipoPosicion } from '../../api/v2/tipos.js';
+import { ALIAS_PROVEEDOR } from './catalogo.js';
+import { diaMes, fmtPesos, nombrePropio, pct } from './formato.js';
+import { CEDEARS_DISPONIBLES, avisoDeMonto, explicarTicker, limitesDe, precioCedear } from './limites.js';
+import { bancosOrdenados } from './motor.js';
+import type { Mercado } from './mercadoTipos.js';
 
 export type TipoCampo = 'texto' | 'monto' | 'numero' | 'porcentaje' | 'fecha' | 'opcion';
 

@@ -4,9 +4,9 @@
 // un CEDEAR hay que elegir cuántos, el registro pregunta cuántos y a qué precio;
 // si para una cuenta alcanza con un monto, el registro pregunta el monto.
 
-import type { ProductoId, ProveedorId } from './catalogo';
-import { fmtPesos } from './formato';
-import type { Mercado } from './mercadoTipos';
+import type { ProductoId, ProveedorId } from './catalogo.js';
+import { fmtPesos } from './formato.js';
+import type { Mercado } from './mercadoTipos.js';
 
 /**
  * Cómo se decide cuánto invertir:

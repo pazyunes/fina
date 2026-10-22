@@ -11,8 +11,8 @@
 //   · Un dato que no se puede saber (porque faltan ingresos cargados) se muestra
 //     como "todavía no lo sabemos", no como cero.
 
-import { fmtPesos, redondearMonto } from './formato';
-import type { Rango } from './motor';
+import { fmtPesos, redondearMonto } from './formato.js';
+import type { Rango } from './motor.js';
 
 type Movimiento = { montoArs: number; ts: number };
 

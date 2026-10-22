@@ -7,8 +7,8 @@
 // ESTIMADO: se muestra como tal. Si faltan datos (pocos gastos, o casi todo
 // queda sin rubro), no se calcula y no se dice nada.
 
-import { rubroDeSeccion, regionDeZona, type RubroId } from './ipc';
-import type { IpcRubros } from './mercadoTipos';
+import { rubroDeSeccion, regionDeZona, type RubroId } from './ipc.js';
+import type { IpcRubros } from './mercadoTipos.js';
 
 export type GastoParaInflacion = { montoArs: number; ts: number; seccion: string | null };
 

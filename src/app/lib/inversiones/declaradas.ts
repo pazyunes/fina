@@ -6,7 +6,7 @@
 // declarado en los últimos 7 días, y únicamente si lo declararon al menos 3 personas
 // distintas. Cada persona cuenta una vez por lugar, con su declaración más reciente.
 
-import type { TasaDeclarada } from './mercadoTipos';
+import type { TasaDeclarada } from './mercadoTipos.js';
 
 export const MIN_PERSONAS = 3;
 export const DIAS_DE_VIGENCIA = 7;

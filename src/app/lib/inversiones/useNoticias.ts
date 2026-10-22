@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { traerNoticias, type NoticiaInversion } from '../../api/v2/noticias';
-import type { ProductoId } from './catalogo';
+import { traerNoticias, type NoticiaInversion } from '../../api/v2/noticias.js';
+import type { ProductoId } from './catalogo.js';
 
 /** Las noticias de hoy para un tipo de inversión. Mientras cargan, o si no hay, la lista está vacía: no se muestra nada. */
 export function useNoticias(tipo: ProductoId): NoticiaInversion[] {

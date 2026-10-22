@@ -9,11 +9,11 @@
 // que" ni de alertas en rojo. Cuando hay algo que decidir, se dice qué opciones
 // hay, no cuál es la correcta. Y todo número lleva su estado de confianza.
 
-import type { PosicionInversion } from '../../api/v2/tipos';
-import { nombreProducto } from './catalogo';
-import { diaMes, fmtPesos, nombreCuenta, nombrePropio, pct, rangoPctConSigno } from './formato';
-import { bancosOrdenados, inflacionDeReferencia, realMensual, temDeTna, type Confianza } from './motor';
-import { estaVigente, type Mercado } from './mercadoTipos';
+import type { PosicionInversion } from '../../api/v2/tipos.js';
+import { nombreProducto } from './catalogo.js';
+import { diaMes, fmtPesos, nombreCuenta, nombrePropio, pct, rangoPctConSigno } from './formato.js';
+import { bancosOrdenados, inflacionDeReferencia, realMensual, temDeTna, type Confianza } from './motor.js';
+import { estaVigente, type Mercado } from './mercadoTipos.js';
 
 export type Novedad = {
   id: string;

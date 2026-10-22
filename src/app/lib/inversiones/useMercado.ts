@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { mercadoEnMemoria, traerMercado, type EstadoMercado } from '../../api/v2/mercado';
+import { mercadoEnMemoria, traerMercado, type EstadoMercado } from '../../api/v2/mercado.js';
 
 /**
  * Los datos de mercado, con las cuatro caras de todo dato remoto (guía §10):

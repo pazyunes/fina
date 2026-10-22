@@ -22,10 +22,10 @@
 import {
   ORDEN_PRODUCTOS, PRODUCTOS, PROVEEDORES, proveedoresDe,
   type FuenteDato, type PerfilRiesgo, type Producto, type ProductoId, type ProveedorId, type Rol,
-} from './catalogo';
-import { diaMes, enMeses, fmtPesos, listaConY, nombreCuenta, nombrePropio, pct, pctConSigno, rangoPct, rangoPctConSigno } from './formato';
-import { claveDeclarada, limitesDe, origenDeclarable } from './limites';
-import { edadEnDias, estaVigente, type Dato, type Mercado } from './mercadoTipos';
+} from './catalogo.js';
+import { diaMes, enMeses, fmtPesos, listaConY, nombreCuenta, nombrePropio, pct, pctConSigno, rangoPct, rangoPctConSigno } from './formato.js';
+import { claveDeclarada, limitesDe, origenDeclarable } from './limites.js';
+import { edadEnDias, estaVigente, type Dato, type Mercado } from './mercadoTipos.js';
 
 export type Rango = { min: number; max: number };
 export type Confianza = 'confirmado' | 'declarado' | 'estimado' | 'por-descubrir';

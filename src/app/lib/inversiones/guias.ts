@@ -20,12 +20,12 @@
 // funcionan estas apps en general; no se pudieron verificar abriendo cada una.
 // `porVerificar` lista lo que hay que confirmar en la app real.
 
-import { PROVEEDORES, type ProductoId, type ProveedorId } from './catalogo';
-import { diaMes, fmtPesos, nombrePropio, pct } from './formato';
-import { CEDEARS_DISPONIBLES, FONDOS_POR_PROVEEDOR, origenDeclarable, precioCedear } from './limites';
-import { bancosOrdenados, type Evaluacion } from './motor';
-import type { Mercado } from './mercadoTipos';
-import type { Valores } from './registro';
+import { PROVEEDORES, type ProductoId, type ProveedorId } from './catalogo.js';
+import { diaMes, fmtPesos, nombrePropio, pct } from './formato.js';
+import { CEDEARS_DISPONIBLES, FONDOS_POR_PROVEEDOR, origenDeclarable, precioCedear } from './limites.js';
+import { bancosOrdenados, type Evaluacion } from './motor.js';
+import type { Mercado } from './mercadoTipos.js';
+import type { Valores } from './registro.js';
 
 export type PasoGuia = {
   id: string;

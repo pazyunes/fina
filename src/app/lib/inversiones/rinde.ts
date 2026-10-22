@@ -3,10 +3,10 @@
 // tenés aproximadamente tanto). Sin comparaciones con la inflación a la vista:
 // esa regla ya decidió qué se muestra; acá solo se explica lo que se obtiene.
 
-import type { ProductoId } from './catalogo';
-import { fmtPesos, pct } from './formato';
-import type { Mercado } from './mercadoTipos';
-import { temDeTna, type Evaluacion, type Veredicto } from './motor';
+import type { ProductoId } from './catalogo.js';
+import { fmtPesos, pct } from './formato.js';
+import type { Mercado } from './mercadoTipos.js';
+import { temDeTna, type Evaluacion, type Veredicto } from './motor.js';
 
 export type FichaRinde = {
   /** Lo grande: "19% anual", "Sigue a la inflación"… */
