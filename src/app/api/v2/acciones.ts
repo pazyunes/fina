@@ -4,7 +4,7 @@ import * as api from './index';
 import { idUsuaria } from './cliente';
 import type {
   AporteInversion, Carga, Contribucion, FuenteIngreso, Gasto, GastoFijo, Grupo, Ingreso, Moneda, MonedaConvertible,
-  Objetivo, PagoMixto, Perfil, PerfilInversor, Periodo, Seccion, TipoGasto,
+  Objetivo, PagoMixto, Perfil, PerfilInversor, Periodo, PosicionInversion, Seccion, TipoGasto,
 } from './tipos';
 import { esConvertible } from './tipos';
 import { siguienteVencimiento } from './fechasFijos';
@@ -677,6 +677,42 @@ export function editarAporte(id: string, parche: Partial<AporteInversion>) {
 export function borrarAporte(id: string) {
   parchearEstado({ aportes: leerEstado().aportes.filter((x) => x.id !== id) });
   push(() => api.borrarAporte(id), 'Aporte borrado con éxito.');
+}
+
+// ── Inversiones registradas (migración 0039) ─────────────────────────────
+/** Dice en criollo que falta la migración, en vez de mostrar el error crudo de la base. */
+function mensajeDePosicion(error: string): string {
+  if (/investment_positions|schema cache|does not exist|relation/i.test(error)) {
+    return 'Todavía no está lista la base para guardar esto (falta correr la migración 0039 en Supabase).';
+  }
+  return error;
+}
+
+/**
+ * Guarda una inversión. A diferencia de los aportes, NO se pinta antes de que la
+ * base confirme: si falla, la persona tiene que enterarse ahora y no creer que
+ * quedó guardado un vencimiento que nunca existió.
+ */
+export async function registrarPosicion(
+  datos: Omit<PosicionInversion, 'id' | 'ts' | 'estado'>,
+): Promise<{ posicion: PosicionInversion | null; error: string | null }> {
+  const r = await api.crearPosicion({ ...datos, id: nuevoId(), estado: 'activa' });
+  if (r.error !== null) return { posicion: null, error: mensajeDePosicion(r.error) };
+  parchearEstado({ posiciones: [r.data, ...leerEstado().posiciones] });
+  avisarConfirmacion('Inversión registrada con éxito.');
+  return { posicion: r.data, error: null };
+}
+
+export function cerrarPosicion(id: string) {
+  parchearEstado({
+    posiciones: leerEstado().posiciones.map((p) => (p.id === id ? { ...p, estado: 'cerrada' as const } : p)),
+  });
+  push(() => api.editarPosicion(id, { estado: 'cerrada' }), 'Inversión marcada como cerrada.');
+}
+
+export function borrarPosicion(id: string) {
+  parchearEstado({ posiciones: leerEstado().posiciones.filter((p) => p.id !== id) });
+  push(() => api.borrarPosicion(id), 'Inversión borrada con éxito.');
 }
 
 // ── Verificación del teléfono ────────────────────────────────────────────

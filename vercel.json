@@ -22,6 +22,9 @@
     },
     "api/notificaciones.ts": {
       "maxDuration": 60
+    },
+    "api/leer-captura.ts": {
+      "maxDuration": 30
     }
   },
   "crons": [

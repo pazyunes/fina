@@ -169,6 +169,46 @@ export type AporteInversion = {
   ts: number;
 };
 
+/** Los tipos de inversión que se pueden registrar con sus datos específicos (migración 0039). */
+export type TipoPosicion =
+  | 'cuenta_remunerada'
+  | 'fci'
+  | 'plazo_fijo'
+  | 'plazo_fijo_uva'
+  | 'letra'
+  | 'dolar'
+  | 'cedear';
+
+/**
+ * Una inversión registrada con lo que la persona ve en su app: dónde está, a
+ * qué tasa, hasta cuándo. A diferencia de `AporteInversion` (sólo "cuánto y en
+ * qué"), esto permite avisar un vencimiento o decir si le está ganando a la
+ * inflación.
+ */
+export type PosicionInversion = {
+  id: string;
+  tipo: TipoPosicion;
+  /** Dónde está: 'Mercado Pago', 'Cocos Capital', el banco… */
+  proveedor: string;
+  /** Pesos puestos. En un dólar o un CEDEAR, lo que costó en pesos. */
+  monto: number;
+  /** 'YYYY-MM-DD' */
+  inicio: string;
+  vencimiento: string | null;
+  plazoDias: number | null;
+  /** Tasa nominal anual como fracción (0.21 = 21%), tal como la ve la persona. */
+  tna: number | null;
+  /** Cuotapartes, CEDEARs, letras o dólares comprados. */
+  cantidad: number | null;
+  precioUnitario: number | null;
+  /** Lo propio de cada tipo: fondo y clase, ticker, tipo de dólar, renovación… */
+  detalle: Record<string, string | number | boolean | null>;
+  estado: 'activa' | 'cerrada';
+  /** 'captura' = lo leímos de una captura y la persona lo confirmó. */
+  origen: 'manual' | 'captura';
+  ts: number;
+};
+
 export type MiembroGrupo = {
   userId: string;
   nombre: string;
@@ -258,6 +298,8 @@ export type EstadoV2 = {
   objetivos: Objetivo[];
   perfilInversor: PerfilInversor | null;
   aportes: AporteInversion[];
+  /** Inversiones registradas con sus datos específicos. Vacío si todavía no se corrió la migración 0039. */
+  posiciones: PosicionInversion[];
   grupo: Grupo | null;
 };
 
@@ -293,5 +335,6 @@ export const ESTADO_VACIO: EstadoV2 = {
   objetivos: [],
   perfilInversor: null,
   aportes: [],
+  posiciones: [],
   grupo: null,
 };

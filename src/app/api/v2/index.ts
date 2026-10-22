@@ -5,7 +5,7 @@ import {
   type AporteInversion, type Contribucion, type EstadoV2, type FuenteIngreso, type Gasto, type GastoFijo, type Grupo, type Ingreso,
   type Carga, type MedioPago, type MiembroGrupo, type Moneda, type MonedaConvertible,
   type Objetivo, type PagoMixto, type Perfil,
-  type PerfilInversor, type Periodo, type Seccion, type TipoGasto,
+  type PerfilInversor, type Periodo, type PosicionInversion, type Seccion, type TipoGasto,
   type PasoGuardado, type Racha, RACHA_VACIA,
 } from './tipos';
 
@@ -30,7 +30,7 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
   if (!uid) return falla<EstadoV2>('sin sesión', 'cargarTodo');
 
   try {
-    const [perfil, secciones, medios, gastos, ingresos, cargas, fijos, objetivos, perfInv, aportes, grupo, dolar] = await Promise.all([
+    const [perfil, secciones, medios, gastos, ingresos, cargas, fijos, objetivos, perfInv, aportes, posiciones, grupo, dolar] = await Promise.all([
       leerPerfil(uid),
       listarSecciones(),
       listarMediosPago(),
@@ -41,6 +41,7 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
       listarObjetivos(),
       leerPerfilInversor(),
       listarAportes(),
+      listarPosiciones(),
       leerMiGrupo(),
       // Para pasar un registro en pesos a un objetivo en dólares (y al revés).
       cotizacionDolar(),
@@ -68,6 +69,8 @@ export async function cargarTodo(): Promise<Resultado<EstadoV2>> {
       objetivos: objetivos.data ?? [],
       perfilInversor: perfInv.data ?? null,
       aportes: aportes.data ?? [],
+      // Sin la migración 0039 no existe la tabla: la app carga igual, sin posiciones.
+      posiciones: posiciones.data ?? [],
       grupo: grupo.data ?? null,
     });
   } catch (e) {
@@ -911,6 +914,87 @@ export async function editarAporte(id: string, a: { instrumento?: string; monto?
 
 export async function borrarAporte(id: string): Promise<Resultado<null>> {
   return borrarFila('investment_contributions', id, 'borrarAporte');
+}
+
+// ── Inversiones registradas con sus datos específicos (migración 0039) ───
+type FilaPosicion = {
+  id: string; kind: PosicionInversion['tipo']; provider: string; amount_ars: number; start_date: string;
+  end_date: string | null; term_days: number | null; rate_tna: number | null; quantity: number | null;
+  unit_price: number | null; details: Record<string, string | number | boolean | null> | null;
+  status: 'activa' | 'cerrada'; source: 'manual' | 'captura'; created_at: string;
+};
+
+const COLUMNAS_POSICION =
+  'id, kind, provider, amount_ars, start_date, end_date, term_days, rate_tna, quantity, unit_price, details, status, source, created_at';
+
+function aPosicion(f: FilaPosicion): PosicionInversion {
+  return {
+    id: f.id,
+    tipo: f.kind,
+    proveedor: f.provider,
+    monto: Number(f.amount_ars),
+    inicio: f.start_date,
+    vencimiento: f.end_date,
+    plazoDias: f.term_days,
+    tna: f.rate_tna === null ? null : Number(f.rate_tna),
+    cantidad: f.quantity === null ? null : Number(f.quantity),
+    precioUnitario: f.unit_price === null ? null : Number(f.unit_price),
+    detalle: f.details ?? {},
+    estado: f.status,
+    origen: f.source,
+    ts: new Date(f.created_at).getTime(),
+  };
+}
+
+export async function listarPosiciones(): Promise<Resultado<PosicionInversion[]>> {
+  const r = await correr<FilaPosicion[]>('listarPosiciones', () =>
+    supabase.from('investment_positions').select(COLUMNAS_POSICION).order('start_date', { ascending: false }),
+  );
+  if (r.error !== null) return falla<PosicionInversion[]>(r.error, 'listarPosiciones');
+  return ok((r.data ?? []).map(aPosicion));
+}
+
+/** Todas las inversiones se guardan en pesos: un dólar o un CEDEAR guardan lo que costaron en pesos. */
+export async function crearPosicion(p: Omit<PosicionInversion, 'ts'>): Promise<Resultado<PosicionInversion>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<PosicionInversion>('sin sesión', 'crearPosicion');
+  const r = await correr<FilaPosicion[]>('crearPosicion', () =>
+    supabase.from('investment_positions').insert({
+      id: p.id,
+      user_id: uid,
+      kind: p.tipo,
+      provider: p.proveedor,
+      amount: p.monto,
+      currency: 'ARS',
+      amount_ars: p.monto,
+      start_date: p.inicio,
+      end_date: p.vencimiento,
+      term_days: p.plazoDias,
+      rate_tna: p.tna,
+      quantity: p.cantidad,
+      unit_price: p.precioUnitario,
+      details: p.detalle,
+      status: p.estado,
+      source: p.origen,
+    }).select(COLUMNAS_POSICION),
+  );
+  if (r.error !== null || !r.data?.[0]) return falla<PosicionInversion>(r.error ?? 'sin fila', 'crearPosicion');
+  return ok(aPosicion(r.data[0]));
+}
+
+export async function editarPosicion(id: string, parche: Partial<Pick<PosicionInversion, 'estado' | 'tna' | 'vencimiento' | 'monto'>>): Promise<Resultado<null>> {
+  const fila: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (parche.estado !== undefined) fila.status = parche.estado;
+  if (parche.tna !== undefined) fila.rate_tna = parche.tna;
+  if (parche.vencimiento !== undefined) fila.end_date = parche.vencimiento;
+  if (parche.monto !== undefined) { fila.amount = parche.monto; fila.amount_ars = parche.monto; }
+  return correr<null>('editarPosicion', () =>
+    supabase.from('investment_positions').update(fila).eq('id', id).then(({ error }) => ({ data: null, error })),
+  );
+}
+
+export async function borrarPosicion(id: string): Promise<Resultado<null>> {
+  return borrarFila('investment_positions', id, 'borrarPosicion');
 }
 
 // ── El paso del día y la racha ───────────────────────────────────────────
