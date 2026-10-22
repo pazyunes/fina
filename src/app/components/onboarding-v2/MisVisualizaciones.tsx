@@ -2,8 +2,10 @@ import { useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { COLORS, Donut, FONTS, TituloSeccion, fmtMoney, vistaGastos } from './shared';
 import { colorDeSeccion } from './datosGasto';
-import { IngresosVsGastos } from './IngresosVsGastos';
+import { IngresosVsGastos, mesAtras } from './IngresosVsGastos';
 import { IconChevron } from './FinaIcons';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
+import { diaArgentina } from '../../api/v2/pasos';
 
 // "Mis visualizaciones" en Home: todos los gráficos a la vez, en una fila que se
 // desliza de costado. Antes había que elegir cuál ver con unos chips, y lo que
@@ -26,6 +28,51 @@ import { IconChevron } from './FinaIcons';
 //   el color de "atención": "Suscripciones" salía pintada como una alerta, justo
 //   lo que prohíbe la regla 3 (un gasto no es un error).
 // · Los montos van en tinta, nunca en el color de la barra.
+//
+// MES. Todas las tarjetas miran UN mes, el mismo para las tres: el actual al
+// entrar, y con las flechas se va a los anteriores (hasta el primero con algo
+// registrado). Antes "Gastos por categoría" sumaba todo lo registrado desde
+// siempre y daba más que Gastos, que mira el mes.
+
+const mesDe = (ts: number) => diaArgentina(ts).slice(0, 7);
+/** Cuántos meses hay de `desde` a `hasta` ('YYYY-MM'). */
+function mesesEntre(desde: string, hasta: string): number {
+  const [a1, m1] = desde.split('-').map(Number);
+  const [a2, m2] = hasta.split('-').map(Number);
+  return (a2 - a1) * 12 + (m2 - m1);
+}
+/** "Octubre", y con el año si no es el actual: "Diciembre 2025". Como en Gastos. */
+function nombreDelMes(mes: string, mesActual: string): string {
+  const nombre = new Date(`${mes}-15T12:00:00Z`).toLocaleDateString('es-AR', { month: 'long', timeZone: 'UTC' });
+  const conAño = mes.slice(0, 4) !== mesActual.slice(0, 4) ? `${nombre} ${mes.slice(0, 4)}` : nombre;
+  return conAño.charAt(0).toUpperCase() + conAño.slice(1);
+}
+
+// El mes que miran las tarjetas, con flechas a los costados. Va adentro de cada
+// tarjeta, arriba, para que al deslizar se vea de qué mes es cada gráfico.
+function SelectorMes({ etiqueta, puedeAtras, puedeAdelante, onMover }: {
+  etiqueta: string; puedeAtras: boolean; puedeAdelante: boolean; onMover: (hacia: 'atras' | 'adelante') => void;
+}) {
+  const flecha = (hacia: 'atras' | 'adelante', puede: boolean) => (
+    <button
+      type="button"
+      onClick={() => onMover(hacia)}
+      disabled={!puede}
+      aria-label={hacia === 'atras' ? 'Mes anterior' : 'Mes siguiente'}
+      className="v2-focus w-11 h-11 -my-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
+      style={{ color: COLORS.inkSoft, opacity: puede ? 1 : 0.3, cursor: puede ? 'pointer' : 'default' }}
+    >
+      <IconChevron size={16} style={hacia === 'atras' ? { transform: 'rotate(180deg)' } : undefined} />
+    </button>
+  );
+  return (
+    <div className="flex items-center justify-between -mx-2">
+      {flecha('atras', puedeAtras)}
+      <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }} aria-live="polite">{etiqueta}</p>
+      {flecha('adelante', puedeAdelante)}
+    </div>
+  );
+}
 
 function SinDatos({ children }: { children: React.ReactNode }) {
   return (
@@ -73,7 +120,7 @@ function TortaSecciones({ filas, total }: { filas: { id: string; label: string; 
         <Donut
           size={140}
           segments={filas.map((f) => ({ color: f.color, pct: total > 0 ? (f.valor / total) * 100 : 0 }))}
-          centerLabel="En total"
+          centerLabel="Gastaste"
           centerValue={fmtMoney(total)}
         />
       </div>
@@ -116,7 +163,26 @@ function Tarjeta({ titulo, ultima, children }: { titulo: string; ultima: boolean
 
 export function MisVisualizaciones() {
   const g = vistaGastos();
-  const gastos = g.gastos;
+  const { estado } = useAlmacen();
+
+  // El mes que miran las tres tarjetas: 0 es el actual. Hacia atrás, hasta el
+  // primer mes con un gasto o un ingreso registrado.
+  const [mesOffset, setMesOffset] = useState(0);
+  const mesActual = mesAtras(0);
+  const mes = mesAtras(mesOffset);
+  const primerMes = [...g.gastos, ...estado.ingresos].reduce((min, x) => { const m = mesDe(x.ts); return m < min ? m : min; }, mesActual);
+  const maxOffset = mesesEntre(primerMes, mesActual);
+  const selector = (
+    <SelectorMes
+      etiqueta={nombreDelMes(mes, mesActual)}
+      puedeAtras={mesOffset < maxOffset}
+      puedeAdelante={mesOffset > 0}
+      onMover={(hacia) => setMesOffset((o) => Math.min(maxOffset, Math.max(0, o + (hacia === 'atras' ? 1 : -1))))}
+    />
+  );
+  const referencia = mesOffset === 0 ? 'este mes' : `en ${nombreDelMes(mes, mesActual).toLowerCase()}`;
+
+  const gastos = g.gastos.filter((x) => mesDe(x.ts) === mes);
 
   const filaRef = useRef<HTMLDivElement>(null);
   const [actual, setActual] = useState(0);
@@ -142,27 +208,47 @@ export function MisVisualizaciones() {
     .filter((f) => f.valor > 0)
     .sort((a, b) => b.valor - a.valor);
 
+  // Sin ningún gasto registrado, se invita a anotar el primero; con gastos en
+  // otros meses pero no en éste, se dice que en éste no hay.
+  const sinGastosNunca = g.gastos.length === 0;
   const tarjetas = [
     {
       titulo: 'Ingresos y gastos',
-      contenido: <IngresosVsGastos explorar />,
+      contenido: (
+        <>
+          {selector}
+          <IngresosVsGastos explorar mesElegido={mes} onElegirMes={(m) => setMesOffset(Math.min(maxOffset, Math.max(0, mesesEntre(m, mesActual))))} />
+        </>
+      ),
     },
     {
       titulo: 'Gastos por categoría',
       // Puede haber muchas categorías: la leyenda se scrollea ADENTRO de su
       // propio alto en vez de estirar la tarjeta (y con ella, todas las demás
       // de la fila).
-      contenido: gastos.length === 0
-        ? <SinDatos>Anotá tu primer gasto para ver cuánto va a cada categoría.</SinDatos>
-        : porSeccion.length === 0 ? <SinDatos>Todavía no hay gastos con categoría.</SinDatos>
-        : <TortaSecciones filas={porSeccion} total={porSeccion.reduce((t, f) => t + f.valor, 0)} />,
+      contenido: (
+        <>
+          {selector}
+          {sinGastosNunca
+            ? <SinDatos>Anotá tu primer gasto para ver cuánto va a cada categoría.</SinDatos>
+            : gastos.length === 0 ? <SinDatos>No hay gastos {referencia}.</SinDatos>
+            : porSeccion.length === 0 ? <SinDatos>No hay gastos con categoría {referencia}.</SinDatos>
+            : <TortaSecciones filas={porSeccion} total={porSeccion.reduce((t, f) => t + f.valor, 0)} />}
+        </>
+      ),
     },
     {
       titulo: 'Gastos por tipo',
-      contenido: gastos.length === 0
-        ? <SinDatos>Anotá gastos para ver cuánto fue necesario, urgente o gusto.</SinDatos>
-        : porTipo.length === 0 ? <SinDatos>Todavía no hay gastos clasificados.</SinDatos>
-        : <Barras filas={porTipo} />,
+      contenido: (
+        <>
+          {selector}
+          {sinGastosNunca
+            ? <SinDatos>Anotá gastos para ver cuánto fue necesario, urgente o gusto.</SinDatos>
+            : gastos.length === 0 ? <SinDatos>No hay gastos {referencia}.</SinDatos>
+            : porTipo.length === 0 ? <SinDatos>No hay gastos clasificados {referencia}.</SinDatos>
+            : <Barras filas={porTipo} />}
+        </>
+      ),
     },
   ];
 

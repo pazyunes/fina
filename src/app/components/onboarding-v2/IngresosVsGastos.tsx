@@ -90,8 +90,11 @@ type Columna = { clave: string; etiqueta: string; aria: string; entro: number; s
 // · `explorar` (Home): cada mes se puede tocar para ver sus números, y se dice
 //   cuánto te quedó o por cuánto te pasaste. Es un gráfico para recorrer, no
 //   donde estás parada.
-export function IngresosVsGastos({ conLista = false, explorar = false, mesElegido, semana }: {
-  conLista?: boolean; explorar?: boolean; mesElegido?: string; semana?: Semana;
+// Con `explorar` y `onElegirMes`, el mes lo maneja quien lo usa (Mis
+// visualizaciones, que lo comparte entre sus tarjetas y lo muestra arriba):
+// `mesElegido` es el que se mira y tocar una columna lo avisa.
+export function IngresosVsGastos({ conLista = false, explorar = false, mesElegido, onElegirMes, semana }: {
+  conLista?: boolean; explorar?: boolean; mesElegido?: string; onElegirMes?: (mes: string) => void; semana?: Semana;
 }) {
   const { estado } = useAlmacen();
   // De los últimos 6 meses, desde el primero que tiene algo cargado: los meses
@@ -104,7 +107,9 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
   const meses = seisMeses.slice(primero === -1 ? seisMeses.length - 1 : primero);
   const mesActual = meses[meses.length - 1];
   const [tocado, setTocado] = useState(mesActual);
-  const elegido = explorar ? tocado : (mesElegido ?? mesActual);
+  const controlado = explorar && !!onElegirMes;
+  const elegido = explorar && !controlado ? tocado : (mesElegido ?? mesActual);
+  const elegir = (mes: string) => (onElegirMes ? onElegirMes(mes) : setTocado(mes));
   const esEsteMes = elegido === mesActual;
   const [borrando, setBorrando] = useState<string | null>(null);
   // La lista de ingresos (sólo en Gastos) muestra los primeros y "Ver todos".
@@ -175,9 +180,12 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
     <div className="flex flex-col gap-3">
       {/* El período elegido, en números. */}
       <div className="flex flex-col gap-2">
-        <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
-          {tituloPeriodo}
-        </p>
+        {/* Controlado, el mes ya se dice arriba, en el selector. */}
+        {!controlado && (
+          <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
+            {tituloPeriodo}
+          </p>
+        )}
         <div className={`grid gap-2 ${explorar ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <Cifra color={INGRESO} etiqueta="Ingresos" valor={actual.entro} />
           <Cifra color={GASTO} etiqueta="Gastos" valor={actual.salio} />
@@ -222,7 +230,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
               <button
                 key={c.clave}
                 type="button"
-                onClick={() => setTocado(c.clave)}
+                onClick={() => elegir(c.clave)}
                 aria-pressed={c.sel}
                 aria-label={c.aria}
                 className={`v2-focus flex-1 ${anchoColumna} h-full flex items-end justify-center gap-[2px] rounded-lg transition-opacity`}
