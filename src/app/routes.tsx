@@ -91,6 +91,9 @@ export const router = createBrowserRouter([
       { path: "/onboarding-v2/gastos/secciones", element: <TodasLasSecciones /> },
       { path: "/onboarding-v2/progreso", element: <ProgresoPasos /> },
       { path: "/onboarding-v2/objetivos", element: <ObjetivosV2 /> },
+      // "Ver todos" de cada parte de Mis planes: la lista completa.
+      { path: "/onboarding-v2/objetivos/ahorro", element: <ObjetivosV2 lista="ahorro" /> },
+      { path: "/onboarding-v2/objetivos/gasto", element: <ObjetivosV2 lista="gasto" /> },
       { path: "/onboarding-v2/inversiones", element: <InversionesV2 /> },
       { path: "/onboarding-v2/perfil", element: <PerfilV2 /> },
       { path: "/onboarding-v2/grupos", element: <GruposV2 /> },

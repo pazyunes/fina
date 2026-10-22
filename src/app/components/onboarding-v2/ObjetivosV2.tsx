@@ -4,7 +4,7 @@ import { Fini } from './Fini';
 import { colorDeTono, datosDelObjetivo } from './ObjetivosEnInicio';
 import { diaArgentina, formasDeLlegarAntes, mensajePlazo, parsearHorizonte, reservaPorMes, textoImpacto, type FormaDeLlegar } from '../../utils/goalStrategies';
 import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
-import { BORDE_FALTA, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, TextoFalta, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
+import { BORDE_FALTA, BotonVolver, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, TextoFalta, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp, useVolver } from './shared';
 import { useFaltantes } from './useFaltantes';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -432,7 +432,17 @@ function MontoPicker({
   );
 }
 
-export function ObjetivosV2() {
+// Cuántos planes muestra cada parte de Mis planes antes de "Ver todos". Las
+// filas son altas: con más, una lista larga de objetivos de ahorro dejaba los
+// gastos planificados varias pantallas más abajo.
+const LIMITE_PLANES = 3;
+
+/**
+ * Mis planes. Con `lista`, es la pantalla con TODOS los de una parte (se llega
+ * desde "Ver todos"): la misma lógica, las mismas hojas y el mismo detalle,
+ * sólo cambia qué se lista.
+ */
+export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
   const { estado: db } = useAlmacen();
   const miUserId = db.grupo?.miembros.find((m) => m.sosVos)?.userId ?? '';
   const nombrePorUserId = useMemo(
@@ -578,6 +588,7 @@ export function ObjetivosV2() {
   const location = useLocation();
   const navigate = useNavigate();
   const volverAlOrigen = useVolverAlOrigen();
+  const volverAPlanes = useVolver('/onboarding-v2/objetivos');
   useAlLlegar('aporte_objetivo', ({ objetivoId, ref }) => {
     const enCurso = db.objetivos.filter((o) => o.estado === 'active');
     if (enCurso.length === 0) return;
@@ -1221,7 +1232,11 @@ export function ObjetivosV2() {
     : null);
   // Lo que ya se pagó y no se repite, sale de la lista: ya no retiene nada.
   const enLista = objetivos.filter((o) => o.estado !== 'cancelled' && !(o.clase === 'gasto' && o.estado === 'achieved' && !o.repite));
-  const gastosQueVienen = enLista.filter((o) => o.clase === 'gasto');
+  // Los gastos planificados, del más próximo al más lejano: el que ya tocaba
+  // ("Era para hoy, ¿ya lo pagaste?") queda arriba y no se esconde detrás de
+  // "Ver todos". Los que no tienen fecha, al final.
+  const fechaPlan = (o: Objetivo) => parsearHorizonte(o.horizonte, hoyAR) ?? '9999-12-31';
+  const gastosQueVienen = enLista.filter((o) => o.clase === 'gasto').sort((a, b) => fechaPlan(a).localeCompare(fechaPlan(b)));
   const deAhorro = enLista.filter((o) => o.clase !== 'gasto');
   const reservaTotal = (() => {
     let min = 0; let max = 0; let cuantos = 0;
@@ -1407,13 +1422,7 @@ export function ObjetivosV2() {
     </button>
   );
 
-  return (
-    <div className="px-[22px] pt-4 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
-      {V2_STYLES}
-      {modalCrear}
-      {confirmarBorrarModal}
-
-      {pagando && (
+  const hojaPago = pagando && (
         <Hoja titulo={`Pagar ${pagando.nombre}`} onCerrar={() => setPagandoId(null)}>
           <div ref={faltaPago.ref} className="flex flex-col gap-3 pt-1">
             <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
@@ -1450,7 +1459,51 @@ export function ObjetivosV2() {
             </button>
           </div>
         </Hoja>
-      )}
+  );
+
+  const EJEMPLO_ALTA = { ahorro: 'Ej: Vacaciones, un colchón', gasto: 'Ej: Psicóloga, la cuota del celular' } as const;
+
+  // ── Pantalla con todos los de una parte (desde "Ver todos") ──
+  if (lista) {
+    const items = lista === 'ahorro' ? deAhorro : gastosQueVienen;
+    return (
+      <div className="px-[22px] pt-4 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
+        {V2_STYLES}
+        {modalCrear}
+        {confirmarBorrarModal}
+        {hojaPago}
+        <header className="flex flex-col gap-1">
+          <BotonVolver onClick={volverAPlanes} />
+          <Titulo>{lista === 'ahorro' ? 'Objetivos de ahorro' : 'Gastos planificados'}</Titulo>
+        </header>
+        {/* El botón va arriba de la lista: con muchos, abajo quedaba lejos. */}
+        {botonAgregar(lista === 'ahorro' ? 'Agregar objetivo de ahorro' : 'Agregar gasto planificado', () => abrirAlta(lista, EJEMPLO_ALTA[lista]))}
+        {items.length === 0
+          ? <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>{lista === 'ahorro' ? 'Todavía no tenés objetivos de ahorro.' : 'Todavía no tenés gastos planificados.'}</p>
+          : <div className="flex flex-col">{items.map(fila)}</div>}
+      </div>
+    );
+  }
+
+  // "Ver todos" de cada parte, como en Gastos: abre la pantalla con la lista
+  // completa. No aparece si no hay nada escondido.
+  const verTodos = (clase: 'ahorro' | 'gasto', total: number) => total > LIMITE_PLANES && (
+    <button
+      type="button"
+      onClick={() => navigate(`/onboarding-v2/objetivos/${clase}`)}
+      className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
+      style={{ color: COLORS.brand }}
+    >
+      Ver todos ({total})
+    </button>
+  );
+
+  return (
+    <div className="px-[22px] pt-4 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
+      {V2_STYLES}
+      {modalCrear}
+      {confirmarBorrarModal}
+      {hojaPago}
 
       {/* Debajo del título, sin cartel: cuánto conviene apartar por mes en
           total (estimado, como rango, regla 4) y las sugerencias, que abren el
@@ -1465,14 +1518,35 @@ export function ObjetivosV2() {
         )}
       </header>
 
+      {/* Agregar, arriba y lado a lado, como en Gastos: con muchos planes, los
+          botones al final de cada lista quedaban fuera de la pantalla. */}
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          onClick={() => abrirAlta('ahorro', EJEMPLO_ALTA.ahorro)}
+          className="v2-focus flex-1 rounded-2xl py-3.5 px-2 text-[13px] font-bold leading-tight select-none transition-all duration-100 ease-out active:scale-[0.98]"
+          style={{ background: COLORS.brand, color: COLORS.surface }}
+        >
+          + Objetivo de ahorro
+        </button>
+        <button
+          type="button"
+          onClick={() => abrirAlta('gasto', EJEMPLO_ALTA.gasto)}
+          className="v2-focus flex-1 rounded-2xl py-3.5 px-2 text-[13px] font-bold leading-tight select-none transition-all duration-100 ease-out active:scale-[0.98]"
+          style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
+        >
+          + Gasto planificado
+        </button>
+      </div>
+
       {/* Primero los objetivos de ahorro: son las aspiraciones de la persona.
           Sin descripción: el título y el ejemplo ya dicen qué va acá. */}
-      <section className="mt-3 flex flex-col gap-2" aria-label="Objetivos de ahorro">
+      <section className="mt-1 flex flex-col gap-2" aria-label="Objetivos de ahorro">
         <TituloSeccion>Objetivos de ahorro</TituloSeccion>
         {deAhorro.length === 0
           ? vacio('ahorro', { nombre: 'Vacaciones', monto: '$0 de $500.000', cuando: 'para marzo' })
-          : <div className="flex flex-col">{deAhorro.map(fila)}</div>}
-        {deAhorro.length > 0 && botonAgregar('Agregar objetivo de ahorro', () => abrirAlta('ahorro', 'Ej: Vacaciones, un colchón'))}
+          : <div className="flex flex-col">{deAhorro.slice(0, LIMITE_PLANES).map(fila)}</div>}
+        {verTodos('ahorro', deAhorro.length)}
       </section>
 
       {/* Después lo que ya sabe que va a pagar. Una sola frase, porque es lo
@@ -1485,8 +1559,8 @@ export function ObjetivosV2() {
         </div>
         {gastosQueVienen.length === 0
           ? vacio('gasto', { nombre: 'Psicóloga', monto: '$0 de $40.000', cuando: 'cada mes, el 10' })
-          : <div className="flex flex-col">{gastosQueVienen.map(fila)}</div>}
-        {gastosQueVienen.length > 0 && botonAgregar('Agregar gasto planificado', () => abrirAlta('gasto', 'Ej: Psicóloga, la cuota del celular'))}
+          : <div className="flex flex-col">{gastosQueVienen.slice(0, LIMITE_PLANES).map(fila)}</div>}
+        {verTodos('gasto', gastosQueVienen.length)}
       </section>
     </div>
   );

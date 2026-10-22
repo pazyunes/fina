@@ -212,6 +212,12 @@ Reglas duras:
   su situación financiera y después la mejore.
 - **Mostrar menos.** Una lista larga muestra los primeros ítems y un "Ver todos" (como
   Mercado Pago), no todo de una. Letra chica sólo para lo que de verdad es secundario.
+- **Los botones principales nunca quedan debajo de una lista que crece.** Por más gastos,
+  ingresos u objetivos que cargue la persona, el botón para agregar sigue a la vista: va
+  arriba de la lista, no al final. Si una lista puede crecer sin límite, se muestran los
+  primeros y "Ver todos" abre una pantalla nueva con la lista completa (Todos tus
+  gastos, Todos tus ingresos, Objetivos de ahorro, Gastos planificados), en vez de
+  desplegarla en el lugar.
 - **Lo importante, sin scrollear.** En un celular de 375px, lo principal de cada pantalla
   se ve completo al abrirla. Tamaños de referencia (bajados 1px en oct 2026): título de
   pantalla 24px, título de sección 17px, texto 13 a 14px, dato principal 24 a 30px. Nada
