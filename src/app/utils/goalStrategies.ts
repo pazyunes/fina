@@ -265,6 +265,8 @@ export type MensajePlazo = {
   salida: string | null;
   /** 'accion' = hay algo para hacer (naranja de relleno, nunca rojo) · 'logro' = va bien (lima) · 'neutral'. */
   tono: 'accion' | 'logro' | 'neutral';
+  /** Si el texto o la salida son una proyección: se marcan como estimado (regla 4). */
+  estimado: boolean;
   /** El rango por semana de la salida, para precargar el registro. En la moneda del objetivo. */
   porSemana: RangoNum | null;
 };
@@ -280,11 +282,14 @@ function otraFecha(dias: number): string {
  */
 export function mensajePlazo(s: SituacionPlazo, fmt: (n: number) => string): MensajePlazo | null {
   switch (s.tipo) {
+    // Sin aportes todavía no hay nada atrasado: es un objetivo por empezar, y
+    // marcarlo en naranja se leía como un error. Va neutral.
     case 'sin-aportes':
       return {
         texto: `${quedan(s.dias)} y no le apartaste nada en las últimas 4 semanas.`,
         salida: `Apartando entre ${fmt(s.porSemana.min)} y ${fmt(s.porSemana.max)} por semana, llegás para el ${fechaLarga(s.fecha)}.${otraFecha(s.dias)}`,
-        tono: 'accion',
+        tono: 'neutral',
+        estimado: true,
         porSemana: s.porSemana,
       };
     case 'no-llega':
@@ -292,12 +297,13 @@ export function mensajePlazo(s: SituacionPlazo, fmt: (n: number) => string): Men
         texto: `${quedan(s.dias)} y a este ritmo no llegás para el ${fechaLarga(s.fecha)}.`,
         salida: `Apartando entre ${fmt(s.porSemana.min)} y ${fmt(s.porSemana.max)} por semana, llegás.${otraFecha(s.dias)}`,
         tono: 'accion',
+        estimado: true,
         porSemana: s.porSemana,
       };
     case 'en-camino':
-      return { texto: `A este ritmo llegás para el ${fechaLarga(s.fecha)}.`, salida: null, tono: 'logro', porSemana: null };
+      return { texto: `A este ritmo llegás para el ${fechaLarga(s.fecha)}.`, salida: null, tono: 'logro', estimado: true, porSemana: null };
     case 'vencido':
-      return { texto: `La fecha ya pasó (${fechaLarga(s.fecha)}).`, salida: 'Elegí una nueva fecha.', tono: 'neutral', porSemana: null };
+      return { texto: `La fecha ya pasó (${fechaLarga(s.fecha)}).`, salida: 'Elegí una nueva fecha.', tono: 'neutral', estimado: false, porSemana: null };
     default:
       return null;
   }

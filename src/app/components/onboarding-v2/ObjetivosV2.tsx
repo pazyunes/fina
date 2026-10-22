@@ -190,16 +190,19 @@ const CARD_SHADOW = 'border';
 const inputClass = 'ov2-input v2-focus rounded-xl px-3 py-2.5 text-[14px] outline-none transition-colors';
 
 const HORIZONTE_OPCIONES = ['Lo antes posible', 'Todavía no lo pensé'];
+// Un gasto planificado ya se sabe que se va a pagar: "Todavía no lo pensé" no
+// tiene sentido ahí. Los que ya lo tenían guardado lo conservan.
+const HORIZONTE_OPCIONES_GASTO = ['Lo antes posible'];
 
 // Plazo del objetivo — quedó acá (ya no en el onboarding) porque cada
 // objetivo puede tener el suyo propio. Si toca "elegir una fecha exacta",
 // se abre un calendario real en vez de pedirlo escrito.
-function HorizontePicker({ valor, setValor, fecha, setFecha }: { valor: string | null; setValor: (v: string | null) => void; fecha: string; setFecha: (v: string) => void }) {
+function HorizontePicker({ valor, setValor, fecha, setFecha, esGasto = false }: { valor: string | null; setValor: (v: string | null) => void; fecha: string; setFecha: (v: string) => void; esGasto?: boolean }) {
   const fechaElegida = !!fecha;
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
-        {HORIZONTE_OPCIONES.map((o) => (
+        {(esGasto ? HORIZONTE_OPCIONES_GASTO : HORIZONTE_OPCIONES).map((o) => (
           <button
             key={o}
             type="button"
@@ -835,7 +838,7 @@ export function ObjetivosV2() {
               minTxt={editMontoMin} setMinTxt={setEditMontoMin}
             />
             <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Para cuándo?</p>
-            <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} />
+            <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} esGasto={abierto.clase === 'gasto'} />
             <div className="flex gap-2 mt-1">
               <button type="button" onClick={() => setEditando(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[13px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
               <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="v2-focus flex-[2] rounded-xl py-2.5 text-[13px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
@@ -955,7 +958,7 @@ export function ObjetivosV2() {
             <TituloSeccion>Próximo paso</TituloSeccion>
             <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>{mensaje?.texto ?? sinPlazo}</p>
             {mensaje?.salida && <p className="text-[13px] leading-snug tabular-nums" style={{ color: COLORS.ink }}>{mensaje.salida}</p>}
-            {mensaje && mensaje.tono !== 'neutral' && <EstadoConfianza estado="estimado" />}
+            {mensaje?.estimado && <EstadoConfianza estado="estimado" />}
             <button
               type="button"
               onClick={() => (pasoVencido ? empezarEdicion() : irASumar(mensaje?.porSemana?.min ?? null))}
@@ -1109,7 +1112,7 @@ export function ObjetivosV2() {
 
         <div className="flex flex-col gap-1.5">
           <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>{claseNueva === 'gasto' ? '¿Cuándo lo pagás?' : '¿Para cuándo necesitás esa plata?'}</p>
-          <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} />
+          <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} esGasto={claseNueva === 'gasto'} />
           {claseNueva === 'gasto' && (
             <div className="flex flex-col gap-1.5 pt-1">
               <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Se repite?</p>
