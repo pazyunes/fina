@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Fini } from './Fini';
 import {
-  ArmarGrupoBtn, BotonVolver, COLORS, borrarDatosLocales, useVolver, FONTS, OpcionesLista, TituloSeccion,
+  ArmarGrupoBtn, BORDE_FALTA, BotonVolver, COLORS, borrarDatosLocales, useVolver, FONTS, OpcionesLista, TextoFalta, TituloSeccion,
   loadV2Foto, loadV2Nombre, loadV2NivelFinanciero, subirV2Foto, saveV2Nombre, saveV2NivelFinanciero, vistaGastos, vistaObjetivos,
   biometriaDisponible, guardarBloqueoPin, quitarBloqueoApp, quitarBloqueoBiometria, registrarBiometria, tieneBloqueoBiometria, tieneBloqueoPin,
 } from './shared';
@@ -12,6 +12,7 @@ import { cerrarSesion } from '../../api/v2/cuenta';
 import { llevarA, useAlLlegar } from './alLlegar';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 import { IconEditar } from './FinaIcons';
+import { useFaltantes } from './useFaltantes';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 
 // Checklist de "Completá tu perfil" — normal, sin puntos ni gamificación
@@ -72,6 +73,7 @@ export function PerfilV2() {
   // nombre guardado no hay nada que mostrar, así que arranca editando.
   const [nombreGuardado, setNombreGuardado] = useState(() => loadV2Nombre());
   const [editandoNombre, setEditandoNombre] = useState(() => !loadV2Nombre().trim());
+  const faltaNombre = useFaltantes({ nombre: !nombre.trim() }, editandoNombre);
   const [guardado, setGuardado] = useState(false);
   const [nivel, setNivel] = useState<string | null>(() => loadV2NivelFinanciero());
   const [abriendoNivel, setAbriendoNivel] = useState(false);
@@ -164,13 +166,15 @@ export function PerfilV2() {
   }
 
   function guardarNombre() {
-    const limpio = nombre.trim();
-    saveV2Nombre(limpio);
-    setNombre(limpio);
-    setNombreGuardado(limpio);
-    setEditandoNombre(false);
-    setGuardado(true);
-    setTimeout(() => setGuardado(false), 1500);
+    faltaNombre.intentar(() => {
+      const limpio = nombre.trim();
+      saveV2Nombre(limpio);
+      setNombre(limpio);
+      setNombreGuardado(limpio);
+      setEditandoNombre(false);
+      setGuardado(true);
+      setTimeout(() => setGuardado(false), 1500);
+    });
   }
   function cancelarNombre() {
     setNombre(nombreGuardado);
@@ -226,32 +230,34 @@ export function PerfilV2() {
       </div>
 
       {editandoNombre ? (
-        <div className="flex flex-col gap-2">
+        <div ref={faltaNombre.ref} className="flex flex-col gap-2">
           <label htmlFor="perfil-nombre" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu nombre</label>
           <div className="flex gap-2">
             <input
               id="perfil-nombre"
+              data-campo="nombre"
               autoFocus={!!nombreGuardado}
+              aria-invalid={faltaNombre.marcado('nombre') || undefined}
               className="v2-focus flex-1 min-w-0 rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
-              style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
+              style={{ background: COLORS.surface, border: faltaNombre.marcado('nombre') ? BORDE_FALTA : `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
               placeholder="Tu nombre"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && nombre.trim()) guardarNombre();
+                if (e.key === 'Enter') guardarNombre();
                 if (e.key === 'Escape' && nombreGuardado) cancelarNombre();
               }}
             />
             <button
               type="button"
               onClick={guardarNombre}
-              disabled={!nombre.trim()}
-              className="v2-focus rounded-2xl px-5 font-bold v2-disabled transition-all duration-100 active:scale-95 shrink-0 inline-flex items-center justify-center"
+              className="v2-focus rounded-2xl px-5 font-bold transition-all duration-100 active:scale-95 shrink-0 inline-flex items-center justify-center"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Guardar
             </button>
           </div>
+          {faltaNombre.marcado('nombre') && <TextoFalta>Falta tu nombre.</TextoFalta>}
           {nombreGuardado && (
             <button type="button" onClick={cancelarNombre} className="v2-focus self-start min-h-[44px] px-1 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
               Cancelar

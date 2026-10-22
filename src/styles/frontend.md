@@ -224,6 +224,12 @@ Reglas duras:
   en el medio de la pantalla se mezcla con lo que hay alrededor y no se sabe dónde
   termina. En el lugar sólo se despliega texto de lectura: una explicación, los pasos de
   "Cómo hacerlo".
+- **El botón de guardar no se apaga por un campo vacío.** Un botón gris no dice qué
+  falta. Se toca, y si falta algo, `useFaltantes` (`onboarding-v2/useFaltantes.ts`)
+  marca cada campo que falta con `BORDE_FALTA` y una línea corta con `TextoFalta`
+  ("Falta el monto."), y lleva la vista y el foco al primero. El color es el de error de
+  la paleta (`--fina-naranja-texto`): en FINA no hay rojo. El botón sólo se apaga
+  mientras se está guardando.
 - **Inicio es un tablero de entradas.** Lo que tiene su propia pantalla aparece en Inicio
   como un botón o una fila compacta (título, una línea, a lo sumo una barrita) que lleva
   ahí; el detalle vive en su pantalla. Ejemplo: el recordatorio de sumarle a un objetivo

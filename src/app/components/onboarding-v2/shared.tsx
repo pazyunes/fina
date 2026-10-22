@@ -966,6 +966,15 @@ export function OpcionesMulti({
   );
 }
 
+// Un campo que falta completar (useFaltantes). El tono de error de la paleta
+// (naranja-texto, frontend.md §3.3: en FINA no hay rojo) en el borde, y una
+// línea corta abajo: el color solo no alcanza para saber qué pasa (WCAG 1.4.1).
+export const BORDE_FALTA = `1.5px solid ${COLORS.naranjaText}`;
+
+export function TextoFalta({ children }: { children: React.ReactNode }) {
+  return <p className="text-[13px] font-semibold" style={{ color: COLORS.naranjaText }}>{children}</p>;
+}
+
 // CTA principal. El deshabilitado llevaba relleno #F1EBDF (1.11 sobre papel) y
 // texto tinta-suave: no se leía como control, se leía como texto suelto flotando
 // abajo. Ahora lleva relleno propio MÁS borde de 3:1 y texto 5.5:1 — sigue

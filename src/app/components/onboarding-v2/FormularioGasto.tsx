@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { COLORS, fmtMoney, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { BORDE_FALTA, COLORS, TextoFalta, fmtMoney, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { useFaltantes } from './useFaltantes';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
@@ -55,8 +56,8 @@ function medioDeFila(f: FilaPago): string {
 
 // Desplegable nativo. En el celular abre el selector del sistema, que es lo más
 // cómodo para elegir de una lista larga con el dedo.
-export function Desplegable({ id, label, value, onChange, children }: {
-  id: string; label: string; value: string; onChange: (v: string) => void; children: React.ReactNode;
+export function Desplegable({ id, label, value, onChange, marcado = false, children }: {
+  id: string; label: string; value: string; onChange: (v: string) => void; marcado?: boolean; children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -66,9 +67,10 @@ export function Desplegable({ id, label, value, onChange, children }: {
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          aria-invalid={marcado || undefined}
           className="v2-focus w-full appearance-none rounded-xl pl-3.5 pr-10 min-h-[48px] text-[14px] transition-colors"
           // Sin nada elegido, el texto va tenue como un placeholder.
-          style={{ ...INPUT_STYLE, color: value ? COLORS.ink : COLORS.inkFaint }}
+          style={{ ...INPUT_STYLE, color: value ? COLORS.ink : COLORS.inkFaint, ...(marcado ? { border: BORDE_FALTA } : {}) }}
         >
           {children}
         </select>
@@ -129,7 +131,14 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
     pagos.every((f) => medioDeFila(f) && parseMoneyInput(f.monto) > 0)
     && Math.abs(sumaPagos - parseMoneyInput(monto)) < 0.01
   );
-  const puedeGuardar = parseMoneyInput(monto) > 0 && (!!catId || !!nuevaCat.trim()) && (editando || opcionFijoValida(fijo)) && pagosValidos;
+  // En el orden de la pantalla: al tocar Agregar con algo sin completar, se
+  // marca y la vista va al primero (useFaltantes).
+  const faltantes = useFaltantes({
+    monto: parseMoneyInput(monto) <= 0,
+    categoria: !catId && !nuevaCat.trim(),
+    pagos: !pagosValidos,
+    fijo: !editando && !opcionFijoValida(fijo),
+  });
 
   function seccionElegida(): string | null {
     if (!nuevaCat.trim()) return catId;
@@ -181,15 +190,17 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
   const idBase = gasto ? `g-${gasto.id}` : 'ng';
 
   return (
-    <div data-form-gasto className="py-2 flex flex-col gap-3">
+    <div ref={faltantes.ref} data-form-gasto className="py-2 flex flex-col gap-3">
       <div className="flex gap-2">
         <div className="relative flex-1 min-w-0">
           <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{moneda === 'USD' ? 'US$' : '$'}</span>
           <input
             autoFocus
+            data-campo="monto"
             aria-label="Monto del gasto"
+            aria-invalid={faltantes.marcado('monto') || undefined}
             className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[14px] transition-colors"
-            style={INPUT_STYLE}
+            style={{ ...INPUT_STYLE, ...(faltantes.marcado('monto') ? { border: BORDE_FALTA } : {}) }}
             placeholder="Monto"
             inputMode="decimal"
             value={monto}
@@ -210,6 +221,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
           ))}
         </div>
       </div>
+      {faltantes.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
       <input
         aria-label="Descripción del gasto"
         className="v2-focus rounded-xl px-3.5 py-2.5 text-[14px] transition-colors"
@@ -236,10 +248,13 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
       {/* Sección y medio en desplegables: con todas las opciones como botones
           el formulario ocupaba tres pantallas en el celular. */}
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
-        <div className="flex flex-col gap-2">
+        {/* Con una categoría nueva a medio escribir, lo que se marca y recibe
+            el foco es el nombre, no el desplegable. */}
+        <div data-campo={creandoCat ? undefined : 'categoria'} className="flex flex-col gap-2">
           <Desplegable
             id={`${idBase}-seccion`}
             label="Categoría"
+            marcado={faltantes.marcado('categoria') && !creandoCat}
             value={catId ? `c:${catId}` : creandoCat ? 'nueva' : nuevaCat ? `s:${nuevaCat}` : ''}
             onChange={(v) => {
               setCatId(v.startsWith('c:') ? v.slice(2) : null);
@@ -263,14 +278,17 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
           {creandoCat && (
             <input
               autoFocus
+              data-campo="categoria"
               aria-label="Nombre de la categoría nueva"
+              aria-invalid={faltantes.marcado('categoria') || undefined}
               className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
-              style={INPUT_STYLE}
+              style={{ ...INPUT_STYLE, ...(faltantes.marcado('categoria') ? { border: BORDE_FALTA } : {}) }}
               placeholder="Ej: Mascota"
               value={nuevaCat}
               onChange={(e) => setNuevaCat(e.target.value)}
             />
           )}
+          {faltantes.marcado('categoria') && <TextoFalta>{creandoCat ? 'Falta el nombre de la categoría.' : 'Falta la categoría.'}</TextoFalta>}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -322,16 +340,17 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
       {/* Dividido entre varios medios: una fila por medio, cada una con su
           monto; la suma tiene que dar el total de arriba. */}
       {dividido && (
-        <div className="flex flex-col gap-2">
+        <div data-campo="pagos" className="flex flex-col gap-2">
           <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Con qué lo pagaste?</p>
           {pagos.map((f, i) => (
             <div key={i} className="flex gap-1.5 items-start">
               <select
                 aria-label={`Medio ${i + 1}`}
+                aria-invalid={(faltantes.marcado('pagos') && !medioDeFila(f)) || undefined}
                 value={f.medio}
                 onChange={(e) => setPagos((v) => v.map((x, idx) => (idx === i ? { ...x, medio: e.target.value } : x)))}
                 className="v2-focus flex-1 min-w-0 rounded-xl pl-3 pr-2 min-h-[48px] text-[13px] transition-colors"
-                style={{ ...INPUT_STYLE, color: f.medio ? COLORS.ink : COLORS.inkFaint }}
+                style={{ ...INPUT_STYLE, color: f.medio ? COLORS.ink : COLORS.inkFaint, ...(faltantes.marcado('pagos') && !medioDeFila(f) ? { border: BORDE_FALTA } : {}) }}
               >
                 <option value="" style={OPCION}>Medio</option>
                 {metodosOfrecidos.map((m) => <option key={m} value={m} style={OPCION}>{m}</option>)}
@@ -349,12 +368,13 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
               )}
               <input
                 aria-label={`Monto pagado con el medio ${i + 1}`}
+                aria-invalid={(faltantes.marcado('pagos') && parseMoneyInput(f.monto) <= 0) || undefined}
                 placeholder="Monto"
                 inputMode="decimal"
                 value={f.monto}
                 onChange={(e) => setPagos((v) => v.map((x, idx) => (idx === i ? { ...x, monto: formatThousands(e.target.value) } : x)))}
                 className="v2-focus w-[104px] shrink-0 rounded-xl px-2.5 min-h-[48px] text-[13px] transition-colors"
-                style={INPUT_STYLE}
+                style={{ ...INPUT_STYLE, ...(faltantes.marcado('pagos') && parseMoneyInput(f.monto) <= 0 ? { border: BORDE_FALTA } : {}) }}
               />
               {pagos.length > 2 && (
                 <button
@@ -380,6 +400,9 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
           <p className="text-[13px] tabular-nums" style={{ color: pagosValidos ? COLORS.inkSoft : COLORS.coralDark }}>
             Sumado: {fmtMoney(sumaPagos)} de {fmtMoney(parseMoneyInput(monto))}
           </p>
+          {faltantes.marcado('pagos') && pagos.some((f) => !medioDeFila(f) || parseMoneyInput(f.monto) <= 0) && (
+            <TextoFalta>Falta el medio o el monto en alguna fila.</TextoFalta>
+          )}
         </div>
       )}
 
@@ -444,7 +467,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
 
       {/* Un gasto que ya pasó no se puede volver "gasto fijo": esto es para
           crear uno nuevo, no para editar un movimiento. */}
-      {!editando && <CamposGastoFijo valor={fijo} onChange={setFijo} />}
+      {!editando && <CamposGastoFijo valor={fijo} onChange={setFijo} marcado={faltantes.marcado('fijo')} />}
 
       {error && <p role="alert" className="text-[13px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{error}</p>}
 
@@ -454,9 +477,8 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
         </button>
         <button
           type="button"
-          onClick={() => void guardar()}
-          disabled={!puedeGuardar}
-          className="v2-focus flex-[2] rounded-xl py-2.5 min-h-[44px] text-[13px] font-bold v2-disabled transition-all duration-100 active:scale-95"
+          onClick={() => faltantes.intentar(() => void guardar())}
+          className="v2-focus flex-[2] rounded-xl py-2.5 min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           {editando ? 'Guardar cambios' : fijo.activo && !fijo.yaPagado ? 'Guardar gasto fijo' : 'Agregar gasto'}

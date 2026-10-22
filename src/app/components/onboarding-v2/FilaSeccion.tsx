@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { COLORS, Monto, SegmentedTab, formatThousands, parseMoneyInput } from './shared';
+import { BORDE_FALTA, COLORS, Monto, SegmentedTab, TextoFalta, formatThousands, parseMoneyInput } from './shared';
+import { useFaltantes } from './useFaltantes';
 import * as acciones from '../../api/v2/acciones';
 import { IconBasura, IconEditar } from './FinaIcons';
 import { INPUT_STYLE } from './FormularioGasto';
@@ -30,42 +31,50 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
   const [renombrando, setRenombrando] = useState(false);
   const [nombre, setNombre] = useState(cat.nombre);
   const [borrando, setBorrando] = useState(false);
+  const faltaTope = useFaltantes({ monto: parseMoneyInput(monto) <= 0 }, abierta);
+  const faltaNombre = useFaltantes({ nombre: !nombre.trim() }, renombrando);
 
   function guardarTope() {
-    const n = parseMoneyInput(monto);
-    if (n <= 0) return;
-    acciones.guardarTope(cat.id, { monto: n, periodo });
-    onAbrir(false);
+    faltaTope.intentar(() => {
+      acciones.guardarTope(cat.id, { monto: parseMoneyInput(monto), periodo });
+      onAbrir(false);
+    });
   }
   function guardarNombre() {
-    if (!nombre.trim()) return;
-    acciones.renombrarSeccion(cat.id, nombre.trim());
-    setRenombrando(false);
+    faltaNombre.intentar(() => {
+      acciones.renombrarSeccion(cat.id, nombre.trim());
+      setRenombrando(false);
+    });
   }
 
   return (
     <div data-seccion={cat.id} className="py-3.5 border-b last:border-b-0 flex flex-col gap-2" style={{ borderColor: COLORS.line }}>
       {renombrando ? (
-        <div className="flex gap-2">
-          <input
-            autoFocus
-            aria-label={`Nuevo nombre para ${cat.nombre}`}
-            maxLength={40}
-            className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[44px] text-[14px]"
-            style={INPUT_STYLE}
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') guardarNombre();
-              if (e.key === 'Escape') { setNombre(cat.nombre); setRenombrando(false); }
-            }}
-          />
-          <button type="button" disabled={!nombre.trim()} onClick={guardarNombre} className="v2-focus rounded-xl px-4 min-h-[44px] text-[13px] font-bold v2-disabled" style={{ background: COLORS.brand, color: COLORS.surface }}>
-            Guardar
-          </button>
-          <button type="button" onClick={() => { setNombre(cat.nombre); setRenombrando(false); }} className="v2-focus rounded-xl px-3 min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
-            Cancelar
-          </button>
+        <div ref={faltaNombre.ref} className="flex flex-col gap-1.5">
+          <div className="flex gap-2">
+            <input
+              autoFocus
+              data-campo="nombre"
+              aria-label={`Nuevo nombre para ${cat.nombre}`}
+              aria-invalid={faltaNombre.marcado('nombre') || undefined}
+              maxLength={40}
+              className="v2-focus flex-1 min-w-0 rounded-xl px-3 min-h-[44px] text-[14px]"
+              style={{ ...INPUT_STYLE, ...(faltaNombre.marcado('nombre') ? { border: BORDE_FALTA } : {}) }}
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') guardarNombre();
+                if (e.key === 'Escape') { setNombre(cat.nombre); setRenombrando(false); }
+              }}
+            />
+            <button type="button" onClick={guardarNombre} className="v2-focus rounded-xl px-4 min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.brand, color: COLORS.surface }}>
+              Guardar
+            </button>
+            <button type="button" onClick={() => { setNombre(cat.nombre); setRenombrando(false); }} className="v2-focus rounded-xl px-3 min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+              Cancelar
+            </button>
+          </div>
+          {faltaNombre.marcado('nombre') && <TextoFalta>Falta el nombre.</TextoFalta>}
         </div>
       ) : (
         <div className="flex items-center gap-2">
@@ -127,15 +136,17 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
       )}
 
       {abierta && (
-        <div className="flex flex-col gap-2 pt-1">
+        <div ref={faltaTope.ref} className="flex flex-col gap-2 pt-1">
           <div className="relative">
             <span className="absolute top-1/2 -translate-y-1/2 left-3.5" style={{ color: COLORS.inkSoft }}>$</span>
             <input
               autoFocus
               aria-label={`Tope de ${cat.nombre}`}
+              aria-invalid={faltaTope.marcado('monto') || undefined}
               data-tope-de={cat.id}
+              data-campo="monto"
               className="v2-focus w-full rounded-xl pl-7 pr-3 py-2 min-h-[44px] text-[13px] transition-colors"
-              style={INPUT_STYLE}
+              style={{ ...INPUT_STYLE, ...(faltaTope.marcado('monto') ? { border: BORDE_FALTA } : {}) }}
               placeholder="Monto"
               inputMode="decimal"
               value={monto}
@@ -143,6 +154,7 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
               onKeyDown={(e) => { if (e.key === 'Enter') guardarTope(); }}
             />
           </div>
+          {faltaTope.marcado('monto') && <TextoFalta>Falta el monto del tope.</TextoFalta>}
           <div className="flex gap-2 items-center">
             <div className="flex-1">
               <SegmentedTab
@@ -154,8 +166,7 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
             </div>
             <button
               type="button"
-              disabled={parseMoneyInput(monto) <= 0}
-              className="v2-focus rounded-xl px-3.5 py-2.5 min-h-[44px] text-[13px] font-bold v2-disabled transition-all duration-100 active:scale-95 shrink-0"
+              className="v2-focus rounded-xl px-3.5 py-2.5 min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95 shrink-0"
               style={{ background: COLORS.brand, color: COLORS.surface }}
               onClick={guardarTope}
             >

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAlLlegar, useVolverAlOrigen } from './alLlegar';
-import { ArmarGrupoBtn, BotonVolver, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
+import { ArmarGrupoBtn, BORDE_FALTA, BotonVolver, COLORS, Chip, Cta, Donut, EstadoConfianza, FONTS, Monto, OpcionesGrid, Rango, Tabs, TextoFalta, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
+import { useFaltantes } from './useFaltantes';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
@@ -297,6 +298,7 @@ export function InversionesV2() {
   // "Tus registros" muestra los primeros y "Ver todos" (§3.5, mostrar menos).
   const [verTodosAportes, setVerTodosAportes] = useState(false);
   const [aporteMonto, setAporteMonto] = useState('');
+  const faltaAporte = useFaltantes({ monto: parseMoneyInput(aporteMonto) <= 0 }, aporteAbierto);
   const [aporteInstrId, setAporteInstrId] = useState<string>(INSTRUMENTOS[0].id);
   // Moneda en la que se está cargando ESTE aporte. Es independiente de la
   // moneda de visualización de la pantalla: podés estar mirando totales en
@@ -552,7 +554,7 @@ export function InversionesV2() {
                 />
               </div>
 
-              <div className="flex flex-col gap-2.5">
+              <div ref={faltaAporte.ref} className="flex flex-col gap-2.5">
                 <TituloSeccion>¿Cuánto?</TituloSeccion>
                 {/* En qué moneda lo pusiste. Es independiente de la moneda en
                     que estás mirando los totales: podés ver en dólares y
@@ -587,15 +589,18 @@ export function InversionesV2() {
                   <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{aporteMoneda === 'USD' ? 'US$' : '$'}</span>
                   <input
                     autoFocus
+                    data-campo="monto"
                     aria-label={`Monto del aporte en ${aporteMoneda === 'USD' ? 'dólares' : 'pesos'}`}
+                    aria-invalid={faltaAporte.marcado('monto') || undefined}
                     className={`v2-focus w-full rounded-2xl ${aporteMoneda === 'USD' ? 'pl-14' : 'pl-8'} pr-4 py-3 text-[15px] font-mono tabular-nums outline-none transition-colors`}
-                    style={{ background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                    style={{ background: COLORS.surface, color: COLORS.ink, border: faltaAporte.marcado('monto') ? BORDE_FALTA : `1.5px solid ${COLORS.lineStrong}` }}
                     placeholder="Monto"
                     inputMode="decimal"
                     value={aporteMonto}
                     onChange={(e) => setAporteMonto(formatThousands(e.target.value))}
                   />
                 </div>
+                {faltaAporte.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
                 {/* Se dice el equivalente y con qué cotización queda guardado,
                     para que no haya sorpresa después. */}
                 {aporteMoneda === 'USD' && rate && parseMoneyInput(aporteMonto) > 0 && (
@@ -612,13 +617,12 @@ export function InversionesV2() {
 
               <Cta
                 label={editandoId ? 'Guardar cambios' : 'Guardar'}
-                disabled={parseMoneyInput(aporteMonto) <= 0}
                 // El modal se cierra sólo si el aporte se pudo cargar: si falla
                 // la cotización, se queda abierto con el monto ya escrito.
-                onClick={() => {
+                onClick={() => faltaAporte.intentar(() => {
                   if (editandoId) { void guardarEdicion().then((ok) => { if (ok) cerrarAporte(); }); return; }
                   void agregarAporte().then((ok) => { if (ok) cerrarAporte(); });
-                }}
+                })}
               />
 
               {/* Borrar. La confirmación se pide en el mismo lugar en vez de un

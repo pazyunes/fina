@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
-import { COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fmtMoney, formatThousands, parseMoneyInput } from './shared';
+import { BORDE_FALTA, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, TextoFalta, Titulo, TituloSeccion, fmtMoney, formatThousands, parseMoneyInput } from './shared';
+import { useFaltantes } from './useFaltantes';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { apartadoTotal } from '../../api/v2/apartado';
 import * as acciones from '../../api/v2/acciones';
@@ -62,6 +63,7 @@ export function GastosV2() {
   // Agregar ingreso.
   const [addingDisponible, setAddingDisponible] = useState(false);
   const [addDispVal, setAddDispVal] = useState('');
+  const faltaIngreso = useFaltantes({ monto: parseMoneyInput(addDispVal) <= 0 }, addingDisponible);
   const [addDispMetodo, setAddDispMetodo] = useState<string | null>(null);
   const [addDispMetodoOtro, setAddDispMetodoOtro] = useState('');
   const [addDispFuente, setAddDispFuente] = useState<FuenteIngreso | ''>('');
@@ -466,17 +468,20 @@ export function GastosV2() {
 
         {addingDisponible && (
           <Hoja titulo="Nuevo ingreso" onCerrar={cerrarIngreso}>
-          <div className="flex flex-col gap-2 pt-1">
+          <div ref={faltaIngreso.ref} className="flex flex-col gap-2 pt-1">
             <input
               autoFocus
+              data-campo="monto"
               aria-label="Monto que te entró"
+              aria-invalid={faltaIngreso.marcado('monto') || undefined}
               className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[14px] transition-colors"
-              style={INPUT_STYLE}
+              style={{ ...INPUT_STYLE, ...(faltaIngreso.marcado('monto') ? { border: BORDE_FALTA } : {}) }}
               placeholder="Monto"
               inputMode="decimal"
               value={addDispVal}
               onChange={(e) => setAddDispVal(formatThousands(e.target.value))}
             />
+            {faltaIngreso.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
             <select
               aria-label="De dónde vino la plata"
               value={addDispFuente}
@@ -563,7 +568,7 @@ export function GastosV2() {
               <button type="button" onClick={cerrarIngreso} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
                 Cancelar
               </button>
-              <button type="button" onClick={agregarDinero} disabled={parseMoneyInput(addDispVal) <= 0} className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[13px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
+              <button type="button" onClick={() => faltaIngreso.intentar(agregarDinero)} className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
                 Agregar ingreso
               </button>
             </div>

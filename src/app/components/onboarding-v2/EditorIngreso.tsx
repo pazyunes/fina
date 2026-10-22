@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { COLORS, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
+import { BORDE_FALTA, COLORS, TextoFalta, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
+import { useFaltantes } from './useFaltantes';
 import { aInputFecha, deInputFecha } from './FormularioGasto';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -30,6 +31,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
 
   const montoNum = parseMoneyInput(monto);
   const medioFinal = (medio === 'otro' ? medioOtro : medio).trim();
+  const faltantes = useFaltantes({ monto: montoNum <= 0 });
 
   async function guardar() {
     if (montoNum <= 0 || guardando) return;
@@ -55,7 +57,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
   }
 
   return (
-    <div className="mt-2 rounded-xl px-3.5 py-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }} role="group" aria-label="Editar ingreso">
+    <div ref={faltantes.ref} className="mt-2 rounded-xl px-3.5 py-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }} role="group" aria-label="Editar ingreso">
       <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Editar ingreso</p>
 
       <div className="flex gap-2">
@@ -63,10 +65,12 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
           <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{moneda === 'USD' ? 'US$' : '$'}</span>
           <input
             autoFocus
+            data-campo="monto"
             aria-label="Monto del ingreso"
+            aria-invalid={faltantes.marcado('monto') || undefined}
             inputMode="decimal"
             className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[14px]"
-            style={INPUT_STYLE}
+            style={{ ...INPUT_STYLE, ...(faltantes.marcado('monto') ? { border: BORDE_FALTA } : {}) }}
             value={monto}
             onChange={(e) => setMonto(formatThousands(e.target.value))}
           />
@@ -86,6 +90,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
           ))}
         </div>
       </div>
+      {faltantes.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`ing-fuente-${ingreso.id}`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿De dónde vino?</label>
@@ -167,8 +172,8 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
         </button>
         <button
           type="button"
-          onClick={() => void guardar()}
-          disabled={montoNum <= 0 || guardando}
+          onClick={() => faltantes.intentar(() => void guardar())}
+          disabled={guardando}
           className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[13px] font-bold v2-disabled"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >

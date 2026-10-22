@@ -4,7 +4,8 @@ import { Fini } from './Fini';
 import { colorDeTono, datosDelObjetivo } from './ObjetivosEnInicio';
 import { diaArgentina, formasDeLlegarAntes, mensajePlazo, parsearHorizonte, reservaPorMes, textoImpacto, type FormaDeLlegar } from '../../utils/goalStrategies';
 import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
-import { COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
+import { BORDE_FALTA, COLORS, Celebracion, Coachmark, Cta, Donut, EstadoConfianza, FONTS, SegmentedTab, TextoFalta, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, invitarAGrupo, loadV2Nombre, loadV2PerfilOnboarding, parseMoneyInput, useCountUp } from './shared';
+import { useFaltantes } from './useFaltantes';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
@@ -197,7 +198,7 @@ const HORIZONTE_OPCIONES_GASTO = ['Lo antes posible'];
 // Plazo del objetivo — quedó acá (ya no en el onboarding) porque cada
 // objetivo puede tener el suyo propio. Si toca "elegir una fecha exacta",
 // se abre un calendario real en vez de pedirlo escrito.
-function HorizontePicker({ valor, setValor, fecha, setFecha, esGasto = false }: { valor: string | null; setValor: (v: string | null) => void; fecha: string; setFecha: (v: string) => void; esGasto?: boolean }) {
+function HorizontePicker({ valor, setValor, fecha, setFecha, esGasto = false, marcado = false }: { valor: string | null; setValor: (v: string | null) => void; fecha: string; setFecha: (v: string) => void; esGasto?: boolean; marcado?: boolean }) {
   const fechaElegida = !!fecha;
   return (
     <div className="flex flex-col gap-2">
@@ -225,11 +226,15 @@ function HorizontePicker({ valor, setValor, fecha, setFecha, esGasto = false }: 
       {(valor === null || fechaElegida) && (
         <input
           type="date"
+          data-campo="fecha"
+          aria-invalid={marcado || undefined}
           className={`${inputClass} w-full`}
+          style={marcado ? { border: BORDE_FALTA } : undefined}
           value={fecha}
           onChange={(e) => { setFecha(e.target.value); setValor(null); }}
         />
       )}
+      {marcado && <TextoFalta>Falta la fecha.</TextoFalta>}
     </div>
   );
 }
@@ -347,12 +352,15 @@ function montoLabel(o: Objetivo): string {
 // Selector de "cómo querés poner el monto" — se reusa al crear un objetivo
 // y al completar uno que llegó incompleto desde el onboarding.
 function MontoPicker({
-  modo, setModo, montoTxt, setMontoTxt, minTxt, setMinTxt,
+  modo, setModo, montoTxt, setMontoTxt, minTxt, setMinTxt, marcado = false,
 }: {
   modo: MontoModo; setModo: (m: MontoModo) => void;
   montoTxt: string; setMontoTxt: (v: string) => void;
   minTxt: string; setMinTxt: (v: string) => void;
+  /** Se tocó guardar sin monto (useFaltantes): se marca el campo de `montoTxt`. */
+  marcado?: boolean;
 }) {
+  const marca = { 'data-campo': 'monto', 'aria-invalid': marcado || undefined, style: marcado ? { border: BORDE_FALTA } : undefined };
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex gap-1.5">
@@ -380,6 +388,7 @@ function MontoPicker({
         <div className="relative">
           <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
           <input
+            {...marca}
             className={`w-full ${inputClass} pl-8`}
             placeholder="Monto"
             inputMode="decimal"
@@ -404,6 +413,7 @@ function MontoPicker({
           <div className="relative flex-1 min-w-0">
             <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>
             <input
+              {...marca}
               className={`w-full ${inputClass} pl-8`}
               placeholder="Hasta"
               inputMode="decimal"
@@ -417,6 +427,7 @@ function MontoPicker({
       {modo === 'desconocido' && (
         <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Lo completás después.</p>
       )}
+      {marcado && modo !== 'desconocido' && <TextoFalta>Falta el monto.</TextoFalta>}
     </div>
   );
 }
@@ -528,6 +539,18 @@ export function ObjetivosV2() {
   }
 
   const abierto = objetivos.find((o) => o.id === openId) || null;
+
+  // Lo que falta completar en cada formulario de esta pantalla: al tocar
+  // guardar se marca y la vista va ahí (useFaltantes).
+  const faltaCrear = useFaltantes({
+    nombre: !nombre.trim(),
+    fecha: !horizonte && !horizonteFecha,
+    grupo: tipo === 'grupal' && !grupo && !invitarNombre.trim(),
+  }, creating);
+  const faltaEditar = useFaltantes({ nombre: !editNombre.trim() }, editando);
+  const faltaMonto = useFaltantes({ monto: montoModoEdit !== 'desconocido' && parseMoneyInput(montoTotalEdit) <= 0 }, !!abierto);
+  const faltaRegistro = useFaltantes({ monto: parseMoneyInput(regMonto) <= 0 }, sumando);
+  const faltaPago = useFaltantes({ monto: parseMoneyInput(montoPago) <= 0 }, pagandoId !== null);
 
   // El plan de cada objetivo lo arma la IA una vez por semana (ver
   // api/recomendaciones.ts). Si todavía no hay, se muestra el consejo de siempre.
@@ -819,9 +842,18 @@ export function ObjetivosV2() {
         </div>
 
         {editando ? (
-          <div className="flex flex-col gap-2.5 pt-1">
+          <div ref={faltaEditar.ref} className="flex flex-col gap-2.5 pt-1">
             <TituloSeccion>Editar objetivo</TituloSeccion>
-            <input className={inputClass} placeholder="Nombre" value={editNombre} onChange={(e) => setEditNombre(e.target.value)} />
+            <input
+              data-campo="nombre"
+              aria-invalid={faltaEditar.marcado('nombre') || undefined}
+              className={inputClass}
+              style={faltaEditar.marcado('nombre') ? { border: BORDE_FALTA } : undefined}
+              placeholder="Nombre"
+              value={editNombre}
+              onChange={(e) => setEditNombre(e.target.value)}
+            />
+            {faltaEditar.marcado('nombre') && <TextoFalta>Falta el nombre.</TextoFalta>}
             <input className={inputClass} placeholder="Descripción (opcional)" value={editDescripcion} onChange={(e) => setEditDescripcion(e.target.value)} />
             <SegmentedTab
               options={[{ id: 'individual' as TipoObjetivo, label: 'Individual' }, { id: 'grupal' as TipoObjetivo, label: 'En conjunto' }]}
@@ -841,7 +873,7 @@ export function ObjetivosV2() {
             <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} esGasto={abierto.clase === 'gasto'} />
             <div className="flex gap-2 mt-1">
               <button type="button" onClick={() => setEditando(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[13px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
-              <button type="button" onClick={guardarEdicion} disabled={!editNombre.trim()} className="v2-focus flex-[2] rounded-xl py-2.5 text-[13px] font-bold v2-disabled transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
+              <button type="button" onClick={() => faltaEditar.intentar(guardarEdicion)} className="v2-focus flex-[2] rounded-xl py-2.5 text-[13px] font-bold transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
             </div>
           </div>
         ) : (
@@ -918,18 +950,18 @@ export function ObjetivosV2() {
         )}
 
         {estado !== 'definido' && (
-          <div className="flex flex-col gap-2.5 pt-1">
+          <div ref={faltaMonto.ref} className="flex flex-col gap-2.5 pt-1">
             <TituloSeccion>¿Cuánto necesitás?</TituloSeccion>
             <MontoPicker
               modo={montoModoEdit} setModo={setMontoModoEdit}
               montoTxt={montoTotalEdit} setMontoTxt={setMontoTotalEdit}
               minTxt={montoMinEdit} setMinTxt={setMontoMinEdit}
+              marcado={faltaMonto.marcado('monto')}
             />
             <button
               type="button"
-              onClick={completarMontoTotal}
-              disabled={montoModoEdit !== 'desconocido' && parseMoneyInput(montoTotalEdit) <= 0}
-              className="v2-focus rounded-xl px-4 py-2.5 font-bold v2-disabled transition-all duration-100 active:scale-95"
+              onClick={() => faltaMonto.intentar(completarMontoTotal)}
+              className="v2-focus rounded-xl px-4 py-2.5 font-bold transition-all duration-100 active:scale-95"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Guardar
@@ -1016,7 +1048,9 @@ export function ObjetivosV2() {
             </div>
           )}
           {sumando && (
-            <>
+            // `contents`: no suma una caja al layout, sólo agrupa los campos
+            // para useFaltantes.
+            <div ref={faltaRegistro.ref} className="contents">
             {abierto.clase !== 'gasto' && (
             <div className="grid grid-cols-2 gap-2">
               {(['paid', 'saved'] as const).map((k) => {
@@ -1045,7 +1079,10 @@ export function ObjetivosV2() {
               <input
                 className={`flex-1 min-w-0 ${inputClass}`}
                 data-monto-registro
+                data-campo="monto"
                 aria-label="Monto del registro"
+                aria-invalid={faltaRegistro.marcado('monto') || undefined}
+                style={faltaRegistro.marcado('monto') ? { border: BORDE_FALTA } : undefined}
                 placeholder="Monto"
                 inputMode="decimal"
                 value={regMonto}
@@ -1054,16 +1091,16 @@ export function ObjetivosV2() {
               <div className="shrink-0"><MonedaDropdown value={regMoneda} onChange={setRegMoneda} /></div>
               <button
                 type="button"
-                onClick={() => void agregarRegistro()}
-                disabled={parseMoneyInput(regMonto) <= 0}
+                onClick={() => faltaRegistro.intentar(() => void agregarRegistro())}
                 aria-label="Sumar registro"
-                className="v2-focus rounded-xl px-4 flex items-center justify-center font-bold v2-disabled transition-all duration-100 active:scale-95 shrink-0"
+                className="v2-focus rounded-xl px-4 flex items-center justify-center font-bold transition-all duration-100 active:scale-95 shrink-0"
                 style={{ background: COLORS.brand, color: COLORS.surface }}
               >
                 <IconMas size={18} />
               </button>
             </div>
-            </>
+            {faltaRegistro.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
+            </div>
           )}
           {errorRegistro && (
             <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{errorRegistro}</p>
@@ -1100,19 +1137,32 @@ export function ObjetivosV2() {
   const cerrarCrear = () => (volverAlOrigen ? volverAlOrigen() : setCreating(false));
   const modalCrear = creating && (
     <div className="fixed inset-0 z-30 flex items-center justify-center p-5" style={{ background: `${COLORS.ink}73` }} onClick={cerrarCrear}>
-      <div className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto rounded-[24px] p-5 flex flex-col gap-3.5" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
+      <div ref={faltaCrear.ref} className="w-full max-w-[380px] max-h-[85vh] overflow-y-auto rounded-[24px] p-5 flex flex-col gap-3.5" style={{ background: COLORS.surface }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <p className="text-[17px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{claseNueva === 'gasto' ? 'Nuevo gasto planificado' : 'Nuevo objetivo de ahorro'}</p>
           <button type="button" onClick={cerrarCrear} aria-label="Cerrar" className="v2-focus w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90" style={{ background: COLORS.tint, color: COLORS.inkSoft }}><IconClose size={16} /></button>
         </div>
         <label htmlFor="nuevo-objetivo-nombre" className="sr-only">Nombre (obligatorio)</label>
-        <input id="nuevo-objetivo-nombre" autoFocus required aria-required="true" className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder={ejemploNombre} value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        <input
+          id="nuevo-objetivo-nombre"
+          data-campo="nombre"
+          autoFocus
+          required
+          aria-required="true"
+          aria-invalid={faltaCrear.marcado('nombre') || undefined}
+          className={`${inputClass} rounded-2xl py-3 text-[15px]`}
+          style={faltaCrear.marcado('nombre') ? { border: BORDE_FALTA } : undefined}
+          placeholder={ejemploNombre}
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+        />
+        {faltaCrear.marcado('nombre') && <TextoFalta>Falta el nombre.</TextoFalta>}
         <input className={`${inputClass} rounded-2xl py-3 text-[15px]`} placeholder="Descripción (opcional)" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
 
         <div className="flex flex-col gap-1.5">
           <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>{claseNueva === 'gasto' ? '¿Cuándo lo pagás?' : '¿Para cuándo necesitás esa plata?'}</p>
-          <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} esGasto={claseNueva === 'gasto'} />
+          <HorizontePicker valor={horizonte} setValor={setHorizonte} fecha={horizonteFecha} setFecha={setHorizonteFecha} esGasto={claseNueva === 'gasto'} marcado={faltaCrear.marcado('fecha')} />
           {claseNueva === 'gasto' && (
             <div className="flex flex-col gap-1.5 pt-1">
               <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>¿Se repite?</p>
@@ -1137,8 +1187,8 @@ export function ObjetivosV2() {
         />
         {/* La fecha es obligatoria: sin ella no se puede decir cuánto reservar
             ni cuándo preguntar si se usó. */}
-        <Cta label="Agregar" disabled={!nombre.trim() || (!horizonte && !horizonteFecha) || (tipo === 'grupal' && !grupo && !invitarNombre.trim())} onClick={() => void crearObjetivo()} />
-        {nombre.trim() && !horizonte && !horizonteFecha && (
+        <Cta label="Agregar" onClick={() => faltaCrear.intentar(() => void crearObjetivo())} />
+        {nombre.trim() && !horizonte && !horizonteFecha && !faltaCrear.marcado('fecha') && (
           <p className="text-[13px] text-center -mt-1" style={{ color: COLORS.inkSoft }}>Elegí una fecha exacta para ver cuánto apartar por mes.</p>
         )}
         {tipo === 'grupal' && !grupo && !invitarNombre.trim() && (
@@ -1365,7 +1415,7 @@ export function ObjetivosV2() {
 
       {pagando && (
         <Hoja titulo={`Pagar ${pagando.nombre}`} onCerrar={() => setPagandoId(null)}>
-          <div className="flex flex-col gap-3 pt-1">
+          <div ref={faltaPago.ref} className="flex flex-col gap-3 pt-1">
             <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
               Se anota en Gastos y usa lo que tenías apartado, así no se descuenta dos veces del disponible.
               {pagando.repite === 'semanal' ? ' La fecha pasa a la semana que viene.' : pagando.repite === 'mensual' ? ' La fecha pasa al mes que viene.' : ''}
@@ -1374,13 +1424,16 @@ export function ObjetivosV2() {
               <label htmlFor="pago-monto" className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Cuánto pagaste?</label>
               <input
                 id="pago-monto"
+                data-campo="monto"
                 autoFocus
                 inputMode="decimal"
+                aria-invalid={faltaPago.marcado('monto') || undefined}
                 className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px] tabular-nums"
-                style={INPUT_STYLE}
+                style={{ ...INPUT_STYLE, ...(faltaPago.marcado('monto') ? { border: BORDE_FALTA } : {}) }}
                 value={montoPago}
                 onChange={(e) => setMontoPago(formatThousands(e.target.value))}
               />
+              {faltaPago.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
             </div>
             <Desplegable id="pago-seccion" label="Categoría" value={seccionPago} onChange={setSeccionPago}>
               <option value="" style={{ color: COLORS.ink }}>Sin categoría</option>
@@ -1389,9 +1442,8 @@ export function ObjetivosV2() {
             {errorPago && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{errorPago}</p>}
             <button
               type="button"
-              disabled={parseMoneyInput(montoPago) <= 0}
-              onClick={() => void confirmarPago()}
-              className="v2-focus w-full rounded-2xl min-h-[48px] text-[14px] font-bold v2-disabled transition-transform active:scale-[0.99]"
+              onClick={() => faltaPago.intentar(() => void confirmarPago())}
+              className="v2-focus w-full rounded-2xl min-h-[48px] text-[14px] font-bold transition-transform active:scale-[0.99]"
               style={{ background: COLORS.lima, color: COLORS.ink }}
             >
               Anotar el gasto

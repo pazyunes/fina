@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { COLORS, SegmentedTab, TituloSeccion, fmtMoney } from './shared';
+import { BORDE_FALTA, COLORS, SegmentedTab, TextoFalta, TituloSeccion, fmtMoney } from './shared';
 import { IconBasura, IconCalendario, IconChevron } from './FinaIcons';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -60,7 +60,8 @@ export function opcionFijoValida(o: OpcionFijo): boolean {
   return o.yaPagado ? n > 0 : n >= 0;
 }
 
-export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChange: (o: OpcionFijo) => void }) {
+/** `marcado`: se tocó guardar con la fecha sin completar o fuera de rango (useFaltantes). */
+export function CamposGastoFijo({ valor, onChange, marcado = false }: { valor: OpcionFijo; onChange: (o: OpcionFijo) => void; marcado?: boolean }) {
   const hoy = diaArgentina();
   const manana = sumarUnDia(hoy);
 
@@ -127,15 +128,18 @@ export function CamposGastoFijo({ valor, onChange }: { valor: OpcionFijo; onChan
             </label>
             <input
               id="fijo-fecha"
+              data-campo="fijo"
               type="date"
               min={valor.yaPagado ? manana : hoy}
               value={valor.proximo}
               onChange={(e) => onChange({ ...valor, proximo: e.target.value, fechaElegida: true })}
+              aria-invalid={marcado || undefined}
               className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px]"
-              style={{ background: COLORS.surface, color: valor.proximo ? COLORS.ink : COLORS.inkFaint, border: `1.5px solid ${COLORS.lineStrong}` }}
+              style={{ background: COLORS.surface, color: valor.proximo ? COLORS.ink : COLORS.inkFaint, border: marcado ? BORDE_FALTA : `1.5px solid ${COLORS.lineStrong}` }}
             />
+            {marcado && !valor.proximo && <TextoFalta>Falta la fecha.</TextoFalta>}
             {valor.proximo && !opcionFijoValida(valor) && (
-              <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>
+              <p className="text-[13px]" style={{ color: marcado ? COLORS.naranjaText : COLORS.inkSoft, fontWeight: marcado ? 600 : undefined }}>
                 {valor.yaPagado ? 'Elegí una fecha a partir de mañana.' : 'Elegí una fecha a partir de hoy.'}
               </p>
             )}
