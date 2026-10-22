@@ -90,7 +90,11 @@ function elegir(objetivos: Objetivo[], dolar: number | null): { o: Objetivo; d: 
 export function ObjetivosEnInicio() {
   const { estado } = useAlmacen();
   const navigate = useNavigate();
-  const elegido = elegir(estado.objetivos, estado.dolar);
+  // Con más de un objetivo de ahorro en curso, la fila habla de todos y abre
+  // la lista; la línea sigue mostrando el que más importa hoy.
+  const ahorros = estado.objetivos.filter((o) => o.estado === 'active' && o.clase === 'ahorro');
+  const varios = ahorros.length > 1;
+  const elegido = elegir(varios ? ahorros : estado.objetivos, estado.dolar);
 
   if (!elegido) {
     return (
@@ -113,6 +117,18 @@ export function ObjetivosEnInicio() {
     ? `${fmt(d.juntado)} de ${fmt(d.total)} ${esGasto ? 'apartados' : 'ahorrados'}`
     : 'Ponele un monto para ver cuánto falta';
   const nombre = o.nombre.charAt(0).toLowerCase() + o.nombre.slice(1);
+
+  if (varios) {
+    return (
+      <Entrada
+        titulo="Aportá a tus objetivos"
+        linea={`${o.nombre}: ${conMonto ? linea : 'ponele un monto'}`}
+        pct={pct}
+        atencion={mensaje?.tono === 'accion'}
+        onClick={() => navigate('/onboarding-v2/objetivos', { state: { from: '/onboarding-v2/home' } })}
+      />
+    );
+  }
 
   return (
     <Entrada
