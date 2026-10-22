@@ -396,9 +396,22 @@ export function GastosV2() {
                   <Monto value={s.monto} className="text-[13px] font-semibold" />
                 </li>
               ))}
+              {/* Lleva a Tus categorías, más abajo en esta pantalla, donde está
+                  el resto. El área para tocar mide 44px sin agrandar la lista. */}
               {porSeccion.length > 3 && (
-                <li className="text-[13px] pl-[22px]" style={{ color: COLORS.inkSoft }}>
-                  Y {porSeccion.length - 3} {porSeccion.length - 3 === 1 ? 'categoría más' : 'categorías más'}
+                <li className="pl-[22px]">
+                  <button
+                    type="button"
+                    onClick={() => llevarA(
+                      () => pantallaRef.current?.querySelector<HTMLElement>('[data-tus-categorias]'),
+                      () => pantallaRef.current?.querySelector<HTMLElement>('[data-tus-categorias]'),
+                      'start',
+                    )}
+                    className="v2-focus inline-flex items-center min-h-[44px] -my-3 text-[13px] font-semibold underline text-left rounded-lg"
+                    style={{ color: COLORS.brand }}
+                  >
+                    Y {porSeccion.length - 3} {porSeccion.length - 3 === 1 ? 'categoría más' : 'categorías más'}
+                  </button>
                 </li>
               )}
               {conApartado && (
@@ -607,7 +620,7 @@ export function GastosV2() {
 
       {/* Tus secciones: las 5 donde más se gastó, con su total y su tope.
           Renombrar y borrar están en Tus secciones, la pantalla completa. */}
-      <section className="flex flex-col gap-1" aria-label="Tus categorías">
+      <section data-tus-categorias tabIndex={-1} className="flex flex-col gap-1 scroll-mt-4" aria-label="Tus categorías">
         <TituloSeccion>Tus categorías</TituloSeccion>
         {categorias.length === 0 ? (
           // Vidriera vacía (§10): promesa, no falla. Único lugar de esta

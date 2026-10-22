@@ -55,13 +55,16 @@ export function useVolverAlOrigen(): (() => void) | null {
  * Con una espera corta a propósito: el elemento suele aparecer recién en el
  * render que dispara la acción, y el layout sube el scroll arriba del todo al
  * cambiar de pantalla — si se hiciera en el acto, ese scroll lo taparía.
+ *
+ * `bloque`: 'center' para un campo; 'start' para una parte entera de la
+ * pantalla, así se ve desde su título.
  */
-export function llevarA(buscar: () => HTMLElement | null | undefined, enfocar?: () => HTMLElement | null | undefined) {
+export function llevarA(buscar: () => HTMLElement | null | undefined, enfocar?: () => HTMLElement | null | undefined, bloque: ScrollLogicalPosition = 'center') {
   window.setTimeout(() => {
     const el = buscar();
     if (!el) return;
     const reducir = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    el.scrollIntoView({ block: 'center', behavior: reducir ? 'auto' : 'smooth' });
+    el.scrollIntoView({ block: bloque, behavior: reducir ? 'auto' : 'smooth' });
     (enfocar?.() ?? null)?.focus({ preventScroll: true });
   }, 120);
 }

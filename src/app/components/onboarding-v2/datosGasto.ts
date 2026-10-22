@@ -64,10 +64,13 @@ export function seccionesDeLaBase(db: EstadoV2): { categorias: Categoria[]; tope
 // séptima volvía al color de la primera). Fuera de la paleta a propósito: el
 // lima (es el Disponible en el anillo), el lila (lo apartado), la tinta (Total
 // gastado) y el gris (Sin categoría). El orden no es estético: validado con
-// dataviz/validate sobre blanco, dos vecinos se distinguen también con
-// daltonismo (ΔE 9,1) y los que quedan a un lugar, también (14,6), que es lo
-// que pasa en el anillo cuando la sección del medio no tuvo gastos. Conserva el
-// color de las secciones 1, 2, 5 y 6 de la paleta anterior.
+// dataviz/validate sobre blanco, dos colores seguidos en esta lista se
+// distinguen también con daltonismo (ΔE 9,1), y los que quedan a un lugar,
+// también (14,6). OJO: el anillo de Gastos ordena las secciones por lo gastado,
+// no por este orden, así que ahí cualquier par puede quedar pegado; los más
+// parecidos son magenta con cian y amarillo con naranja. Los nombres en las
+// referencias son la segunda señal. Conserva el color de las secciones 1, 2, 5
+// y 6 de la paleta anterior.
 const CAT_COLORS = [COLORS.brand, COLORS.naranja, COLORS.cian, COLORS.bordo, COLORS.azul, COLORS.magenta, COLORS.aqua, COLORS.amarilloDato];
 
 /**
