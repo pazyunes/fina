@@ -24,6 +24,8 @@ export function PasosNumerados({
 }) {
   const total = guia.pasos.length;
   const terminada = hechos.length === total;
+  // Los pasos que piden anotar la tasa no se pueden marcar como hechos sin anotarla.
+  const [tasaAnotada, setTasaAnotada] = useState<Record<string, boolean>>({});
 
   return (
     <>
@@ -71,7 +73,7 @@ export function PasosNumerados({
                     </div>
                   )}
                   <Bloque t="Sabés que salió bien cuando" x={paso.chequeo} />
-                  {paso.declara && <DeclararTasa onAnotar={(tna) => onDeclarar(paso, tna)} />}
+                  {paso.declara && <DeclararTasa anotada={!!tasaAnotada[paso.id]} onAnotar={(tna) => { setTasaAnotada({ ...tasaAnotada, [paso.id]: true }); onDeclarar(paso, tna); }} />}
 
                   {hecho && !paso.registra ? (
                     <>
@@ -79,7 +81,7 @@ export function PasosNumerados({
                       <BotonFantasma label="Marcar como pendiente" onClick={() => onDeshacer(i)} />
                     </>
                   ) : (
-                    <Cta label={paso.registra ? 'Anotarla en FINA' : 'Ya lo hice'} onClick={() => onHacer(i, paso)} />
+                    <Cta label={paso.registra ? 'Anotarla en FINA' : 'Ya lo hice'} disabled={!!paso.declara && !tasaAnotada[paso.id]} onClick={() => onHacer(i, paso)} />
                   )}
                   {i > 0 && <BotonFantasma label="← Volver al paso anterior" onClick={() => onAbrir(i - 1)} />}
                 </div>
@@ -130,17 +132,17 @@ function Bloque({ t, x, fuerte = false }: { t: string; x: string; fuerte?: boole
 
 /**
  * "¿Qué tasa te muestra la app?" Billeteras y fondos no tienen una API con su tasa: lo
- * que la persona ve en su pantalla es el dato real, y le sirve a todos. Es opcional.
+ * que la persona ve en su pantalla es el dato real, y le sirve a todos. Es obligatorio: sin la
+ * tasa no se puede calcular cuánto crece la plata, así que el paso no se marca como hecho sin anotarla.
  */
-function DeclararTasa({ onAnotar }: { onAnotar: (tna: number) => void }) {
+function DeclararTasa({ anotada, onAnotar }: { anotada: boolean; onAnotar: (tna: number) => void }) {
   const [txt, setTxt] = useState('');
-  const [hecho, setHecho] = useState(false);
   const n = txt.trim() ? leerNumero(txt) : null;
   const valida = n !== null && n >= 1 && n <= 200;
-  if (hecho) return <p className="text-[14px]" style={{ color: COLORS.limaText }}>Gracias: lo que ves en tu app ayuda a que las recomendaciones sean más precisas para todos.</p>;
+  if (anotada) return <p className="text-[14px]" style={{ color: COLORS.limaText }}>Anotada. Con ese número calculamos cuánto crece tu plata, y lo que ves en tu app ayuda a que las recomendaciones sean más precisas para todos.</p>;
   return (
     <div className="flex flex-col gap-2 rounded-2xl p-3" style={{ background: COLORS.tint }}>
-      <label htmlFor="declarar-tasa" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Qué tasa te muestra la app? (opcional)</label>
+      <label htmlFor="declarar-tasa" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>¿Qué tasa te muestra la app? (obligatorio para seguir)</label>
       <div className="flex gap-2">
         <div className="relative flex-1">
           <input
@@ -157,14 +159,14 @@ function DeclararTasa({ onAnotar }: { onAnotar: (tna: number) => void }) {
         <button
           type="button"
           disabled={!valida}
-          onClick={() => { if (valida && n !== null) { onAnotar(n / 100); setHecho(true); } }}
+          onClick={() => { if (valida && n !== null) onAnotar(n / 100); }}
           className="v2-focus min-h-[44px] rounded-2xl px-4 text-[15px] font-bold"
           style={valida ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.inkFaint, border: `1.5px solid ${COLORS.lineStrong}` }}
         >
           Anotar
         </button>
       </div>
-      <p className="text-[12px] leading-snug" style={{ color: COLORS.inkSoft }}>Es la TNA (tasa nominal anual: cuánto rinde en un año). Si solo ves la TEA, anotá esa.</p>
+      <p className="text-[12px] leading-snug" style={{ color: COLORS.inkSoft }}>Es la TNA (tasa nominal anual: cuánto rinde en un año). Con este número calculamos cuánto crece tu plata. Si solo ves la TEA, anotá esa.</p>
     </div>
   );
 }

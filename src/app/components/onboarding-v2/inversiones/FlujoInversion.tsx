@@ -40,6 +40,8 @@ export function FlujoInversion({
   const [entradas, setEntradas] = useState<Entradas>({ monto: null, plazoDias: null, ticker: null, cantidad: null, dolares: null });
   const [hechos, setHechos] = useState<number[]>([]);
   const [abierto, setAbierto] = useState(0);
+  // La tasa que la persona anotó en el paso a paso: llega ya cargada al registro.
+  const [tnaAnotada, setTnaAnotada] = useState<number | null>(null);
 
   // Retoma donde había quedado, en el proveedor que estaba haciendo.
   useEffect(() => {
@@ -152,6 +154,11 @@ export function FlujoInversion({
 
   if (!guia || !proveedor) return null;
 
+  const previosConTasa = (): Partial<Valores> => ({
+    ...previosParaRegistro(proveedor, producto.id, ctx),
+    ...(tnaAnotada !== null ? { tna: (tnaAnotada * 100).toLocaleString('es-AR', { maximumFractionDigits: 4 }) } : {}),
+  });
+
   return (
     <Hoja titulo={guia.titulo} onCerrar={onCerrar} ancho={460}>
       <PasosNumerados
@@ -164,13 +171,13 @@ export function FlujoInversion({
           const nuevos = hechos.includes(i) ? hechos : [...hechos, i];
           setHechos(nuevos);
           persistir(nuevos);
-          if (paso.registra) { onRegistrar(previosParaRegistro(proveedor, producto.id, ctx)); return; }
+          if (paso.registra) { onRegistrar(previosConTasa()); return; }
           if (i < total - 1) setAbierto(i + 1);
         }}
         onDeshacer={(i) => { const nuevos = hechos.filter((h) => h !== i); setHechos(nuevos); persistir(nuevos); }}
         onVerBasico={() => setFase('aprende')}
-        onDeclarar={(paso, tna) => { if (paso.declara) acciones.declararTasa({ ...paso.declara, tna }); }}
-        onRegistrar={() => onRegistrar(previosParaRegistro(proveedor, producto.id, ctx))}
+        onDeclarar={(paso, tna) => { setTnaAnotada(tna); if (paso.declara) acciones.declararTasa({ ...paso.declara, tna }); }}
+        onRegistrar={() => onRegistrar(previosConTasa())}
       />
     </Hoja>
   );
