@@ -65,7 +65,7 @@ export function RecomendacionesTab({
   );
   const resultado = useMemo(
     () => (mercado
-      ? recomendar({ mercado, perfil, horizonteMeses: horizonte, monto, usa, yaInvierteEn, necesitaCaja: !colchon?.cubierto, inflacionPersonal: inflacionPersonal?.mensual ?? null })
+      ? recomendar({ mercado, perfil, horizonteMeses: horizonte, monto, usa, yaInvierteEn, necesitaCaja: !colchon?.cubierto, faltaColchon: colchon && !colchon.cubierto ? colchon.falta : null, inflacionPersonal: inflacionPersonal?.mensual ?? null })
       : null),
     [mercado, perfil, horizonte, monto, usa, yaInvierteEn, colchon, inflacionPersonal],
   );

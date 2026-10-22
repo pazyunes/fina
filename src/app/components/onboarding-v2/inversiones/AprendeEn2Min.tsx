@@ -8,8 +8,7 @@ import { Hoja } from './Hoja';
 
 // "Aprendé en 2 minutos": lo esencial de una inversión en cuatro pantallas cortas,
 // siempre en el mismo orden. La primera es el glosario: las palabras que se van a
-// usar, antes de usarlas. En las otras sigue arriba, cerrado, por si hay que volver
-// a buscar una. Al final, "¡Empecemos!".
+// usar, antes de usarlas, y no se repite en las demás. Al final, "¡Empecemos!".
 export function AprendeEn2Min({
   producto, ficha, confianza, onEmpezar, onCerrar,
 }: {
@@ -41,10 +40,10 @@ export function AprendeEn2Min({
       <div className="flex flex-col gap-3.5">
         {actual === 'glosario' && (
           <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>
-            Antes de empezar, estas son las palabras que vas a ver. Si más adelante alguna se te escapa, las encontrás de nuevo arriba de cada pantalla.
+            Antes de empezar, estas son las palabras que vas a ver.
           </p>
         )}
-        <GlosarioNecesario p={producto} abierto={actual === 'glosario'} />
+        {actual === 'glosario' && <GlosarioNecesario p={producto} abierto />}
         {actual === 'que-es' && (<><GlobitoQueEs p={producto} /><GlobitoDonde p={producto} /></>)}
         {actual === 'rinde' && (<><GlobitoRinde ficha={ficha} confianza={confianza} /><GlobitoRiesgo p={producto} /></>)}
         {actual === 'cuando' && (<><GlobitoCuando p={producto} /><GlobitoGarantia p={producto} /></>)}

@@ -155,7 +155,11 @@ conexión con Objetivos, más proveedores y fondos, y la revisión legal (CNV).
 
 ## Cuántas recomendaciones y con qué criterio
 
-- Se marcan **entre 2 y 3** (`MIN_RECOMENDADAS` / `MAX_RECOMENDADAS` en `motor.ts`), siempre la mejor de cada rol (caja, ahorro, crecimiento).
-- **Desde 24 meses de plazo se compara lo que rinde cada opción al año** (real, sobre la inflación): las que pagan tasa o UVA con su rendimiento real de hoy, los CEDEARs con lo que rindió el S&P 500 en 10 años (dato histórico, no promesa), el dólar no se compara. Si hay al menos tres comparables y una rinde más de 1,5 puntos por año menos que la segunda mejor, **no se recomienda** y dice por qué.
-- Con plazo largo y colchón armado, la **caja** (cuenta para tener plata a mano) no entra por ser "la caja". Si todavía no hay colchón, sigue.
+- Se marcan **las 2 mejores para ese monto y ese plazo** (`RECOMENDADAS` y `puntajeAnual` en `motor.ts`). Las demás se listan igual, con "para X y $Y hoy rinden más A y B".
+- El puntaje es lo que se espera que rinda **por año, por encima de la inflación**:
+  - Tasas (cuentas, plazo fijo): el centro del rango a plazos cortos; a medida que el plazo crece (hasta 24 meses) pesa más la peor tasa posible, porque no sabemos qué tasa pagará un banco dentro de un año.
+  - Si el monto pasa el **tope** de la cuenta, lo que sobra no rinde: la tasa se diluye (`tope / monto`).
+  - La **UVA** sigue a la inflación con ~3 meses de rezago: ese atraso pesa a corto plazo y se diluye a largo.
+  - Los **CEDEARs** se miden con lo que rindió el S&P 500 en 10 años, en dólares (histórico, no promesa). El **dólar** no puntúa: no desplaza a lo que rinde.
+- Excepción: **sin colchón** (menos de 3 meses de gastos a mano) y con un monto que no supera lo que falta para completarlo, una de las dos es la mejor opción para tener plata disponible.
 - Sólo se compara lo que está en el catálogo. Lo que el mercado usa y hoy no está (obligaciones negociables, bonos CER, fondos de renta fija o CER, acciones) necesita fuente de datos y revisión de un asesor.
