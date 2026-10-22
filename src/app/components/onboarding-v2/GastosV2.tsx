@@ -340,7 +340,7 @@ export function GastosV2() {
               <IconChevron size={18} style={{ transform: 'rotate(180deg)' }} />
             </button>
             <Donut
-              size={150}
+              size={132}
               segments={segmentosAnillo}
               centerLabel={conIngreso ? teQueda : 'Gastaste'}
               centerValue={fmtMoney(conIngreso ? disponibleVentana : totalGastado)}
@@ -359,20 +359,8 @@ export function GastosV2() {
             </button>
           </div>
 
-          <div className="px-2 flex flex-col items-center text-center gap-1" aria-live="polite">
-            <p className="text-[13px] font-medium" style={{ color: COLORS.inkSoft }}>
-              {conIngreso ? teQueda : 'Gastaste'}
-            </p>
-            <Monto value={conIngreso ? disponibleVentana : totalGastado} size={24} className="font-bold leading-tight tracking-[-0.01em]" />
-            {conIngreso && (
-              <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-                De <span className="font-mono tabular-nums">{fmtMoney(plataDelPeriodo)}</span> registrados
-              </p>
-            )}
-            <EstadoConfianza estado="declarado" className="mt-1" />
-          </div>
-
-          {/* Leyenda: primero lo disponible, después las 3 secciones que más se
+          {/* Abajo del anillo van sólo las referencias: el monto ya está en el
+              centro. Primero lo disponible, después las 3 secciones que más se
               llevaron y lo apartado. El resto de las secciones está en Tus
               secciones, más abajo. */}
           {(porSeccion.length > 0 || conIngreso) && (
