@@ -1502,7 +1502,8 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
       </header>
 
       {/* Agregar, arriba y lado a lado, como en Gastos: con muchos planes, los
-          botones al final de cada lista quedaban fuera de la pantalla. */}
+          botones al final de cada lista quedaban fuera de la pantalla. Los dos
+          iguales, en violeta (pedido de diseño, oct 2026). */}
       <div className="flex gap-2.5">
         <button
           type="button"
@@ -1516,7 +1517,7 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
           type="button"
           onClick={() => abrirAlta('gasto', EJEMPLO_ALTA.gasto)}
           className="v2-focus flex-1 rounded-2xl py-3.5 px-2 text-[13px] font-bold leading-tight select-none transition-all duration-100 ease-out active:scale-[0.98]"
-          style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
+          style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           + Gasto planificado
         </button>
