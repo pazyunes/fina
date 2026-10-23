@@ -1,5 +1,6 @@
--- 0042: el próximo paso y la racha por días con gastos.
--- Idempotente: se puede correr más de una vez. Correr después de 0041.
+-- 0042: el próximo paso. La racha por días con gastos quedó en la 0044.
+-- Idempotente: se puede correr más de una vez. Correr después de 0041. Si ya
+-- se corrió la 0044, la tabla de abajo ya existe y esto no cambia nada.
 --
 -- ANTES (0028): un paso distinto por día, que se cumplía solo mirando los
 -- datos, y la racha contaba los días con el paso cumplido o con un gasto
@@ -41,83 +42,10 @@ create policy "proximos pasos propios: desmarcar" on next_steps
   for delete using (auth.uid() = user_id);
 
 
--- ── 2) La racha: días con al menos un gasto anotado ─────────────────────
--- Mismas reglas que la 0028 (un comodín por semana, el día de Argentina, no se
--- camina más atrás del primer día activo); cambia sólo qué hace activo a un
--- día: haber anotado un gasto, por cualquier canal.
---
--- `created_at`, no `occurred_at`: la racha mide si apareciste ese día. Quien
--- hoy anota "ayer gasté 5.000" apareció HOY.
-create or replace function _calcular_racha(p_user uuid)
-returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = public
-as $$
-declare
-  zona      constant text := 'America/Argentina/Buenos_Aires';
-  hoy       date := (now() at time zone zona)::date;
-  d         date;
-  primero   date;
-  con_gasto date[];
-  por_wpp   date[];
-  cuenta    int := 0;
-  usadas    date[] := '{}';
-  semana    date;
-  detalle   jsonb := '[]'::jsonb;
-begin
-  select coalesce(array_agg(distinct (created_at at time zone zona)::date), '{}') into con_gasto
-  from transactions
-  where user_id = p_user and type = 'expense';
-
-  -- Los de WhatsApp se marcan aparte en el detalle ("Le contaste un gasto a
-  -- FINA por WhatsApp"): es el canal que más queremos que use.
-  select coalesce(array_agg(distinct (created_at at time zone zona)::date), '{}') into por_wpp
-  from transactions
-  where user_id = p_user and type = 'expense' and source = 'whatsapp';
-
-  select min(x) into primero from unnest(con_gasto) as x;
-
-  if primero is null then
-    return jsonb_build_object('dias', 0, 'hoyCumplido', false, 'comodinDisponible', true, 'detalle', '[]'::jsonb);
-  end if;
-
-  d := case when hoy = any(con_gasto) then hoy else hoy - 1 end;
-
-  while d >= primero loop
-    if d = any(por_wpp) then
-      cuenta := cuenta + 1;
-      detalle := detalle || jsonb_build_object('dia', d, 'tipo', 'whatsapp');
-    elsif d = any(con_gasto) then
-      cuenta := cuenta + 1;
-      detalle := detalle || jsonb_build_object('dia', d, 'tipo', 'gasto');
-    else
-      semana := date_trunc('week', d::timestamp)::date;
-      exit when semana = any(usadas);
-      usadas := usadas || semana;
-      detalle := detalle || jsonb_build_object('dia', d, 'tipo', 'comodin');
-    end if;
-    d := d - 1;
-  end loop;
-
-  -- Si la racha se cortó, los comodines que se gastaron caminando hacia atrás
-  -- no salvaron nada: se sacan del detalle.
-  while jsonb_array_length(detalle) > 0 and detalle -> -1 ->> 'tipo' = 'comodin' loop
-    detalle := detalle - (jsonb_array_length(detalle) - 1);
-  end loop;
-
-  return jsonb_build_object(
-    'dias', cuenta,
-    'hoyCumplido', hoy = any(con_gasto),
-    'comodinDisponible', not exists (
-      select 1 from jsonb_array_elements(detalle) e
-      where e ->> 'tipo' = 'comodin'
-        and date_trunc('week', (e ->> 'dia')::date::timestamp)::date = date_trunc('week', hoy::timestamp)::date
-    ),
-    'detalle', detalle
-  );
-end;
-$$;
-
-revoke all on function _calcular_racha(uuid) from public, anon, authenticated;
+-- ── 2) La racha ──────────────────────────────────────────────────────────
+-- Ya no está acá. La pasó a días con un gasto anotado la 0044
+-- (0044_proximo_paso_y_racha.sql), que se corre con la subida de Inicio y
+-- además respeta la fecha del cambio: los días anteriores se siguen contando
+-- con la regla de la 0028, así nadie vio cambiar su racha. Si esta migración
+-- redefiniera `_calcular_racha`, correrla ahora pisaría esa versión y le
+-- cambiaría el número a todos.
