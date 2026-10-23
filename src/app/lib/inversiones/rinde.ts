@@ -73,6 +73,17 @@ export function describirRinde(producto: ProductoId, ev: Evaluacion | null, m: M
     };
   }
 
+  if (producto === 'bono_cer') {
+    if (!ev.tir) return null;
+    return {
+      titulo: `Inflación + ${pct(ev.tir.min * 100, 1)} a ${pct(ev.tir.max * 100, 1)}`,
+      detalle: 'Cada bono paga la inflación más un extra por año; cuanto más largo el bono, más extra',
+      ejemplo: `Si ponés ${fmtPesos(BASE_EJEMPLO)}, la inflación del año es 20% y el extra es 5% por año (números de juguete), al año tenés unos ${fmtPesos(aCien(BASE_EJEMPLO * 1.2 * 1.05))} si esperás hasta el vencimiento.`,
+      aclaracion: 'Si lo vendés antes del vencimiento, el precio puede ser menor al que pagaste.',
+      chip: chipDe(ev.veredicto),
+      fecha: ev.fecha,
+    };
+  }
   if (!ev.tna) return null;
   // En los fondos el rango es simétrico alrededor de lo medido: se muestra el centro.
   // En las demás se muestra el piso, que es lo que se cobra seguro.

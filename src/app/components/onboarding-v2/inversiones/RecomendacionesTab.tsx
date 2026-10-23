@@ -217,7 +217,7 @@ export function RecomendacionesTab({
       <section className="flex flex-col" aria-label="Inversiones">
         <p className="text-[14px] leading-snug pb-2" style={{ color: COLORS.inkSoft }}>
           {resultado.items.some((i) => i.recomendado)
-            ? <>Para plata que querés sacar en {TRAMOS[resultado.tramo]}, con tu perfil, estas son las alternativas y cómo repartirla. En cada parte elegís una. El plazo define en qué; tu perfil, cuánto. Con $50.000 o con $5.000.000, es lo mismo.</>
+            ? <>{horizonte === null ? 'Sin un plazo elegido, mostramos el de ' : 'Para un plazo de '}{TRAMOS[resultado.tramo]} y con tu perfil, estas son las alternativas y cómo repartirla. En cada parte elegís una. El plazo define en qué; tu perfil, cuánto. Con $50.000 o con $5.000.000, es lo mismo.</>
             : <>Hoy no tenemos alternativas para sugerirte con los datos al día. Igual podés mirar cada inversión.</>}
         </p>
         {resultado.items.map(fila)}

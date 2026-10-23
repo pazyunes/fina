@@ -58,7 +58,8 @@ const opc = (xs: string[]): Opcion[] => xs.map((x) => ({ id: x, label: x }));
 const BILLETERAS = opc(['Mercado Pago', 'Ualá', 'Naranja X', 'Otra']);
 const BROKERS_OPC = opc([...BROKERS.map((b) => PROVEEDORES[b].nombre), 'Otro']);
 const PARA_FONDOS = opc([...BROKERS.map((b) => PROVEEDORES[b].nombre), 'Mercado Pago', 'Otro']);
-const ES_MONEY_MARKET = (v: Valores): boolean => (v.tipoFondo ?? 'money_market') === 'money_market';
+// Mientras no elija el tipo, se pide la tasa (es lo habitual); sólo en renta fija, variable o mixto no hay tasa para anotar.
+const ES_MONEY_MARKET = (v: Valores): boolean => (v.tipoFondo || 'money_market') === 'money_market';
 const TIPOS_DE_FONDO: Opcion[] = [
   { id: 'money_market', label: 'Money market (liquidez)' },
   { id: 'renta_fija', label: 'Renta fija (bonos)' },

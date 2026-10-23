@@ -305,7 +305,7 @@ function guiaLetras(prov: BrokerId, ctx: ContextoGuia): Guia {
         haces: 'Entrá a “Renta fija” (o “Letras”) y fijate las letras disponibles. Cada una tiene una fecha de vencimiento (el día en que el Estado te devuelve la plata).',
         loVes: 'Una lista con el nombre de cada letra (ticker, su código), cuánto rinde por mes y cuándo vence. El nombre ya indica la fecha: S13N6 vence el 13 de noviembre de 2026.',
         lograras: 'Elegir un plazo que coincida con cuándo pensás usar la plata, así no necesitás venderla antes.',
-        chequeo: 'Elegiste una letra que vence después de cuando podrías necesitar la plata.',
+        chequeo: 'Elegiste una letra que vence cerca de cuando vas a necesitar la plata.',
         datos: letras.map((l) => ({ etiqueta: `${l.ticker} (vence ${diaMes(l.vencimiento)})`, valor: `${pct(l.tem * 100, 2)} por mes` })),
       },
       {
@@ -347,7 +347,7 @@ function guiaBonoCer(prov: BrokerId, ctx: ContextoGuia): Guia {
         haces: 'Entrá a “Renta fija” (o “Bonos”) y buscá los bonos “CER” (o “ajustables por CER”). Cada uno tiene un vencimiento.',
         loVes: 'Una lista con el nombre de cada bono (ticker, su código), su precio, lo que rinde por encima de la inflación (TIR) y cuándo vence. Fijate también cuánto se opera: si casi no se opera, cuesta venderlo antes.',
         lograras: 'Elegir un bono que venza cuando pensás usar la plata, así no necesitás venderlo antes. Si lo vendés antes, el precio puede ser menor.',
-        chequeo: 'Elegiste un bono que vence después de cuando podrías necesitar la plata y que se opera todos los días.',
+        chequeo: 'Elegiste un bono que vence cerca de cuando vas a necesitar la plata y que se opera todos los días.',
         datos: bonos.map((b) => ({ etiqueta: `${b.ticker} (vence ${diaMes(b.vencimiento)})`, valor: `inflación + ${pct(b.tir * 100, 1)} por año` })),
       },
       {

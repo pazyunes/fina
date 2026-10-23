@@ -121,6 +121,8 @@ export type Evaluacion = {
   fuente: string | null;
   vigente: boolean;
   confianza: Confianza;
+  /** Sólo en los bonos CER: lo que rinden por año por encima de la inflación (fracción). */
+  tir?: Rango;
   /** Una frase con lo que se sabe de esta opción hoy. */
   detalle: string;
   /** Topes, condiciones, plazos: lo que cambia la cuenta. */
@@ -334,7 +336,7 @@ function evaluarBonosCer(
   const real = { min: realMensual(tem.min, infl.mensual), max: realMensual(tem.max, infl.mensual) };
   const corto = [...lista].sort((a, b) => a.dias - b.dias)[0];
   return {
-    producto, proveedor, veredicto: veredictoDe(real), tna: null, tem, real,
+    producto, proveedor, veredicto: veredictoDe(real), tna: null, tem, real, tir: { min: Math.min(...tirs), max: Math.max(...tirs) },
     fecha: bonos.fecha, fuente: bonos.fuente, vigente: estaVigente('bonosCer', bonos.fecha, ahora) && !enRevision(m, 'bonosCer'), confianza: 'estimado',
     detalle: `Hoy hay ${lista.length} bonos CER que se operan y vencen dentro de ese plazo. Rinden entre ${pct(Math.min(...tirs) * 100, 1)} y ${pct(Math.max(...tirs) * 100, 1)} por año por encima de la inflación. El más corto, ${corto.ticker}, vence el ${diaMes(corto.vencimiento)}.`,
     notas: [
@@ -504,7 +506,7 @@ function motivoFueraDeCartera(id: ProductoId, tramo: Tramo, ctx: Contexto): stri
     case 'dolar':
       return 'No es una inversión: no rinde. Te lo mostramos cuando tenés un objetivo en dólares y el dólar está bajo.';
     default:
-      return `Para ${TRAMOS[tramo]} hay otras opciones que encajan mejor.`;
+      return `Para un plazo de ${TRAMOS[tramo]} hay otras opciones que encajan mejor.`;
   }
 }
 
@@ -627,7 +629,7 @@ export function recomendar(ctx: Contexto): Resultado {
       if (c.motivo) return c;
       const enAlgunGrupo = grupos.some((gr) => gr.productos.includes(c.rec.producto.id));
       const motivo = enAlgunGrupo && nombresMarcados.length > 0
-        ? `Para ${TRAMOS[tramo]} hoy rinden más ${listaConY(nombresMarcados)}.`
+        ? `Para un plazo de ${TRAMOS[tramo]} hoy rinden más ${listaConY(nombresMarcados)}.`
         : motivoFueraDeCartera(c.rec.producto.id, tramo, ctx);
       return { ...c, motivo };
     });

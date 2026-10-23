@@ -92,7 +92,7 @@ const G: Record<string, Termino> = {
   custodio: { termino: 'Custodio', significado: 'El banco que guarda lo que compró el fondo, separado de la empresa que lo administra.' },
   cnv: { termino: 'CNV', significado: 'Comisión Nacional de Valores: el organismo del Estado que controla las inversiones.' },
   segDepositos: { termino: 'Seguro de depósitos', significado: `Si un banco quiebra, te devuelven tu plata hasta un tope: hoy ${TOPE_TEXTO} por persona y por banco (lo fija el BCRA). Cubre plazos fijos y cuentas de bancos.` },
-  vencimiento: { termino: 'Vencimiento', significado: 'El día en que termina el plazo y el banco te devuelve la plata.' },
+  vencimiento: { termino: 'Vencimiento', significado: 'El día en que termina el plazo y te devuelven la plata.' },
   precancelable: { termino: 'Precancelable', significado: 'Se puede retirar antes del vencimiento, pero cobrando menos interés.' },
   uva: { termino: 'UVA', significado: 'Un número que sube con la inflación. Si la UVA sube 2%, tu plata sube 2%.' },
   mep: { termino: 'Dólar MEP', significado: 'La forma legal de comprar dólares desde un broker, sin pasar por el cupo del banco. Su precio es distinto al del dólar oficial.' },

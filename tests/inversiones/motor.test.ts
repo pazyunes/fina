@@ -615,6 +615,7 @@ describe('es obligatorio todo dato sin el cual no se ve cómo crece la plata ni 
     const opcionales = (t: keyof typeof FORMULARIOS) => FORMULARIOS[t].campos.filter((c) => !c.obligatorio).map((c) => c.id).sort();
     assert.deepEqual(opcionales('fci'), ['clase', 'rescate']);
     assert.equal(esObligatorio(FORMULARIOS.fci.campos.find((c) => c.id === 'tna')!, { tipoFondo: 'renta_fija' }), false);
+    assert.equal(esObligatorio(FORMULARIOS.fci.campos.find((c) => c.id === 'tna')!, { tipoFondo: '' }), true, 'sin elegir el tipo, la tasa se pide');
     assert.deepEqual(opcionales('dolar'), ['tipo']);
     for (const t of ['cuenta_remunerada', 'plazo_fijo', 'plazo_fijo_uva', 'cedear', 'letra'] as const) assert.deepEqual(opcionales(t), [], t);
     assert.deepEqual(opcionales('bono_cer'), ['cantidad']);
