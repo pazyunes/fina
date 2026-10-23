@@ -324,6 +324,47 @@ function guiaLetras(prov: BrokerId, ctx: ContextoGuia): Guia {
   };
 }
 
+function guiaBonoCer(prov: BrokerId, ctx: ContextoGuia): Guia {
+  const nombre = PROVEEDORES[prov].nombre;
+  const bonos = [...(ctx.mercado?.bonosCer?.valor ?? [])].filter((b) => b.volumen > 0).sort((a, b) => a.dias - b.dias).slice(0, 4);
+  return {
+    proveedor: prov,
+    producto: 'bono_cer',
+    titulo: `Bonos CER en ${nombre}`,
+    alTerminar: 'Tu plata prestada al Estado hasta un vencimiento, ajustada por la inflación más un extra que ya conocés al comprar.',
+    tiempo: 'Uno o dos días para la cuenta; después, 15 minutos.',
+    pasos: [
+      pasoCuentaBroker(nombre),
+      pasoIngresar(nombre, ctx.monto, true),
+      {
+        id: 'elegir',
+        titulo: 'Elegí hasta cuándo dejás la plata',
+        haces: 'Entrá a “Renta fija” (o “Bonos”) y buscá los bonos “CER” (o “ajustables por CER”). Cada uno tiene un vencimiento.',
+        loVes: 'Una lista con el nombre de cada bono (ticker, su código), su precio, lo que rinde por encima de la inflación (TIR) y cuándo vence. Fijate también cuánto se opera: si casi no se opera, cuesta venderlo antes.',
+        lograras: 'Elegir un bono que venza cuando pensás usar la plata, así no necesitás venderlo antes. Si lo vendés antes, el precio puede ser menor.',
+        chequeo: 'Elegiste un bono que vence después de cuando podrías necesitar la plata y que se opera todos los días.',
+        datos: bonos.map((b) => ({ etiqueta: `${b.ticker} (vence ${diaMes(b.vencimiento)})`, valor: `inflación + ${pct(b.tir * 100, 1)} por año` })),
+      },
+      {
+        id: 'comprar',
+        titulo: 'Comprá',
+        haces: 'Tocá “Comprar”, poné el monto o la cantidad y confirmá. Si te pregunta el tipo de orden, elegí “a precio de mercado” (se compra al precio del momento).',
+        loVes: 'Antes de confirmar la app muestra cuántos nominales (la unidad en que se compran) recibís y el costo total, con la comisión.',
+        lograras: 'Le prestás tu plata al Estado: tu capital se ajusta con la inflación y cobrás un extra, siempre que esperes hasta el vencimiento. Lo respalda el Tesoro de la Nación.',
+        chequeo: 'El bono aparece en “Mi cartera” (lo que tenés invertido) con su vencimiento.',
+        datos: filaMonto(ctx.monto),
+      },
+      pasoRescate(nombre, 'Podés esperar al vencimiento (el Estado paga solo) o venderlo antes: tocá “Vender”. Si vendés antes, el precio puede ser menor al que pagaste: por eso conviene elegir un vencimiento que coincida con cuándo necesitás la plata.'),
+      pasoRegistrar(),
+    ],
+    porVerificar: [
+      'Dónde están los bonos CER en el menú de la app.',
+      'Si se compra por monto o por cantidad de nominales.',
+      'Qué comisión cobra por comprar y por mantener.',
+    ],
+  };
+}
+
 function guiaDolar(prov: BrokerId, ctx: ContextoGuia): Guia {
   const nombre = PROVEEDORES[prov].nombre;
   const mep = ctx.mercado?.dolar.mep?.valor ?? null;
@@ -493,6 +534,7 @@ export function armarGuia(proveedor: ProveedorId, producto: ProductoId, ctx: Con
   if (PROVEEDORES[proveedor].tipo === 'broker') {
     const broker = proveedor as BrokerId;
     if (producto === 'letra') return guiaLetras(broker, ctx);
+    if (producto === 'bono_cer') return guiaBonoCer(broker, ctx);
     if (producto === 'dolar') return guiaDolar(broker, ctx);
     if (producto === 'cedear') return guiaCedear(broker, ctx);
   }
@@ -547,9 +589,11 @@ export function previosParaRegistro(proveedor: ProveedorId, producto: ProductoId
       if (precio) base.precio = entero(precio);
       break;
     }
+    case 'bono_cer':
     case 'letra':
       base.proveedor = prov.nombre;
       if (ctx.monto) base.monto = entero(ctx.monto);
+      if (producto === 'bono_cer' && ctx.ticker) base.ticker = ctx.ticker;
       break;
   }
   return base;

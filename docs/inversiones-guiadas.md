@@ -172,16 +172,19 @@ conexión con Objetivos, más proveedores y fondos, y la revisión legal (CNV).
 El plazo decide **en qué**; el perfil, **cuánto**; el monto, nada ("no guiarse por montos"). Cada tramo
 arma partes de la plata, y en cada parte la persona elige una alternativa (`cartera.ts`):
 
+Es la tabla que completó él (las filas de $50.000; las de $5.000.000 son "lo mismo que 50k"):
+
 | Plazo | Conservador | Moderado | Arriesgado |
 |---|---|---|---|
-| Menos de 3 meses | todo a mano (plazo fijo, cuenta, fondo, letras): aunque rinda menos que la inflación, es mejor que nada | igual | igual |
-| 3 a 12 meses | todo a mano | 50% a mano + 50% renta fija (letras, UVA) | igual que el moderado |
+| Menos de 3 meses | plazo fijo, cuenta, fondo (y letras): todo a mano, aunque hoy rinda menos que la inflación | igual | igual |
+| 3 a 12 meses | todo a mano (plazo fijo, cuenta, fondo) | 50% a mano + 50% renta fija (letras, bonos CER, UVA) | 50% renta fija + 50% CEDEARs |
 | 1 a 3 años | plazo fijo UVA y cuenta | igual | igual |
-| Más de 3 años | 10% CEDEARs, 90% UVA/cuenta | 50% / 50% | 100% CEDEARs |
+| Más de 3 años | 10% CEDEARs, 90% UVA/cuenta | 50% CEDEARs, 50% UVA/cuenta | 100% CEDEARs (y la cuenta, sin porcentaje, para tener plata a mano) |
 
-- Nunca CEDEARs a menos de 3 años. Se muestran entre 1 y 3 alternativas en total.
+- Se muestran **todas** las alternativas de cada parte (no hay tope de dos o tres). Sin saber para cuándo es la plata, al arriesgado se lo trata como moderado (sin CEDEARs).
+- **Renta fija** = letras del Tesoro, **bonos CER** (los que vencen en menos de 2 años y se operan; TIR real de ArgentinaDatos) y plazo fijo UVA. Los bonos CER son un tipo nuevo de inversión registrable: hace falta correr la migración `0043_bonos_cer.sql`.
 - Dentro de cada parte se ordena por lo que se espera que rinda **por año sobre la inflación** (`puntajeAnual`): el centro del rango a plazos cortos y, a más plazo (hasta 24 meses), la peor tasa; la UVA pierde peso por su rezago de ~3 meses; los CEDEARs, con lo que rindió el S&P 500 en 10 años en dólares (histórico, no promesa). **El tope de la cuenta ya no desplaza**: es un dato que se informa.
-- Fuera de los 3 meses, no se ofrece lo que pierde contra la inflación si hay otra opción igual de disponible que no.
+- Para ahorrar o fijar un plazo (UVA, renta fija), no se ofrece lo que pierde contra la inflación si hay otra opción igual de disponible que no. La plata a mano (plazo fijo, cuenta, fondo) se muestra completa aunque hoy rinda menos, con su aviso.
 - Una parte sin datos (por ejemplo, sin CEDEARs) pasa su porcentaje a las demás.
 - **Cuánto invertir**: todo lo que sobró el mes pasado, no un porcentaje ni tres meses de espera. Si además hay plata ahorrada, también se puede sumar.
 - **Sin reserva por las dudas**: sólo si en los próximos 30 días hay gastos fijos que superan lo que ingresa por mes, se suma la mejor opción para tener plata disponible.
@@ -190,21 +193,25 @@ arma partes de la plata, y en cada parte la persona elige una alternativa (`cart
 - **Fondos comunes**: al registrar se pide el tipo (money market, renta fija, renta variable, mixto). La tasa sólo se pide en el money market; renta fija o variable sube y baja.
 - Sólo se compara lo que está en el catálogo. Lo que el mercado usa y hoy no está (obligaciones negociables, bonos CER, fondos de renta fija o CER) necesita fuente de datos.
 
+### Seguro de depósitos, CAFCI, bonos y ONs (22/10/2026)
+
+- **Seguro de depósitos**: $50.000.000 por persona y por banco, vigente desde el 01/04/2026 (Comunicación "A" 8407 del BCRA, 05/03/2026; verificado en el PDF de SEDESA). Está en una sola constante (`TOPE_SEGURO_DEPOSITOS`, `catalogo.ts`) que usan los textos del plazo fijo, el glosario y las cards. Si el BCRA lo actualiza, se cambia ahí.
+- **CAFCI**: su API directa responde `403 "Route not allowed"` (bloqueo del servidor, no de headers; `api.cafci.org.ar` pide credenciales). Los datos de CAFCI ya llegan por **ArgentinaDatos** (es la misma fuente que usa comparatasas.ar) y es lo que usa la app: fondos de dinero, y también los de renta fija y variable existen ahí si hace falta sumarlos. dolarhoy.com no publica una API de fondos.
+- **Bonos CER**: ArgentinaDatos publica `/v1/finanzas/bonos-cer` con precio y **TIR real** (lo que rinden sobre la inflación). Se estima su rendimiento como UVA 30 días + TIR, igual que el plazo fijo UVA. No se toman los que vencen en menos de 3 meses (la TIR es ruidosa) ni los de más de 2 años (para plazos de meses).
+- **Obligaciones negociables**: no están. BYMA da el precio y el vencimiento pero no el cupón ni la TIR, y casi todas son en dólares; sin cupones no se puede calcular el rendimiento sin inventarlo. Hace falta una fuente que publique su TIR.
+
 ### Dudas que quedan para el asesor
 
-- **Conservador a más de 3 años**: en la tabla puso 10% CEDEARs y en sus notas "conservador, largo plazo, 70 y 30". Hoy está en 10% (`PESO_CEDEAR_A_LARGO_PLAZO`).
-- **Arriesgado de 3 a 12 meses**: en la tabla puso 50% CEDEARs, pero también dijo "menos de 1 año, CEDEARs no va". Se siguió la segunda regla (50% renta fija + 50% a mano).
-- **Tope del seguro de depósitos**: dijo hasta $50 millones; fuentes públicas hablan de $25–30 millones. No se escribió ninguna cifra en la app: verificar en SEDESA/BCRA.
-- **CAFCI**: dice que es público; desde el servidor sigue respondiendo 403. Hace falta probarlo desde Vercel o con otra ruta (la fuente comunitaria sigue siendo la que se usa).
+- **Moderado de 3 a 12 meses**: puso "50%/30% (plazo fijo, cuenta, FCI) y 50%/70% renta fija". Hoy es 50/50; si quiso decir 30/70, se cambia en `armarCartera`.
+- **Conservador a más de 3 años**: en la tabla puso 10% CEDEARs y en sus notas "70 y 30". Se siguió la tabla (10%, `PESO_CEDEAR_A_LARGO_PLAZO`).
 - **"Dólar bajo"**: hoy es "subió menos que la inflación en 30 días". Si él usa otra vara (brecha, promedio histórico), cambiarla en `dolarEstaBajo`.
-- **Renta fija**: hoy son las letras y el plazo fijo UVA. Bonos CER y ONs necesitan fuente de datos.
 - **Cuenta remunerada**: dijo que "depende de cada billetera" (condiciones de Ualá y compañía): hay que revisar billetera por billetera que el texto de las condiciones sea el correcto.
 - **Modelo de negocio**: confirmó que cobrarle a las marcas "es el modelo correcto" (como dolarhoy.com, que está pautado). Pendiente decidir cómo se muestra lo pautado.
-- **Legal**: sigue abierto el encuadre con la CNV (su primo abogado/asesor: "tiene que estar filtrado por alguien matriculado").
+- **Legal**: sigue abierto el encuadre con la CNV ("tiene que estar filtrado por alguien matriculado").
 
 ## Mini lecciones (cards)
 
-- Debajo de las alternativas: cards que se deslizan para el costado (se asoma la siguiente). 24 lecciones de cuatro clases: diferencias ("Diferencia entre TNA y TEA"), conceptos ("¿Qué es la inflación?"), mitos y errores comunes. Contenido en `lib/inversiones/aprender.ts`; los ejemplos con plata dicen "de juguete" y tienen test de cuentas.
+- Debajo de las alternativas: cards que se deslizan para el costado (se asoma la siguiente). 25 lecciones de cuatro clases: diferencias ("Diferencia entre TNA y TEA"), conceptos ("¿Qué es la inflación?"), mitos y errores comunes. Contenido en `lib/inversiones/aprender.ts`; los ejemplos con plata dicen "de juguete" y tienen test de cuentas.
 - Cada una se marca con "Ya lo aprendí" (y se puede desmarcar). **Cada 5 aprendidas se completa una racha** (`rachaDeAprendizaje`). No está ligada a la racha diaria de pasos: ésa mide algo que se hace, y un botón la inflaría.
 - **Máximo 5 por día** (`LIMITE_DIARIO`, día de Argentina): con 5 marcadas hoy, el botón dice "Mañana seguís"; ver y leer las cards no tiene límite. Desmarcar una de hoy libera un lugar. El límite se aplica en la app (no hay regla en la base): se cuenta con el día en que se marcó cada una (`learned_at`).
 - Se guarda en el dispositivo siempre y en `learned_cards` (migración 0042) para que pase de un dispositivo a otro; sin la migración andan igual.

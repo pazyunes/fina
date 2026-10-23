@@ -21,7 +21,7 @@
 
 import { SERIES_IPC, type RegionIpc } from '../../src/app/lib/inversiones/ipc.js';
 import type {
-  CedearMercado, CuentaMercado, Dato, FondoMercado, IpcRubros, LetraMercado, Mercado, PlazoFijoBanco, SpyEstadisticas,
+  BonoCerMercado, CedearMercado, CuentaMercado, Dato, FondoMercado, IpcRubros, LetraMercado, Mercado, PlazoFijoBanco, SpyEstadisticas,
 } from '../../src/app/lib/inversiones/mercadoTipos.js';
 import { chequear, type Controles } from './chequeos.js';
 
@@ -201,6 +201,31 @@ async function letras(hoy: string): Promise<Dato<LetraMercado[]> | null> {
     }));
   if (salida.length === 0) return null;
   return { valor: salida, fecha: r.fechaActualizacion ? r.fechaActualizacion.slice(0, 10) : hoy, fuente: 'mercado de letras (vía ArgentinaDatos)' };
+}
+
+// ── bonos CER ────────────────────────────────────────────────────────────
+type FilaBonoCer = { ticker: string; precioArs: number; tirPorcentaje: number; fechaVencimiento: string; volumen?: number };
+
+/**
+ * Bonos del Tesoro que se ajustan por CER (la inflación), con su TIR real: lo que rinden por encima de la
+ * inflación si se esperan hasta el vencimiento. La TIR de los que vencen en pocas semanas es ruidosa (el precio
+ * casi no se mueve y un centavo cambia el número): sólo se toman los de más de 3 meses.
+ */
+async function bonosCer(hoy: string): Promise<Dato<BonoCerMercado[]> | null> {
+  const r = await traer<{ fechaActualizacion?: string; bonos?: FilaBonoCer[] }>(`${AD}/finanzas/bonos-cer`);
+  const salida: BonoCerMercado[] = (r.bonos ?? [])
+    .filter((b) => esNum(b.precioArs) && esNum(b.tirPorcentaje) && typeof b.fechaVencimiento === 'string')
+    .map((b) => ({
+      ticker: b.ticker,
+      precio: b.precioArs,
+      tir: b.tirPorcentaje / 100,
+      vencimiento: b.fechaVencimiento,
+      dias: diasEntre(hoy, b.fechaVencimiento),
+      volumen: esNum(b.volumen) ? b.volumen : 0,
+    }))
+    .filter((b) => b.dias >= 90 && b.tir > -0.05 && b.tir < 0.5);
+  if (salida.length === 0) return null;
+  return { valor: salida, fecha: r.fechaActualizacion ? r.fechaActualizacion.slice(0, 10) : hoy, fuente: 'bonos CER (vía ArgentinaDatos)' };
 }
 
 // ── CEDEARs ──────────────────────────────────────────────────────────────
@@ -417,7 +442,7 @@ export async function construirMercado(ahora: number = Date.now(), declaradas: M
   const fallas: string[] = [];
   const dolarVacio: Mercado['dolar'] = { oficial: null, mep: null, ccl: null, blue: null, brechaMep: null, mep30d: null };
 
-  const [meses, esperada, uva, tamar, badlar, pf, ctas, fci, lts, cedByma, usd, rp, ipc, spy, blu, pf30, ced912] = await Promise.all([
+  const [meses, esperada, uva, tamar, badlar, pf, ctas, fci, lts, bcer, cedByma, usd, rp, ipc, spy, blu, pf30, ced912] = await Promise.all([
     seguro('inflación', fallas, inflacionMeses, []),
     seguro('inflación esperada (REM)', fallas, () => bcra(29, 'REM, BCRA: inflación esperada a 12 meses'), null),
     seguro('UVA', fallas, () => uva30d(hoy), null),
@@ -427,6 +452,7 @@ export async function construirMercado(ahora: number = Date.now(), declaradas: M
     seguro('cuentas remuneradas', fallas, cuentas, null),
     seguro('fondos', fallas, fondos, null),
     seguro('letras', fallas, () => letras(hoy), null),
+    seguro('bonos CER', fallas, () => bonosCer(hoy), null),
     seguro('CEDEARs (BYMA)', fallas, () => cedearsByma(hoy), null),
     seguro('dólar', fallas, dolar, dolarVacio),
     seguro('riesgo país', fallas, riesgoPais, null),
@@ -457,6 +483,7 @@ export async function construirMercado(ahora: number = Date.now(), declaradas: M
     cuentas: ctas,
     fondos: fci,
     letras: lts,
+    bonosCer: bcer,
     cedears: ced,
     dolar: usd,
     riesgoPais: rp,
@@ -494,6 +521,7 @@ export function rellenarConAnterior(nuevo: Mercado, previo: Mercado | null): Mer
     cuentas: nuevo.cuentas ?? previo.cuentas,
     fondos: nuevo.fondos ?? previo.fondos,
     letras: nuevo.letras ?? previo.letras,
+    bonosCer: nuevo.bonosCer ?? previo.bonosCer ?? null,
     cedears: nuevo.cedears ?? previo.cedears,
     dolar: {
       oficial: nuevo.dolar.oficial ?? previo.dolar.oficial,

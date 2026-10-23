@@ -19,6 +19,7 @@ const NOMBRE: Record<string, string> = {
   plazo_fijo: 'plazo fijo',
   plazo_fijo_uva: 'plazo fijo UVA',
   letra: 'letra',
+  bono_cer: 'bono CER',
 };
 
 const monto = (n: number, moneda: string) => `${moneda === 'USD' ? 'US$' : '$'}${Math.round(n).toLocaleString('es-AR')}`;

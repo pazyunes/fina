@@ -1,19 +1,19 @@
-// Cómo se reparte la plata según el PLAZO y el PERFIL. Es el criterio del asesor:
+// Cómo se reparte la plata según el PLAZO y el PERFIL. Es la tabla que completó el asesor:
 //   · el plazo decide EN QUÉ (qué tipo de inversión tiene sentido);
 //   · el perfil decide CUÁNTO (qué parte de la plata va a lo que sube y baja);
 //   · el monto no decide nada: lo mismo para $50.000 que para $5.000.000.
 //
-// Cada tramo de plazo arma "grupos": un porcentaje de la plata y las inversiones que
-// sirven para esa parte (la persona elige una; el motor las ordena por rendimiento).
+// Cada tramo de plazo arma "grupos": un porcentaje de la plata y las inversiones que sirven para esa
+// parte (la persona elige una; el motor las ordena por rendimiento).
 //
-//   Menos de 3 meses   todo lo mismo: plata a mano (plazo fijo, cuenta, fondo, letras). Aunque
-//                      rinda menos que la inflación, para tan poco tiempo es mejor que nada.
-//   3 a 12 meses       conservador: todo a mano. Moderado y arriesgado: la mitad a mano y la
-//                      mitad en renta fija (letras, plazo fijo UVA), que suele rendir positivo
-//                      en ese tiempo. Sin CEDEARs: menos de un año no es plazo para altibajos.
+//   Menos de 3 meses   todo lo mismo para cualquier perfil: plata a mano (plazo fijo, cuenta, fondo,
+//                      letras). Aunque rinda menos que la inflación, a tan poco tiempo es mejor que nada.
+//   3 a 12 meses       conservador: todo a mano. Moderado: la mitad a mano y la mitad en renta fija
+//                      (letras, bonos CER, UVA: "suele rendir positivo en ese tiempo"). Arriesgado: la mitad
+//                      en renta fija y la mitad en CEDEARs.
 //   1 a 3 años         plazo fijo UVA y cuenta remunerada, para cualquier perfil.
-//   Más de 3 años      conservador 10% CEDEARs, moderado 50%, arriesgado 100%; el resto en
-//                      plazo fijo UVA o cuenta.
+//   Más de 3 años      conservador 10% CEDEARs, moderado 50%, arriesgado 100% (y la cuenta para tener
+//                      plata a mano); el resto, en plazo fijo UVA o cuenta.
 //
 // Función pura, sin red ni React.
 
@@ -50,7 +50,7 @@ export type Grupo = {
 /** Qué sirve para cada parte. */
 export const PRODUCTOS_DEL_GRUPO: Record<GrupoId, ProductoId[]> = {
   liquidez: ['plazo_fijo', 'cuenta_remunerada', 'fci', 'letra'],
-  renta_fija: ['letra', 'plazo_fijo_uva'],
+  renta_fija: ['letra', 'bono_cer', 'plazo_fijo_uva'],
   ahorro: ['plazo_fijo_uva', 'cuenta_remunerada'],
   crecimiento: ['cedear'],
 };
@@ -68,22 +68,20 @@ export function armarCartera(perfil: PerfilRiesgo, meses: number | null): Grupo[
   switch (tramoDe(meses)) {
     case 'corto':
       return [g('liquidez', 1)];
-    case 'medio':
+    case 'medio': {
+      if (perfil === 'conservador') return [g('liquidez', 1)];
       // Con dos partes, las letras van en la de renta fija: la de plata a mano queda para plazo fijo, cuenta y fondo.
-      return perfil === 'conservador'
-        ? [g('liquidez', 1)]
-        : [g('liquidez', 0.5, PRODUCTOS_DEL_GRUPO.liquidez.filter((id) => id !== 'letra')), g('renta_fija', 0.5)];
+      // Sin saber para cuándo es la plata, al arriesgado no se le sugieren CEDEARs: se lo trata como moderado.
+      if (perfil === 'moderado' || meses === null) return [g('liquidez', 0.5, PRODUCTOS_DEL_GRUPO.liquidez.filter((id) => id !== 'letra')), g('renta_fija', 0.5)];
+      return [g('renta_fija', 0.5), g('crecimiento', 0.5)];
+    }
     case 'largo':
       return [g('ahorro', 1)];
     case 'mlargo': {
       const cedear = PESO_CEDEAR_A_LARGO_PLAZO[perfil];
-      return cedear >= 1 ? [g('crecimiento', 1)] : [g('ahorro', 1 - cedear), g('crecimiento', cedear)].sort((a, b) => b.peso - a.peso);
+      // El arriesgado va todo a CEDEARs; igual se le muestra la cuenta, sin porcentaje, para tener plata a mano.
+      if (cedear >= 1) return [g('crecimiento', 1), g('liquidez', 0, ['cuenta_remunerada'])];
+      return [g('ahorro', 1 - cedear), g('crecimiento', cedear)].sort((a, b) => b.peso - a.peso);
     }
   }
-}
-
-/** Cuántas alternativas se muestran por grupo: 3 si es una sola parte; si son dos, 2 para la mayor y 1 para la otra. */
-export function maximoPorGrupo(cantidadDeGrupos: number, esLaMayor: boolean): number {
-  if (cantidadDeGrupos <= 1) return 3;
-  return esLaMayor ? 2 : 1;
 }

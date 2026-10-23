@@ -3,7 +3,7 @@
 // separado y qué quedarse. Sin números que cambien con el mercado: los ejemplos son de
 // juguete y lo dicen. Nada de "tenés que": se explica, la decisión es de la persona.
 
-import type { ProductoId } from './catalogo.js';
+import { TOPE_SEGURO_DEPOSITOS, type ProductoId } from './catalogo.js';
 
 export type Lado = { nombre: string; texto: string };
 
@@ -275,11 +275,23 @@ export const TARJETAS: Tarjeta[] = [
     titulo: '¿Quién garantiza cada inversión?',
     idea: 'No todas tienen el mismo respaldo.',
     bloques: [
-      { nombre: 'Con respaldo', texto: 'Plazo fijo: el seguro de depósitos (hasta un tope por banco). Letras del Tesoro: el Tesoro de la Nación, o sea el Estado.' },
+      { nombre: 'Con respaldo', texto: `Plazo fijo: el seguro de depósitos, hasta $${TOPE_SEGURO_DEPOSITOS.toLocaleString('es-AR')} por persona y por banco (lo fija el BCRA). Letras del Tesoro y bonos: el Tesoro de la Nación, o sea el Estado.` },
       { nombre: 'Sin respaldo de nadie', texto: 'Bonos corporativos, CEDEARs y acciones: nadie te garantiza que no pierdas. Los fondos los controla la CNV, pero tampoco garantiza el rendimiento.' },
     ],
     retener: 'Que algo esté garantizado no significa que rinda más, sólo que tiene un respaldo si algo sale mal.',
-    productos: ['plazo_fijo', 'letra', 'cedear', 'fci'],
+    productos: ['plazo_fijo', 'letra', 'bono_cer', 'cedear', 'fci'],
+  },
+  {
+    id: 'bono-cer',
+    clase: 'concepto',
+    titulo: '¿Qué es un bono CER?',
+    idea: 'Un préstamo al Estado que sigue a la inflación y paga un extra.',
+    bloques: [
+      { nombre: 'Cómo funciona', texto: 'Tu capital se ajusta con el CER (un índice que sigue a la inflación) y encima cobrás un extra por año. Si esperás hasta el vencimiento, cobrás la inflación más ese extra.' },
+      { nombre: 'Qué cuidar', texto: 'En el medio el precio sube y baja. Si lo vendés antes del vencimiento, podés perder. Elegí uno que venza cuando vas a necesitar la plata.' },
+    ],
+    retener: 'Es renta fija: sirve para plazos de meses o años, y conviene esperar al vencimiento.',
+    productos: ['bono_cer', 'letra'],
   },
   {
     id: 'error-comprar-vender',

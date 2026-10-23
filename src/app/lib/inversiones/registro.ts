@@ -102,9 +102,10 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     campos: [
       { id: 'proveedor', etiqueta: '¿Dónde lo compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o broker (la plataforma donde comprás inversiones) desde donde invertiste.', opciones: PARA_FONDOS },
       {
-        id: 'fondo', etiqueta: 'Nombre del fondo', tipo: 'opcion', obligatorio: true,
-        ayuda: 'Está arriba, en la pantalla del fondo. Hay cientos de fondos: si no figura en la lista, escribilo tal cual aparece.',
-        opciones: (v) => (FONDOS_DE[v.proveedor] ? opc([FONDOS_DE[v.proveedor]]) : []),
+        id: 'fondo', etiqueta: 'Nombre del fondo', tipo: 'texto', obligatorio: true,
+        ayuda: 'Está arriba, en la pantalla del fondo. Hay cientos de fondos: escribilo tal cual aparece (si es uno que ya conocemos, te lo sugerimos).',
+        placeholder: 'Ej: Mercado Fondo',
+        sugerencias: (v) => (FONDOS_DE[v.proveedor] ? [{ id: FONDOS_DE[v.proveedor], label: FONDOS_DE[v.proveedor] }] : []),
       },
       { id: 'tipoFondo', etiqueta: '¿Qué tipo de fondo es?', tipo: 'opcion', obligatorio: true, ayuda: 'Money market: presta a muy corto plazo y casi no baja. Renta fija: invierte en bonos y puede bajar según el plazo. Renta variable: invierte en acciones y puede bajar bastante. Figura en la descripción del fondo.', opciones: TIPOS_DE_FONDO },
       { id: 'clase', etiqueta: 'Clase', tipo: 'opcion', obligatorio: false, ayuda: 'Una letra (A, B, C…) que figura junto al nombre. Cambia las comisiones, no lo que rinde. Si no la ves, dejala vacía.', opciones: opc(['A', 'B', 'C', 'Otra']) },
@@ -151,6 +152,18 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
       { id: 'cantidad', etiqueta: 'Cantidad comprada', tipo: 'numero', obligatorio: true, ayuda: 'Figura en el comprobante o en lo que tenés invertido. Con esto calculamos cuánto cobrás al vencimiento.', placeholder: 'Ej: 1.000' },
       { id: 'vencimiento', etiqueta: 'Fecha de vencimiento', tipo: 'fecha', obligatorio: true, ayuda: 'El día en que el Estado te devuelve la plata.' },
       inicio('¿Cuándo la compraste?'),
+    ],
+  },
+  bono_cer: {
+    tipo: 'bono_cer',
+    titulo: 'Bono CER',
+    campos: [
+      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o plataforma desde donde lo compraste.', opciones: BROKERS_OPC },
+      { id: 'ticker', etiqueta: 'Nombre del bono (ticker)', tipo: 'texto', obligatorio: true, ayuda: `${explicarTicker} Ej: TZXD6. El nombre suele indicar el vencimiento.`, placeholder: 'Ej: TZXD6', sugerencias: (_v, m) => (m?.bonosCer?.valor ?? []).map((b) => ({ id: b.ticker, label: `${b.ticker} · vence el ${diaMes(b.vencimiento)}` })) },
+      { id: 'monto', etiqueta: '¿Cuánto pagaste en total?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos, con la comisión si la hubo.' },
+      { id: 'cantidad', etiqueta: 'Cantidad comprada (nominales)', tipo: 'numero', obligatorio: false, ayuda: 'Cuántos nominales (la unidad en que se compran los bonos) compraste. Figura en el comprobante.', placeholder: 'Ej: 1.000' },
+      { id: 'vencimiento', etiqueta: 'Fecha de vencimiento', tipo: 'fecha', obligatorio: true, ayuda: 'El día en que el Estado te devuelve el capital ajustado. Si el bono lo conocemos, lo completamos solos.' },
+      inicio('¿Cuándo lo compraste?'),
     ],
   },
   dolar: {
@@ -240,9 +253,9 @@ export function procesarRegistro(
   const resumen: string[] = [];
   const hoy = hoyISO(ahora);
 
-  // Una letra que el mercado conoce trae su propio vencimiento: no se lo pedimos.
+  // Una letra o un bono que el mercado conoce trae su propio vencimiento: no se lo pedimos.
   const tickerLetra = (v.ticker ?? '').trim().toUpperCase();
-  const letraConocida = tipo === 'letra' ? mercado?.letras?.valor.find((l) => l.ticker === tickerLetra) : undefined;
+  const letraConocida = tipo === 'letra' ? mercado?.letras?.valor.find((l) => l.ticker === tickerLetra) : tipo === 'bono_cer' ? mercado?.bonosCer?.valor.find((b) => b.ticker === tickerLetra) : undefined;
 
   for (const c of def.campos) {
     const valor = (v[c.id] ?? '').trim();
@@ -336,6 +349,18 @@ export function procesarRegistro(
     if (hoyLetra && vencimiento && hoyLetra.vencimiento !== vencimiento) avisos.push(`Esa letra vence el ${diaMes(hoyLetra.vencimiento)} según el mercado; vos anotaste el ${diaMes(vencimiento)}.`);
     if (vencimiento && fechaValida(iniciof) && vencimiento <= iniciof) errores.vencimiento = 'El vencimiento tiene que ser posterior a la compra.';
     if (vencimiento) resumen.push(`Vence el ${diaMes(vencimiento)}.`);
+  }
+
+  if (tipo === 'bono_cer') {
+    const ticker = (v.ticker ?? '').trim().toUpperCase();
+    if (ticker) detalle.ticker = ticker;
+    const hoyBono = mercado?.bonosCer?.valor.find((b) => b.ticker === ticker);
+    if (hoyBono && !vencimiento) vencimiento = hoyBono.vencimiento;
+    if (mercado?.bonosCer && ticker && !hoyBono) avisos.push('No encontramos ese bono entre los CER que se operan hoy. Puede estar mal escrito o vencer en menos de tres meses.');
+    if (hoyBono && vencimiento && hoyBono.vencimiento !== vencimiento) avisos.push(`Ese bono vence el ${diaMes(hoyBono.vencimiento)} según el mercado; vos anotaste el ${diaMes(vencimiento)}.`);
+    if (vencimiento && fechaValida(iniciof) && vencimiento <= iniciof) errores.vencimiento = 'El vencimiento tiene que ser posterior a la compra.';
+    if (vencimiento) resumen.push(`Vence el ${diaMes(vencimiento)}.`);
+    resumen.push('Si lo vendés antes del vencimiento, el precio puede ser menor al que pagaste.');
   }
 
   if (tipo === 'fci') {

@@ -45,10 +45,11 @@ describe('recomendaciones con los datos de hoy', () => {
     assert.deepEqual(cuenta.rec.opciones.map((o) => o.proveedor), ['uala']);
     assert.ok(cuenta.rec.opciones.every((o) => o.veredicto !== 'pierde'));
   });
-  it('el fondo común no se sugiere si hay otra opción igual de disponible que rinde más', () => {
+  it('el fondo común se ofrece como plata a mano (así figura en la tabla del asesor), aunque hoy rinda menos que la inflación, y lo avisa', () => {
     const fci = item(recomendar(ctx(m, { horizonteMeses: 6 })), 'fci')!;
-    assert.equal(fci.recomendado, false);
-    assert.match(fci.motivo ?? '', /hoy rinden más/);
+    assert.equal(fci.recomendado, true);
+    assert.equal(fci.rec.mejor.veredicto, 'pierde');
+    assert.ok(fci.rec.avisos.some((a) => /menos que la inflación/.test(a)));
   });
   it('se pueden elegir TODAS las inversiones: las no recomendadas igual aparecen, con su motivo', () => {
     const r = recomendar(ctx(conLetras(m)));
@@ -62,11 +63,11 @@ describe('recomendaciones con los datos de hoy', () => {
     assert.ok(r.items.slice(primerNo).every((i) => !i.recomendado));
   });
   it('sin un gasto cercano que no se cubra, no se aparta nada por las dudas: no se fuerza la caja', () => {
-    const r = recomendar(ctx(m, { perfil: 'arriesgado', horizonteMeses: 60, necesitaCaja: false }));
+    const r = recomendar(ctx(m, { perfil: 'arriesgado', horizonteMeses: 6, necesitaCaja: false }));
     assert.ok(!r.items.some((i) => i.recomendado && i.rec.rol === 'caja'));
   });
   it('con un gasto cercano que los ingresos no cubren, se suma la mejor opción para tener plata disponible', () => {
-    const r = recomendar(ctx(m, { perfil: 'arriesgado', horizonteMeses: 60, necesitaCaja: true }));
+    const r = recomendar(ctx(m, { perfil: 'arriesgado', horizonteMeses: 6, necesitaCaja: true }));
     assert.ok(r.items.some((i) => i.recomendado && i.rec.rol === 'caja'));
   });
 });
@@ -82,10 +83,14 @@ describe('el plazo y el perfil cambian lo que se sugiere; el monto, no', () => {
   it('CEDEARs con $100.000 y varios años: se recomiendan', () => {
     assert.equal(item(ar({ monto: 100000 }), 'cedear')!.recomendado, true);
   });
-  it('si necesita la plata en menos de 3 años, los CEDEARs no se recomiendan', () => {
-    const c = item(ar({ monto: 100000, horizonteMeses: 6 }), 'cedear')!;
+  it('a 6 meses los CEDEARs sólo se sugieren al arriesgado (así dice la tabla del asesor)', () => {
+    assert.equal(item(ar({ monto: 100000, horizonteMeses: 6 }), 'cedear')!.recomendado, true);
+    for (const perfil of ['conservador', 'moderado'] as const) assert.equal(item(ar({ perfil, monto: 100000, horizonteMeses: 6 }), 'cedear')!.recomendado, false, perfil);
+  });
+  it('a menos de 3 meses no hay CEDEARs para nadie', () => {
+    const c = item(ar({ monto: 100000, horizonteMeses: 2 }), 'cedear')!;
     assert.equal(c.recomendado, false);
-    assert.match(c.motivo ?? '', /al menos 3 años/);
+    assert.match(c.motivo ?? '', /al menos 3 meses/);
   });
   it('sin saber el horizonte, tampoco se recomienda lo de varios años', () => {
     assert.equal(item(ar({ monto: 100000, horizonteMeses: null }), 'cedear')!.recomendado, false);
@@ -212,6 +217,8 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
     ['galicia_securities', 'dolar', { monto: 80000 }],
     ['ppi', 'dolar', { monto: 50000 }],
     ['ieb', 'cedear', { ticker: 'QQQ', cantidad: 1, monto: 58700 }],
+    ['iol', 'bono_cer', { ticker: 'TZXM7', monto: 80000 }],
+    ['cocos', 'bono_cer', { ticker: 'TZXD6', monto: 50000 }],
   ];
   for (const [prov, prod, extra] of casos) {
     it(`${PROVEEDORES[prov].nombre} · ${PRODUCTOS[prod].nombre}`, () => {
@@ -221,6 +228,8 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
       const valores = valoresIniciales(prod, previos, AHORA);
       for (const campo of FORMULARIOS[prod].campos) {
         if (!esObligatorio(campo, valores) || valores[campo.id]) continue;
+        // Una letra o un bono que el mercado conoce trae su propio vencimiento.
+        if (campo.id === 'vencimiento' && (prod === 'letra' || prod === 'bono_cer')) continue;
         const lista = opcionesDe(campo, valores, m);
         valores[campo.id] = campo.tipo === 'opcion' ? (lista[0]?.id ?? 'x') : campo.tipo === 'porcentaje' ? '19' : '1000';
       }
@@ -236,7 +245,7 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
     });
   }
   it('cada inversión que se ofrece tiene guía y registro, con la misma forma de decidir', () => {
-    for (const prod of ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'dolar', 'cedear'] as const) {
+    for (const prod of ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'bono_cer', 'dolar', 'cedear'] as const) {
       const algunProveedor = Object.values(PROVEEDORES).find((p) => p.productos[prod]);
       assert.ok(algunProveedor, `ningún proveedor para ${prod}`);
       assert.ok(armarGuia(algunProveedor.id, prod, { ...CONTEXTO_VACIO, mercado: m }), `sin guía para ${prod}`);
@@ -359,12 +368,14 @@ describe('cuando los datos fallan, la persona sólo ve "hubo un error"', () => {
   });
 });
 
-describe('la cartera: el plazo decide en qué, el perfil cuánto, el monto nada', () => {
+describe('la cartera: la tabla del asesor (el plazo decide en qué, el perfil cuánto, el monto nada)', () => {
   const m = conLetras(mercadoFixture());
   const perfiles = ['conservador', 'moderado', 'arriesgado'] as const;
   const plazos = [1, 2, 6, 11, 12, 24, 35, 36, 48, 60];
   const alternativas = (c: Partial<Contexto>, mercado: Mercado = m) => recomendar(ctx(mercado, c)).items.filter((i) => i.recomendado);
   const ids = (c: Partial<Contexto>, mercado: Mercado = m) => alternativas(c, mercado).map((i) => i.rec.producto.id);
+  const A_MANO = ['plazo_fijo', 'cuenta_remunerada', 'fci'];
+  const RENTA_FIJA = ['letra', 'bono_cer', 'plazo_fijo_uva'];
 
   it('los tramos de plazo', () => {
     assert.equal(tramoDe(2), 'corto');
@@ -384,22 +395,24 @@ describe('la cartera: el plazo decide en qué, el perfil cuánto, el monto nada'
     }
   });
 
-  it('las partes de la plata (según la cartera) suman 100%, y se muestran entre 1 y 3 alternativas', () => {
+  it('las partes de la plata suman 100% y cada alternativa dice qué parte le toca', () => {
     for (const perfil of perfiles) for (const horizonteMeses of [...plazos, null]) {
       const cartera = armarCartera(perfil, horizonteMeses);
       assert.ok(Math.abs(cartera.reduce((a, gr) => a + gr.peso, 0) - 1) < 1e-9, `${perfil} ${horizonteMeses}m`);
       const marcadas = alternativas({ perfil, horizonteMeses });
-      // Cada parte puede tener varias alternativas a elegir: su porcentaje se repite en cada una.
-      const permitidos = cartera.map((gr) => gr.peso);
-      for (const i of marcadas) assert.ok(i.peso !== null && permitidos.some((x) => Math.abs(x - i.peso!) < 1e-9), `${perfil} ${horizonteMeses}m: ${i.peso}`);
-      assert.ok(marcadas.length >= 1 && marcadas.length <= 3, `${perfil} ${horizonteMeses}m: ${marcadas.length}`);
+      assert.ok(marcadas.length >= 1, `${perfil} ${horizonteMeses}m`);
+      // Cada parte puede tener varias alternativas a elegir: su porcentaje se repite en cada una. Sin porcentaje sólo la parte de 0%.
+      const permitidos = cartera.filter((gr) => gr.peso > 0).map((gr) => gr.peso);
+      for (const i of marcadas) assert.ok(i.peso === null || permitidos.some((x) => Math.abs(x - i.peso!) < 1e-9), `${perfil} ${horizonteMeses}m: ${i.rec.producto.id} ${i.peso}`);
+      assert.ok(marcadas.some((i) => i.peso !== null), `${perfil} ${horizonteMeses}m: alguna lleva porcentaje`);
     }
   });
 
-  it('menos de 3 meses: todo lo mismo para cualquier perfil (plata a mano), sin UVA ni CEDEARs', () => {
+  it('menos de 3 meses: todo lo mismo para cualquier perfil (plazo fijo, cuenta, fondo y letras), sin UVA ni CEDEARs', () => {
     for (const horizonteMeses of [1, 2]) {
       const base = ids({ perfil: 'conservador', horizonteMeses });
       for (const perfil of perfiles) assert.deepEqual(ids({ perfil, horizonteMeses }), base);
+      for (const id of [...A_MANO, 'letra']) assert.ok(base.includes(id as never), `falta ${id}`);
       assert.ok(!base.includes('plazo_fijo_uva') && !base.includes('cedear') && !base.includes('dolar'));
       assert.ok(alternativas({ horizonteMeses }).every((i) => i.peso === 1));
     }
@@ -410,15 +423,34 @@ describe('la cartera: el plazo decide en qué, el perfil cuánto, el monto nada'
     assert.ok(r.items.some((i) => i.recomendado && i.rec.rol === 'caja'));
   });
 
-  it('3 a 12 meses: el conservador, todo a mano; moderado y arriesgado, mitad a mano y mitad en renta fija, sin CEDEARs', () => {
+  it('3 a 12 meses, conservador: todo a mano (plazo fijo, cuenta y fondo), sin renta fija ni CEDEARs', () => {
     for (const horizonteMeses of [3, 6, 11]) {
-      assert.ok(alternativas({ perfil: 'conservador', horizonteMeses }).every((i) => i.peso === 1));
-      for (const perfil of ['moderado', 'arriesgado'] as const) {
-        const marcadas = alternativas({ perfil, horizonteMeses });
-        assert.deepEqual([...new Set(marcadas.map((i) => i.peso))].sort(), [0.5], `${perfil} ${horizonteMeses}m`);
-        assert.ok(marcadas.some((i) => i.rec.producto.id === 'letra' || i.rec.producto.id === 'plazo_fijo_uva'), 'una parte es renta fija');
-        assert.ok(!marcadas.some((i) => i.rec.producto.id === 'cedear'));
-      }
+      const x = alternativas({ perfil: 'conservador', horizonteMeses });
+      assert.ok(x.every((i) => i.peso === 1));
+      for (const id of A_MANO) assert.ok(x.some((i) => i.rec.producto.id === id), `falta ${id}`);
+      assert.ok(!x.some((i) => i.rec.producto.id === 'cedear'));
+    }
+  });
+
+  it('3 a 12 meses, moderado: 50% a mano (plazo fijo, cuenta, fondo) y 50% renta fija (letras, bonos CER, UVA)', () => {
+    for (const horizonteMeses of [3, 6, 11]) {
+      const x = alternativas({ perfil: 'moderado', horizonteMeses });
+      assert.deepEqual([...new Set(x.map((i) => i.peso))], [0.5]);
+      const mano = x.filter((i) => A_MANO.includes(i.rec.producto.id)).map((i) => i.rec.producto.id);
+      const fija = x.filter((i) => RENTA_FIJA.includes(i.rec.producto.id)).map((i) => i.rec.producto.id);
+      assert.ok(mano.length >= 2 && fija.length >= 2, `${horizonteMeses}m: ${mano} / ${fija}`);
+      assert.ok(fija.includes('letra') && fija.includes('bono_cer'), 'los bonos CER entran en la renta fija');
+      assert.ok(!x.some((i) => i.rec.producto.id === 'cedear'));
+    }
+  });
+
+  it('3 a 12 meses, arriesgado: 50% renta fija y 50% CEDEARs', () => {
+    for (const horizonteMeses of [3, 6, 11]) {
+      const x = alternativas({ perfil: 'arriesgado', horizonteMeses });
+      assert.deepEqual([...new Set(x.map((i) => i.peso))], [0.5]);
+      assert.ok(x.some((i) => i.rec.producto.id === 'cedear'));
+      assert.ok(x.some((i) => RENTA_FIJA.includes(i.rec.producto.id)));
+      assert.ok(!x.some((i) => A_MANO.includes(i.rec.producto.id)));
     }
   });
 
@@ -435,23 +467,53 @@ describe('la cartera: el plazo decide en qué, el perfil cuánto, el monto nada'
       assert.ok(cedear, perfil);
       assert.equal(cedear.peso, PESO_CEDEAR_A_LARGO_PLAZO[perfil]);
     }
-    assert.deepEqual(armarCartera('arriesgado', 60).map((g) => g.id), ['crecimiento']);
-    assert.ok(!ids({ perfil: 'conservador', horizonteMeses: 60 }).every((id) => id === 'cedear'), 'el conservador no queda todo en CEDEARs');
-  });
-
-  it('nunca CEDEARs a menos de 3 años, ni siquiera para el arriesgado', () => {
-    for (const perfil of perfiles) for (const horizonteMeses of [1, 2, 6, 11, 12, 24, 35, null]) {
-      assert.ok(!ids({ perfil, horizonteMeses }).includes('cedear'), `${perfil} ${horizonteMeses}m`);
+    assert.deepEqual(armarCartera('arriesgado', 60).map((g) => g.id), ['crecimiento', 'liquidez']);
+    for (const perfil of ['conservador', 'moderado'] as const) {
+      const x = ids({ perfil, horizonteMeses: 60 });
+      assert.ok(x.includes('plazo_fijo_uva') && x.includes('cuenta_remunerada') && x.includes('cedear'), perfil);
     }
   });
 
-  it('si no hay datos de CEDEARs, su parte pasa a lo demás y sigue sumando 100%', () => {
-    const sinCedears = { ...m, cedears: null };
-    const marcadas = alternativas({ perfil: 'moderado', horizonteMeses: 60 }, sinCedears);
-    assert.ok(marcadas.length > 0 && marcadas.every((i) => i.peso === 1));
+  it('más de 3 años, arriesgado: CEDEARs y, además, la cuenta remunerada para tener plata a mano (sin porcentaje)', () => {
+    const x = alternativas({ perfil: 'arriesgado', horizonteMeses: 60 });
+    assert.deepEqual(x.map((i) => i.rec.producto.id).sort(), ['cedear', 'cuenta_remunerada']);
+    assert.equal(x.find((i) => i.rec.producto.id === 'cedear')!.peso, 1);
+    assert.equal(x.find((i) => i.rec.producto.id === 'cuenta_remunerada')!.peso, null);
   });
 
-  it('las letras del Tesoro se ofrecen en los mismos casos que el plazo fijo (y rinden más que él hoy)', () => {
+  it('CEDEARs: nunca a menos de 3 meses ni de 1 a 3 años; de 3 a 12 meses sólo el arriesgado; a más de 3 años, todos', () => {
+    for (const perfil of perfiles) for (const horizonteMeses of [1, 2, 3, 6, 11, 12, 24, 35, 36, 60, null]) {
+      const hay = ids({ perfil, horizonteMeses }).includes('cedear');
+      const esperado = tramoDe(horizonteMeses) === 'mlargo' || (tramoDe(horizonteMeses) === 'medio' && perfil === 'arriesgado' && horizonteMeses !== null);
+      assert.equal(hay, esperado, `${perfil} ${horizonteMeses}m`);
+    }
+  });
+
+  it('si no hay datos de CEDEARs, su parte pasa a lo demás y siempre queda un porcentaje', () => {
+    const sinCedears = { ...m, cedears: null };
+    for (const perfil of perfiles) {
+      const x = alternativas({ perfil, horizonteMeses: 60 }, sinCedears);
+      assert.ok(x.length > 0 && x.some((i) => i.peso === 1), perfil);
+      assert.ok(!x.some((i) => i.rec.producto.id === 'cedear'));
+    }
+  });
+
+  it('los bonos CER son renta fija: aparecen de 3 a 12 meses para moderado y arriesgado, no a menos de 3 meses', () => {
+    assert.ok(ids({ perfil: 'moderado', horizonteMeses: 6 }).includes('bono_cer'));
+    assert.ok(ids({ perfil: 'arriesgado', horizonteMeses: 6 }).includes('bono_cer'));
+    assert.ok(!ids({ horizonteMeses: 2 }).includes('bono_cer'));
+    const e = item(recomendar(ctx(m, { horizonteMeses: 6 })), 'bono_cer')!.rec.mejor;
+    assert.equal(e.confianza, 'estimado');
+    assert.ok(e.tem && e.real, 'se estima lo que rinde por encima de la inflación, como rango');
+    assert.match(PRODUCTOS.bono_cer.puedeBajar, /^Sí/);
+  });
+
+  it('un bono CER sin datos de hoy no se ofrece', () => {
+    const sin = { ...m, bonosCer: null };
+    assert.equal(item(recomendar(ctx(sin, { horizonteMeses: 6 })), 'bono_cer'), undefined);
+  });
+
+  it('las letras del Tesoro se ofrecen en los mismos casos que el plazo fijo', () => {
     assert.ok(ids({ horizonteMeses: 2 }).includes('letra'));
     assert.ok(ids({ perfil: 'moderado', horizonteMeses: 6 }).includes('letra'));
   });
@@ -470,11 +532,9 @@ describe('la cartera: el plazo decide en qué, el perfil cuánto, el monto nada'
     assert.equal(d?.peso, null);
   });
 
-  it('a las que quedan afuera se les dice por qué: o cuáles rinden más', () => {
+  it('a las que quedan afuera se les dice por qué', () => {
     const r = recomendar(ctx(m, { horizonteMeses: 12 }));
     for (const i of r.items.filter((x) => !x.recomendado)) assert.ok(i.motivo, i.rec.producto.nombre);
-    const marcadas = r.items.filter((i) => i.recomendado).map((i) => i.rec.producto.nombre.toLowerCase());
-    for (const i of r.items.filter((x) => !x.recomendado && x.motivo && /hoy rinden más/.test(x.motivo))) for (const n of marcadas) assert.ok(i.motivo!.includes(n), i.motivo!);
   });
 });
 
@@ -529,6 +589,16 @@ describe('es obligatorio todo dato sin el cual no se ve cómo crece la plata ni 
     assert.ok(registrar('cedear', { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '1', precio: '21000', comision: '150' }).errores.comision, 'más de 100% no puede ser');
   });
 
+  it('bono CER: se completa el vencimiento con el del mercado, y el ticker es obligatorio', () => {
+    const base = { proveedor: 'Cocos Capital', monto: '50000', inicio: '2026-10-01' };
+    assert.ok(registrar('bono_cer', base).errores.ticker);
+    const ok = registrar('bono_cer', { ...base, ticker: 'tzxm7', vencimiento: '' });
+    assert.deepEqual(ok.errores, {});
+    assert.equal(ok.borrador?.vencimiento, '2027-03-31');
+    assert.equal(ok.borrador?.detalle.ticker, 'TZXM7');
+    assert.ok(registrar('bono_cer', { ...base, ticker: 'XXXX1', vencimiento: '2027-05-01' }).avisos.some((a) => /No encontramos/.test(a)));
+  });
+
   it('CEDEAR: cualquier ticker se puede anotar (hay cientos y también acciones argentinas), con un aviso si no lo conocemos', () => {
     const r = registrar('cedear', { proveedor: 'IOL (InvertirOnline)', ticker: 'GGAL', cantidad: '10', precio: '5000', comision: '0,6' });
     assert.deepEqual(r.errores, {});
@@ -549,6 +619,7 @@ describe('es obligatorio todo dato sin el cual no se ve cómo crece la plata ni 
     assert.equal(esObligatorio(FORMULARIOS.fci.campos.find((c) => c.id === 'tna')!, { tipoFondo: 'renta_fija' }), false);
     assert.deepEqual(opcionales('dolar'), ['tipo']);
     for (const t of ['cuenta_remunerada', 'plazo_fijo', 'plazo_fijo_uva', 'cedear', 'letra'] as const) assert.deepEqual(opcionales(t), [], t);
+    assert.deepEqual(opcionales('bono_cer'), ['cantidad']);
   });
 });
 

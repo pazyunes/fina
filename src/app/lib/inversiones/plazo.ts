@@ -13,6 +13,9 @@ export function avisoDePlazo(producto: Producto, horizonteMeses: number | null):
       ? `Dijiste que vas a necesitar la plata en ${enMeses(horizonteMeses)}, y esto se piensa para ${enMeses(producto.horizonteMinimoMeses)} o más. Si el precio baja justo cuando la necesitás, vendés con pérdida. Para plazos más cortos suelen encajar mejor otras opciones.`
       : `Dijiste que vas a necesitar la plata en ${enMeses(horizonteMeses)}, y esto pide dejarla al menos ${enMeses(producto.horizonteMinimoMeses)}. Fijate que el plazo coincida con cuándo la vas a usar.`;
   }
+  if (producto.id === 'cedear' && horizonteMeses < 36) {
+    return `Dijiste que vas a necesitar la plata en ${enMeses(horizonteMeses)}. Los CEDEARs suben y bajan y se piensan a varios años: si el precio está bajo justo cuando la necesitás, vendés con pérdida. Si decidís hacerlo, que sea con la parte de tu plata que aguante esos altibajos.`;
+  }
   if ((producto.rol === 'caja' || producto.id === 'plazo_fijo') && horizonteMeses >= 36) {
     return 'Dijiste que podés dejar la plata más de 3 años. Para plazos tan largos suele convenir algo que pueda crecer más que una cuenta para tener a mano: fijate que el plazo de la inversión coincida con el de tu plata.';
   }

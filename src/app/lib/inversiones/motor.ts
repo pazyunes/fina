@@ -24,7 +24,7 @@ import {
   type FuenteDato, type PerfilRiesgo, type Producto, type ProductoId, type ProveedorId, type Rol,
 } from './catalogo.js';
 import { diaMes, enMeses, fmtPesos, listaConY, nombreCuenta, nombrePropio, pct, pctConSigno, rangoPct, rangoPctConSigno } from './formato.js';
-import { armarCartera, maximoPorGrupo, TRAMOS, tramoDe, type Tramo } from './cartera.js';
+import { armarCartera, PRODUCTOS_DEL_GRUPO, TRAMOS, tramoDe, type Tramo } from './cartera.js';
 import { claveDeclarada, limitesDe, origenDeclarable } from './limites.js';
 import { edadEnDias, estaVigente, type Dato, type Mercado } from './mercadoTipos.js';
 
@@ -312,6 +312,35 @@ function evaluarLetras(
   });
 }
 
+function evaluarBonosCer(
+  producto: ProductoId, proveedor: ProveedorId, m: Mercado, infl: Inflacion, ahora: number,
+): Evaluacion {
+  const bonos = m.bonosCer;
+  if (!bonos) return sinDato(producto, proveedor, 'No tenemos el mercado de bonos CER de hoy.');
+  // Sólo los que se operan (un bono que casi no tiene movimiento es difícil de vender antes del vencimiento) y que vencen
+  // en menos de 2 años: es la renta fija para plazos de meses, no para dejar la plata una década.
+  const lista = bonos.valor.filter((b) => b.volumen > 0 && b.dias <= 730);
+  if (lista.length === 0) return sinDato(producto, proveedor, 'No hay bonos CER con movimiento hoy.');
+  const uva = m.inflacion.uva30d;
+  if (!uva) return sinDato(producto, proveedor, 'No tenemos la UVA de hoy, que se usa para estimar lo que suma el CER.');
+  // El bono paga el CER (que sigue a la inflación, igual que la UVA) más la TIR real. El rango va de la
+  // menor a la mayor TIR de los bonos que se operan.
+  const tirs = lista.map((b) => b.tir);
+  const aMensual = (tir: number) => (1 + uva.valor / 100) * Math.pow(1 + tir, 30 / 365) - 1;
+  const tem = { min: aMensual(Math.max(0, Math.min(...tirs))), max: aMensual(Math.max(...tirs)) };
+  const real = { min: realMensual(tem.min, infl.mensual), max: realMensual(tem.max, infl.mensual) };
+  const corto = [...lista].sort((a, b) => a.dias - b.dias)[0];
+  return {
+    producto, proveedor, veredicto: veredictoDe(real), tna: null, tem, real,
+    fecha: bonos.fecha, fuente: bonos.fuente, vigente: estaVigente('bonosCer', bonos.fecha, ahora) && !enRevision(m, 'bonosCer'), confianza: 'estimado',
+    detalle: `Hoy hay ${lista.length} bonos CER que se operan y vencen en menos de 2 años. Rinden entre ${pct(Math.min(...tirs) * 100, 1)} y ${pct(Math.max(...tirs) * 100, 1)} por año por encima de la inflación. El más corto, ${corto.ticker}, vence el ${diaMes(corto.vencimiento)}.`,
+    notas: [
+      'Rinden la inflación (el CER) más ese extra si esperás hasta el vencimiento. El CER sigue a la inflación con un rezago de un par de meses.',
+      'Si los vendés antes, el precio puede ser menor: cuanto más largo el bono, más se mueve.',
+    ],
+  };
+}
+
 function evaluarDolar(
   producto: ProductoId, proveedor: ProveedorId, m: Mercado, infl: Inflacion, ahora: number,
 ): Evaluacion {
@@ -356,6 +385,7 @@ export function evaluar(
     case 'cuenta': return evaluarCuenta(producto, proveedor, fuente, m, infl, ahora);
     case 'plazo': return evaluarPlazoFijo(producto, proveedor, m, infl, ahora);
     case 'letras': return evaluarLetras(producto, proveedor, m, infl, ahora);
+    case 'bonosCer': return evaluarBonosCer(producto, proveedor, m, infl, ahora);
     case 'dolar': return evaluarDolar(producto, proveedor, m, infl, ahora);
     case 'cedears': return evaluarCedears(producto, proveedor, m, ahora);
   }
@@ -536,32 +566,35 @@ export function recomendar(ctx: Contexto): Resultado {
   const sirve = (c: ItemProducto | undefined): c is ItemProducto => !!c && c.motivo === null;
   const puntajeDe = (c: ItemProducto) => puntajes.get(c) ?? -Infinity;
 
-  // ── La cartera de este plazo y este perfil ──
+  // ── La cartera de este plazo y este perfil (la tabla del asesor) ──
   const grupos = armarCartera(ctx.perfil, ctx.horizonteMeses);
   const candidatosDeGrupo = grupos.map((gr) => {
     let lista = gr.productos.map(porId).filter(sirve);
-    // Para tener la plata a mano o fijar un plazo, no se ofrece lo que pierde contra la inflación si hay
-    // otra opción igual de disponible que no. A menos de 3 meses sí: todo es mejor que nada.
-    if (tramo !== 'corto' && lista.some((c) => c.rec.mejor.veredicto !== 'pierde')) lista = lista.filter((c) => c.rec.mejor.veredicto !== 'pierde');
+    // Para fijar un plazo o ahorrar, no se ofrece lo que pierde contra la inflación si hay otra opción igual de
+    // disponible que no. La plata a mano (plazo fijo, cuenta, fondo) se muestra completa: es lo que figura en la
+    // tabla y sirve para tener la plata disponible aunque hoy rinda menos que los precios.
+    if (gr.id !== 'liquidez' && lista.some((c) => c.rec.mejor.veredicto !== 'pierde')) lista = lista.filter((c) => c.rec.mejor.veredicto !== 'pierde');
     return [...lista].sort((a, b) => puntajeDe(b) - puntajeDe(a));
   });
 
-  // Una parte sin nada para ofrecer (por ejemplo, sin datos de CEDEARs) pasa su porcentaje a las demás.
-  const conAlgo = grupos.map((gr, i) => ({ gr, lista: candidatosDeGrupo[i] })).filter((x) => x.lista.length > 0);
+  // Se muestran todas las alternativas de cada parte. Una parte sin nada para ofrecer (por ejemplo, sin datos de
+  // CEDEARs) pasa su porcentaje a las demás. Una parte de 0% se muestra sin porcentaje.
   const elegidas: ItemProducto[] = [];
-  const puestasPorGrupo = conAlgo.map(({ lista }, i) => {
-    const max = maximoPorGrupo(conAlgo.length, i === 0);
+  const puestasPorGrupo = grupos.map((_, i) => {
     const picks: ItemProducto[] = [];
-    for (const c of lista) {
-      if (picks.length >= max) break;
-      if (!elegidas.includes(c)) { picks.push(c); elegidas.push(c); }
-    }
+    for (const c of candidatosDeGrupo[i]) if (!elegidas.includes(c)) { picks.push(c); elegidas.push(c); }
     return picks;
   });
-  const pesoTotal = conAlgo.reduce((a, x, i) => a + (puestasPorGrupo[i].length > 0 ? x.gr.peso : 0), 0);
-  conAlgo.forEach(({ gr }, i) => {
-    for (const c of puestasPorGrupo[i]) { c.recomendado = true; c.peso = gr.peso / pesoTotal; }
+  const pesoTotal = grupos.reduce((a, gr, i) => a + (puestasPorGrupo[i].length > 0 ? gr.peso : 0), 0);
+  grupos.forEach((gr, i) => {
+    for (const c of puestasPorGrupo[i]) { c.recomendado = true; c.peso = gr.peso > 0 && pesoTotal > 0 ? gr.peso / pesoTotal : null; }
   });
+  // Si la parte que llevaba la plata no tiene nada para ofrecer (por ejemplo, el arriesgado sin datos de CEDEARs), la plata
+  // va a lo mejor para ahorrar a ese plazo: nunca queda una cartera sin porcentajes.
+  if (pesoTotal === 0) {
+    const ahorro = PRODUCTOS_DEL_GRUPO.ahorro.map(porId).filter(sirve).sort((a, b) => puntajeDe(b) - puntajeDe(a));
+    for (const c of ahorro) { c.recomendado = true; c.peso = 1; if (!elegidas.includes(c)) elegidas.push(c); }
+  }
 
   // Un gasto cercano que no se cubre con lo que ingresa: se suma lo mejor para tener plata disponible.
   if (ctx.necesitaCaja && !elegidas.some((c) => c.rec.rol === 'caja')) {

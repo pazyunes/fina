@@ -59,6 +59,18 @@ export type LetraMercado = {
   precio: number;
 };
 
+/** Un bono que se ajusta por CER (la inflación): lo que rinde POR ENCIMA de la inflación si se espera al vencimiento. */
+export type BonoCerMercado = {
+  ticker: string;
+  precio: number;
+  /** TIR real (fracción anual): lo que rinde sobre el CER. */
+  tir: number;
+  vencimiento: string;
+  dias: number;
+  /** Lo operado, en pesos: un bono que casi no se opera no es fácil de vender. */
+  volumen: number;
+};
+
 export type CedearMercado = {
   simbolo: string;
   precio: number;
@@ -117,6 +129,8 @@ export type Mercado = {
   cuentas: Dato<CuentaMercado[]> | null;
   fondos: Dato<FondoMercado[]> | null;
   letras: Dato<LetraMercado[]> | null;
+  /** Bonos CER (renta fija que sigue a la inflación). Opcional: los paquetes guardados antes no lo traen. */
+  bonosCer?: Dato<BonoCerMercado[]> | null;
   cedears: Dato<CedearMercado[]> | null;
   dolar: {
     oficial: Dato<number> | null;
@@ -159,6 +173,7 @@ export const LIMITE_DIAS = {
   tasaBcra: 6,
   riesgoPais: 5,
   letras: 5,
+  bonosCer: 5,
   cedears: 5,
   inflacion: 55,  // el INDEC publica una vez por mes
   uva: 5,

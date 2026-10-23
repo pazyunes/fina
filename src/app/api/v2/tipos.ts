@@ -176,6 +176,7 @@ export type TipoPosicion =
   | 'plazo_fijo'
   | 'plazo_fijo_uva'
   | 'letra'
+  | 'bono_cer'
   | 'dolar'
   | 'cedear';
 

@@ -18,6 +18,7 @@ export type ProductoId =
   | 'plazo_fijo'
   | 'plazo_fijo_uva'
   | 'letra'
+  | 'bono_cer'
   | 'dolar'
   | 'cedear';
 
@@ -67,6 +68,14 @@ export type Producto = {
   glosario: Termino[];
 };
 
+/**
+ * Hasta cuánto garantiza el seguro de depósitos, por persona y por banco, en pesos. Lo fija el BCRA y se
+ * actualiza de a poco: hoy es el de la Comunicación "A" 8407 (05/03/2026), vigente desde el 01/04/2026.
+ * Si cambia, se cambia acá y se actualizan todos los textos.
+ */
+export const TOPE_SEGURO_DEPOSITOS = 50_000_000;
+const TOPE_TEXTO = `$${TOPE_SEGURO_DEPOSITOS.toLocaleString('es-AR')}`;
+
 // El glosario común. Cada inversión toma de acá las palabras que usa, así una
 // palabra técnica se explica siempre igual. Además, en los textos cada palabra
 // técnica lleva su aclaración entre paréntesis la primera vez que aparece.
@@ -82,7 +91,7 @@ const G: Record<string, Termino> = {
   rescate: { termino: 'Rescate', significado: 'Pedir que te devuelvan tu plata: se venden tus cuotapartes y el dinero llega a tu cuenta.' },
   custodio: { termino: 'Custodio', significado: 'El banco que guarda lo que compró el fondo, separado de la empresa que lo administra.' },
   cnv: { termino: 'CNV', significado: 'Comisión Nacional de Valores: el organismo del Estado que controla las inversiones.' },
-  segDepositos: { termino: 'Seguro de depósitos', significado: 'Si un banco quiebra, el Estado te devuelve tu plata hasta un tope. Cubre plazos fijos y cuentas de bancos.' },
+  segDepositos: { termino: 'Seguro de depósitos', significado: `Si un banco quiebra, te devuelven tu plata hasta un tope: hoy ${TOPE_TEXTO} por persona y por banco (lo fija el BCRA). Cubre plazos fijos y cuentas de bancos.` },
   vencimiento: { termino: 'Vencimiento', significado: 'El día en que termina el plazo y el banco te devuelve la plata.' },
   precancelable: { termino: 'Precancelable', significado: 'Se puede retirar antes del vencimiento, pero cobrando menos interés.' },
   uva: { termino: 'UVA', significado: 'Un número que sube con la inflación. Si la UVA sube 2%, tu plata sube 2%.' },
@@ -95,6 +104,8 @@ const G: Record<string, Termino> = {
   diversificar: { termino: 'Diversificar', significado: 'No poner toda la plata en el mismo lugar: si uno cae, no caés vos.' },
   volatilidad: { termino: 'Volatilidad', significado: 'Cuánto sube y baja el precio. Más vaivén, más riesgo.' },
   letra: { termino: 'Letra del Tesoro', significado: 'Un préstamo que le hacés al Estado por unos meses: pagás hoy y en una fecha fija te devuelve más.' },
+  cer: { termino: 'CER', significado: 'Un índice que sigue a la inflación. Un bono “CER” te paga la inflación más un extra.' },
+  bono: { termino: 'Bono', significado: 'Un préstamo que le hacés al Estado por un tiempo más largo que una letra. Te devuelve el capital ajustado más un extra, y su precio sube y baja hasta el vencimiento.' },
   habil: { termino: 'Día hábil', significado: 'Un día de semana que no es feriado.' },
 };
 
@@ -148,7 +159,7 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     dondeQuedaTuPlata: 'En el banco. Mientras dura el plazo no la podés usar.',
     riesgoTexto: 'Cobrás lo pactado. El riesgo es que la inflación (lo que suben los precios) sea mayor que tu interés y con esa plata compres menos.',
     cuandoLaSacas: 'Al vencimiento (el día en que termina el plazo). Antes, solo si es precancelable (se puede retirar antes) y con menos interés.',
-    garantia: 'Sí: los depósitos en bancos tienen seguro de depósitos (si el banco quiebra, el Estado te devuelve la plata hasta un tope, o sea un monto máximo, por persona y por banco).',
+    garantia: `Sí: está garantizado por el BCRA a través del seguro de depósitos, hasta ${TOPE_TEXTO} por persona y por banco (un tope es un monto máximo). Lo que pase de ahí no está cubierto.`,
     puedeBajar: 'No: cobrás lo pactado. El riesgo es que los precios suban más que tu interés, no que pierdas lo que pusiste.',
     glosario: [G.tna, G.vencimiento, G.precancelable, G.inflacion, G.segDepositos],
   },
@@ -166,7 +177,7 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     dondeQuedaTuPlata: 'En el banco, durante todo el plazo. El mínimo es de 90 días.',
     riesgoTexto: 'Si la inflación (lo que suben los precios) sube, cobrás más pesos; si baja, cobrás menos. Siempre cobrás en pesos.',
     cuandoLaSacas: 'Al vencimiento (el día en que termina el plazo), como mínimo a los 90 días.',
-    garantia: 'Sí: es un depósito en un banco, con seguro de depósitos (el Estado te devuelve la plata hasta un tope, o sea un monto máximo, si el banco quiebra).',
+    garantia: `Sí: es un depósito en un banco, garantizado por el BCRA a través del seguro de depósitos hasta ${TOPE_TEXTO} por persona y por banco (un tope es un monto máximo). Cubre también lo que se actualiza por la UVA.`,
     puedeBajar: 'No: en pesos tu capital no baja, se actualiza con la inflación. Lo que no sabés de antemano es cuántos pesos vas a cobrar.',
     glosario: [G.uva, G.vencimiento, G.inflacion, G.segDepositos],
   },
@@ -187,6 +198,24 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     garantia: 'No tiene seguro de depósitos. Está garantizada por el Tesoro de la Nación: el respaldo es el compromiso de pago del Estado argentino.',
     puedeBajar: 'Si esperás al vencimiento, no: cobrás lo que figuraba al comprar. Si la vendés antes, el precio puede ser menor y ahí sí perdés.',
     glosario: [G.broker, G.letra, G.vencimiento, G.tna],
+  },
+
+  bono_cer: {
+    id: 'bono_cer',
+    nombre: 'Bonos CER',
+    resumen: 'Un préstamo al Estado a varios meses que sigue a la inflación más un extra. Se pueden vender antes.',
+    rol: 'ahorro',
+    riesgo: 'Medio',
+    horizonteMinimoMeses: 3,
+    plazoMinimoDias: null,
+    perfiles: ['conservador', 'moderado', 'arriesgado'],
+    queEs: 'Un bono “CER” es un préstamo que le hacés al Estado por varios meses o años. Tu capital se ajusta con el CER (un índice que sigue a la inflación, o sea lo que suben los precios) y encima te paga un extra. Se compra desde un broker (una app o empresa donde comprás inversiones).',
+    dondeQuedaTuPlata: 'En el Tesoro Nacional. Lo que comprás queda a tu nombre en tu cuenta del broker (la plataforma donde lo comprás).',
+    riesgoTexto: 'Si esperás hasta el vencimiento, cobrás la inflación más el extra que figuraba al comprar. Si lo vendés antes, el precio puede ser menor.',
+    cuandoLaSacas: 'Al vencimiento, o antes vendiéndolo: se acredita en 1 o 2 días hábiles (de lunes a viernes, sin feriados). Algunos casi no se operan y cuesta venderlos: mirá cuánto se opera.',
+    garantia: 'No tiene seguro de depósitos. Lo respalda el Tesoro de la Nación: el compromiso de pago del Estado argentino.',
+    puedeBajar: 'Sí, según el plazo: si lo vendés antes del vencimiento, el precio puede estar más bajo y perdés. Cuanto más largo el bono, más se mueve su precio.',
+    glosario: [G.broker, G.bono, G.cer, G.inflacion, G.vencimiento],
   },
 
   dolar: {
@@ -213,7 +242,7 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     resumen: 'Pedacitos de empresas grandes del exterior (también hay acciones argentinas). Para dejar varios años, no para retirar ya.',
     rol: 'crecimiento',
     riesgo: 'Alto',
-    horizonteMinimoMeses: 36,
+    horizonteMinimoMeses: 3,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
     queEs: 'Un CEDEAR es un papel en pesos que representa un pedacito de una empresa del exterior (como Apple). Se compra desde un broker (una app o empresa donde comprás inversiones). Un ETF como SPY (un “paquete” que reúne a las 500 empresas más grandes de EE.UU.) te evita elegir una sola. Este tipo de inversión se suele dejar a largo plazo, por varios años: así es como puede crecer. No es para retirar pronto.',
@@ -234,6 +263,7 @@ export type FuenteDato =
   | { tipo: 'cuenta'; id: string; extra?: string[] }
   | { tipo: 'plazo' }
   | { tipo: 'letras' }
+  | { tipo: 'bonosCer' }
   | { tipo: 'cedears' }
   | { tipo: 'dolar' };
 
@@ -280,6 +310,7 @@ export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
     productos: {
       fci: { tipo: 'fondo', id: 'Cocos Ahorro - Clase A' },
       letra: { tipo: 'letras' },
+      bono_cer: { tipo: 'bonosCer' },
       dolar: { tipo: 'dolar' },
       cedear: { tipo: 'cedears' },
     },
@@ -292,6 +323,7 @@ export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
     productos: {
       fci: { tipo: 'fondo', id: 'Balanz Capital Money Market - Clase A' },
       letra: { tipo: 'letras' },
+      bono_cer: { tipo: 'bonosCer' },
       dolar: { tipo: 'dolar' },
       cedear: { tipo: 'cedears' },
     },
@@ -301,28 +333,28 @@ export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
     id: 'iol',
     nombre: 'IOL (InvertirOnline)',
     tipo: 'broker',
-    productos: { letra: { tipo: 'letras' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
+    productos: { letra: { tipo: 'letras' }, bono_cer: { tipo: 'bonosCer' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
     paraEmpezar: PARA_EMPEZAR_BROKER,
   },
   galicia_securities: {
     id: 'galicia_securities',
     nombre: 'Galicia Securities',
     tipo: 'broker',
-    productos: { letra: { tipo: 'letras' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
+    productos: { letra: { tipo: 'letras' }, bono_cer: { tipo: 'bonosCer' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
     paraEmpezar: PARA_EMPEZAR_BROKER,
   },
   ppi: {
     id: 'ppi',
     nombre: 'PPI (Portfolio Personal)',
     tipo: 'broker',
-    productos: { letra: { tipo: 'letras' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
+    productos: { letra: { tipo: 'letras' }, bono_cer: { tipo: 'bonosCer' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
     paraEmpezar: PARA_EMPEZAR_BROKER,
   },
   ieb: {
     id: 'ieb',
     nombre: 'IEB',
     tipo: 'broker',
-    productos: { letra: { tipo: 'letras' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
+    productos: { letra: { tipo: 'letras' }, bono_cer: { tipo: 'bonosCer' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
     paraEmpezar: PARA_EMPEZAR_BROKER,
   },
   banco: {
@@ -339,7 +371,7 @@ export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
  * se ofrecen en los mismos casos que el plazo fijo: son parecidas, se pueden vender antes
  * y a veces pagan una tasa mejor.
  */
-export const ORDEN_PRODUCTOS: ProductoId[] = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'dolar', 'cedear'];
+export const ORDEN_PRODUCTOS: ProductoId[] = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'bono_cer', 'dolar', 'cedear'];
 
 /** Los nombres con los que la persona dice que usa cada proveedor (campo "bancos" del perfil inversor). */
 export const ALIAS_PROVEEDOR: Record<string, ProveedorId> = {

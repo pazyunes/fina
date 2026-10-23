@@ -28,7 +28,7 @@ type TipoMime = (typeof TIPOS_MIME)[number];
 const MAX_BASE64 = 5_000_000;
 const MAX_POR_HORA = 20;
 
-const TIPOS_DE_INVERSION = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'dolar', 'cedear'];
+const TIPOS_DE_INVERSION = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'letra', 'bono_cer', 'dolar', 'cedear'];
 
 const Lectura = z.object({
   esInversion: z.boolean().describe('false si la imagen no es de una inversión, una cuenta con rendimientos o un comprobante financiero.'),

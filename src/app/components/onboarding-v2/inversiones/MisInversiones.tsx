@@ -37,6 +37,7 @@ const COLOR_TIPO: Record<PosicionInversion['tipo'], string> = {
   plazo_fijo: COLORS.lila,
   plazo_fijo_uva: COLORS.brandSoft,
   letra: COLORS.naranja,
+  bono_cer: COLORS.star,
   dolar: COLORS.limaViz,
   cedear: COLORS.brand,
 };

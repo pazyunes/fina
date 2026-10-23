@@ -33,7 +33,7 @@ const FEEDS = [
   { fuente: 'BBC Mundo', url: 'https://feeds.bbci.co.uk/mundo/rss.xml' },
 ];
 
-const TIPOS = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'dolar', 'cedear', 'letra'] as const;
+const TIPOS = ['cuenta_remunerada', 'fci', 'plazo_fijo', 'plazo_fijo_uva', 'dolar', 'cedear', 'letra', 'bono_cer'] as const;
 type Tipo = (typeof TIPOS)[number];
 
 // Qué palabras vuelven relevante un titular para cada tipo de inversión.
@@ -45,6 +45,7 @@ const POR_TIPO: Record<Tipo, RegExp> = {
   dolar: /d[oó]lar|cepo|brecha|mep|reservas|tipo de cambio|devaluaci|fmi|blue|contado con liqui|riesgo pa[ií]s|bcra/i,
   cedear: /wall street|s&p|nasdaq|dow jones|reserva federal|\bfed\b|acciones|apple|nvidia|microsoft|tesla|amazon|google|meta\b|cedear|bolsa|aranceles|trump|inteligencia artificial/i,
   letra: /letra|lecap|licitaci|tesoro|riesgo pa[ií]s|tasa|bcra/i,
+  bono_cer: /bono|cer\b|inflaci|indec|licitaci|tesoro|riesgo pa[ií]s|bcra/i,
 };
 // Lo que mueve a todas: conflictos, petróleo, crisis, tasas de EE.UU.
 const GLOBAL = /guerra|conflicto|ataque|sanciones|petr[oó]leo|crisis|recesi[oó]n|elecciones|reserva federal|\bfed\b|aranceles|inflaci[oó]n/i;
@@ -57,6 +58,7 @@ const DESCRIPCION: Record<Tipo, string> = {
   dolar: 'dólares comprados con el dólar MEP',
   cedear: 'CEDEARs (pedacitos de empresas del exterior, a largo plazo)',
   letra: 'letras del Tesoro',
+  bono_cer: 'bonos CER (bonos del Tesoro que se ajustan por inflación)',
 };
 
 type Titular = { fuente: string; titular: string; enlace: string; fecha: string; puntaje: number };

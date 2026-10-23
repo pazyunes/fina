@@ -44,6 +44,7 @@ const QUE_SIGUE: Record<PosicionInversion['tipo'], string> = {
   plazo_fijo: 'No tenés que hacer nada hasta el vencimiento (el día en que termina el plazo). Ese día el banco te devuelve la plata más el interés; ahí decidís si lo renovás o lo usás.',
   plazo_fijo_uva: 'No tenés que hacer nada hasta el vencimiento (el día en que termina el plazo). Tu plata se va actualizando con la inflación; ese día cobrás lo actualizado más el interés.',
   letra: 'Podés olvidarte hasta el vencimiento (el día en que el Estado te devuelve la plata): paga solo y entra a tu cuenta del broker. El precio en el medio puede moverse, pero no cambia lo que cobrás si esperás.',
+  bono_cer: 'Cobrás la inflación más el extra si esperás hasta el vencimiento (el día en que el Estado te devuelve el capital ajustado). En el medio el precio sube y baja, y eso es normal: si no lo necesitás antes, no cambia lo que cobrás. Vender con miedo por una baja es lo que concreta la pérdida.',
   dolar: 'Los dólares no generan interés: lo que cambia es cuántos pesos valen. Mirarlo seguido no cambia nada; lo importante es para qué los guardaste.',
   cedear: 'El precio va a subir y bajar todos los días, y eso es normal. Está pensado para dejarlo varios años: mirarlo todos los días suele dar más ansiedad que información.',
 };
@@ -242,6 +243,7 @@ export function queHayHoy(p: PosicionInversion, m: Mercado | null, ahora: number
       break;
     }
     case 'letra':
+    case 'bono_cer':
       break;
   }
   return salida;

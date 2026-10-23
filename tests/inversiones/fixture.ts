@@ -55,6 +55,14 @@ export function mercadoFixture(cambios: Partial<Mercado> = {}): Mercado {
       fecha: '2026-10-20', fuente: 'CAFCI',
     },
     letras: null,
+    bonosCer: {
+      valor: [
+        { ticker: 'TZXD6', precio: 312.75, tir: 0.0236, vencimiento: '2026-12-15', dias: 55, volumen: 346_000_000 },
+        { ticker: 'TZXM7', precio: 233.15, tir: 0.0224, vencimiento: '2027-03-31', dias: 161, volumen: 249_000_000 },
+        { ticker: 'TZX28', precio: 364.4, tir: 0.0945, vencimiento: '2028-06-30', dias: 617, volumen: 111_000_000 },
+      ],
+      fecha: '2026-10-21', fuente: 'bonos CER',
+    },
     cedears: {
       valor: [
         { simbolo: 'SPY', precio: 21000, variacionDia: -0.4 },
