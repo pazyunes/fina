@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Check, TrendingUp, Clock, Plus, Pencil, Trash2 } from 'lucide-react';
 import { FinancialAnalysis, UserData } from '../types';
 import { useMoney, DisplayCurrencyToggle } from '../lib/displayCurrency';
-import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategies';
+import { buildGoalStrategies, GoalStrategy } from '../utils/goalStrategiesV1';
 import { updateReportData } from '../lib/reports';
 import { fetchUserPreferences } from '../lib/preferences';
 import { BottomNav } from './BottomNav';

@@ -5,9 +5,15 @@
 //       – un gasto fijo que vence hoy o mañana;
 //       – si no, "día de separar", el día del mes en que cobra (si lo cargó);
 //       – si no, los lunes, el resumen de la semana anterior.
-//   · ?turno=tarde  — 19 hs de Argentina, sólo a quien hoy todavía no sumó:
-//       – si tiene una racha de 2 días o más, el de la racha;
-//       – si no, el del paso del día.
+//   · ?turno=tarde, 19 hs de Argentina, si hoy no hay gastos anotados:
+//       – con racha de 2 días o más: el de la racha, que pide contarle a FINA
+//         lo de hoy (anotar un gasto salva el día);
+//       – si no: el recordatorio de anotar lo de hoy.
+//
+// Desde la migración 0044 no hay paso del día: la racha cuenta los días con
+// un gasto anotado, y el próximo paso es uno grande que la persona marca en
+// Inicio. La preferencia 'paso' apaga el recordatorio de anotar (sin
+// migración nueva).
 //
 // Máximo dos avisos por día. Cada tipo se apaga desde Perfil.
 //
@@ -18,7 +24,6 @@
 // Tono de FINA: los avisos recuerdan, no retan. Nunca "vas a perder tu racha".
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { PASOS } from '../src/app/api/v2/pasos.js';
 import { diaAR, diaDeSemana, diasDelMes, lunesDe, sumarDias } from './_recomendaciones/fechas.js';
 import { configurarPush, enviarAviso, type Aviso, type Suscripcion } from './_notificaciones/enviar.js';
 import { avisoDeInversionQueVence, type InversionQueVence } from './_notificaciones/inversiones.js';
@@ -27,14 +32,12 @@ type Req = { headers: Record<string, string | string[] | undefined>; query?: Rec
 type Res = { status(code: number): Res; json(body: unknown): void; setHeader(nombre: string, valor: string): void };
 
 type Turno = 'manana' | 'tarde';
-type Tipo = 'paso' | 'racha' | 'separar' | 'resumen' | 'vencimiento';
+type Tipo = 'paso' | 'racha' | 'separar' | 'resumen' | 'vencimiento' | 'registro';
 type Racha = { dias: number; hoyCumplido: boolean };
 type FilaSuscripcion = Suscripcion & { id: string; user_id: string };
 // Con `select('*')`: si todavía no se corrió la 0031, las columnas nuevas no
 // vienen y valen sus valores por defecto, en vez de romper la tarea entera.
 type Prefs = { paso?: boolean; racha?: boolean; separar?: boolean; resumen?: boolean; vencimientos?: boolean; dia_cobro?: number | null };
-
-const TITULO_PASO = new Map(PASOS.map((p) => [p.clave as string, p.titulo]));
 
 export default async function handler(req: Req, res: Res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -259,37 +262,60 @@ async function armarResumenSemanal(supabase: SupabaseClient, uid: string, hoy: s
   };
 }
 
-// ── La tarde: racha o paso ───────────────────────────────────────────────
+// ── La tarde: registro o racha ───────────────────────────────────────────
+
+/** Si hoy (en Argentina) hay algún gasto anotado: cargado hoy o con fecha de hoy. */
+async function hayGastoHoy(supabase: SupabaseClient, uid: string, hoy: string): Promise<boolean | null> {
+  // En UTC: dentro de un `or` de PostgREST, un "-03:00" suelto es más frágil.
+  const desde = new Date(`${hoy}T00:00:00-03:00`).toISOString();
+  const { count, error } = await supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', uid)
+    .eq('type', 'expense')
+    .or(`created_at.gte.${desde},occurred_at.gte.${desde}`);
+  return error ? null : (count ?? 0) > 0;
+}
 
 async function avisoDeLaTarde(supabase: SupabaseClient, uid: string, hoy: string, pref: Prefs): Promise<{ tipo: Tipo; aviso: Aviso } | null> {
   const { data: rachaData, error } = await supabase.rpc('racha_de', { p_user: uid });
   if (error) return null;
   const racha = rachaData as Racha;
-  // Si hoy ya sumó (paso cumplido o gasto por WhatsApp), no hay nada que recordar.
-  if (racha.hoyCumplido) return null;
+  // Si no se pudo saber, se asume que hay: mejor no recordar que recordar de más.
+  const gastoHoy = await hayGastoHoy(supabase, uid, hoy);
+  const sinGastoHoy = gastoHoy === false;
 
-  if (pref.racha !== false && racha.dias >= 2) {
+  // Racha en juego y nada anotado hoy: un solo aviso con las dos cosas. Contarle
+  // un gasto a FINA por WhatsApp anota lo de hoy y salva la racha a la vez.
+  //
+  // Si hay un gasto de hoy, el aviso no sale aunque la racha diga que el día no
+  // está cumplido: pasa con un gasto cargado antes con fecha de hoy (la racha
+  // mira `created_at`, `hayGastoHoy` también `occurred_at`), y decirle "no
+  // anotaste gastos" a quien ve uno de hoy en la app sería falso. Si no se pudo
+  // consultar (`null`), manda la racha, que ya sabe que hoy no se cargó nada.
+  if (!racha.hoyCumplido && gastoHoy !== true && pref.racha !== false && racha.dias >= 2) {
     return {
       tipo: 'racha',
       aviso: {
         title: `Tu racha de ${racha.dias} días`,
-        body: 'Hoy todavía no sumaste. Con registrar un gasto, acá o por WhatsApp, alcanza.',
+        body: sinGastoHoy
+          ? 'Hoy todavía no anotaste gastos. Contale a FINA por WhatsApp lo que gastaste y la racha queda a salvo.'
+          : 'Hoy todavía no anotaste gastos.',
         url: '/onboarding-v2/home',
         tag: 'fina-racha',
       },
     };
   }
-  if (pref.paso === false) return null;
-
-  const { data: paso } = await supabase.from('daily_steps').select('*').eq('user_id', uid).eq('day', hoy).maybeSingle();
-  const fila = paso as { step_key: string; completed_at: string | null; message?: string | null } | null;
-  if (fila?.completed_at) return null;
-  const titulo = fila ? TITULO_PASO.get(fila.step_key) : null;
+  // La preferencia 'paso' quedó como la del recordatorio de anotar lo del
+  // día (sin migración nueva): el paso diario ya no existe (migración 0044).
+  if (pref.paso === false || !sinGastoHoy) return null;
   return {
-    tipo: 'paso',
-    aviso: titulo
-      ? { title: 'Tu paso de hoy', body: `${titulo}. ${fila?.message ?? 'Lo hacés en un minuto.'}`.slice(0, 180), url: '/onboarding-v2/home', tag: 'fina-paso' }
-      // Todavía no entró hoy, así que no tiene paso asignado: se la invita a verlo.
-      : { title: 'Tu paso de hoy te espera', body: 'Entrá a FINA y fijate qué te toca hoy. Lo hacés en un minuto.', url: '/onboarding-v2/home', tag: 'fina-paso' },
+    tipo: 'registro',
+    aviso: {
+      title: 'Anotá tus gastos de hoy',
+      body: 'Si gastaste algo, contáselo a FINA por WhatsApp o anotalo en la app.',
+      url: '/onboarding-v2/home',
+      tag: 'fina-registro',
+    },
   };
 }

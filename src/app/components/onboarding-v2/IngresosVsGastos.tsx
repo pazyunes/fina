@@ -89,14 +89,20 @@ type Columna = { clave: string; etiqueta: string; aria: string; entro: number; s
 // · `explorar` (Home): cada mes se puede tocar para ver sus números, y se dice
 //   cuánto te quedó o por cuánto te pasaste. Es un gráfico para recorrer, no
 //   donde estás parada.
-export function IngresosVsGastos({ conLista = false, explorar = false, mesElegido, semana }: {
-  conLista?: boolean; explorar?: boolean; mesElegido?: string; semana?: Semana;
+//
+// Con `explorar` y `onElegirMes`, el mes lo maneja quien lo usa (Mis
+// visualizaciones, que tiene sus propias flechas): `mesElegido` es el que se
+// mira y tocar una columna lo avisa.
+export function IngresosVsGastos({ conLista = false, explorar = false, mesElegido, onElegirMes, semana }: {
+  conLista?: boolean; explorar?: boolean; mesElegido?: string; onElegirMes?: (mes: string) => void; semana?: Semana;
 }) {
   const { estado } = useAlmacen();
   const meses = ultimosMeses(6);
   const mesActual = meses[meses.length - 1];
   const [tocado, setTocado] = useState(mesActual);
-  const elegido = explorar ? tocado : (mesElegido ?? mesActual);
+  const controlado = explorar && !!onElegirMes;
+  const elegido = explorar && !controlado ? tocado : (mesElegido ?? mesActual);
+  const elegir = (mes: string) => (onElegirMes ? onElegirMes(mes) : setTocado(mes));
   const esEsteMes = elegido === mesActual;
   const [borrando, setBorrando] = useState<string | null>(null);
 
@@ -208,7 +214,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
               <button
                 key={c.clave}
                 type="button"
-                onClick={() => setTocado(c.clave)}
+                onClick={() => elegir(c.clave)}
                 aria-pressed={c.sel}
                 aria-label={c.aria}
                 className={`v2-focus flex-1 ${anchoColumna} h-full flex items-end justify-center gap-[2px] rounded-lg transition-opacity`}

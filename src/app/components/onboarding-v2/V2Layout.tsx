@@ -9,7 +9,7 @@ import { TerminosGate } from './TerminosGate';
 import { terminosAlDia } from '../../lib/legales';
 import { useAuth } from '../../lib/auth';
 import { AlmacenProvider, useAlmacen } from '../../api/v2/AlmacenProvider';
-import { PasoDelDiaProvider } from '../../api/v2/PasoDelDiaProvider';
+import { ProximoPasoProvider } from '../../api/v2/ProximoPasoProvider';
 import { Confirmaciones } from './Confirmaciones';
 import { CelebracionRacha } from './CelebracionRacha';
 import { AvisoWhatsAppProvider } from './LinkWhatsApp';
@@ -245,9 +245,9 @@ export function V2Layout() {
 
   return (
     <AlmacenProvider>
-    {/* Adentro del almacén (lee sus datos) y afuera de las pantallas: el paso
-        del día se cumple en la pantalla donde se hace, no donde se muestra. */}
-    <PasoDelDiaProvider>
+    {/* Adentro del almacén (lee sus datos) y afuera de las pantallas: la racha
+        cambia al anotar un gasto, que se hace en Gastos y no donde se muestra. */}
+    <ProximoPasoProvider>
     {/* Todo botón de WhatsApp recuerda verificar el teléfono si falta. */}
     <AvisoWhatsAppProvider>
     <div
@@ -297,7 +297,7 @@ export function V2Layout() {
     {/* El festejo cuando sube la racha: aparece en el medio y vuela al contador. */}
     <CelebracionRacha />
     </AvisoWhatsAppProvider>
-    </PasoDelDiaProvider>
+    </ProximoPasoProvider>
     </AlmacenProvider>
   );
 }

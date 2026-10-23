@@ -1,34 +1,33 @@
 import { useEffect, useState } from 'react';
-import { useReducedMotion } from 'motion/react';
-import { CheckIcon, COLORS, EstadoConfianza, FONTS, fmtMoney } from './shared';
+import { COLORS, EstadoConfianza, FONTS, fmtMoney } from './shared';
+import { Fini } from './Fini';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
-import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
-import { diaArgentina, pasosPosiblesManana } from '../../api/v2/pasos';
+import { diaArgentina } from '../../api/v2/pasos';
 import type { EstadoV2 } from '../../api/v2/tipos';
+import { useProximoPaso } from '../../api/v2/ProximoPasoProvider';
+import type { ClaveProximoPaso } from '../../api/v2/proximoPaso';
 import {
-  PERIODOS_RECOMENDACION, clavesDeHoy, leerHechas, leerRecomendaciones, marcarHecha, marcarUtil, recomendacionesRecordadas,
+  PERIODOS_RECOMENDACION, clavesDeHoy, leerHechas, leerRecomendaciones, marcarUtil, recomendacionesRecordadas,
   type PeriodoRecomendacion, type Recomendacion, type Recomendaciones as RecomendacionesT,
 } from '../../api/v2/recomendaciones';
 
-// "Para vos": una recomendación para hoy, una para la semana y una para el mes.
+// Un consejo, abajo de todo en Inicio. Sale de una recomendación para hoy, una
+// para la semana y una para el mes.
 //
-// Cada una se puede TACHAR. Al tacharla aparece la siguiente de ese período, y
-// cuando cambia el día, la semana o el mes vuelven a empezar. El orden de cada
-// período es:
+// Se muestra como un mensaje, no como una tarea: antes se podía tachar, pero
+// no es algo que se cumple, y la casilla competía con el paso del día (DEBT
+// I10). Lo que se tachó antes de este cambio sigue sin volver a aparecer
+// (`leerHechas`). Cambia sola cuando cambia el día, la semana o el mes. El
+// orden de cada período es:
 //   1. la que armó la IA con los datos de la persona (si hay);
 //   2. los consejos generales de la app, rotando desde el que toca en ese
 //      período, así no arrancan siempre por el mismo.
-// Cuando tachó todas, se lo dice y se le avisa cuándo hay nuevas.
-//
-// No se pide otra a la IA al tachar: tardaría hasta un minuto y costaría otra
-// llamada cada vez. Lo que sí hace la IA es leer cuáles tachó, al armar las
-// siguientes (ver api/recomendaciones.ts).
 //
 // Reglas que se ven acá:
 // · Todo dato lleva su referencia ("contra los mismos días del mes pasado").
 // · Lo estimado se marca como estimado (regla 4).
 // · Sin colores de alerta: una recomendación no es un reto (regla 3).
-// · Sin botones de acción: las tareas las propone el paso del día.
+// · Sin botones de acción: lo que hay que hacer es el próximo paso.
 
 // ── Consejos generales ───────────────────────────────────────────────────
 // Cosas chicas para hacer o mirar, que se pueden tachar. NO son las tareas que
@@ -39,28 +38,32 @@ import {
 // gustos chicos no son el problema, lo automático le gana a la fuerza de
 // voluntad, y el contexto argentino (inflación, cuotas, préstamos rápidos). Sin
 // montos ni instrumentos de inversión. No usan IA ni cuestan nada.
-type General = { titulo: string; texto: string };
+// `tema`: el próximo paso que ya cubre lo mismo. Mientras ese sea el paso de la
+// persona, el consejo no se muestra: diría dos veces lo mismo en Inicio.
+type General = { titulo: string; texto: string; tema?: ClaveProximoPaso };
 
+// Cada consejo: un título que dice qué hacer y UNA oración corta que dice por
+// qué o cómo. Claro para cualquiera, sin vueltas (CLAUDE.md regla 13).
 const GENERALES: Record<PeriodoRecomendacion, General[]> = {
   dia: [
-    { titulo: 'Fijate qué gasto de hoy fue un gusto', texto: 'No para culparte: para saber qué disfrutás. Los gastos que valorás se sostienen; los que no, se pueden soltar sin extrañarlos.' },
-    { titulo: 'Sumá cuánto pagás por mes en cuotas', texto: 'Entre todas las que tenés. Es plata de tus próximos sueldos que ya está comprometida, y conviene saber cuánta es.' },
-    { titulo: 'Mirá qué suscripciones te cobraron', texto: 'En el resumen de la tarjeta o de tu billetera virtual. Las que no usás son plata que se va sola todos los meses.' },
-    { titulo: 'Antes de una compra grande, dejala pasar un día', texto: 'Si al otro día la seguís queriendo igual, adelante. Muchas compras de impulso no pasan esa prueba.' },
-    { titulo: 'Si te ofrecen un préstamo, mirá el costo total', texto: 'No la cuota: el CFT (costo financiero total). Es lo que de verdad terminás pagando, y en los préstamos rápidos suele ser muy alto.' },
-    { titulo: 'Compará tu gasto con tu mes, no con el de otros', texto: 'Lo que gasta otra persona no dice nada de tus finanzas. La referencia que sirve es cómo te fue a vos.' },
+    { titulo: 'Antes de una compra grande, esperá 24 horas.', texto: 'Si mañana la seguís queriendo, decidí ahí.' },
+    { titulo: 'Fijate qué gasto de hoy fue un gusto.', texto: 'Así sabés en qué disfrutás gastar.' },
+    { titulo: 'Sumá cuánto pagás por mes en cuotas.', texto: 'Es plata de tus próximos sueldos que ya está usada.' },
+    { titulo: 'Revisá qué suscripciones te cobraron.', texto: 'Las que no usás se llevan plata todos los meses.' },
+    { titulo: 'Si te ofrecen un préstamo, mirá el costo total.', texto: 'Fijate el CFT, no la cuota: es lo que vas a pagar de verdad.', tema: 'ordenar_deudas' },
+    { titulo: 'Compará tus gastos con los del mes pasado.', texto: 'En Gastos podés pasar de un mes a otro.' },
   ],
   semana: [
-    { titulo: 'Elegí un día fijo para mirar tus números', texto: 'Cinco minutos, siempre el mismo día. Lo que se mira seguido se ordena casi solo.' },
-    { titulo: 'Decidí cuánto separar antes de cobrar', texto: 'Una decisión que se toma una sola vez funciona mejor que proponerse ahorrar todos los días. Una vez que entra la plata, cuesta más.' },
-    { titulo: 'Encontrá el gasto que se repite', texto: 'Delivery, transporte, salidas: el que aparece todas las semanas es donde más margen hay, mucho más que en los gustos chicos.' },
-    { titulo: 'Hablá de plata con alguien de confianza', texto: 'Contar en qué andás ayuda a sostenerlo. No hace falta dar números.' },
+    { titulo: 'Elegí un día fijo para mirar tus números.', texto: 'Con cinco minutos por semana alcanza.' },
+    { titulo: 'Decidí cuánto ahorrar antes de cobrar.', texto: 'Apartalo apenas entra la plata, después cuesta más.', tema: 'ahorro_automatico' },
+    { titulo: 'Buscá el gasto que se repite todas las semanas.', texto: 'Ahí hay más margen que en los gustos chicos.' },
+    { titulo: 'Contale a alguien de confianza qué objetivo tenés.', texto: 'Hablarlo ayuda a sostenerlo, sin dar números.' },
   ],
   mes: [
-    { titulo: 'Calculá tus gastos fijos del mes', texto: 'Alquiler, servicios, transporte, suscripciones. Lo que queda después es tu margen de verdad para decidir.' },
-    { titulo: 'Averiguá cuánto rinde tu plata guardada', texto: 'Con inflación, los pesos quietos compran menos cada mes. Saber si tu plata le gana o le pierde es el primer paso para decidir.' },
-    { titulo: 'Definí de cuánto querés tu colchón', texto: 'Cuántos meses de gastos fijos querés tener apartados para imprevistos. Aunque tardes en llegar, tener el número ayuda.' },
-    { titulo: 'Leé el resumen de tu tarjeta completo', texto: 'No solo el total a pagar: qué cuotas siguen y cuándo terminan. Así sabés cuánto de los próximos meses ya está usado.' },
+    { titulo: 'Sumá tus gastos fijos del mes.', texto: 'Lo que queda después es lo que podés decidir.' },
+    { titulo: 'Averiguá cuánto rinde tu plata guardada.', texto: 'Con inflación, la plata quieta compra menos cada mes.', tema: 'cuenta_que_rinda' },
+    { titulo: 'Definí de cuánto querés tu fondo para imprevistos.', texto: 'Por ejemplo, lo que gastás en uno o dos meses.' },
+    { titulo: 'Leé el resumen completo de tu tarjeta.', texto: 'Fijate qué cuotas siguen y cuándo terminan.' },
   ],
 };
 
@@ -102,9 +105,7 @@ function topeSugerido(estado: EstadoV2, periodo: 'semana' | 'mes'): Recomendacio
   const alto = redondear(base);
   return {
     titulo: `Probá un tope para ${mejor.nombre}`,
-    texto: periodo === 'mes'
-      ? 'Es la sección donde más se te fue y todavía no tiene tope. Un tope parecido a lo que ya gastás te avisa cuánto te queda sin pedirte que cambies nada; si querés recortar un poco, apuntá a la parte de abajo del rango.'
-      : 'Por semana se ve más rápido cuánto te queda. Un tope parecido a lo que ya gastás no te pide cambiar nada; si querés recortar un poco, apuntá a la parte de abajo del rango.',
+    texto: 'Es donde más gastaste y no tiene tope. Un tope te avisa cuánto te queda; si querés gastar menos, elegí el número más bajo.',
     dato: {
       valor: `Entre ${fmtMoney(bajo)} y ${fmtMoney(alto)} por ${periodo === 'mes' ? 'mes' : 'semana'}`,
       referencia: `Gastaste ${fmtMoney(mejor.total)} en ${mejor.nombre} los últimos 30 días (${mejor.cant} gastos)`,
@@ -114,7 +115,7 @@ function topeSugerido(estado: EstadoV2, periodo: 'semana' | 'mes'): Recomendacio
   };
 }
 
-function colaDe(periodo: PeriodoRecomendacion, datos: RecomendacionesT | null, estado: EstadoV2): Item[] {
+function colaDe(periodo: PeriodoRecomendacion, datos: RecomendacionesT | null, estado: EstadoV2, pasoActual: ClaveProximoPaso | null): Item[] {
   const cola: Item[] = [];
   const t = datos?.[periodo];
   if (t && t.estado === 'lista') cola.push({ tipo: 'ia', ref: `ia:${t.id}`, id: t.id, contenido: t.contenido, util: t.util });
@@ -127,6 +128,7 @@ function colaDe(periodo: PeriodoRecomendacion, datos: RecomendacionesT | null, e
   const inicio = inicioDe(periodo);
   for (let i = 0; i < lista.length; i++) {
     const n = (inicio + i) % lista.length;
+    if (lista[n].tema && lista[n].tema === pasoActual) continue;
     cola.push({ tipo: 'general', ref: `general:${periodo}:${n}`, contenido: lista[n] });
   }
   return cola;
@@ -138,14 +140,14 @@ export function Recomendaciones() {
   const [claves] = useState(() => clavesDeHoy());
   const [hechas, setHechas] = useState<Set<string>>(new Set());
   const { estado } = useAlmacen();
-  const { paso } = usePasoDelDia();
+  const { paso } = useProximoPaso();
 
   useEffect(() => {
     let vivo = true;
     void leerHechas(claves).then((h) => { if (vivo) setHechas(h); });
-    // Junto con la recomendación del día, la IA elige el paso de mañana entre
-    // los que la persona puede cumplir.
-    void leerRecomendaciones(pasosPosiblesManana(estado, paso?.clave ?? null)).then((r) => {
+    // Ya no se le piden pasos a la IA: el próximo paso es uno grande que elige
+    // la app (proximoPaso.ts). La IA arma el consejo y los planes de objetivos.
+    void leerRecomendaciones().then((r) => {
       if (!vivo) return;
       if (r.error !== null) { if (!recomendacionesRecordadas()) setFallo(true); return; }
       setFallo(false);
@@ -171,22 +173,15 @@ export function Recomendaciones() {
     });
   }
 
-  async function tachar(periodo: PeriodoRecomendacion, ref: string): Promise<boolean> {
-    const r = await marcarHecha(periodo, claves[periodo], ref);
-    if (r.error !== null) return false;
-    setHechas((h) => new Set(h).add(`${periodo}|${ref}`));
-    return true;
-  }
-
-  // UNA sola recomendación, debajo del paso de hoy. La primera que haya, en
+  // UNA sola recomendación, debajo de los gráficos. La primera que haya, en
   // este orden: la que armó la IA con los datos de la persona (la de hoy, si
   // no la de la semana o el mes), después el tope sugerido con lo que suele
-  // gastar y, si no hay nada de eso, un consejo general. Al tacharla entra la
-  // siguiente. Mientras llegan los datos no se muestra nada: que aparezca una
-  // general y un segundo después la cambie la personalizada es peor que esperar.
+  // gastar y, si no hay nada de eso, un consejo general. Mientras llegan los
+  // datos no se muestra nada: que aparezca una general y un segundo después la
+  // cambie la personalizada es peor que esperar.
   if (!datos && !fallo) return null;
   const candidatas = PERIODOS_RECOMENDACION.flatMap((p) => {
-    const it = colaDe(p, datos, estado).find((x) => !hechas.has(`${p}|${x.ref}`));
+    const it = colaDe(p, datos, estado, paso?.clave ?? null).find((x) => !hechas.has(`${p}|${x.ref}`));
     return it ? [{ periodo: p, item: it }] : [];
   });
   const elegida = candidatas.find((c) => c.item.tipo === 'ia')
@@ -197,15 +192,22 @@ export function Recomendaciones() {
   if (!elegida) return null;
 
   return (
-    <section className="flex flex-col gap-2">
-      <Tarjeta
-        // La key cambia con la recomendación: al tachar, la nueva entra como
-        // una tarjeta nueva y no hereda el estado de la anterior.
-        key={`${elegida.periodo}-${elegida.item.ref}`}
-        item={elegida.item}
-        onTachar={(ref) => tachar(elegida.periodo, ref)}
-        onUtil={marcarUtilidad}
-      />
+    <section className="flex flex-col gap-2" aria-label="Un consejo de FINA">
+      {/* Fini se asoma desde atrás del cartel: va detrás (z-0) y el cartel lo
+          tapa hasta la mitad, así parece que sale de adentro. Es un momento de
+          acompañamiento (§6): Fini acompaña el consejo, no reacciona a un
+          gasto. Sube una vez al aparecer y se queda quieta. */}
+      <div className="relative pt-9">
+        <div className="absolute right-5 top-0 z-0 v2-fini-asoma" aria-hidden>
+          <Fini state="idle" size={56} />
+        </div>
+        <div className="relative z-10 rounded-2xl px-4 py-3.5 flex flex-col gap-1.5" style={{ background: COLORS.starSoft }}>
+          {/* Se presenta como consejo: se lee, no se cumple. Lo que hay que
+              hacer es el próximo paso, arriba. */}
+          <p className="text-[13px] font-semibold" style={{ color: COLORS.starText }}>Un consejo</p>
+          <Mensaje key={`${elegida.periodo}-${elegida.item.ref}`} item={elegida.item} onUtil={marcarUtilidad} />
+        </div>
+      </div>
       <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
         {elegida.item.tipo === 'ia' ? 'Hecha con IA a partir de tus datos. No es asesoramiento financiero.'
           : elegida.item.tipo === 'calculada' ? 'Calculada con tus gastos de los últimos 30 días. No es asesoramiento financiero.'
@@ -215,79 +217,34 @@ export function Recomendaciones() {
   );
 }
 
-function Tarjeta({ item, onTachar, onUtil }: {
+// Un mensaje, sin casilla: se lee, no se cumple. Va en un cartel amarillo
+// suave (el color de Fini y de los momentos de marca), abajo de todo en Inicio.
+function Mensaje({ item, onUtil }: {
   item: Item;
-  onTachar: (ref: string) => Promise<boolean>;
   onUtil: (id: string, util: boolean | null) => void;
 }) {
-  const reducir = useReducedMotion();
-  // Se ve tachada un momento antes de dar paso a la siguiente: si cambiara en
-  // el acto, no se entendería qué pasó con la que se tocó.
-  const [tachando, setTachando] = useState(false);
-  const [error, setError] = useState(false);
-
-  const etiqueta = (
-    <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
-      Recomendación
-      <span style={{ color: item.tipo === 'general' ? COLORS.inkFaint : COLORS.brandDark }}>
-        {' · '}{item.tipo === 'general' ? 'general' : 'con tus datos'}
-      </span>
-    </p>
-  );
-
-  async function tachar() {
-    if (tachando) return;
-    setError(false);
-    setTachando(true);
-    // Se guarda y, a la vez, se deja ver el tachado un momento.
-    const [ok] = await Promise.all([onTachar(item.ref), reducir ? Promise.resolve() : new Promise((r) => setTimeout(r, 500))]);
-    if (!ok) { setTachando(false); setError(true); }
-  }
-
   const r = item.contenido;
   return (
-    <article className="py-4 border-b last:border-b-0 flex gap-3" style={{ borderColor: COLORS.line }}>
-      {/* La casilla para tacharla. Target de 44px; el círculo dibujado es más chico. */}
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={tachando}
-        aria-label={`Marcar como hecha: ${r.titulo}`}
-        onClick={() => void tachar()}
-        className="v2-focus w-11 h-11 -ml-2 -mt-2 shrink-0 rounded-full flex items-center justify-center"
-      >
-        <span
-          className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200"
-          style={tachando ? { background: COLORS.brand } : { border: `2px solid ${COLORS.lineStrong}` }}
-        >
-          {tachando && <CheckIcon />}
-        </span>
-      </button>
+    <article className="flex flex-col gap-2">
+      <h3 className="text-[14px] font-bold leading-tight" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+        {r.titulo}
+      </h3>
+      <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
 
-      <div className="flex-1 min-w-0 flex flex-col gap-2 transition-opacity duration-300" style={{ opacity: tachando ? 0.55 : 1 }}>
-        {etiqueta}
-        <h3
-          className="text-[18px] font-bold leading-tight"
-          style={{ color: COLORS.ink, fontFamily: FONTS.display, textDecoration: tachando ? 'line-through' : 'none' }}
-        >
-          {r.titulo}
-        </h3>
-        <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.texto}</p>
+      {(item.tipo === 'ia' || item.tipo === 'calculada') && (
+        <>
+          {/* El dato en el que se apoya, con contra qué se compara. */}
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[14px] font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{item.contenido.dato.valor}</p>
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{item.contenido.dato.referencia}</p>
+            {item.contenido.confianza === 'estimado' && <EstadoConfianza estado="estimado" />}
+          </div>
 
-        {(item.tipo === 'ia' || item.tipo === 'calculada') && (
-          <>
-            {/* El dato en el que se apoya, con contra qué se compara. */}
-            <div className="flex flex-col gap-0.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.brandSoft }}>
-              <p className="text-[16px] font-semibold font-mono tabular-nums" style={{ color: COLORS.ink }}>{item.contenido.dato.valor}</p>
-              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{item.contenido.dato.referencia}</p>
-              {item.contenido.confianza === 'estimado' && <EstadoConfianza estado="estimado" />}
-            </div>
-
-            {/* Lo que marca la persona es lo que usa el modelo la próxima vez
-                para no insistir con lo que no le sirve. Tocar de nuevo saca la marca. */}
-            {item.tipo === 'ia' && (
+          {/* Lo que marca la persona es lo que usa el modelo la próxima vez
+              para no insistir con lo que no le sirve. Tocar de nuevo saca la marca. */}
+          {item.tipo === 'ia' && (
             <div className="flex items-center gap-1 pt-1" role="group" aria-label="¿Te sirvió esta recomendación?">
-              <span className="text-[14px] mr-1" style={{ color: COLORS.inkFaint }}>¿Te sirvió?</span>
+              <span className="text-[13px] mr-1" style={{ color: COLORS.inkFaint }}>¿Te sirvió?</span>
               {([true, false] as const).map((v) => {
                 const elegido = item.util === v;
                 return (
@@ -296,7 +253,7 @@ function Tarjeta({ item, onTachar, onUtil }: {
                     type="button"
                     aria-pressed={elegido}
                     onClick={() => onUtil(item.id, elegido ? null : v)}
-                    className="v2-focus min-h-[44px] min-w-[44px] px-3 rounded-full text-[14px] font-semibold"
+                    className="v2-focus min-h-[44px] min-w-[44px] px-3 rounded-full text-[13px] font-semibold"
                     style={elegido
                       ? { background: COLORS.brandSoft, color: COLORS.brandDark }
                       : { color: COLORS.inkSoft, border: `1.5px solid ${COLORS.line}` }}
@@ -306,14 +263,9 @@ function Tarjeta({ item, onTachar, onUtil }: {
                 );
               })}
             </div>
-            )}
-          </>
-        )}
-
-        {error && (
-          <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>No se pudo guardar. Probá de nuevo.</p>
-        )}
-      </div>
+          )}
+        </>
+      )}
     </article>
   );
 }

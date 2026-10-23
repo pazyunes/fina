@@ -63,6 +63,7 @@ export const COLORS = {
   // 7.28:1 sobre papel contra 4.89:1, y 7.78:1 con texto blanco contra 5.23:1.
   brand: '#7626B3',      // violeta — botones, progreso, foco, estado elegido
   brandSoft: '#E4D5F5',  // lila — bandas / recuadros (violeta encima: 7.6:1)
+  brandFaint: '#F6F0FB', // violeta muy claro: recuadro apenas tintado sobre blanco
   brandDark: '#5C1B8E',  // violeta oscuro — texto sobre lila, fondos plenos
 
   // Fondo del "marco" que envuelve la pantalla en desktop — ver DeviceFrame.

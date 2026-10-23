@@ -269,8 +269,12 @@ export type PasoGuardado = {
 
 export type DiaDeRacha = {
   dia: string;
-  /** 'paso' = cumplió el paso · 'whatsapp' = le contó un gasto al bot · 'comodin' = el comodín salvó el día */
-  tipo: 'paso' | 'whatsapp' | 'comodin';
+  /**
+   * 'gasto' = anotó un gasto en la app · 'whatsapp' = le contó un gasto al bot ·
+   * 'comodin' = el comodín salvó el día · 'paso' = cumplió el paso del día (sólo
+   * en los días anteriores a la migración 0044).
+   */
+  tipo: 'gasto' | 'whatsapp' | 'comodin' | 'paso';
   paso?: string;
 };
 

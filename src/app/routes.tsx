@@ -10,6 +10,7 @@ import { ObjetivosV2 } from "./components/onboarding-v2/ObjetivosV2";
 import { InversionesV2 } from "./components/onboarding-v2/InversionesV2";
 import { PerfilV2 } from "./components/onboarding-v2/PerfilV2";
 import { GruposV2 } from "./components/onboarding-v2/GruposV2";
+import { ProgresoPasos } from "./components/onboarding-v2/ProgresoPasos";
 import { FiniPlayground } from "./components/onboarding-v2/FiniPlayground";
 import { TerminosPantalla } from "./components/onboarding-v2/TerminosPantalla";
 
@@ -85,6 +86,7 @@ export const router = createBrowserRouter([
       { path: "/onboarding-v2/inversiones", element: <InversionesV2 /> },
       { path: "/onboarding-v2/perfil", element: <PerfilV2 /> },
       { path: "/onboarding-v2/grupos", element: <GruposV2 /> },
+      { path: "/onboarding-v2/progreso", element: <ProgresoPasos /> },
     ],
   },
   {

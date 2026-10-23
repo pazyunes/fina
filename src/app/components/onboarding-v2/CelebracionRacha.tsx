@@ -4,7 +4,7 @@ import { Fini } from './Fini';
 import { COLOR_VARS, COLORS, FONT_VARS, FONTS } from './shared';
 import { IconFuego } from './FinaIcons';
 import { useAuth } from '../../lib/auth';
-import { usePasoDelDia } from '../../api/v2/PasoDelDiaProvider';
+import { useProximoPaso } from '../../api/v2/ProximoPasoProvider';
 import { RACHA_VACIA } from '../../api/v2/tipos';
 
 // Cuando la racha sube, se festeja: en el medio de la pantalla aparece el número
@@ -14,7 +14,7 @@ import { RACHA_VACIA } from '../../api/v2/tipos';
 //
 // Pasa tanto al entrar a FINA (si la racha subió desde la última vez que la vio,
 // por ejemplo con un gasto contado por WhatsApp) como estando adentro (al
-// cumplir el paso del día).
+// anotar un gasto).
 //
 // "La última que vio" se guarda en este dispositivo, por cuenta. Si la racha
 // bajó (se cortó), se actualiza sin festejar nada: no hay nada que festejar y
@@ -40,7 +40,7 @@ function guardarVista(uid: string, dias: number) {
 }
 
 export function CelebracionRacha() {
-  const { racha } = usePasoDelDia();
+  const { racha } = useProximoPaso();
   const { user } = useAuth();
   const reducir = useReducedMotion();
   const [festejo, setFestejo] = useState<{ desde: number; hasta: number } | null>(null);
@@ -162,7 +162,7 @@ function Animacion({ desde, hasta, reducir, onFin }: { desde: number; hasta: num
           </span>
           {/* Se va antes del vuelo: al contador de arriba llega sólo el número. */}
           <span
-            className="text-[18px] font-bold mt-1 transition-opacity duration-200"
+            className="text-[15px] font-bold mt-1 transition-opacity duration-200"
             style={{ color: COLORS.ink, fontFamily: FONTS.display, opacity: volando ? 0 : 1 }}
           >
             {hasta === 1 ? '¡Arrancaste tu racha!' : `¡${hasta} días de racha!`}

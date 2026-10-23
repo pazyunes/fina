@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
-import { GoalStrategy } from '../utils/goalStrategies';
+import { GoalStrategy } from '../utils/goalStrategiesV1';
 import { formatArs } from '../lib/currency';
 
 // PR — Al tildar una estrategia ("Cómo llegar al objetivo"), preguntamos cuánto
