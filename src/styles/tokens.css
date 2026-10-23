@@ -25,7 +25,7 @@
   --fina-gris: #6B647A;    /* subtítulos, labels */
   --fina-linea: #E9E3F1;   /* separadores, contornos de tarjeta */
   --fina-tinte: #F0E7FA;   /* violeta 100 = superficie de apoyo */
-  --fina-papel: #FBFAF8;   /* fondo app (calidez, evita blanco puro) */
+  --fina-papel: #FFFFFF;   /* fondo general: blanco (decisión oct 2026) */
   --fina-blanco: #FFFFFF;  /* tarjetas / elevación */
 
   /* Semánticos por categoría + versión suave */
@@ -35,10 +35,12 @@
   --fina-grupos: #E8952B;        --fina-grupos-100: #FDEEDA;
   --fina-error: #DD3350;         --fina-error-100: #FCE4E8;
 
-  /* Tipografía editorial */
-  --fina-display: "Baloo 2", ui-rounded, "Figtree", system-ui, sans-serif;
-  --fina-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
-  --fina-mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* Tipografía: una sola familia, Poppins. Los tres nombres quedan para no
+     romper lo que ya los usa; apuntan todos a lo mismo. */
+  --fina-font: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --fina-display: var(--fina-font);
+  --fina-sans: var(--fina-font);
+  --fina-mono: var(--fina-font);
 
   /* Radios */
   --fina-r-xs: 8px;

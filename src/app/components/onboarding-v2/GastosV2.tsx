@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { llevarA, useAlLlegar } from './alLlegar';
-import { ArmarGrupoBtn, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
+import { COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, Titulo, TituloSeccion, fechaDisplay, fmtMoney, fmtMontoCompacto, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput, slug } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
@@ -540,9 +540,14 @@ export function GastosV2() {
   //   "elegí la que más se te va") con el campo del tope listo. Si todavía no
   //   gastó en ninguna, la primera.
   const pantallaRef = useRef<HTMLDivElement>(null);
-  useAlLlegar('gasto', () => {
+  useAlLlegar('gasto', (datos) => {
     setChooser(false);
     setAddingGasto(true);
+    // Desde un atajo de la pantalla de inicio puede venir el monto ya cargado.
+    const monto = parseMoneyInput(datos.get('monto') ?? '');
+    if (monto > 0) setNgMonto(formatThousands(String(monto)));
+    const desc = datos.get('descripcion');
+    if (desc) setNgDesc(desc.slice(0, 80));
     llevarA(
       () => pantallaRef.current?.querySelector<HTMLElement>('[data-form-gasto]'),
       () => pantallaRef.current?.querySelector<HTMLElement>('[aria-label="Monto del gasto"]'),
@@ -1773,10 +1778,6 @@ export function GastosV2() {
             {verTodos ? 'Ver menos' : `Ver todos (${gastosFiltrados.length})`}
           </button>
         )}
-      </div>
-
-      <div className="lg:col-span-3">
-        <ArmarGrupoBtn />
       </div>
       </div>
     </div>

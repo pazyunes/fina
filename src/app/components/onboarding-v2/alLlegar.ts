@@ -12,7 +12,13 @@ import type { AccionPaso } from '../../api/v2/pasos';
 //
 // Se limpia enseguida: volver atrás o recargar no tiene que abrirlo otra vez.
 
-export function useAlLlegar(accion: AccionPaso | 'fijos', hacer: () => void) {
+/**
+ * `hacer` recibe lo que venía en la dirección además de `abrir`. Sirve para los
+ * atajos del celular: `?abrir=gasto&monto=8500` abre el formulario con el monto
+ * ya escrito, así registrar un gasto desde la pantalla de inicio es un toque y
+ * un número.
+ */
+export function useAlLlegar(accion: AccionPaso | 'fijos', hacer: (datos: URLSearchParams) => void) {
   const location = useLocation();
   const navigate = useNavigate();
   useEffect(() => {
@@ -20,10 +26,12 @@ export function useAlLlegar(accion: AccionPaso | 'fijos', hacer: () => void) {
     const query = new URLSearchParams(location.search);
     if (estado?.abrir !== accion && query.get('abrir') !== accion) return;
     const { abrir: _abrir, ...resto } = estado ?? {};
-    query.delete('abrir');
+    const datos = new URLSearchParams(query);
+    // Se limpian de la dirección: recargar no tiene que volver a abrir nada.
+    for (const clave of ['abrir', 'monto', 'descripcion']) query.delete(clave);
     const busqueda = query.toString();
     navigate(`${location.pathname}${busqueda ? `?${busqueda}` : ''}`, { replace: true, state: Object.keys(resto).length ? resto : null });
-    hacer();
+    hacer(datos);
     // Sólo cuando se llega con una navegación nueva.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);

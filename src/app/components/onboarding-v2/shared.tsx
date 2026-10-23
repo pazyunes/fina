@@ -29,7 +29,7 @@ import { sumarEn } from '../../api/v2/conversion';
 // toda la app: "tu próximo paso" en Home.
 //
 // La jerarquía sale de la escala tipográfica y del peso, nunca de una caja:
-// un solo <h1> por pantalla, en Baloo 2 (ver Titulo).
+// un solo <h1> por pantalla, en Poppins (ver Titulo).
 
 // Tokens de onboarding-v2 — fuente de verdad de color del sandbox (no tocamos
 // styles/tokens.css, que es de la app real). Alineado a la guía de frontend
@@ -49,7 +49,7 @@ export const COLORS = {
   ink: '#2B2118',        // tinta — texto y montos (14:1+ sobre papel)
   inkSoft: '#5F5346',    // tinta-media — labels, fechas (6.9:1)
   inkFaint: '#7A6A58',   // tinta-suave — auxiliar (mínimo AA)
-  paper: '#FAF7F1',      // fondo general — casi blanco, apenas cálido
+  paper: '#FFFFFF',      // fondo general: blanco (decisión oct 2026)
   surface: '#FFFFFF',    // superficie elevada — tarjetas
   tint: '#EEE4D2',       // hueco — bloque tintado / hundido
   // Separadores. Se subieron de contraste a propósito: los valores viejos
@@ -109,16 +109,17 @@ export const COLORS = {
   onDarkSoft: 'rgba(250,247,241,0.6)',
 };
 
-// Tipografía de onboarding-v2: Baloo 2 en títulos, Figtree cuerpo, IBM Plex
-// Mono montos. El display era Outfit; se cambió a Baloo 2 por pedido explícito
-// de diseño — es lo único de la estética anterior que se conserva. Baloo 2 ya
-// vivía en tokens.css como --fina-display: lo tapaba justamente este override.
-// Se aplican SCOPEADAS al subárbol de v2 (ver FONT_VARS) sobrescribiendo las
-// CSS vars que ya usan los <h1..h4> y el body.
+// Tipografía de onboarding-v2: una sola familia, Poppins, para todo (pedido de
+// diseño, oct 2026; antes eran Baloo 2, Figtree e IBM Plex Mono). Se mantienen
+// los tres nombres para no tocar cada componente: apuntan a lo mismo. Los
+// montos siguen con tabular-nums (regla 5). Se aplican SCOPEADAS al subárbol de
+// v2 (ver FONT_VARS) sobrescribiendo las CSS vars que ya usan los <h1..h4>, el
+// body y la clase font-mono de Tailwind.
+const POPPINS = "'Poppins', ui-sans-serif, system-ui, sans-serif";
 export const FONTS = {
-  display: "'Baloo 2', ui-rounded, 'Figtree', system-ui, sans-serif",
-  body: "'Figtree', system-ui, sans-serif",
-  mono: "'IBM Plex Mono', ui-monospace, monospace",
+  display: POPPINS,
+  body: POPPINS,
+  mono: POPPINS,
 };
 // Se pega en el root de V2Layout y DeviceFrame (style={{ ...FONT_VARS, ...COLOR_VARS }}).
 export const FONT_VARS = {
@@ -759,11 +760,11 @@ export function Donut({
   // El valor del centro se dimensiona segun cuanto mide: con 18px fijos,
   // "$4.635.000" se desbordaba del anillo. El circulo interior mide
   // `size - 2*inset`; se le deja un 88% util y se estima el ancho del texto en
-  // 0.6em por caracter, que es el avance de IBM Plex Mono. Piso de 11px para
-  // que nunca quede ilegible, techo de 18px para que un numero corto no se
-  // infle. Va en mono con cifras tabulares, como todo monto (regla 5).
+  // 0.64em por caracter, que es lo que mide un dígito de Poppins en negrita.
+  // Piso de 11px para que nunca quede ilegible, techo de 18px para que un
+  // numero corto no se infle. Va con cifras tabulares, como todo monto (regla 5).
   const anchoInterior = (size - inset * 2) * 0.88;
-  const valorFontSize = Math.max(11, Math.min(18, anchoInterior / (Math.max(centerValue.length, 1) * 0.6)));
+  const valorFontSize = Math.max(11, Math.min(18, anchoInterior / (Math.max(centerValue.length, 1) * 0.64)));
   const labelFontSize = Math.max(9, Math.min(12, valorFontSize * 0.66));
   return (
     <div
@@ -987,8 +988,8 @@ export function Cta({ label, disabled, onClick }: { label: string; disabled?: bo
 // cada pantalla repetía `text-[26px] font-bold` a mano, y por eso la pantalla
 // de género terminaba con dos preguntas del mismo tamaño y sin jerarquía.
 
-// El ÚNICO <h1> de la pantalla. Baloo 2 es lo único de la estética anterior
-// que se conserva, por pedido explícito.
+// El ÚNICO <h1> de la pantalla. Poppins, como todo el resto
+// (una sola familia en toda la app).
 export function Titulo({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <h1
@@ -1095,7 +1096,7 @@ export function OpcionesLista<T extends string>({
   );
 }
 
-// Título de sección dentro de una pantalla. Baloo 2 chico: se distingue del
+// Título de sección dentro de una pantalla. Poppins más chico: se distingue del
 // título de pantalla por tamaño, no por color ni por una caja alrededor.
 // Reemplaza los `text-[15px] font-bold` en gris que se usaban como encabezado,
 // que competían en peso con el cuerpo y no leían como jerarquía.
