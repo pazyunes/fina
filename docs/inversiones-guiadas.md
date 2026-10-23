@@ -172,17 +172,19 @@ conexión con Objetivos, más proveedores y fondos, y la revisión legal (CNV).
 El plazo decide **en qué**; el perfil, **cuánto**; el monto, nada ("no guiarse por montos"). Cada tramo
 arma partes de la plata, y en cada parte la persona elige una alternativa (`cartera.ts`):
 
-Es la tabla que completó él (las filas de $50.000; las de $5.000.000 son "lo mismo que 50k"):
+Es la tabla armada con su criterio y revisada con Sofía el 23/10/2026. **"A mano"** = plazo fijo, cuenta remunerada y money market (y, a menos de 3 meses, letras cortas). **"Renta fija"** = letras, bonos CER y plazo fijo UVA, siempre con un vencimiento que coincida con el plazo. En cada parte se elige una alternativa.
 
-| Plazo | Conservador | Moderado | Arriesgado |
-|---|---|---|---|
-| Menos de 3 meses | plazo fijo, cuenta, fondo (y letras): todo a mano, aunque hoy rinda menos que la inflación | igual | igual |
-| 3 a 12 meses | todo a mano (plazo fijo, cuenta, fondo) | 50% a mano + 50% renta fija (letras, bonos CER, UVA) | 50% renta fija + 50% CEDEARs |
-| 1 a 3 años | plazo fijo UVA y cuenta | igual | igual |
-| Más de 3 años | 10% CEDEARs, 90% UVA/cuenta | 50% CEDEARs, 50% UVA/cuenta | 100% CEDEARs (y la cuenta, sin porcentaje, para tener plata a mano) |
+| Perfil | Menos de 3 meses | 3 a 12 meses | 1 a 3 años | Más de 3 años |
+|---|---|---|---|---|
+| Conservador | 100% a mano (plazo fijo, cuenta, money market, letras cortas) | 70% a mano + 30% renta fija (letras, bonos CER hasta 12 meses, UVA) | 70% plazo fijo UVA + 30% bonos CER (1 a 3 años) | 80% renta fija (bonos CER de más de 3 años, UVA) + 20% CEDEARs |
+| Moderado | 100% a mano | 50% a mano + 50% renta fija | 70% renta fija (UVA, bonos CER 1 a 3 años) + 30% CEDEARs | 50% renta fija + 50% CEDEARs |
+| Arriesgado | 100% a mano | 30% a mano + 70% renta fija | 50% renta fija + 50% CEDEARs | 100% CEDEARs (ETF como SPY o QQQ de base) + cuenta como reserva opcional, sin porcentaje |
 
-- Se muestran **todas** las alternativas de cada parte (no hay tope de dos o tres). Sin saber para cuándo es la plata, al arriesgado se lo trata como moderado (sin CEDEARs).
-- **Renta fija** = letras del Tesoro, **bonos CER** (los que vencen en menos de 2 años y se operan; TIR real de ArgentinaDatos) y plazo fijo UVA. Los bonos CER son un tipo nuevo de inversión registrable: hace falta correr la migración `0043_bonos_cer.sql`.
+- **Nunca CEDEARs a menos de 1 año**, ni para el arriesgado: el plazo manda sobre el perfil (el perfil dice cuánto riesgo querés tomar; el plazo, cuánto podés). Esto corrige la tabla original, donde el arriesgado de 3 a 12 meses tenía 50% CEDEARs y contradecía su regla "menos de 1 año, CEDEARs no va". La escalera de CEDEARs es 0% / 30% / 50% (moderado) y 0% / 50% / 100% (arriesgado).
+- **El vencimiento coincide con el plazo** (`ventanaDeVencimiento` en `cartera.ts`): a menos de 3 meses sólo letras de hasta 90 días; de 3 a 12 meses, letras y bonos que vencen antes del plazo; de 1 a 3 años, bonos de 1 a 3 años; a más de 3 años, bonos de 3 a ~5,5 años. Sin plazo dicho, la ventana es amplia y el arriesgado se trata como moderado.
+- La **cuenta remunerada** no es renta fija: sirve para tener plata a mano, no para plazos de más de un año.
+- Se muestran **todas** las alternativas de cada parte (no hay tope de dos o tres), y cada una dice qué parte le toca ("Para el 50% de tu plata · renta fija").
+- Los **bonos CER** son un tipo nuevo de inversión registrable: hace falta correr la migración `0043_bonos_cer.sql`.
 - Dentro de cada parte se ordena por lo que se espera que rinda **por año sobre la inflación** (`puntajeAnual`): el centro del rango a plazos cortos y, a más plazo (hasta 24 meses), la peor tasa; la UVA pierde peso por su rezago de ~3 meses; los CEDEARs, con lo que rindió el S&P 500 en 10 años en dólares (histórico, no promesa). **El tope de la cuenta ya no desplaza**: es un dato que se informa.
 - Para ahorrar o fijar un plazo (UVA, renta fija), no se ofrece lo que pierde contra la inflación si hay otra opción igual de disponible que no. La plata a mano (plazo fijo, cuenta, fondo) se muestra completa aunque hoy rinda menos, con su aviso.
 - Una parte sin datos (por ejemplo, sin CEDEARs) pasa su porcentaje a las demás.
@@ -202,8 +204,8 @@ Es la tabla que completó él (las filas de $50.000; las de $5.000.000 son "lo m
 
 ### Dudas que quedan para el asesor
 
-- **Moderado de 3 a 12 meses**: puso "50%/30% (plazo fijo, cuenta, FCI) y 50%/70% renta fija". Hoy es 50/50; si quiso decir 30/70, se cambia en `armarCartera`.
-- **Conservador a más de 3 años**: en la tabla puso 10% CEDEARs y en sus notas "70 y 30". Se siguió la tabla (10%, `PESO_CEDEAR_A_LARGO_PLAZO`).
+- **Conservador a más de 3 años**: su tabla dice 10% CEDEARs y sus notas "70 y 30". Quedó en 20% (`PESO_CEDEAR`), el punto medio.
+- **Arriesgado de 3 a 12 meses y 1 a 3 años**: ahí la tabla es de Sofía (30% a mano + 70% renta fija; 50/50), no de él; hay que mostrársela.
 - **"Dólar bajo"**: hoy es "subió menos que la inflación en 30 días". Si él usa otra vara (brecha, promedio histórico), cambiarla en `dolarEstaBajo`.
 - **Cuenta remunerada**: dijo que "depende de cada billetera" (condiciones de Ualá y compañía): hay que revisar billetera por billetera que el texto de las condiciones sea el correcto.
 - **Modelo de negocio**: confirmó que cobrarle a las marcas "es el modelo correcto" (como dolarhoy.com, que está pautado). Pendiente decidir cómo se muestra lo pautado.

@@ -242,7 +242,7 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     resumen: 'Pedacitos de empresas grandes del exterior (también hay acciones argentinas). Para dejar varios años, no para retirar ya.',
     rol: 'crecimiento',
     riesgo: 'Alto',
-    horizonteMinimoMeses: 3,
+    horizonteMinimoMeses: 12,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
     queEs: 'Un CEDEAR es un papel en pesos que representa un pedacito de una empresa del exterior (como Apple). Se compra desde un broker (una app o empresa donde comprás inversiones). Un ETF como SPY (un “paquete” que reúne a las 500 empresas más grandes de EE.UU.) te evita elegir una sola. Este tipo de inversión se suele dejar a largo plazo, por varios años: así es como puede crecer. No es para retirar pronto.',

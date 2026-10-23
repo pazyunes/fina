@@ -23,6 +23,7 @@
 import { PROVEEDORES, type BrokerId, type ProductoId, type ProveedorId } from './catalogo.js';
 import { diaMes, fmtPesos, nombrePropio, pct } from './formato.js';
 import { CEDEARS_DISPONIBLES, FONDOS_POR_PROVEEDOR, origenDeclarable, precioCedear } from './limites.js';
+import { ventanaDeVencimiento } from './cartera.js';
 import { bancosOrdenados, type Evaluacion } from './motor.js';
 import type { Mercado } from './mercadoTipos.js';
 import type { Valores } from './registro.js';
@@ -70,10 +71,12 @@ export type ContextoGuia = {
   evaluacion: Evaluacion | null;
   /** Banco elegido, si el producto es un plazo fijo. */
   banco: string | null;
+  /** Para cuándo es la plata, en meses: sirve para mostrar sólo las letras y los bonos que vencen dentro de ese plazo. */
+  horizonteMeses: number | null;
 };
 
 export const CONTEXTO_VACIO: ContextoGuia = {
-  monto: null, plazoDias: null, ticker: null, cantidad: null, dolares: null, mercado: null, evaluacion: null, banco: null,
+  monto: null, plazoDias: null, ticker: null, cantidad: null, dolares: null, mercado: null, evaluacion: null, banco: null, horizonteMeses: null,
 };
 
 const filaMonto = (m: number | null): { etiqueta: string; valor: string }[] => (m && m > 0 ? [{ etiqueta: 'Tu monto', valor: fmtPesos(m) }] : []);
@@ -285,7 +288,8 @@ function guiaFondoBroker(prov: 'cocos' | 'balanz', ctx: ContextoGuia): Guia {
 
 function guiaLetras(prov: BrokerId, ctx: ContextoGuia): Guia {
   const nombre = PROVEEDORES[prov].nombre;
-  const letras = (ctx.mercado?.letras?.valor ?? []).filter((l) => l.dias >= 15 && l.dias <= 200).slice(0, 3);
+  const v = ventanaDeVencimiento('letra', ctx.horizonteMeses);
+  const letras = (ctx.mercado?.letras?.valor ?? []).filter((l) => l.dias >= v.min && l.dias <= v.max).slice(0, 3);
   return {
     proveedor: prov,
     producto: 'letra',
@@ -326,7 +330,8 @@ function guiaLetras(prov: BrokerId, ctx: ContextoGuia): Guia {
 
 function guiaBonoCer(prov: BrokerId, ctx: ContextoGuia): Guia {
   const nombre = PROVEEDORES[prov].nombre;
-  const bonos = [...(ctx.mercado?.bonosCer?.valor ?? [])].filter((b) => b.volumen > 0).sort((a, b) => a.dias - b.dias).slice(0, 4);
+  const v = ventanaDeVencimiento('bono_cer', ctx.horizonteMeses);
+  const bonos = [...(ctx.mercado?.bonosCer?.valor ?? [])].filter((b) => b.volumen > 0 && b.dias >= v.min && b.dias <= v.max).sort((a, b) => a.dias - b.dias).slice(0, 4);
   return {
     proveedor: prov,
     producto: 'bono_cer',

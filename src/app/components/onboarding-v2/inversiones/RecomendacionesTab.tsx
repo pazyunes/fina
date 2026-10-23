@@ -125,9 +125,12 @@ export function RecomendacionesTab({
           <span className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>{r.producto.resumen}</span>
           {it.recomendado && it.peso !== null && (
             <span className="text-[14px] font-semibold leading-snug" style={{ color: COLORS.ink }}>
-              Para el <span className="font-mono tabular-nums">{Math.round(it.peso * 100)}%</span> de tu plata
+              Para el <span className="font-mono tabular-nums">{Math.round(it.peso * 100)}%</span> de tu plata{it.parte ? <> · {it.parte}</> : null}
               {monto ? <> (unos <span className="font-mono tabular-nums">{fmtPesos(monto * it.peso)}</span>)</> : null}
             </span>
+          )}
+          {it.recomendado && it.peso === null && it.parte && (
+            <span className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>Reserva opcional, sin porcentaje · {it.parte}</span>
           )}
           {it.motivo && <span className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>{it.motivo}</span>}
         </span>

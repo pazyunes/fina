@@ -75,8 +75,8 @@ export function FlujoInversion({
 
   const evaluacion = rec.opciones.find((o) => o.proveedor === proveedor) ?? rec.mejor;
   const ctx: ContextoGuia = useMemo(
-    () => ({ ...CONTEXTO_VACIO, ...entradas, mercado, evaluacion, banco }),
-    [entradas, mercado, evaluacion, banco],
+    () => ({ ...CONTEXTO_VACIO, ...entradas, mercado, evaluacion, banco, horizonteMeses }),
+    [entradas, mercado, evaluacion, banco, horizonteMeses],
   );
   const guia = useMemo(() => (proveedor ? armarGuia(proveedor, producto.id, ctx) : null), [proveedor, producto.id, ctx]);
 

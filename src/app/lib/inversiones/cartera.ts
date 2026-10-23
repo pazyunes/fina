@@ -1,19 +1,21 @@
-// Cómo se reparte la plata según el PLAZO y el PERFIL. Es la tabla que completó el asesor:
+// Cómo se reparte la plata según el PLAZO y el PERFIL. Es la tabla que armamos con el criterio del asesor:
 //   · el plazo decide EN QUÉ (qué tipo de inversión tiene sentido);
 //   · el perfil decide CUÁNTO (qué parte de la plata va a lo que sube y baja);
 //   · el monto no decide nada: lo mismo para $50.000 que para $5.000.000.
 //
-// Cada tramo de plazo arma "grupos": un porcentaje de la plata y las inversiones que sirven para esa
+// Cada tramo de plazo arma "partes": un porcentaje de la plata y las inversiones que sirven para esa
 // parte (la persona elige una; el motor las ordena por rendimiento).
 //
-//   Menos de 3 meses   todo lo mismo para cualquier perfil: plata a mano (plazo fijo, cuenta, fondo,
-//                      letras). Aunque rinda menos que la inflación, a tan poco tiempo es mejor que nada.
-//   3 a 12 meses       conservador: todo a mano. Moderado: la mitad a mano y la mitad en renta fija
-//                      (letras, bonos CER, UVA: "suele rendir positivo en ese tiempo"). Arriesgado: la mitad
-//                      en renta fija y la mitad en CEDEARs.
-//   1 a 3 años         plazo fijo UVA y cuenta remunerada, para cualquier perfil.
-//   Más de 3 años      conservador 10% CEDEARs, moderado 50%, arriesgado 100% (y la cuenta para tener
-//                      plata a mano); el resto, en plazo fijo UVA o cuenta.
+//   "A mano" = plazo fijo, cuenta remunerada y money market (casi nunca bajan) y, a menos de 3 meses, letras cortas.
+//   "Renta fija" = letras, bonos CER y plazo fijo UVA, siempre con un vencimiento que coincida con el plazo.
+//
+//                 Menos de 3 meses | 3 a 12 meses              | 1 a 3 años                    | Más de 3 años
+//   Conservador   100% a mano      | 70% a mano, 30% r. fija   | 70% UVA, 30% bonos CER        | 80% r. fija, 20% CEDEARs
+//   Moderado      100% a mano      | 50% a mano, 50% r. fija   | 70% r. fija, 30% CEDEARs      | 50% r. fija, 50% CEDEARs
+//   Arriesgado    100% a mano      | 30% a mano, 70% r. fija   | 50% r. fija, 50% CEDEARs      | 100% CEDEARs (+ la cuenta, sin %)
+//
+// Nunca CEDEARs a menos de 1 año: el plazo manda sobre el perfil (el perfil dice cuánto riesgo querés
+// tomar; el plazo, cuánto podés).
 //
 // Función pura, sin red ni React.
 
@@ -37,7 +39,14 @@ export function tramoDe(meses: number | null): Tramo {
   return 'mlargo';
 }
 
-export type GrupoId = 'liquidez' | 'renta_fija' | 'ahorro' | 'crecimiento';
+export type GrupoId = 'liquidez' | 'renta_fija' | 'crecimiento';
+
+/** Cómo se llama cada parte de la plata, para decírselo a la persona. */
+export const NOMBRE_DE_PARTE: Record<GrupoId, string> = {
+  liquidez: 'a mano',
+  renta_fija: 'renta fija',
+  crecimiento: 'CEDEARs',
+};
 
 export type Grupo = {
   id: GrupoId;
@@ -47,41 +56,71 @@ export type Grupo = {
   productos: ProductoId[];
 };
 
-/** Qué sirve para cada parte. */
-export const PRODUCTOS_DEL_GRUPO: Record<GrupoId, ProductoId[]> = {
-  liquidez: ['plazo_fijo', 'cuenta_remunerada', 'fci', 'letra'],
-  renta_fija: ['letra', 'bono_cer', 'plazo_fijo_uva'],
-  ahorro: ['plazo_fijo_uva', 'cuenta_remunerada'],
-  crecimiento: ['cedear'],
+const A_MANO: ProductoId[] = ['plazo_fijo', 'cuenta_remunerada', 'fci'];
+
+/** La renta fija de cada plazo: a menos de 3 meses sólo letras cortas (están entre las de a mano). */
+export function rentaFijaDe(tramo: Tramo): ProductoId[] {
+  switch (tramo) {
+    case 'corto': return ['letra'];
+    case 'medio': return ['letra', 'bono_cer', 'plazo_fijo_uva'];
+    case 'largo': return ['plazo_fijo_uva', 'bono_cer'];
+    case 'mlargo': return ['bono_cer', 'plazo_fijo_uva'];
+  }
+}
+
+/** Qué parte de la plata va a CEDEARs de 1 a 3 años y a más de 3 años, según el perfil. */
+export const PESO_CEDEAR: Record<'largo' | 'mlargo', Record<PerfilRiesgo, number>> = {
+  largo: { conservador: 0, moderado: 0.3, arriesgado: 0.5 },
+  mlargo: { conservador: 0.2, moderado: 0.5, arriesgado: 1 },
 };
 
-/** Qué parte de la plata va a CEDEARs a más de 3 años, según el perfil (criterio del asesor). */
-export const PESO_CEDEAR_A_LARGO_PLAZO: Record<PerfilRiesgo, number> = {
-  conservador: 0.1,
-  moderado: 0.5,
-  arriesgado: 1,
-};
+/** Qué parte de la plata va a lo que está a mano de 3 a 12 meses; el resto es renta fija. */
+export const PESO_A_MANO_DE_3_A_12: Record<PerfilRiesgo, number> = { conservador: 0.7, moderado: 0.5, arriesgado: 0.3 };
 
-const g = (id: GrupoId, peso: number, productos: ProductoId[] = PRODUCTOS_DEL_GRUPO[id]): Grupo => ({ id, peso, productos });
+const g = (id: GrupoId, peso: number, productos: ProductoId[]): Grupo => ({ id, peso, productos });
 
 export function armarCartera(perfil: PerfilRiesgo, meses: number | null): Grupo[] {
-  switch (tramoDe(meses)) {
+  const tramo = tramoDe(meses);
+  switch (tramo) {
     case 'corto':
-      return [g('liquidez', 1)];
+      // Todo lo mismo para cualquier perfil. Aunque rinda menos que la inflación, a tan poco tiempo es mejor que nada.
+      return [g('liquidez', 1, [...A_MANO, 'letra'])];
     case 'medio': {
-      if (perfil === 'conservador') return [g('liquidez', 1)];
-      // Con dos partes, las letras van en la de renta fija: la de plata a mano queda para plazo fijo, cuenta y fondo.
-      // Sin saber para cuándo es la plata, al arriesgado no se le sugieren CEDEARs: se lo trata como moderado.
-      if (perfil === 'moderado' || meses === null) return [g('liquidez', 0.5, PRODUCTOS_DEL_GRUPO.liquidez.filter((id) => id !== 'letra')), g('renta_fija', 0.5)];
-      return [g('renta_fija', 0.5), g('crecimiento', 0.5)];
+      // Sin saber para cuándo es la plata, al arriesgado se lo trata como moderado.
+      const mano = PESO_A_MANO_DE_3_A_12[meses === null && perfil === 'arriesgado' ? 'moderado' : perfil];
+      return [g('liquidez', mano, A_MANO), g('renta_fija', 1 - mano, rentaFijaDe(tramo))];
     }
-    case 'largo':
-      return [g('ahorro', 1)];
+    case 'largo': {
+      const cedear = PESO_CEDEAR.largo[perfil];
+      // El conservador reparte su renta fija entre el plazo fijo UVA (70%) y los bonos CER (30%).
+      if (perfil === 'conservador') return [g('renta_fija', 0.7, ['plazo_fijo_uva']), g('renta_fija', 0.3, ['bono_cer'])];
+      return [g('renta_fija', 1 - cedear, rentaFijaDe(tramo)), g('crecimiento', cedear, ['cedear'])];
+    }
     case 'mlargo': {
-      const cedear = PESO_CEDEAR_A_LARGO_PLAZO[perfil];
-      // El arriesgado va todo a CEDEARs; igual se le muestra la cuenta, sin porcentaje, para tener plata a mano.
-      if (cedear >= 1) return [g('crecimiento', 1), g('liquidez', 0, ['cuenta_remunerada'])];
-      return [g('ahorro', 1 - cedear), g('crecimiento', cedear)].sort((a, b) => b.peso - a.peso);
+      const cedear = PESO_CEDEAR.mlargo[perfil];
+      // El arriesgado va todo a CEDEARs; igual se le muestra la cuenta, sin porcentaje, como reserva opcional.
+      if (cedear >= 1) return [g('crecimiento', 1, ['cedear']), g('liquidez', 0, ['cuenta_remunerada'])];
+      return [g('renta_fija', 1 - cedear, rentaFijaDe(tramo)), g('crecimiento', cedear, ['cedear'])].sort((a, b) => b.peso - a.peso);
     }
+  }
+}
+
+/**
+ * Los vencimientos que sirven para este plazo, en días: el vencimiento tiene que coincidir con cuándo se
+ * necesita la plata (si no, hay que vender antes y el precio puede ser menor). Sin plazo dicho, la ventana es amplia.
+ */
+export function ventanaDeVencimiento(producto: 'letra' | 'bono_cer', meses: number | null): { min: number; max: number } {
+  const tramo = tramoDe(meses);
+  if (meses === null) return producto === 'letra' ? { min: 15, max: 200 } : { min: 90, max: 730 };
+  const dias = meses * 30;
+  if (producto === 'letra') {
+    // Letras cortas a menos de 3 meses; si no, las que vencen antes del plazo.
+    return { min: 15, max: tramo === 'corto' ? Math.min(90, Math.max(dias, 30)) : Math.max(dias, 30) };
+  }
+  switch (tramo) {
+    case 'corto': return { min: 90, max: 90 };
+    case 'medio': return { min: 90, max: Math.max(dias, 90) };
+    case 'largo': return { min: 365, max: 1095 };
+    case 'mlargo': return { min: 1095, max: 2000 };
   }
 }
