@@ -55,6 +55,10 @@ export function mercadoFixture(cambios: Partial<Mercado> = {}): Mercado {
       fecha: '2026-10-20', fuente: 'CAFCI',
     },
     letras: null,
+    plazoFijoUva: {
+      valor: [{ entidad: 'Banco de la Nación Argentina', tasas: [{ plazoMinDias: 90, plazoMaxDias: 119, tna: 0.0225 }, { plazoMinDias: 120, plazoMaxDias: 179, tna: 0.025 }] }],
+      fecha: '2026-10-21', fuente: 'plazos fijos UVA',
+    },
     bonosCer: {
       valor: [
         { ticker: 'TZXD6', precio: 312.75, tir: 0.0236, vencimiento: '2026-12-15', dias: 55, volumen: 346_000_000 },

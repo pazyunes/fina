@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAlLlegar } from './alLlegar';
 import { BotonVolver, COLORS, Chip, Cta, OpcionesGrid, Tabs, Titulo, TituloSeccion, fechaDisplay, fmtMoney, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
 import { ALIAS_PROVEEDOR, EN_QUE_A_PRODUCTO, type ProveedorId } from '../../lib/inversiones/catalogo';
@@ -156,11 +156,10 @@ export function InversionesV2() {
 
   // Registrar una inversión (formulario específico por tipo). `previos` viene del
   // paso a paso: ya sabe el proveedor y el monto con el que empezó.
-  const [registro, setRegistro] = useState<{ tipo?: PosicionInversion['tipo']; previos?: Partial<Valores>; desdeGuia?: boolean } | null>(null);
-  const abrirRegistro = (tipo?: PosicionInversion['tipo'], previos?: Partial<Valores>, desdeGuia?: boolean) => setRegistro({ tipo, previos, desdeGuia });
-  // Si se volvió del registro al paso a paso, de cuál inversión.
-  const [volverAGuia, setVolverAGuia] = useState<PosicionInversion['tipo'] | null>(null);
-  const alReabrirGuia = useCallback(() => setVolverAGuia(null), []);
+  const [registro, setRegistro] = useState<{ tipo?: PosicionInversion['tipo']; previos?: Partial<Valores> } | null>(null);
+  const abrirRegistro = (tipo?: PosicionInversion['tipo'], previos?: Partial<Valores>) => setRegistro({ tipo, previos });
+  // El perfil se explica sólo si se toca: ocupa mucho.
+  const [perfilAbierto, setPerfilAbierto] = useState(false);
   const { estado: estadoMercado } = useMercado();
 
   // Los registros VIEJOS (sólo "cuánto y en qué") se siguen pudiendo corregir y
@@ -357,6 +356,13 @@ export function InversionesV2() {
       ipc,
       db.perfil.zona,
     );
+    // Los bancos y billeteras que usa: lo que contó en el perfil, sus medios de pago y dónde ya tiene inversiones. Sirven para
+    // marcar como "recomendado" el lugar donde ya tiene cuenta.
+    const propias = [...new Set([
+      ...bancos.filter((b) => b !== 'Banco tradicional' && b !== 'Efectivo' && b !== 'Otro'),
+      ...db.mediosPago.map((m) => m.nombre),
+      ...db.posiciones.filter((p) => p.estado === 'activa').map((p) => p.proveedor),
+    ])];
     // Productos en los que la persona dijo que ya invierte (quiz) o que ya registró.
     const productosQuiz = enQue.flatMap((o) => EN_QUE_A_PRODUCTO[o] ?? []);
 
@@ -516,19 +522,29 @@ export function InversionesV2() {
             previos={registro.previos}
             mercado={estadoMercado.tipo === 'listo' ? estadoMercado.mercado : null}
             onCerrar={() => setRegistro(null)}
-            onVolver={registro.desdeGuia && registro.tipo ? () => { setVolverAGuia(registro.tipo ?? null); setRegistro(null); } : undefined}
+            onVerMias={() => setTab('mias')}
           />
         )}
         <div className="px-[22px] pt-8 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto">
           {/* Banda editorial full-bleed. Sin Fini (guía §6): el personaje nunca
               va cerca de un dato, y menos en inversiones. */}
-          <header data-franja className="pb-1 mb-2">
-            <Titulo>Inversiones</Titulo>
-            <p className="text-[15px] mt-1" style={{ color: COLORS.inkSoft }}>Con los números de hoy, estas son tus alternativas y cómo hacerlas.</p>
+          <header data-franja className="pb-0 mb-0">
+            <Titulo className="!text-[28px]">Inversiones</Titulo>
           </header>
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            Sos <span className="font-bold" style={{ color: pl.strong }}>perfil {perfil.label.toLowerCase()}</span>: {perfil.copy.charAt(0).toLowerCase() + perfil.copy.slice(1)}
-          </p>
+          <div className="flex flex-col">
+            <button
+              type="button"
+              onClick={() => setPerfilAbierto(!perfilAbierto)}
+              aria-expanded={perfilAbierto}
+              className="v2-focus self-start inline-flex items-center gap-1.5 min-h-[36px] text-[14px] font-bold"
+              style={{ color: pl.strong }}
+            >
+              Perfil {perfil.label.toLowerCase()} <span aria-hidden className="text-[12px]">{perfilAbierto ? '▴' : '▾'}</span>
+            </button>
+            {perfilAbierto && (
+              <p className="text-[13px] leading-snug pb-1" style={{ color: COLORS.inkSoft }}>Ser perfil {perfil.label.toLowerCase()} es: {perfil.copy.charAt(0).toLowerCase() + perfil.copy.slice(1)}</p>
+            )}
+          </div>
 
           <Tabs
             options={[
@@ -552,9 +568,8 @@ export function InversionesV2() {
               objetivoEnDolares={objetivoEnDolares}
               inflacionPersonal={inflacionPersonal}
               objetivos={objetivos}
-              reabrir={volverAGuia}
-              onReabierto={alReabrirGuia}
-              onRegistrar={abrirRegistro}
+              propias={propias}
+              onVerMias={() => setTab('mias')}
             />
           )}
 

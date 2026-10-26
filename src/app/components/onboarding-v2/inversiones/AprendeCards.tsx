@@ -44,8 +44,8 @@ export function AprendeCards({ recomendados }: { recomendados: ProductoId[] }) {
   return (
     <section className="flex flex-col gap-3" aria-label="Mini lecciones">
       <div className="flex flex-col gap-1">
-        <TituloSeccion>Aprendé en una card</TituloSeccion>
-        <p className="text-[15px] leading-relaxed max-w-[62ch]" style={{ color: COLORS.inkSoft }}>
+        <h2 className="text-[17px] font-bold leading-tight" style={{ color: COLORS.ink }}>Aprendé en una card</h2>
+        <p className="text-[13px] leading-snug max-w-[62ch]" style={{ color: COLORS.inkSoft }}>
           Mini lecciones para entender las palabras y las opciones. Deslizá para ver la que sigue y marcá las que ya aprendiste: hasta {LIMITE_DIARIO} por día.
         </p>
       </div>
@@ -82,23 +82,23 @@ export function AprendeCards({ recomendados }: { recomendados: ProductoId[] }) {
             <article
               key={t.id}
               aria-label={`${t.titulo} (${i + 1} de ${orden.length})`}
-              className="snap-start shrink-0 w-[82%] sm:w-[340px] rounded-[28px] p-5 flex flex-col gap-3"
+              className="snap-start shrink-0 w-[82%] sm:w-[340px] rounded-[22px] p-4 flex flex-col gap-2.5"
               style={{ background: COLORS.surface, border: `2px solid ${aprendida ? COLORS.lima : COLORS.line}` }}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkFaint }}>{ETIQUETA[t.clase]}</span>
+                <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: COLORS.inkFaint }}>{ETIQUETA[t.clase]}</span>
                 {aprendida && <span className="text-[12px] font-bold rounded-full px-2.5 py-0.5" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>Aprendida</span>}
               </div>
-              <h3 className="text-[19px] leading-snug font-bold" style={{ color: COLORS.ink }}>{t.titulo}</h3>
-              <p className="text-[15px] leading-relaxed" style={{ color: COLORS.inkSoft }}>{t.idea}</p>
+              <h3 className="text-[16px] leading-snug font-bold" style={{ color: COLORS.ink }}>{t.titulo}</h3>
+              <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{t.idea}</p>
               {t.bloques.map((b) => (
-                <div key={b.nombre} className="rounded-2xl px-3.5 py-3" style={{ background: COLORS.tint }}>
-                  <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>{b.nombre}</p>
-                  <p className="text-[15px] leading-snug mt-1" style={{ color: COLORS.inkSoft }}>{b.texto}</p>
+                <div key={b.nombre} className="rounded-2xl px-3 py-2" style={{ background: COLORS.tint }}>
+                  <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>{b.nombre}</p>
+                  <p className="text-[13px] leading-snug mt-0.5" style={{ color: COLORS.inkSoft }}>{b.texto}</p>
                 </div>
               ))}
-              {t.ejemplo && <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{t.ejemplo}</p>}
-              <p className="text-[15px] leading-snug pl-3.5 border-l-2" style={{ borderColor: COLORS.lima, color: COLORS.ink }}>
+              {t.ejemplo && <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>{t.ejemplo}</p>}
+              <p className="text-[13px] leading-snug pl-3 border-l-2" style={{ borderColor: COLORS.lima, color: COLORS.ink }}>
                 <span className="font-bold">Para quedarte con algo: </span>{t.retener}
               </p>
               <div className="mt-auto pt-1">
@@ -116,7 +116,7 @@ export function AprendeCards({ recomendados }: { recomendados: ProductoId[] }) {
                     type="button"
                     onClick={() => marcar(t, i, true)}
                     aria-disabled={cupoLleno || undefined}
-                    className={`v2-focus w-full min-h-[48px] rounded-2xl text-[16px] font-bold transition-all duration-100 ${cupoLleno ? 'cursor-not-allowed' : 'active:scale-[0.98]'}`}
+                    className={`v2-focus w-full min-h-[44px] rounded-2xl text-[15px] font-bold transition-all duration-100 ${cupoLleno ? 'cursor-not-allowed' : 'active:scale-[0.98]'}`}
                     style={cupoLleno
                       ? { background: COLORS.tint, color: COLORS.inkSoft, border: `1.5px solid ${COLORS.lineStrong}` }
                       : { background: COLORS.brand, color: COLORS.surface }}

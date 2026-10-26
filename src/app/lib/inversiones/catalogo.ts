@@ -22,7 +22,7 @@ export type ProductoId =
   | 'dolar'
   | 'cedear';
 
-export type ProveedorId = 'mercado_pago' | 'uala' | 'naranja_x' | 'cocos' | 'balanz' | 'iol' | 'galicia_securities' | 'ppi' | 'ieb' | 'banco';
+export type ProveedorId = 'mercado_pago' | 'uala' | 'naranja_x' | 'otra_cuenta' | 'cocos' | 'balanz' | 'iol' | 'galicia_securities' | 'ppi' | 'ieb' | 'banco';
 
 /** Los brokers (plataformas donde se compran fondos, CEDEARs, letras y dólares). */
 export type BrokerId = 'cocos' | 'balanz' | 'iol' | 'galicia_securities' | 'ppi' | 'ieb';
@@ -65,6 +65,11 @@ export type Producto = {
   garantia: string;
   /** ¿Puede bajar la plata que pusiste? Una respuesta corta y sincera. */
   puedeBajar: string;
+  /** Lo que hay que saber antes de invertir en esto, en puntos cortos. */
+  antesDeInvertir: string[];
+  /** Cuándo conviene vender, cuándo no y por qué (sólo en lo que se puede vender antes). */
+  cuandoVender?: { si: string; no: string; porque: string };
+  /** Sólo las palabras difíciles: la inversión misma se explica en "¿Qué es?", no acá. */
   glosario: Termino[];
 };
 
@@ -119,13 +124,18 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     horizonteMinimoMeses: 0,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs: 'Una cuenta de tu billetera virtual (la app donde tenés tu plata, como Ualá o Mercado Pago) en la que el saldo que dejás quieto genera intereses todos los días. La seguís usando como siempre.',
-    dondeQuedaTuPlata: 'La billetera presta tu plata por períodos muy cortos (a bancos y al Estado) y te paga una parte de lo que gana. En varias, detrás hay un fondo común de inversión de dinero (un fondo que junta la plata de muchas personas y la presta a muy corto plazo).',
-    riesgoTexto: 'Casi no se mueve: lo que cambia es el interés (la tasa) que te pagan.',
+    queEs: 'Una cuenta de tu billetera o banco donde el saldo que dejás quieto genera intereses todos los días. La seguís usando como siempre.',
+    dondeQuedaTuPlata: 'La billetera o el banco presta tu plata por períodos muy cortos y te paga una parte de lo que gana. En varias, detrás hay un fondo de dinero.',
+    riesgoTexto: 'Casi no se mueve: lo que cambia es la tasa que te pagan, y puede cambiar cualquier día.',
     cuandoLaSacas: 'Cuando quieras, en el momento.',
-    garantia: 'Depende de la billetera. Si queda en un fondo de inversión, no tiene el seguro de depósitos (la protección que tienen las cuentas de los bancos).',
-    puedeBajar: 'No: lo que tenés en pesos no baja, sólo suma intereses. Lo que cambia de un día para el otro es la tasa que te pagan, y tu saldo, que sube y baja con lo que cobrás y pagás.',
-    glosario: [G.tna, G.tope, G.inflacion, G.segDepositos],
+    garantia: 'Depende: en un banco, el seguro de depósitos; en una billetera con fondo de inversión, no.',
+    puedeBajar: 'No: lo que tenés en pesos no baja, sólo suma intereses. Cambia la tasa que te pagan, y tu saldo, que sube y baja con lo que cobrás y pagás.',
+    antesDeInvertir: [
+      'La tasa puede cambiar de un día para el otro.',
+      'Casi todas tienen un tope: lo que pasa de cierto saldo rinde menos o nada.',
+      'Algunas piden condiciones para pagar la tasa más alta.',
+    ],
+    glosario: [G.tna, G.tope, G.segDepositos],
   },
 
   fci: {
@@ -137,13 +147,18 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     horizonteMinimoMeses: 0,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs: 'Una “bolsa” de plata de muchas personas (un fondo común de inversión, o FCI) que maneja un profesional. Vos tenés cuotapartes (pedacitos de esa bolsa). Acá hablamos del más conservador, el “money market” (un fondo que presta a muy corto plazo). Se compra desde un broker (una app o empresa donde comprás inversiones).',
-    dondeQuedaTuPlata: 'El fondo presta a muy corto plazo (a bancos y al Estado) y cada día sube un poquito el valor de tu cuotaparte. Lo que compró el fondo lo guarda un banco aparte (el custodio), no la empresa que lo administra.',
+    queEs: 'Una bolsa de plata de muchas personas que maneja un profesional. Vos tenés cuotapartes, pedacitos de esa bolsa. Acá hablamos del money market, el más conservador. Se compra desde un broker.',
+    dondeQuedaTuPlata: 'El fondo presta a muy corto plazo y cada día sube un poquito el valor de tu cuotaparte. Lo que compró el fondo lo guarda un banco aparte.',
     riesgoTexto: 'Casi no baja. Si un fondo promete mucho más que el resto, preguntá qué riesgo toma.',
-    cuandoLaSacas: 'Entre el mismo día y 2 días hábiles (días de semana sin feriados), según el fondo.',
-    garantia: 'No tiene seguro de depósitos (la protección de las cuentas de los bancos), pero lo controla la CNV (el organismo del Estado que regula las inversiones) y la plata del fondo está separada de la de la empresa que lo administra.',
+    cuandoLaSacas: 'Entre el mismo día y 2 días hábiles, según el fondo.',
+    garantia: 'No tiene seguro de depósitos, pero lo controla la CNV y la plata del fondo está separada de la de la empresa que lo administra.',
     puedeBajar: 'El money market casi nunca baja: cada día suma un poquito. Ojo: hay fondos de renta fija (bonos) y de renta variable (acciones) que sí pueden bajar, y mucho.',
-    glosario: [G.broker, G.fci, G.cuotaparte, G.moneyMarket, G.rescate, G.custodio, G.cnv, G.tna],
+    antesDeInvertir: [
+      'Fijate el plazo de rescate: cuánto tarda en volver tu plata.',
+      'La clase del fondo (A, B…) cambia las comisiones, no lo que rinde.',
+      'El valor de la cuotaparte sube casi todos los días, pero no está garantizado.',
+    ],
+    glosario: [G.broker, G.cuotaparte, G.moneyMarket, G.rescate, G.cnv, G.habil],
   },
 
   plazo_fijo: {
@@ -157,11 +172,16 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     perfiles: ['conservador', 'moderado', 'arriesgado'],
     queEs: 'Le prestás plata al banco por un tiempo (30, 60, 90 días…) y sabés desde el primer día cuánto te devuelve.',
     dondeQuedaTuPlata: 'En el banco. Mientras dura el plazo no la podés usar.',
-    riesgoTexto: 'Cobrás lo pactado. El riesgo es que la inflación (lo que suben los precios) sea mayor que tu interés y con esa plata compres menos.',
-    cuandoLaSacas: 'Al vencimiento (el día en que termina el plazo). Antes, solo si es precancelable (se puede retirar antes) y con menos interés.',
-    garantia: `Sí: está garantizado por el BCRA a través del seguro de depósitos, hasta ${TOPE_TEXTO} por persona y por banco (un tope es un monto máximo). Lo que pase de ahí no está cubierto.`,
+    riesgoTexto: 'Cobrás lo pactado. El riesgo es que la inflación sea mayor que tu interés y con esa plata compres menos.',
+    cuandoLaSacas: 'Al vencimiento. Antes, solo si es precancelable y con menos interés.',
+    garantia: `Sí: está garantizado por el BCRA a través del seguro de depósitos, hasta ${TOPE_TEXTO} por persona y por banco. Lo que pase de ahí no está cubierto.`,
     puedeBajar: 'No: cobrás lo pactado. El riesgo es que los precios suban más que tu interés, no que pierdas lo que pusiste.',
-    glosario: [G.tna, G.vencimiento, G.precancelable, G.inflacion, G.segDepositos],
+    antesDeInvertir: [
+      'Tiene un vencimiento: hasta ese día no podés usar la plata.',
+      'Si no se renueva solo, decidís de nuevo con la tasa del momento.',
+      'Las tasas que ves son para clientes del banco.',
+    ],
+    glosario: [G.tna, G.vencimiento, G.precancelable, G.segDepositos],
   },
 
   plazo_fijo_uva: {
@@ -173,13 +193,18 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     horizonteMinimoMeses: 3,
     plazoMinimoDias: 90,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs: 'Un plazo fijo donde tu plata se actualiza con la inflación (lo que suben los precios) a través de la UVA (un número del BCRA que sube cuando suben los precios), más un interés chico. Protege lo que ahorraste; no está pensado para ganarle por mucho a la inflación.',
+    queEs: 'Un plazo fijo donde tu plata se actualiza con la inflación a través de la UVA, más un interés chico. Protege lo que ahorraste; no busca ganarle por mucho.',
     dondeQuedaTuPlata: 'En el banco, durante todo el plazo. El mínimo es de 90 días.',
-    riesgoTexto: 'Si la inflación (lo que suben los precios) sube, cobrás más pesos; si baja, cobrás menos. Siempre cobrás en pesos.',
-    cuandoLaSacas: 'Al vencimiento (el día en que termina el plazo), como mínimo a los 90 días.',
-    garantia: `Sí: es un depósito en un banco, garantizado por el BCRA a través del seguro de depósitos hasta ${TOPE_TEXTO} por persona y por banco (un tope es un monto máximo). Cubre también lo que se actualiza por la UVA.`,
+    riesgoTexto: 'Si la inflación sube, cobrás más pesos; si baja, cobrás menos. Siempre cobrás en pesos.',
+    cuandoLaSacas: 'Al vencimiento, como mínimo a los 90 días.',
+    garantia: `Sí: es un depósito en un banco, garantizado por el BCRA a través del seguro de depósitos hasta ${TOPE_TEXTO} por persona y por banco. Cubre también lo que se actualiza por la UVA.`,
     puedeBajar: 'No: en pesos tu capital no baja, se actualiza con la inflación. Lo que no sabés de antemano es cuántos pesos vas a cobrar.',
-    glosario: [G.uva, G.vencimiento, G.inflacion, G.segDepositos],
+    antesDeInvertir: [
+      'Mínimo 90 días, y tiene vencimiento.',
+      'No sabés cuántos pesos vas a cobrar hasta el final.',
+      'Algunos bancos suman un extra sobre la inflación (“UVA + 2”: ese 2 es el extra) y a veces limitan este producto.',
+    ],
+    glosario: [G.uva, G.vencimiento, G.segDepositos],
   },
 
   letra: {
@@ -191,13 +216,23 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     horizonteMinimoMeses: 1,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs: 'Un préstamo que le hacés al Estado por unos meses. Pagás hoy un precio y en una fecha fija te devuelve un monto mayor. Se compra desde un broker (una app o empresa donde comprás inversiones).',
-    dondeQuedaTuPlata: 'En el Tesoro Nacional. Lo que comprás queda a tu nombre en tu cuenta del broker (la plataforma donde lo comprás).',
+    queEs: 'Un préstamo que le hacés al Estado por unos meses. Pagás hoy un precio y en una fecha fija te devuelve un monto mayor. Se compra desde un broker.',
+    dondeQuedaTuPlata: 'En el Tesoro Nacional. Queda a tu nombre en tu cuenta del broker.',
     riesgoTexto: 'Si esperás hasta el vencimiento cobrás lo que figuraba; si vendés antes, el precio puede ser menor.',
-    cuandoLaSacas: 'Al vencimiento, o antes vendiéndola: se acredita en 1 o 2 días hábiles (de lunes a viernes, sin feriados).',
+    cuandoLaSacas: 'Al vencimiento, o antes vendiéndola: se acredita en 1 o 2 días hábiles.',
     garantia: 'No tiene seguro de depósitos. Está garantizada por el Tesoro de la Nación: el respaldo es el compromiso de pago del Estado argentino.',
     puedeBajar: 'Si esperás al vencimiento, no: cobrás lo que figuraba al comprar. Si la vendés antes, el precio puede ser menor y ahí sí perdés.',
-    glosario: [G.broker, G.letra, G.vencimiento, G.tna],
+    antesDeInvertir: [
+      'Tiene vencimiento: elegí uno que coincida con cuándo vas a usar la plata.',
+      'Se puede vender antes, pero el precio puede ser menor.',
+      'Mirá que se opere seguido: si no, cuesta venderla.',
+    ],
+    cuandoVender: {
+      si: 'Al vencimiento (el Estado paga solo) o si necesitás la plata antes.',
+      no: 'Si no la necesitás: vender antes suele dar menos de lo que cobrarías esperando.',
+      porque: 'Tu ganancia está fijada para el vencimiento; antes de esa fecha el precio sube y baja.',
+    },
+    glosario: [G.broker, G.vencimiento, G.tna, G.habil],
   },
 
   bono_cer: {
@@ -209,13 +244,23 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     horizonteMinimoMeses: 3,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs: 'Un bono “CER” es un préstamo que le hacés al Estado por varios meses o años. Tu capital se ajusta con el CER (un índice que sigue a la inflación, o sea lo que suben los precios) y encima te paga un extra. Se compra desde un broker (una app o empresa donde comprás inversiones).',
-    dondeQuedaTuPlata: 'En el Tesoro Nacional. Lo que comprás queda a tu nombre en tu cuenta del broker (la plataforma donde lo comprás).',
+    queEs: 'Un préstamo que le hacés al Estado por varios meses o años. Tu capital se ajusta con la inflación y encima te paga un extra. Se compra desde un broker.',
+    dondeQuedaTuPlata: 'En el Tesoro Nacional. Queda a tu nombre en tu cuenta del broker.',
     riesgoTexto: 'Si esperás hasta el vencimiento, cobrás la inflación más el extra que figuraba al comprar. Si lo vendés antes, el precio puede ser menor.',
-    cuandoLaSacas: 'Al vencimiento, o antes vendiéndolo: se acredita en 1 o 2 días hábiles (de lunes a viernes, sin feriados). Algunos casi no se operan y cuesta venderlos: mirá cuánto se opera.',
+    cuandoLaSacas: 'Al vencimiento, o antes vendiéndolo: se acredita en 1 o 2 días hábiles. Algunos casi no se operan y cuesta venderlos.',
     garantia: 'No tiene seguro de depósitos. Lo respalda el Tesoro de la Nación: el compromiso de pago del Estado argentino.',
     puedeBajar: 'Sí, según el plazo: si lo vendés antes del vencimiento, el precio puede estar más bajo y perdés. Cuanto más largo el bono, más se mueve su precio.',
-    glosario: [G.broker, G.bono, G.cer, G.inflacion, G.vencimiento],
+    antesDeInvertir: [
+      'Tiene vencimiento: elegí uno que coincida con cuándo vas a usar la plata.',
+      'Si lo vendés antes, el precio puede ser menor.',
+      'Mirá cuánto se opera: si casi no se opera, cuesta venderlo.',
+    ],
+    cuandoVender: {
+      si: 'Al vencimiento (el Estado paga solo) o si necesitás la plata antes.',
+      no: 'Si no la necesitás: vender antes puede darte menos que esperar.',
+      porque: 'La inflación y el extra se cobran completos al vencimiento; en el medio el precio sube y baja.',
+    },
+    glosario: [G.broker, G.cer, G.vencimiento, G.habil],
   },
 
   dolar: {
@@ -227,31 +272,46 @@ export const PRODUCTOS: Record<ProductoId, Producto> = {
     horizonteMinimoMeses: 3,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs: 'Comprar dólares no es una inversión: es tener dólares guardados. Sirve si necesitás dólares más adelante (para un viaje, una compra, un objetivo en dólares); para plata de corto plazo suelen convenir los pesos, y para largo plazo, los dólares. Se hace de forma legal desde un broker (una app o empresa donde comprás inversiones). Se llama dólar MEP (es el nombre de esta forma de comprarlos).',
-    dondeQuedaTuPlata: 'Los dólares quedan a tu nombre en tu cuenta del broker (la plataforma donde los compraste). Los podés pasar a una cuenta en dólares de tu banco.',
-    riesgoTexto: 'No genera intereses y lo que valen en pesos sube o baja con el dólar. Sirve para cuidar tus ahorros, no para que crezcan.',
-    cuandoLaSacas: 'Cuando quieras: vendés los dólares y los pesos llegan en 1 o 2 días hábiles (días de semana sin feriados).',
+    queEs: 'Comprar dólares no es una inversión: es tener dólares guardados. Sirve si necesitás dólares más adelante. Para plata de corto plazo suelen convenir los pesos, y para largo plazo, los dólares. Se compra desde un broker.',
+    dondeQuedaTuPlata: 'Los dólares quedan a tu nombre en tu cuenta del broker. Los podés pasar a una cuenta en dólares de tu banco.',
+    riesgoTexto: 'No genera intereses y lo que valen en pesos sube o baja con el dólar.',
+    cuandoLaSacas: 'Cuando quieras: vendés los dólares y los pesos llegan en 1 o 2 días hábiles.',
     garantia: 'Ninguna sobre su valor: el dólar puede subir o bajar.',
     puedeBajar: 'Sí: lo que valen tus dólares en pesos sube y baja con el precio del dólar.',
+    antesDeInvertir: [
+      'No genera interés: sirve para guardar valor en dólares, no para que tu plata crezca.',
+      'Su precio en pesos sube y baja.',
+      'El dólar MEP cuesta distinto al oficial: esa diferencia es la brecha.',
+    ],
     glosario: [G.broker, G.mep, G.brecha, G.habil],
   },
 
   cedear: {
     id: 'cedear',
     nombre: 'CEDEARs',
-    resumen: 'Pedacitos de empresas grandes del exterior (también hay acciones argentinas). Para dejar varios años, no para retirar ya.',
+    resumen: 'Pedacitos de empresas grandes del exterior (también hay acciones argentinas).',
     rol: 'crecimiento',
     riesgo: 'Alto',
     horizonteMinimoMeses: 12,
     plazoMinimoDias: null,
     perfiles: ['conservador', 'moderado', 'arriesgado'],
-    queEs: 'Un CEDEAR es un papel en pesos que representa un pedacito de una empresa del exterior (como Apple). Se compra desde un broker (una app o empresa donde comprás inversiones). Un ETF como SPY (un “paquete” que reúne a las 500 empresas más grandes de EE.UU.) te evita elegir una sola. Este tipo de inversión se suele dejar a largo plazo, por varios años: así es como puede crecer. No es para retirar pronto.',
-    dondeQuedaTuPlata: 'Está respaldado por acciones reales (pedacitos de empresas) que guarda un banco en el exterior. Queda a tu nombre en tu cuenta del broker (la “cuenta comitente”).',
-    riesgoTexto: 'Sube y baja todos los días y puede haber años de pérdida. Por eso es para plata que no vas a necesitar en 3 años o más.',
-    cuandoLaSacas: 'Cuando quieras, pero solo cuando el mercado está abierto (de lunes a viernes, más o menos de 11 a 17 hs). La plata llega en 1 o 2 días hábiles (de lunes a viernes, sin feriados). Si vendés cuando el precio está bajo, perdés.',
-    garantia: 'Ninguna.',
-    puedeBajar: 'Sí, y puede bajar bastante: hay años de pérdida. Por eso es para plata que no vas a necesitar en 3 años o más, y no para vender con miedo cuando cae.',
-    glosario: [G.broker, G.cedear, G.etf, G.ticker, G.accion, G.comitente, G.diversificar, G.volatilidad],
+    queEs: 'Un papel en pesos que representa un pedacito de una empresa del exterior, como Apple. Se compra desde un broker. También hay CEDEARs de ETF, como SPY, que reúnen muchas empresas en una sola compra.',
+    dondeQuedaTuPlata: 'Está respaldado por acciones reales que guarda un banco en el exterior. Queda a tu nombre en tu cuenta comitente.',
+    riesgoTexto: 'Sube y baja todos los días y puede haber años de pérdida. Es para dejar varios años.',
+    cuandoLaSacas: 'Cuando quieras, pero solo con el mercado abierto (de lunes a viernes, de 11 a 17 hs más o menos). La plata llega en 1 o 2 días hábiles.',
+    garantia: 'Nadie te garantiza que su precio suba: puede bajar. Lo que comprás queda a tu nombre en tu cuenta comitente.',
+    puedeBajar: 'Sí, y puede bajar bastante: hay años de pérdida. Por eso no conviene vender con miedo cuando cae.',
+    antesDeInvertir: [
+      'Se piensa a varios años: no es para plata que necesitás pronto.',
+      'Sube y baja todos los días, y es normal.',
+      'Pagás una comisión (un % de lo que operás) al comprar y al vender.',
+    ],
+    cuandoVender: {
+      si: 'Cuando necesitás la plata, cuando llegaste a tu objetivo o cuando cambió lo que te hizo comprar (la empresa ya no es la misma).',
+      no: 'Solo porque bajó, ni porque subió y querés “asegurar”.',
+      porque: 'Vender con el precio bajo concreta la pérdida; con tiempo, el precio suele recuperarse. Y mover seguido suma comisiones.',
+    },
+    glosario: [G.broker, G.etf, G.ticker, G.accion, G.comitente, G.diversificar, G.volatilidad, G.habil],
   },
 };
 
@@ -356,6 +416,14 @@ export const PROVEEDORES: Record<ProveedorId, Proveedor> = {
     tipo: 'broker',
     productos: { letra: { tipo: 'letras' }, bono_cer: { tipo: 'bonosCer' }, dolar: { tipo: 'dolar' }, cedear: { tipo: 'cedears' } },
     paraEmpezar: PARA_EMPEZAR_BROKER,
+  },
+  // Cualquier otra billetera o banco con cuenta remunerada (Brubank, BNA, Belo…): se arma con los datos de mercado, no tiene catálogo propio.
+  otra_cuenta: {
+    id: 'otra_cuenta',
+    nombre: 'Otra cuenta',
+    tipo: 'billetera',
+    productos: {},
+    paraEmpezar: 'Una cuenta con tu DNI y una selfie, y plata para ingresar.',
   },
   banco: {
     id: 'banco',

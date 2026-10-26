@@ -81,6 +81,29 @@ export const FONDOS_POR_PROVEEDOR: Partial<Record<ProveedorId, { id: string; nom
   balanz: { id: 'Balanz Capital Money Market - Clase A', nombre: 'Balanz Capital Money Market' },
 };
 
+// ── Lo que se puede anotar ───────────────────────────────────────────────
+// Nada de números extremos: ni infinitos ceros ni tasas imposibles. Es un tope de sentido común, no un
+// consejo: FINA no limita cuánto puede invertir una persona, sólo evita que un error de tipeo ensucie sus datos.
+
+/** Lo máximo que se puede anotar en una sola inversión, en dólares. En pesos se convierte con el MEP de hoy. */
+export const MAX_USD = 1_000_000;
+/** TNA máxima que se acepta (%): cuenta, fondo y plazo fijo. */
+export const MAX_TASA = 100;
+/** Extra máximo sobre la UVA (%). */
+export const MAX_TASA_EXTRA_UVA = 30;
+/** Comisión máxima de un CEDEAR (%). */
+export const MAX_COMISION = 10;
+/** Plazo máximo de un plazo fijo, en días (3 años). */
+export const MAX_DIAS = 1095;
+/** Cantidad máxima de unidades (CEDEARs, cuotapartes, nominales). */
+export const MAX_UNIDADES = 100_000_000;
+
+/** Lo máximo que se puede anotar en pesos: US$ 1.000.000 al MEP de hoy (o al oficial, o a un valor de respaldo). */
+export function maxPesos(m: Mercado | null): number {
+  const dolar = m?.dolar.mep?.valor ?? m?.dolar.oficial?.valor ?? 1500;
+  return Math.round(MAX_USD * dolar);
+}
+
 // ── Mínimos y máximos ────────────────────────────────────────────────────
 export type Limites = {
   /** Lo mínimo para hacerlo. null = no hay un mínimo que conozcamos. */

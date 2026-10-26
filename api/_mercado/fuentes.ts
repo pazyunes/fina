@@ -21,7 +21,7 @@
 
 import { SERIES_IPC, type RegionIpc } from '../../src/app/lib/inversiones/ipc.js';
 import type {
-  BonoCerMercado, CedearMercado, CuentaMercado, Dato, FondoMercado, IpcRubros, LetraMercado, Mercado, PlazoFijoBanco, SpyEstadisticas,
+  BonoCerMercado, CedearMercado, CuentaMercado, Dato, FondoMercado, PlazoFijoUvaBanco, IpcRubros, LetraMercado, Mercado, PlazoFijoBanco, SpyEstadisticas,
 } from '../../src/app/lib/inversiones/mercadoTipos.js';
 import { chequear, type Controles } from './chequeos.js';
 
@@ -226,6 +226,19 @@ async function bonosCer(hoy: string): Promise<Dato<BonoCerMercado[]> | null> {
     .filter((b) => b.dias >= 90 && b.tir > -0.05 && b.tir < 0.5);
   if (salida.length === 0) return null;
   return { valor: salida, fecha: r.fechaActualizacion ? r.fechaActualizacion.slice(0, 10) : hoy, fuente: 'bonos CER (vía ArgentinaDatos)' };
+}
+
+// ── plazo fijo UVA ───────────────────────────────────────────────────────
+type FilaUvaBanco = { entidad: string; tasas: { plazoMinDias: number; plazoMaxDias: number; tna: number }[] };
+
+/** Lo que suma sobre la UVA cada banco que lo publica (hoy casi ninguno: se usa para no pedirle el dato a la persona cuando se sabe). */
+async function plazoFijoUva(hoy: string): Promise<Dato<PlazoFijoUvaBanco[]> | null> {
+  const filas = await traer<FilaUvaBanco[]>(`${AD}/finanzas/tasas/plazoFijoUvaPagoPeriodico`);
+  const valor: PlazoFijoUvaBanco[] = filas
+    .filter((f) => typeof f.entidad === 'string' && Array.isArray(f.tasas))
+    .map((f) => ({ entidad: f.entidad, tasas: f.tasas.filter((t) => esNum(t.tna) && esNum(t.plazoMinDias) && esNum(t.plazoMaxDias)).map((t) => ({ plazoMinDias: t.plazoMinDias, plazoMaxDias: t.plazoMaxDias, tna: t.tna })) }))
+    .filter((f) => f.tasas.length > 0);
+  return valor.length > 0 ? { valor, fecha: hoy, fuente: 'plazos fijos UVA (vía ArgentinaDatos)' } : null;
 }
 
 // ── CEDEARs ──────────────────────────────────────────────────────────────
@@ -442,7 +455,7 @@ export async function construirMercado(ahora: number = Date.now(), declaradas: M
   const fallas: string[] = [];
   const dolarVacio: Mercado['dolar'] = { oficial: null, mep: null, ccl: null, blue: null, brechaMep: null, mep30d: null };
 
-  const [meses, esperada, uva, tamar, badlar, pf, ctas, fci, lts, bcer, cedByma, usd, rp, ipc, spy, blu, pf30, ced912] = await Promise.all([
+  const [meses, esperada, uva, tamar, badlar, pf, ctas, fci, lts, bcer, pfUva, cedByma, usd, rp, ipc, spy, blu, pf30, ced912] = await Promise.all([
     seguro('inflación', fallas, inflacionMeses, []),
     seguro('inflación esperada (REM)', fallas, () => bcra(29, 'REM, BCRA: inflación esperada a 12 meses'), null),
     seguro('UVA', fallas, () => uva30d(hoy), null),
@@ -453,6 +466,8 @@ export async function construirMercado(ahora: number = Date.now(), declaradas: M
     seguro('fondos', fallas, fondos, null),
     seguro('letras', fallas, () => letras(hoy), null),
     seguro('bonos CER', fallas, () => bonosCer(hoy), null),
+    // Es un dato de ayuda (no se le pide a la persona lo que ya se sabe): si falta, no es una falla.
+    plazoFijoUva(hoy).catch(() => null),
     seguro('CEDEARs (BYMA)', fallas, () => cedearsByma(hoy), null),
     seguro('dólar', fallas, dolar, dolarVacio),
     seguro('riesgo país', fallas, riesgoPais, null),
@@ -484,6 +499,7 @@ export async function construirMercado(ahora: number = Date.now(), declaradas: M
     fondos: fci,
     letras: lts,
     bonosCer: bcer,
+    plazoFijoUva: pfUva,
     cedears: ced,
     dolar: usd,
     riesgoPais: rp,
@@ -522,6 +538,7 @@ export function rellenarConAnterior(nuevo: Mercado, previo: Mercado | null): Mer
     fondos: nuevo.fondos ?? previo.fondos,
     letras: nuevo.letras ?? previo.letras,
     bonosCer: nuevo.bonosCer ?? previo.bonosCer ?? null,
+    plazoFijoUva: nuevo.plazoFijoUva ?? previo.plazoFijoUva ?? null,
     cedears: nuevo.cedears ?? previo.cedears,
     dolar: {
       oficial: nuevo.dolar.oficial ?? previo.dolar.oficial,
