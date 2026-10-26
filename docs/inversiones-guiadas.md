@@ -37,16 +37,29 @@ fuentes públicas ─► api/mercado.ts ─► src/app/api/v2/mercado.ts ─► 
   **alternativas**, no de recomendaciones (criterio legal del asesor). Arriba, la persona puede decir
   cuánto quiere invertir (arranca con lo que sobró el mes pasado) y en cuánto tiempo lo quiere sacar.
   El **plazo y el perfil** cambian qué se muestra; el **monto no** (sólo si un CEDEAR físicamente no alcanza).
-- **Al tocar una inversión empieza el flujo** (`FlujoInversion.tsx`): "Aprendé en 2 minutos" (4 pantallas:
-  la primera es el **glosario necesario**, después qué es / cuánto rinde / cuándo la sacás) → dónde hacerlo (las opciones una al lado de la otra, con un mini
-  comentario sólo si las distingue) → con cuánto empezar → los pasos numerados, que se pueden recorrer
-  para adelante y para atrás.
-- **Lo que se decide al empezar es lo mismo que se pregunta al registrar** (`lib/inversiones/limites.ts`
-  y `previosParaRegistro` en `guias.ts`): cuenta y fondo piden un monto; plazo fijo, monto y días;
-  CEDEAR, cuál y cuántos (se compran enteros, con su precio y mínimo); dólar, pesos o dólares. El
-  registro llega ya completado y la persona sólo corrige lo que salió distinto. Los tickers, fondos y
-  bancos son listas predeterminadas; los campos numéricos no aceptan letras; cada monto dice en qué
-  moneda es y su mínimo/máximo.
+- **Al tocar una inversión empieza el flujo** (`FlujoInversion.tsx`), de a una pantalla, sin deslizar:
+  1. **"Aprendé en 2 minutos"** (`AprendeEn2Min.tsx`): glosario (sólo las palabras difíciles; la inversión se explica en "¿Qué es?") →
+     qué es y dónde queda tu plata → cuánto rinde, riesgo y si puede bajar → **qué tenés que saber antes de invertir** (y cuándo conviene
+     vender, en letras, bonos y CEDEARs) → cuándo la sacás y quién la garantiza. El título es fijo arriba; la flecha vuelve a la pantalla
+     anterior y "Siguiente" está arriba. Al volver desde los pasos se cae en la **última** pantalla, no en la primera.
+  2. **Los pasos** (`PasosGuia.tsx`, contenido en `guias.ts`): uno por pantalla, con círculos que se rellenan ("2/6"). El primero es **elegir
+     dónde, ahí mismo** (sin pantalla aparte): un menú con los bancos o cuentas de mayor a menor tasa y el que la persona ya usa primero y
+     marcado "recomendado", más "ya tengo cuenta / me tengo que crear" (si no tiene, se explica cómo, cuánto lleva y que es una sola vez).
+     Cada paso dice sólo CÓMO se hace; no hay "qué lográs con esto". "Sabés que salió bien cuando…" va **sólo** en el paso donde termina la
+     operación. Las elecciones (plazo, cuál CEDEAR y cuántos, cuántos dólares, la tasa) se hacen en su paso. El penúltimo es "Antes de finalizar"
+     (cómo salir de la inversión) y el último es **anotarla en FINA, adentro del paso**.
+  3. **Felicitaciones** al anotar. Si deja los pasos a la mitad queda **"Pendiente"** debajo de las alternativas (se retoma o se cancela).
+- **El registro** (`FormularioRegistro.tsx`) es el mismo adentro del paso y suelto: lo ya elegido sale **apagado y bloqueado**; sólo se pide lo
+  que no se puede saber de afuera (la tasa del plazo fijo y el extra de la UVA se traen solos cuando el banco los publica; el extra de UVA hoy
+  sólo lo publica el Banco Nación). Cada dato dice "También lo encontrás como…" cuando se toca. Se puede subir una **captura o un PDF**
+  (`api/leer-captura.ts` los lee con el modelo; el archivo no se guarda; un PDF pesa hasta ~3 MB).
+- **Nada de números extremos** (`limites.ts`): hasta US$ 1.000.000 (en pesos, al MEP de hoy), TNA hasta 100%, extra UVA hasta 30%, comisión
+  hasta 10%, plazo hasta 1095 días. Lo que pasa el tope no se puede ni escribir.
+- **Cuenta remunerada**: ya no es sólo Ualá. Se elige entre todas las cuentas de los datos (Brubank, Naranja X, Mercado Pago, bancos…), de la
+  que más rinde a la que menos, y se marca cuáles hoy rinden menos que la inflación (`entidades.ts`).
+- **Pantalla de alternativas**: monto chico en pesos o dólares (se pasa al MEP) y plazo en un desplegable, en una línea; el aviso se puede cerrar
+  con una ×; sólo se ven las alternativas sugeridas y el resto está detrás de "Ver más"; el perfil se explica sólo si se toca; sin descripciones
+  ni "inflación personal" a la vista (igual se usa para comparar).
 - **El texto fijo** de cada inversión vive en `lib/inversiones/catalogo.ts`; **el "cuánto rinde"** (porcentaje
   + un ejemplo con plata) se arma con datos de hoy en `lib/inversiones/rinde.ts`. Toda palabra técnica lleva
   su aclaración entre paréntesis y está en el glosario.

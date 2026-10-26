@@ -1,188 +1,233 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as acciones from '../../../api/v2/acciones';
-import { guardarPlan, leerPlan } from '../../../api/v2/planes';
-import { type ProveedorId } from '../../../lib/inversiones/catalogo';
-import type { SugerenciaMonto } from '../../../lib/inversiones/cuanto';
-import { armarGuia, CONTEXTO_VACIO, previosParaRegistro, type ContextoGuia } from '../../../lib/inversiones/guias';
+import { borrarPlanesDe, guardarPlan, listarPlanes } from '../../../api/v2/planes';
+import type { TipoPosicion } from '../../../api/v2/tipos';
+import { PROVEEDORES, type ProveedorId } from '../../../lib/inversiones/catalogo';
+import { bancosParaPlazoFijo, cuentasParaElegir } from '../../../lib/inversiones/entidades';
+import { armarGuia, camposBloqueados, CONTEXTO_VACIO, previosParaRegistro, type ContextoGuia, type PasoGuia } from '../../../lib/inversiones/guias';
+import { pct } from '../../../lib/inversiones/formato';
+import { plazosDe } from '../../../lib/inversiones/limites';
 import type { Mercado } from '../../../lib/inversiones/mercadoTipos';
-import type { Recomendacion } from '../../../lib/inversiones/motor';
+import { inflacionDeReferencia, type Recomendacion } from '../../../lib/inversiones/motor';
 import { avisoDePlazo } from '../../../lib/inversiones/plazo';
 import { describirRinde } from '../../../lib/inversiones/rinde';
 import type { Valores } from '../../../lib/inversiones/registro';
 import { AprendeEn2Min } from './AprendeEn2Min';
-import { ElegirDonde } from './ElegirDonde';
-import { ElegirMonto, type Entradas } from './ElegirMonto';
 import { Hoja } from './Hoja';
-import { PasosNumerados } from './PasosNumerados';
+import { PasosGuia, type OpcionDonde } from './PasosGuia';
 
-type Fase = 'aprende' | 'donde' | 'monto' | 'pasos';
+type Fase = 'aprende' | 'pasos';
+
+/** Lo que se elige adentro de los pasos. */
+type Entradas = { plazoDias: number | null; ticker: string | null; cantidad: number | null; dolares: number | null };
+
+const ENTRADAS_VACIAS: Entradas = { plazoDias: null, ticker: null, cantidad: null, dolares: null };
 
 // De "me interesa" a "ya lo hice", en este orden:
-//   1. Aprendé en 2 minutos (cuatro pantallas: la primera es el glosario)
-//   2. Dónde lo hacés (las opciones una al lado de la otra)
-//   3. Con cuánto empezás (lo que cada inversión realmente pide)
-//   4. Los pasos, numerados
-// El avance se guarda: si lo deja a la mitad y vuelve, sigue donde estaba.
+//   1. Aprendé en 2 minutos (pantallas cortas: qué es, cuánto rinde, qué tenés que saber, cuándo la sacás)
+//   2. Los pasos, de a uno: el primero es elegir dónde (ahí mismo, sin pantalla aparte), y el último es anotarla en FINA
+//   3. Felicitaciones
+// El avance se guarda: si lo deja a la mitad, queda "pendiente" debajo de las alternativas y retoma donde estaba.
 export function FlujoInversion({
-  rec, mercado, usa, sugerencia, montoDeseado, horizonteMeses, onRegistrar, onCerrar,
+  rec, mercado, usa, propias, montoDeseado, horizonteMeses, onVerMias, onCerrar,
 }: {
   rec: Recomendacion;
   mercado: Mercado;
+  /** Los brokers que la persona dijo que ya usa. */
   usa: ProveedorId[];
-  sugerencia: SugerenciaMonto;
+  /** Los nombres de los bancos y billeteras que usa (por lo que contó y por sus medios de pago): sirven para marcar uno como recomendado. */
+  propias: string[];
+  /** El monto que escribió arriba, en pesos (si lo puso en dólares, ya viene convertido). */
   montoDeseado: number | null;
   /** Para cuándo es la plata, si lo dijo: sirve para avisar si la inversión no encaja con ese plazo. */
   horizonteMeses: number | null;
-  onRegistrar: (previos: Partial<Valores>) => void;
+  /** Termina el flujo y lleva a "Mis inversiones". */
+  onVerMias: () => void;
   onCerrar: () => void;
 }) {
   const producto = rec.producto;
-  const [fase, setFase] = useState<Fase | null>(null);
-  const [proveedor, setProveedor] = useState<ProveedorId | null>(rec.opciones.length === 1 ? rec.opciones[0].proveedor : rec.mejor.proveedor);
-  const [banco, setBanco] = useState<string | null>(null);
-  const [entradas, setEntradas] = useState<Entradas>({ monto: null, plazoDias: null, ticker: null, cantidad: null, dolares: null });
-  const [hechos, setHechos] = useState<number[]>([]);
-  const [abierto, setAbierto] = useState(0);
-  // La tasa que la persona anotó en el paso a paso: llega ya cargada al registro.
-  const [tnaAnotada, setTnaAnotada] = useState<number | null>(null);
+  const esPlazo = producto.id === 'plazo_fijo' || producto.id === 'plazo_fijo_uva';
+  const esCuenta = producto.id === 'cuenta_remunerada';
+  const tipoPosicion = producto.id as TipoPosicion;
 
-  // Retoma donde había quedado, en el proveedor que estaba haciendo.
-  useEffect(() => {
-    let vivo = true;
-    Promise.all(rec.opciones.map((o) => leerPlan(producto.id, o.proveedor))).then((planes) => {
-      if (!vivo) return;
-      const idx = planes.findIndex((p) => p && (p.hechos.length > 0 || p.monto !== null));
-      const plan = idx >= 0 ? planes[idx] : null;
-      if (plan) {
-        setProveedor(rec.opciones[idx].proveedor);
-        setHechos(plan.hechos);
-        const x = plan.extra ?? {};
-        setBanco(x.banco || null);
-        setEntradas({
-          monto: plan.monto,
-          plazoDias: x.plazoDias ? Number(x.plazoDias) : null,
-          ticker: x.ticker || null,
-          cantidad: x.cantidad ? Number(x.cantidad) : null,
-          dolares: x.dolares ? Number(x.dolares) : null,
-        });
-        setFase('pasos');
-      } else {
-        setFase('aprende');
-      }
-    });
-    return () => { vivo = false; };
-  }, [producto.id, rec.opciones]);
+  const [fase, setFase] = useState<Fase | null>(null);
+  const [alVolverDePasos, setAlVolverDePasos] = useState(false);
+  const [seleccion, setSeleccion] = useState<string | null>(null);
+  const [tieneCuenta, setTieneCuenta] = useState<boolean | null>(null);
+  const [entradas, setEntradas] = useState<Entradas>(ENTRADAS_VACIAS);
+  const [hechos, setHechos] = useState<number[]>([]);
+  const [actual, setActual] = useState(0);
+  // La tasa que la persona anotó en el paso: llega ya cargada al registro.
+  const [tnaAnotada, setTnaAnotada] = useState<number | null>(null);
+  const [terminado, setTerminado] = useState(false);
+
+  const infl = useMemo(() => inflacionDeReferencia(mercado), [mercado]);
+  const uva = producto.id === 'plazo_fijo_uva';
+
+  // ── dónde: el banco, la cuenta o el broker ──
+  const cuentas = useMemo(() => (esCuenta ? cuentasParaElegir(mercado, infl?.mensual ?? 0, propias) : []), [esCuenta, mercado, infl, propias]);
+  const opcionesDonde: OpcionDonde[] = useMemo(() => {
+    if (esPlazo) {
+      return bancosParaPlazoFijo(mercado, uva, propias).map((b) => ({
+        id: b.entidad,
+        nombre: b.nombre,
+        detalle: b.tna !== null ? `${pct(b.tna * 100, 1)} anual` : b.extraUva !== null ? `UVA + ${pct(b.extraUva * 100, 1)}` : undefined,
+        recomendado: b.recomendado,
+      }));
+    }
+    if (esCuenta) {
+      return cuentas.map((c) => ({
+        id: c.id,
+        nombre: c.nombre,
+        detalle: c.techo > c.tna + 0.001 ? `${pct(c.tna * 100, 0)} (hasta ${pct(c.techo * 100, 0)})` : `${pct(c.tna * 100, 0)} anual`,
+        aviso: c.pierde ? 'Hoy rinde menos que la inflación: sirve para tener la plata a mano, no para que crezca.' : null,
+        recomendado: c.recomendado,
+      }));
+    }
+    return rec.opciones
+      .map((o): OpcionDonde => ({ id: o.proveedor, nombre: PROVEEDORES[o.proveedor].nombre, recomendado: usa.includes(o.proveedor) }))
+      .sort((a, b) => Number(b.recomendado) - Number(a.recomendado));
+  }, [esPlazo, esCuenta, uva, mercado, propias, cuentas, rec.opciones, usa]);
+
+  const { proveedor, banco } = useMemo((): { proveedor: ProveedorId; banco: string | null } => {
+    if (esPlazo) return { proveedor: 'banco', banco: seleccion };
+    if (esCuenta) return { proveedor: cuentas.find((c) => c.id === seleccion)?.proveedor ?? rec.mejor.proveedor, banco: seleccion };
+    return { proveedor: (seleccion as ProveedorId | null) ?? rec.mejor.proveedor, banco: null };
+  }, [esPlazo, esCuenta, seleccion, cuentas, rec.mejor.proveedor]);
 
   const evaluacion = rec.opciones.find((o) => o.proveedor === proveedor) ?? rec.mejor;
   const ctx: ContextoGuia = useMemo(
-    () => ({ ...CONTEXTO_VACIO, ...entradas, mercado, evaluacion, banco, horizonteMeses }),
-    [entradas, mercado, evaluacion, banco, horizonteMeses],
+    () => ({ ...CONTEXTO_VACIO, monto: montoDeseado, ...entradas, mercado, evaluacion, banco, horizonteMeses, tieneCuenta }),
+    [montoDeseado, entradas, mercado, evaluacion, banco, horizonteMeses, tieneCuenta],
   );
-  const guia = useMemo(() => (proveedor ? armarGuia(proveedor, producto.id, ctx) : null), [proveedor, producto.id, ctx]);
+  const guia = useMemo(() => {
+    const g = armarGuia(proveedor, producto.id, ctx);
+    // Hasta que elige dónde, el título es el de la inversión (no el de un proveedor que todavía no eligió).
+    return g && seleccion === null ? { ...g, titulo: producto.nombre } : g;
+  }, [proveedor, producto.id, producto.nombre, ctx, seleccion]);
 
-  // Al entrar a los pasos se abre el primero que falta.
-  const total = guia?.pasos.length ?? 0;
-  useEffect(() => {
-    if (fase === 'pasos' && total > 0) {
-      const primero = Array.from({ length: total }, (_, i) => i).find((i) => !hechos.includes(i));
-      setAbierto(primero ?? total - 1);
+  // ── lo que llega al registro ──
+  const previosRegistro = useMemo((): Partial<Valores> => {
+    const base = previosParaRegistro(proveedor, producto.id, ctx);
+    if (tnaAnotada !== null && (producto.id === 'cuenta_remunerada' || producto.id === 'fci')) {
+      base.tna = (tnaAnotada * 100).toLocaleString('es-AR', { maximumFractionDigits: 4 });
     }
-    // Sólo al cambiar de fase: después manda la persona.
-  }, [fase, total]);
+    return base;
+  }, [proveedor, producto.id, ctx, tnaAnotada]);
+  const bloqueadosRegistro = useMemo(() => camposBloqueados(producto.id, previosRegistro), [producto.id, previosRegistro]);
 
-  function persistir(nuevosHechos: number[], e: Entradas = entradas, b: string | null = banco) {
-    if (!proveedor) return;
+  // ── retomar donde había quedado ──
+  useEffect(() => {
+    let vivo = true;
+    void listarPlanes().then((planes) => {
+      if (!vivo) return;
+      const plan = planes.find((p) => p.producto === producto.id);
+      if (!plan) { setFase('aprende'); return; }
+      const x = plan.extra ?? {};
+      setSeleccion(x.seleccion || null);
+      setTieneCuenta(x.tieneCuenta === '1' ? true : x.tieneCuenta === '0' ? false : null);
+      setEntradas({
+        plazoDias: x.plazoDias ? Number(x.plazoDias) : null,
+        ticker: x.ticker || null,
+        cantidad: x.cantidad ? Number(x.cantidad) : null,
+        dolares: x.dolares ? Number(x.dolares) : null,
+      });
+      setTnaAnotada(x.tna ? Number(x.tna) : null);
+      setHechos(plan.hechos);
+      setActual(x.actual ? Number(x.actual) : Math.min(plan.hechos.length, 99));
+      setFase('pasos');
+    });
+    return () => { vivo = false; };
+  }, [producto.id]);
+
+  const persistir = useCallback((nuevosHechos: number[], irA: number, e: Entradas, sel: string | null, tiene: boolean | null, tna: number | null) => {
     void guardarPlan({
-      producto: producto.id, proveedor, monto: e.monto, hechos: nuevosHechos,
+      producto: producto.id,
+      proveedor: 'flujo',
+      monto: montoDeseado,
+      hechos: nuevosHechos,
       extra: {
-        banco: b ?? '', plazoDias: e.plazoDias ? String(e.plazoDias) : '', ticker: e.ticker ?? '',
-        cantidad: e.cantidad ? String(e.cantidad) : '', dolares: e.dolares ? String(e.dolares) : '',
+        seleccion: sel ?? '', tieneCuenta: tiene === null ? '' : tiene ? '1' : '0', actual: String(irA),
+        plazoDias: e.plazoDias ? String(e.plazoDias) : '', ticker: e.ticker ?? '', cantidad: e.cantidad ? String(e.cantidad) : '',
+        dolares: e.dolares ? String(e.dolares) : '', tna: tna !== null ? String(tna) : '',
       },
     });
-  }
+  }, [producto.id, montoDeseado]);
 
-  if (fase === null) {
+  if (fase === null || !guia) {
     return <Hoja titulo={producto.nombre} onCerrar={onCerrar}><p className="text-[15px]">Un segundo…</p></Hoja>;
   }
 
   if (fase === 'aprende') {
-    const ficha = describirRinde(producto.id, rec.mejor, mercado);
     return (
       <AprendeEn2Min
         producto={producto}
-        ficha={ficha}
+        ficha={describirRinde(producto.id, rec.mejor, mercado)}
         confianza={rec.mejor.confianza}
         aviso={avisoDePlazo(producto, horizonteMeses)}
-        onEmpezar={() => setFase(rec.opciones.length > 1 || producto.id === 'plazo_fijo' || producto.id === 'plazo_fijo_uva' ? 'donde' : 'monto')}
+        alVolverDePasos={alVolverDePasos}
+        onEmpezar={() => { setFase('pasos'); setAlVolverDePasos(false); }}
         onCerrar={onCerrar}
       />
     );
   }
 
-  const hayDonde = rec.opciones.length > 1 || producto.id === 'plazo_fijo' || producto.id === 'plazo_fijo_uva';
-
-  if (fase === 'donde') {
-    return (
-      <ElegirDonde
-        producto={producto.id}
-        opciones={rec.opciones}
-        usa={usa}
-        mercado={mercado}
-        proveedor={proveedor}
-        banco={banco}
-        onProveedor={setProveedor}
-        onBanco={setBanco}
-        onSeguir={() => setFase('monto')}
-        onVolver={() => setFase('aprende')}
-        onCerrar={onCerrar}
-      />
-    );
-  }
-
-  if (fase === 'monto' && proveedor) {
-    return (
-      <ElegirMonto
-        producto={producto.id}
-        proveedor={proveedor}
-        banco={banco}
-        mercado={mercado}
-        sugerencia={sugerencia}
-        montoDeseado={montoDeseado}
-        inicial={entradas}
-        onListo={(e) => { setEntradas(e); persistir(hechos, e); setFase('pasos'); }}
-        onVolver={() => setFase(hayDonde ? 'donde' : 'aprende')}
-        onCerrar={onCerrar}
-      />
-    );
-  }
-
-  if (!guia || !proveedor) return null;
-
-  const previosConTasa = (): Partial<Valores> => ({
-    ...previosParaRegistro(proveedor, producto.id, ctx),
-    ...(tnaAnotada !== null ? { tna: (tnaAnotada * 100).toLocaleString('es-AR', { maximumFractionDigits: 4 }) } : {}),
-  });
+  const ir = (i: number) => { setActual(i); persistir(hechos, i, entradas, seleccion, tieneCuenta, tnaAnotada); };
+  const marcar = (i: number, e: Entradas = entradas, sel = seleccion, tiene = tieneCuenta, tna = tnaAnotada) => {
+    const nuevos = hechos.includes(i) ? hechos : [...hechos, i];
+    const siguiente = Math.min(i + 1, guia.pasos.length - 1);
+    setHechos(nuevos);
+    setActual(siguiente);
+    persistir(nuevos, siguiente, e, sel, tiene, tna);
+  };
 
   return (
-    <Hoja titulo={guia.titulo} onCerrar={onCerrar} ancho={460}>
-      <PasosNumerados
-        guia={guia}
-        monto={entradas.monto}
-        hechos={hechos}
-        abierto={abierto}
-        onAbrir={setAbierto}
-        onHacer={(i, paso) => {
-          const nuevos = hechos.includes(i) ? hechos : [...hechos, i];
-          setHechos(nuevos);
-          persistir(nuevos);
-          if (paso.registra) { onRegistrar(previosConTasa()); return; }
-          if (i < total - 1) setAbierto(i + 1);
-        }}
-        onDeshacer={(i) => { const nuevos = hechos.filter((h) => h !== i); setHechos(nuevos); persistir(nuevos); }}
-        onVerBasico={() => setFase('aprende')}
-        onDeclarar={(paso, tna) => { setTnaAnotada(tna); if (paso.declara) acciones.declararTasa({ ...paso.declara, tna }); }}
-        onRegistrar={() => onRegistrar(previosConTasa())}
-      />
-    </Hoja>
+    <PasosGuia
+      guia={guia}
+      tipoPosicion={tipoPosicion}
+      mercado={mercado}
+      hechos={hechos}
+      actual={Math.min(actual, guia.pasos.length - 1)}
+      terminado={terminado}
+      onIr={ir}
+      onHecho={(i) => marcar(i)}
+      onDeshacer={(i) => { const nuevos = hechos.filter((h) => h !== i); setHechos(nuevos); persistir(nuevos, actual, entradas, seleccion, tieneCuenta, tnaAnotada); }}
+      onVolverAExplicacion={() => { setAlVolverDePasos(true); setFase('aprende'); }}
+      onCerrar={onCerrar}
+      opcionesDonde={opcionesDonde}
+      seleccionDonde={seleccion}
+      onElegirDonde={(id) => {
+        const recomendado = opcionesDonde.find((o) => o.id === id)?.recomendado ?? false;
+        setSeleccion(id);
+        setTieneCuenta(recomendado);
+        // Lo que viene después depende de dónde lo hace: si cambia, los pasos siguientes se vuelven a mirar.
+        const nuevos = hechos.filter((h) => h === 0);
+        setHechos(nuevos);
+        persistir(nuevos, actual, entradas, id, recomendado, tnaAnotada);
+      }}
+      tieneCuenta={tieneCuenta}
+      onTieneCuenta={(b) => { setTieneCuenta(b); persistir(hechos, actual, entradas, seleccion, b, tnaAnotada); }}
+      plazos={plazosDe(producto.id)}
+      plazoDias={entradas.plazoDias}
+      onPlazo={(d) => { const e = { ...entradas, plazoDias: d }; setEntradas(e); persistir(hechos, actual, e, seleccion, tieneCuenta, tnaAnotada); }}
+      ticker={entradas.ticker}
+      cantidad={entradas.cantidad}
+      onTicker={(t) => { const e = { ...entradas, ticker: t }; setEntradas(e); persistir(hechos, actual, e, seleccion, tieneCuenta, tnaAnotada); }}
+      onCantidad={(n) => { const e = { ...entradas, cantidad: n }; setEntradas(e); persistir(hechos, actual, e, seleccion, tieneCuenta, tnaAnotada); }}
+      dolares={entradas.dolares}
+      onDolares={(d) => { const e = { ...entradas, dolares: d }; setEntradas(e); }}
+      tasaAnotada={tnaAnotada}
+      onDeclarar={(paso: PasoGuia, tna) => {
+        setTnaAnotada(tna);
+        if (paso.declara) void acciones.declararTasa({ ...paso.declara, tna });
+        // Al anotar la tasa se pasa solo al paso siguiente.
+        marcar(guia.pasos.findIndex((x) => x.id === paso.id), entradas, seleccion, tieneCuenta, tna);
+      }}
+      previosRegistro={previosRegistro}
+      bloqueadosRegistro={bloqueadosRegistro}
+      onRegistrado={() => { setTerminado(true); void borrarPlanesDe(producto.id); }}
+      nombreProducto={producto.nombre}
+      onVerMias={() => { onCerrar(); onVerMias(); }}
+    />
   );
 }

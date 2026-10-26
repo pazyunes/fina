@@ -59,6 +59,9 @@ export type LetraMercado = {
   precio: number;
 };
 
+/** El plazo fijo UVA de un banco: lo que suma sobre la UVA (TNA, fracción) según el plazo. Sólo lo publican algunos bancos. */
+export type PlazoFijoUvaBanco = { entidad: string; tasas: TasaPlazo[] };
+
 /** Un bono que se ajusta por CER (la inflación): lo que rinde POR ENCIMA de la inflación si se espera al vencimiento. */
 export type BonoCerMercado = {
   ticker: string;
@@ -131,6 +134,8 @@ export type Mercado = {
   letras: Dato<LetraMercado[]> | null;
   /** Bonos CER (renta fija que sigue a la inflación). Opcional: los paquetes guardados antes no lo traen. */
   bonosCer?: Dato<BonoCerMercado[]> | null;
+  /** Lo que suma sobre la UVA cada banco que lo publica. Opcional: los paquetes guardados antes no lo traen. */
+  plazoFijoUva?: Dato<PlazoFijoUvaBanco[]> | null;
   cedears: Dato<CedearMercado[]> | null;
   dolar: {
     oficial: Dato<number> | null;
@@ -174,6 +179,7 @@ export const LIMITE_DIAS = {
   riesgoPais: 5,
   letras: 5,
   bonosCer: 5,
+  plazoFijoUva: 10,
   cedears: 5,
   inflacion: 55,  // el INDEC publica una vez por mes
   uva: 5,

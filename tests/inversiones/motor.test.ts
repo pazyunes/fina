@@ -5,7 +5,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { PRODUCTOS, PROVEEDORES, type PerfilRiesgo } from '../../src/app/lib/inversiones/catalogo';
-import { armarGuia, CONTEXTO_VACIO, previosParaRegistro } from '../../src/app/lib/inversiones/guias';
+import { armarGuia, camposBloqueados, CONTEXTO_VACIO, previosParaRegistro } from '../../src/app/lib/inversiones/guias';
+import { bancosParaPlazoFijo, coincideEntidad, cuentasParaElegir, entidadQueUsa, extraUva } from '../../src/app/lib/inversiones/entidades';
+import { MAX_USD, maxPesos } from '../../src/app/lib/inversiones/limites';
 import { esObligatorio, FORMULARIOS, opcionesDe, procesarRegistro, valoresIniciales } from '../../src/app/lib/inversiones/registro';
 import { entradaDe } from '../../src/app/lib/inversiones/limites';
 import { evaluar, inflacionDeReferencia, recomendar, type Contexto } from '../../src/app/lib/inversiones/motor';
@@ -233,7 +235,7 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
         // Una letra o un bono que el mercado conoce trae su propio vencimiento.
         if (campo.id === 'vencimiento' && (prod === 'letra' || prod === 'bono_cer')) continue;
         const lista = opcionesDe(campo, valores, m);
-        valores[campo.id] = campo.tipo === 'opcion' ? (lista[0]?.id ?? 'x') : campo.tipo === 'porcentaje' ? '19' : '1000';
+        valores[campo.id] = campo.tipo === 'opcion' ? (lista[0]?.id ?? 'x') : campo.tipo === 'porcentaje' ? (campo.id === 'comision' ? '0,6' : '19') : '1000';
       }
       const r = procesarRegistro(prod, valores, m, 'manual', AHORA);
       assert.deepEqual(r.errores, {}, JSON.stringify(previos));
@@ -258,30 +260,49 @@ describe('lo que se decide al empezar es lo mismo que se pregunta al registrar',
   it('las guías no meten el monto de la persona adentro de una frase', () => {
     for (const [prov, prod] of casos.map((c) => [c[0], c[1]] as const)) {
       const g = armarGuia(prov, prod, { ...CONTEXTO_VACIO, mercado: m, monto: 77777 })!;
-      for (const p of g.pasos) for (const t of [p.titulo, p.haces, p.loVes, p.lograras, p.chequeo]) assert.ok(!t.includes('77.777'), `${prov}/${prod}: ${t}`);
+      for (const p of g.pasos) for (const t of [p.titulo, p.haces, p.atencion ?? '', p.chequeo ?? '', ...(p.puntos ?? [])]) assert.ok(!t.includes('77.777'), `${prov}/${prod}: ${t}`);
     }
   });
 });
 
 describe('textos para alguien que no sabe nada', () => {
   const todos = Object.values(PRODUCTOS).flatMap((p) => [p.queEs, p.dondeQuedaTuPlata, p.riesgoTexto, p.cuandoLaSacas, p.garantia]);
-  it('todo "broker" se explica la primera vez que aparece en cada ficha', () => {
+  it('toda palabra técnica que usa una ficha está en su glosario (así no hay que explicarla de nuevo en cada texto)', () => {
     for (const p of Object.values(PRODUCTOS)) {
-      const texto = [p.queEs, p.dondeQuedaTuPlata, p.riesgoTexto, p.cuandoLaSacas, p.garantia].join(' ');
-      const i = texto.indexOf('broker');
-      if (i >= 0) assert.match(texto.slice(i, i + 80), /broker \(|broker: |\(.*broker/, `${p.id}: "broker" sin explicar`);
+      const texto = [p.queEs, p.dondeQuedaTuPlata, p.riesgoTexto, p.cuandoLaSacas, p.garantia, ...p.antesDeInvertir].join(' ');
+      const terminos = p.glosario.map((g) => g.termino.toLowerCase());
+      if (/\bbroker\b/.test(texto)) assert.ok(terminos.includes('broker'), `${p.id}: "broker" no está en el glosario`);
+      if (/\bcuotapartes?\b/.test(texto)) assert.ok(terminos.includes('cuotaparte'), `${p.id}: "cuotaparte" no está en el glosario`);
+      if (/días hábiles/.test(texto)) assert.ok(terminos.includes('día hábil'), `${p.id}: "días hábiles" no está en el glosario`);
+      if (/\bETF\b/.test(texto)) assert.ok(terminos.includes('etf'), `${p.id}: "ETF" no está en el glosario`);
     }
   });
-  it('los CEDEARs se presentan como inversión de largo plazo y explican qué es un ETF', () => {
-    const c = PRODUCTOS.cedear;
-    assert.match(c.queEs, /largo plazo/);
-    assert.match(c.queEs, /ETF como SPY \(/);
-    assert.match(c.queEs, /No es para retirar pronto/);
+  it('el glosario no repite lo que ya explica "¿Qué es?": la inversión misma no está entre sus términos', () => {
+    const propios: Record<string, string[]> = { cedear: ['cedear'], letra: ['letra del tesoro'], bono_cer: ['bono'], fci: ['fondo común de inversión (fci)'] };
+    for (const [id, nombres] of Object.entries(propios)) {
+      const terminos = PRODUCTOS[id as keyof typeof PRODUCTOS].glosario.map((g) => g.termino.toLowerCase());
+      for (const n of nombres) assert.ok(!terminos.includes(n), `${id}: "${n}" se explica dos veces`);
+    }
   });
-  it('"horario de mercado" y "días hábiles" siempre vienen con su aclaración', () => {
-    for (const t of todos) {
-      if (/días hábiles/.test(t)) assert.match(t, /días hábiles \(/, t);
-      if (/mercado está abierto/.test(t)) assert.match(t, /lunes a viernes/, t);
+  it('los CEDEARs se presentan como inversión de varios años, sin repetirlo en cada texto', () => {
+    const c = PRODUCTOS.cedear;
+    assert.match(c.queEs, /ETF/);
+    assert.ok(c.antesDeInvertir.some((x) => /varios años/.test(x)));
+    const textos = [c.queEs, c.dondeQuedaTuPlata, c.riesgoTexto, c.cuandoLaSacas, c.garantia, c.puedeBajar, ...c.antesDeInvertir];
+    assert.ok(textos.filter((t) => /3 años/.test(t)).length <= 1, 'lo de los 3 años se dice una sola vez');
+    assert.ok(c.cuandoVender && /bajó/.test(c.cuandoVender.no), 'explica cuándo conviene vender y cuándo no');
+    assert.doesNotMatch(c.garantia, /^Ninguna\.?$/, 'la garantía no es sólo "Ninguna"');
+  });
+  it('cada inversión dice qué hay que saber antes de invertir (2 a 4 puntos cortos)', () => {
+    for (const p of Object.values(PRODUCTOS)) {
+      assert.ok(p.antesDeInvertir.length >= 2 && p.antesDeInvertir.length <= 4, p.id);
+      for (const t of p.antesDeInvertir) assert.ok(t.length < 140, `${p.id}: demasiado largo`);
+    }
+  });
+  it('lo que se puede vender antes (letras, bonos, CEDEARs) explica cuándo conviene y cuándo no', () => {
+    for (const id of ['letra', 'bono_cer', 'cedear'] as const) {
+      const v = PRODUCTOS[id].cuandoVender;
+      assert.ok(v && v.si && v.no && v.porque, id);
     }
   });
   it('toda palabra del glosario tiene definición y no hay dos iguales en una ficha', () => {
@@ -648,5 +669,214 @@ describe('criterio del asesor: aviso legal, "¿puede bajar?", plazo que no encaj
     for (const b of ['cocos', 'balanz', 'iol', 'galicia_securities', 'ppi', 'ieb'] as const) {
       for (const prod of ['cedear', 'letra', 'dolar'] as const) assert.ok(PROVEEDORES[b].productos[prod], `${b} ${prod}`);
     }
+  });
+});
+
+
+describe('los pasos: cortos, con las elecciones adentro y "sabés que salió bien" sólo al terminar la operación', () => {
+  const m = conLetras(mercadoFixture());
+  const ctxGuia = { ...CONTEXTO_VACIO, mercado: m, tieneCuenta: false as boolean | null };
+  const todas: [keyof typeof PROVEEDORES, keyof typeof PRODUCTOS][] = [
+    ['uala', 'cuenta_remunerada'], ['mercado_pago', 'cuenta_remunerada'], ['otra_cuenta', 'cuenta_remunerada'], ['cocos', 'fci'], ['balanz', 'fci'],
+    ['banco', 'plazo_fijo'], ['banco', 'plazo_fijo_uva'], ['cocos', 'letra'], ['iol', 'bono_cer'], ['balanz', 'dolar'], ['ppi', 'cedear'],
+  ];
+  const guia = (prov: keyof typeof PROVEEDORES, prod: keyof typeof PRODUCTOS, c = {}) => armarGuia(prov, prod, { ...ctxGuia, banco: prov === 'otra_cuenta' ? 'BRUBANK' : null, ...c })!;
+
+  it('el primer paso es elegir dónde (ahí mismo) y el último es anotarla en FINA', () => {
+    for (const [prov, prod] of todas) {
+      const g = guia(prov, prod);
+      assert.equal(g.pasos[0].widget, 'donde', `${prov}/${prod}`);
+      assert.equal(g.pasos[g.pasos.length - 1].widget, 'registro', `${prov}/${prod}`);
+      assert.equal(g.pasos[g.pasos.length - 1].registra, true);
+    }
+  });
+
+  it('el paso de elegir banco o broker no repite lo que ya se explicó antes: va a lo concreto', () => {
+    for (const [prov, prod] of todas) {
+      const p = guia(prov, prod).pasos[0];
+      assert.ok(p.haces.length < 90, `${prov}/${prod}: ${p.haces}`);
+    }
+  });
+
+  it('"sabés que salió bien cuando…" va sólo en el paso donde termina la operación (uno por guía)', () => {
+    for (const [prov, prod] of todas) {
+      const conChequeo = guia(prov, prod).pasos.filter((p) => p.chequeo);
+      assert.ok(conChequeo.length <= 1, `${prov}/${prod}`);
+      for (const p of conChequeo) assert.ok(['constituir', 'suscribir', 'comprar'].includes(p.id), `${prov}/${prod}: ${p.id}`);
+    }
+    for (const [prov, prod] of todas.filter(([, p]) => p !== 'cuenta_remunerada')) assert.equal(guia(prov, prod).pasos.filter((p) => p.chequeo).length, 1, `${prov}/${prod}`);
+  });
+
+  it('si ya tiene cuenta, entra; si no, se explica cómo crearla, cuánto lleva y que es una sola vez', () => {
+    for (const [prov, prod] of todas) {
+      const tiene = guia(prov, prod, { tieneCuenta: true }).pasos[0];
+      assert.match(tiene.haces, /Entrá/);
+      assert.equal(tiene.puntos, undefined);
+      const crea = guia(prov, prod, { tieneCuenta: false }).pasos[0];
+      assert.match(crea.haces, /Creá/);
+      assert.ok(crea.puntos && crea.puntos.length >= 2, `${prov}/${prod}`);
+      assert.match(crea.atencion ?? '', /única vez/);
+      assert.match(crea.atencion ?? '', /Lleva|Suele llevar/);
+    }
+  });
+
+  it('el paso de la plata se llama "Tu plata en tu cuenta" y explica cómo transferirla; en los brokers avisa que todavía no se invirtió', () => {
+    for (const [prov, prod] of todas) {
+      const p = guia(prov, prod).pasos.find((x) => x.id === 'plata')!;
+      assert.equal(p.titulo, 'Tu plata en tu cuenta');
+      assert.ok(p.puntos?.some((t) => /alias|CBU|CVU/.test(t)));
+      if (PROVEEDORES[prov].tipo === 'broker') assert.match(p.atencion ?? '', /todavía no lo invertiste/);
+    }
+  });
+
+  it('cuenta remunerada: la tasa se anota en su paso (que es el que mira las condiciones) y los niveles de Ualá son "avanzado"', () => {
+    const u = guia('uala', 'cuenta_remunerada').pasos.find((p) => p.id === 'tasa')!;
+    assert.equal(u.widget, 'tasa');
+    assert.ok(u.declara);
+    assert.match(u.avanzado?.titulo ?? '', /Avanzado/);
+    assert.equal(guia('mercado_pago', 'cuenta_remunerada').pasos.find((p) => p.id === 'tasa')!.avanzado, undefined);
+  });
+
+  it('plazo fijo y UVA: cuatro pasos (banco, tu plata, hacerlo, anotarlo) y el plazo se elige adentro del paso de hacerlo', () => {
+    for (const prod of ['plazo_fijo', 'plazo_fijo_uva'] as const) {
+      const g = guia('banco', prod);
+      assert.deepEqual(g.pasos.map((p) => p.id), ['donde', 'plata', 'constituir', 'registrar']);
+      assert.equal(g.pasos[2].widget, 'plazo');
+    }
+  });
+
+  it('CEDEAR: se elige cuál y cuántos adentro de un paso, y al final se explica cuándo conviene vender y cuándo no', () => {
+    const g = guia('cocos', 'cedear');
+    assert.equal(g.pasos.find((p) => p.id === 'elegir')!.widget, 'cedear');
+    const cierre = g.pasos.find((p) => p.id === 'cierre')!;
+    assert.match(cierre.titulo, /Antes de finalizar/);
+    assert.ok(cierre.puntos?.some((t) => /No conviene vender solo porque bajó/.test(t)));
+  });
+
+  it('bonos CER: el paso de elegir lista lo importante en puntos (vencimiento, vender, cuánto se opera) y el 5° paso es el cierre', () => {
+    const g = guia('iol', 'bono_cer', { horizonteMeses: 6 });
+    const elegir = g.pasos.find((p) => p.id === 'elegir')!;
+    assert.ok((elegir.puntos ?? []).length >= 3);
+    assert.ok(elegir.puntos!.some((t) => /vencimiento/.test(t)) && elegir.puntos!.some((t) => /vender/.test(t)) && elegir.puntos!.some((t) => /opera/.test(t)));
+    assert.equal(g.pasos[4].id, 'registrar'.replace('registrar', 'cierre') === 'cierre' ? 'cierre' : 'cierre');
+    assert.equal(g.pasos.length, 6);
+  });
+
+  it('ninguna guía mezcla el nombre de un proveedor distinto del elegido (si ya se sabe cuál es, no se repite "en X fijate…")', () => {
+    for (const [prov, prod] of todas) {
+      const g = guia(prov, prod);
+      for (const p of g.pasos) assert.doesNotMatch(p.haces, /^En [A-ZÁÉÍÓÚ][^,.]* fijate/, `${prov}/${prod}: ${p.haces}`);
+    }
+  });
+});
+
+describe('bancos y cuentas: ordenados por tasa, con el que ya usa recomendado', () => {
+  const m = mercadoFixture();
+  const conBrubank = { ...m, cuentas: { ...m.cuentas!, valor: [...m.cuentas!.valor, { id: 'BRUBANK', tna: 0.27, tea: null, tope: 750000, condiciones: '', fecha: '2026-10-21' }, { id: 'VOII', tna: 0, tea: null, tope: null, condiciones: '', fecha: '2026-10-21' }] } };
+
+  it('las cuentas salen de los datos (no sólo Ualá), de la que más rinde a la que menos, con los niveles de Ualá juntos', () => {
+    const c = cuentasParaElegir(conBrubank, 0.019, []);
+    assert.deepEqual(c.map((x) => x.id), ['BRUBANK', 'UALA', 'NARANJA X', 'MERCADO PAGO']);
+    for (let i = 1; i < c.length; i++) assert.ok(c[i - 1].techo >= c[i].techo, 'ordenadas por tasa');
+    assert.equal(c.find((x) => x.id === 'UALA')!.techo, 0.24);
+    assert.equal(c.find((x) => x.id === 'UALA')!.tna, 0.19);
+    assert.ok(!c.some((x) => x.id === 'VOII'), 'las que no rinden nada no se ofrecen');
+  });
+
+  it('a una cuenta que rinde menos que la inflación se la marca, y se ofrece igual', () => {
+    const mp = cuentasParaElegir(conBrubank, 0.019, []).find((x) => x.id === 'MERCADO PAGO')!;
+    assert.equal(mp.pierde, true);
+    assert.equal(cuentasParaElegir(conBrubank, 0.019, []).find((x) => x.id === 'BRUBANK')!.pierde, false);
+  });
+
+  it('la cuenta que ya usa va primera y marcada como recomendada', () => {
+    const c = cuentasParaElegir(conBrubank, 0.019, ['Naranja X']);
+    assert.equal(c[0].id, 'NARANJA X');
+    assert.equal(c[0].recomendado, true);
+    assert.equal(c.filter((x) => x.recomendado).length, 1);
+  });
+
+  it('los bancos del plazo fijo van de mayor a menor tasa; el que ya usa va primero', () => {
+    const b = bancosParaPlazoFijo(m, false, []);
+    for (let i = 1; i < b.length; i++) assert.ok(b[i - 1].tna! >= b[i].tna!, 'ordenados por tasa');
+    const suyo = bancosParaPlazoFijo(m, false, ['Galicia']);
+    assert.match(suyo[0].entidad, /GALICIA/);
+    assert.equal(suyo[0].recomendado, true);
+    assert.equal(suyo.filter((x) => x.recomendado).length, 1);
+    for (let i = 2; i < suyo.length; i++) assert.ok(suyo[i - 1].tna! >= suyo[i].tna!, 'el resto sigue por tasa');
+  });
+
+  it('reconoce el mismo banco aunque se escriba distinto', () => {
+    assert.ok(coincideEntidad('Galicia', 'BANCO DE GALICIA Y BUENOS AIRES S.A.'));
+    assert.ok(coincideEntidad('Banco Nación', 'BANCO DE LA NACION ARGENTINA'));
+    assert.ok(coincideEntidad('Ualá', 'UALA PLUS 2'));
+    assert.ok(!coincideEntidad('Santander', 'BANCO BBVA ARGENTINA S.A.'));
+    assert.equal(entidadQueUsa(['Santander'], ['BANCO BBVA ARGENTINA S.A.']), null);
+  });
+});
+
+describe('plazo fijo UVA: el extra sobre la UVA se pide sólo si no se puede saber', () => {
+  const m = mercadoFixture();
+  const BNA = 'BANCO DE LA NACION ARGENTINA';
+  it('un banco que publica el extra lo trae solo, según el plazo', () => {
+    assert.equal(extraUva(m, BNA, 90), 0.0225);
+    assert.equal(extraUva(m, BNA, 150), 0.025);
+    assert.equal(extraUva(m, 'BANCO DE GALICIA Y BUENOS AIRES S.A.', 90), null);
+  });
+  it('en el registro, el extra viene cargado y bloqueado si el banco lo publica; si no, se le pide', () => {
+    const c = { ...CONTEXTO_VACIO, mercado: m, banco: BNA, plazoDias: 90, monto: 100000 };
+    const bna = previosParaRegistro('banco', 'plazo_fijo_uva', c);
+    assert.equal(bna.tna, '2,25');
+    assert.ok(camposBloqueados('plazo_fijo_uva', bna).includes('tna'));
+    const otro = previosParaRegistro('banco', 'plazo_fijo_uva', { ...c, banco: 'BANCO DE GALICIA Y BUENOS AIRES S.A.' });
+    assert.equal(otro.tna, undefined);
+    assert.ok(!camposBloqueados('plazo_fijo_uva', otro).includes('tna'));
+  });
+  it('en el plazo fijo común, la tasa del banco también viene sola', () => {
+    const p = previosParaRegistro('banco', 'plazo_fijo', { ...CONTEXTO_VACIO, mercado: m, banco: BNA, plazoDias: 30 });
+    assert.equal(p.tna, '19,25');
+    assert.deepEqual(camposBloqueados('plazo_fijo', p).sort(), ['plazo', 'proveedor', 'tna']);
+  });
+  it('el monto y la fecha no se bloquean: son de la persona', () => {
+    const p = previosParaRegistro('banco', 'plazo_fijo', { ...CONTEXTO_VACIO, mercado: m, banco: BNA, plazoDias: 30, monto: 50000 });
+    assert.ok(!camposBloqueados('plazo_fijo', p).includes('monto'));
+    assert.ok(!camposBloqueados('plazo_fijo', p).includes('inicio'));
+  });
+});
+
+describe('nada de números extremos: hasta US$ 1.000.000, tasas y plazos con sentido', () => {
+  const m = mercadoFixture();
+  const registrar = (prod: keyof typeof FORMULARIOS, v: Record<string, string>) => procesarRegistro(prod, { ...valoresIniciales(prod, {}, AHORA), ...v }, m, 'manual', AHORA);
+  const cuenta = { proveedor: 'Ualá', tna: '19' };
+
+  it('el tope en pesos es US$ 1.000.000 al dólar de hoy', () => {
+    assert.equal(maxPesos(m), MAX_USD * 1548);
+  });
+  it('un monto de más de US$ 1.000.000 no se puede anotar (infinitos ceros), y uno dentro del tope sí', () => {
+    assert.ok(registrar('cuenta_remunerada', { ...cuenta, monto: '9.999.999.999.999' }).errores.monto);
+    assert.match(registrar('cuenta_remunerada', { ...cuenta, monto: '1.600.000.000' }).errores.monto ?? '', /máximo/);
+    assert.deepEqual(registrar('cuenta_remunerada', { ...cuenta, monto: '1.500.000.000' }).errores, {});
+  });
+  it('en dólares, el máximo es US$ 1.000.000', () => {
+    const base = { proveedor: 'Balanz', precio: '1.550' };
+    assert.ok(registrar('dolar', { ...base, cantidad: '1.000.001' }).errores.cantidad);
+    assert.deepEqual(registrar('dolar', { ...base, cantidad: '1.000.000' }).errores, {});
+  });
+  it('un CEDEAR cuyo total pasa el tope no se puede anotar', () => {
+    const r = registrar('cedear', { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '99.999', precio: '21.000', comision: '0' });
+    assert.ok(r.errores.cantidad);
+  });
+  it('las tasas tienen que tener sentido: más de 100% anual no; en el UVA, el extra no pasa de 30%', () => {
+    assert.ok(registrar('cuenta_remunerada', { ...cuenta, monto: '50.000', tna: '150' }).errores.tna);
+    assert.deepEqual(registrar('cuenta_remunerada', { ...cuenta, monto: '50.000', tna: '100' }).errores, {});
+    assert.ok(registrar('plazo_fijo_uva', { proveedor: 'Banco Galicia', monto: '100000', plazo: '90', tna: '31', renueva: 'si' }).errores.tna);
+    assert.deepEqual(registrar('plazo_fijo_uva', { proveedor: 'Banco Galicia', monto: '100000', plazo: '90', tna: '30', renueva: 'si' }).errores, {});
+  });
+  it('el plazo no pasa de 3 años y la comisión no pasa de 10%', () => {
+    assert.ok(registrar('plazo_fijo', { proveedor: 'Banco Nación', monto: '100000', tna: '20', plazo: '1096', renueva: 'no', precancelable: 'no' }).errores.plazo);
+    assert.deepEqual(registrar('plazo_fijo', { proveedor: 'Banco Nación', monto: '100000', tna: '20', plazo: '1095', renueva: 'no', precancelable: 'no' }).errores, {});
+    const base = { proveedor: 'Cocos Capital', ticker: 'SPY', cantidad: '1', precio: '21000' };
+    assert.ok(registrar('cedear', { ...base, comision: '11' }).errores.comision);
+    assert.deepEqual(registrar('cedear', { ...base, comision: '10' }).errores, {});
   });
 });

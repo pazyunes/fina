@@ -1,22 +1,18 @@
-import { useMemo, useRef, useState } from 'react';
-import * as acciones from '../../../api/v2/acciones';
-import { leerCaptura } from '../../../api/v2/capturas';
+import { useState } from 'react';
 import type { TipoPosicion } from '../../../api/v2/tipos';
 import { nombreProducto, ORDEN_PRODUCTOS } from '../../../lib/inversiones/catalogo';
 import type { Mercado } from '../../../lib/inversiones/mercadoTipos';
-import {
-  FORMULARIOS, esObligatorio, hoyISO, lecturaAValores, opcionesDe, procesarRegistro, soloNumeros, valoresIniciales,
-  type CampoDef, type Opcion, type Valores,
-} from '../../../lib/inversiones/registro';
-import { BotonFantasma, COLORS, Cta, formatThousands, OpcionesGrid, TituloSeccion } from '../shared';
-import { Hoja, Parrafo } from './Hoja';
+import type { Valores } from '../../../lib/inversiones/registro';
+import { COLORS, OpcionesGrid, TituloSeccion } from '../shared';
+import { Felicitaciones } from './Felicitaciones';
+import { FormularioRegistro } from './FormularioRegistro';
+import { Hoja } from './Hoja';
 
-// Registrar una inversión con lo que de verdad la define. Cada tipo pide sólo lo
-// que se ve en la app después de invertir, y cada campo dice dónde encontrarlo.
-// También se puede subir una captura: la leemos y la persona revisa antes de
-// guardar. La imagen no se guarda.
+// Anotar una inversión que ya hiciste, desde "Mis inversiones" (o desde el paso a paso, que usa el mismo formulario
+// adentro de su último paso). Cada tipo pide sólo lo que se ve en la app después de invertir. También se puede subir
+// una captura o un PDF: lo leemos y la persona revisa antes de guardar. El archivo no se guarda.
 export function RegistroPosicion({
-  tipoInicial, previos, mercado, onCerrar, onVolver,
+  tipoInicial, previos, mercado, onCerrar, onVolver, onVerMias,
 }: {
   tipoInicial?: TipoPosicion;
   previos?: Partial<Valores>;
@@ -24,215 +20,46 @@ export function RegistroPosicion({
   onCerrar: () => void;
   /** Si se llegó desde el paso a paso: vuelve a los pasos, sin perder lo hecho. */
   onVolver?: () => void;
+  onVerMias?: () => void;
 }) {
   const [tipo, setTipo] = useState<TipoPosicion | null>(tipoInicial ?? null);
-  const [valores, setValores] = useState<Valores>(() => (tipoInicial ? valoresIniciales(tipoInicial, previos) : {}));
-  const [intentado, setIntentado] = useState(false);
-  const [guardando, setGuardando] = useState(false);
-  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
-  const [leidos, setLeidos] = useState<string[]>([]);
-  const [captura, setCaptura] = useState<{ estado: 'quieta' | 'leyendo' | 'aviso'; mensaje?: string }>({ estado: 'quieta' });
-  const archivo = useRef<HTMLInputElement>(null);
-
-  const resultado = useMemo(
-    () => (tipo ? procesarRegistro(tipo, valores, mercado, leidos.length > 0 ? 'captura' : 'manual') : null),
-    [tipo, valores, mercado, leidos],
-  );
-
-  function elegirTipo(t: TipoPosicion) {
-    setTipo(t);
-    setValores(valoresIniciales(t, previos));
-    setLeidos([]);
-    setIntentado(false);
-  }
-
-  function cambiar(id: string, val: string) {
-    setValores((v) => {
-      const nuevo = { ...v, [id]: val };
-      // Lo que depende de lo elegido (el fondo depende de dónde lo compró) se ajusta solo.
-      for (const c of tipo ? FORMULARIOS[tipo].campos : []) {
-        if (typeof c.opciones !== 'function' || c.id === id) continue;
-        const lista = opcionesDe(c, nuevo, mercado);
-        if (lista.length === 1) nuevo[c.id] = lista[0].id;
-        else if (lista.length > 1 && !lista.some((o) => o.id === nuevo[c.id])) nuevo[c.id] = '';
-      }
-      return nuevo;
-    });
-    // Si ella corrige un campo leído de la captura, deja de ser "leído": ahora lo puso ella.
-    setLeidos((l) => l.filter((x) => x !== id));
-  }
-
-  async function subirCaptura(f: File) {
-    setCaptura({ estado: 'leyendo' });
-    const r = await leerCaptura(f);
-    if (r.error !== null) { setCaptura({ estado: 'aviso', mensaje: 'Hubo un error al leer la captura. Probá de nuevo más tarde o completá los datos a mano.' }); return; }
-    const res = r.data;
-    if (res.estado === 'no_configurado') { setCaptura({ estado: 'aviso', mensaje: 'La lectura de capturas todavía no está activada. Completá los datos a mano.' }); return; }
-    if (res.estado === 'no_es_inversion') { setCaptura({ estado: 'aviso', mensaje: 'Esa imagen no parece ser de una inversión. Probá con el comprobante o la pantalla del saldo.' }); return; }
-    if (res.estado === 'no_se_pudo') { setCaptura({ estado: 'aviso', mensaje: 'No se leyó bien. Probá con una captura más nítida, o completá a mano.' }); return; }
-    const conv = lecturaAValores(res.lectura);
-    if (!conv.tipo) { setCaptura({ estado: 'aviso', mensaje: 'Leímos la captura pero no pudimos saber de qué inversión es. Elegila vos.' }); return; }
-    setTipo(conv.tipo);
-    setValores(conv.valores);
-    setLeidos(conv.leidos);
-    setCaptura({ estado: 'aviso', mensaje: 'Leímos tu captura. Revisá que cada dato esté bien antes de guardar: la imagen no se guarda.' });
-  }
-
-  async function guardar() {
-    setIntentado(true);
-    if (!resultado?.borrador) return;
-    setGuardando(true);
-    setErrorGuardado(null);
-    const r = await acciones.registrarPosicion(resultado.borrador);
-    setGuardando(false);
-    if (r.error !== null) { setErrorGuardado(r.error); return; }
-    onCerrar();
-  }
+  const [datos, setDatos] = useState<{ previos?: Partial<Valores>; leidos: string[]; clave: number }>({ previos, leidos: [], clave: 0 });
+  const [guardado, setGuardado] = useState(false);
 
   const titulo = tipo ? `Registrar: ${nombreProducto(tipo)}` : 'Registrar una inversión';
 
   return (
-    <Hoja titulo={titulo} onCerrar={onCerrar} ancho={460}>
-      <Parrafo>Es solo anotar lo que ya hiciste en tu app: FINA no mueve ni toca tu plata.</Parrafo>
-
-      <div className="flex flex-col gap-2">
-        <input
-          ref={archivo}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          aria-label="Subir una captura de tu inversión"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) void subirCaptura(f); e.target.value = ''; }}
-        />
-        <button
-          type="button"
-          onClick={() => archivo.current?.click()}
-          disabled={captura.estado === 'leyendo'}
-          className="v2-focus w-full min-h-[48px] rounded-2xl text-[15px] font-bold transition-all duration-100 active:scale-[0.98]"
-          style={{ border: `1.5px dashed ${COLORS.lineStrong}`, color: COLORS.brand }}
-        >
-          {captura.estado === 'leyendo' ? 'Leyendo tu captura…' : 'Subir una captura y que la leamos por vos'}
-        </button>
-        {captura.mensaje && <p role="status" className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>{captura.mensaje}</p>}
-      </div>
-
-      {!tipo && (
-        <div className="flex flex-col gap-2.5">
-          <TituloSeccion>¿Qué hiciste?</TituloSeccion>
-          <OpcionesGrid
-            opciones={ORDEN_PRODUCTOS.map((id) => ({ id, label: nombreProducto(id) }))}
-            valor={null}
-            onElegir={elegirTipo}
-          />
-        </div>
-      )}
-
-      {tipo && resultado && (
+    <Hoja titulo={titulo} onCerrar={onCerrar} ancho={460} onVolver={guardado ? undefined : (tipo && !tipoInicial ? () => setTipo(null) : onVolver)}>
+      {guardado && tipo ? (
+        <Felicitaciones nombre={nombreProducto(tipo).toLowerCase()} onListo={() => { onCerrar(); onVerMias?.(); }} />
+      ) : (
         <>
-          <div className="flex flex-col gap-4">
-            {FORMULARIOS[tipo].campos.map((c) => (
-              <Campo
-                key={c.id}
-                campo={c}
-                valor={valores[c.id] ?? ''}
-                opciones={opcionesDe(c, valores, mercado)}
-                sugerencias={c.sugerencias ? c.sugerencias(valores, mercado) : []}
-                obligatorio={esObligatorio(c, valores)}
-                error={intentado ? resultado.errores[c.id] : undefined}
-                leido={leidos.includes(c.id)}
-                onCambiar={(v) => cambiar(c.id, v)}
+          {!tipo && (
+            <div className="flex flex-col gap-2.5">
+              <TituloSeccion>¿Qué hiciste?</TituloSeccion>
+              <OpcionesGrid
+                opciones={ORDEN_PRODUCTOS.map((id) => ({ id, label: nombreProducto(id) }))}
+                valor={null}
+                onElegir={(t) => { setTipo(t); setDatos({ previos, leidos: [], clave: datos.clave + 1 }); }}
               />
-            ))}
-          </div>
-
-          {resultado.resumen.length > 0 && (
-            <div className="flex flex-col gap-1 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }}>
-              {resultado.resumen.map((r) => <p key={r} className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>{r}</p>)}
             </div>
           )}
-          {resultado.avisos.map((a) => (
-            <p key={a} className="text-[14px] leading-snug pl-3.5 border-l-2" style={{ color: COLORS.inkSoft, borderColor: COLORS.star }}>
-              {a} Si está bien, podés guardarlo igual.
-            </p>
-          ))}
-
-          {errorGuardado && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.naranjaText }}>{errorGuardado}</p>}
-
-          <Cta label={guardando ? 'Guardando…' : 'Guardar'} disabled={guardando} onClick={() => void guardar()} />
-          {onVolver && <BotonFantasma label="← Volver a los pasos" onClick={onVolver} />}
-          {!tipoInicial && (
-            <button type="button" onClick={() => { setTipo(null); setLeidos([]); }} className="v2-focus min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>
-              Cambiar el tipo de inversión
-            </button>
+          {tipo && (
+            <>
+              <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>Es solo anotar lo que ya hiciste en tu app: FINA no mueve ni toca tu plata.</p>
+              <FormularioRegistro
+                key={`${tipo}-${datos.clave}`}
+                tipo={tipo}
+                previos={datos.previos}
+                leidosIniciales={datos.leidos}
+                mercado={mercado}
+                onCambiarTipo={(t, valores, leidos) => { setTipo(t); setDatos({ previos: valores, leidos, clave: datos.clave + 1 }); }}
+                onGuardado={() => setGuardado(true)}
+              />
+            </>
           )}
         </>
       )}
     </Hoja>
-  );
-}
-
-function Campo({
-  campo, valor, opciones, sugerencias, obligatorio, error, leido, onCambiar,
-}: {
-  campo: CampoDef;
-  valor: string;
-  opciones: Opcion[];
-  sugerencias: Opcion[];
-  obligatorio: boolean;
-  error?: string;
-  leido: boolean;
-  onCambiar: (v: string) => void;
-}) {
-  const id = `reg-${campo.id}`;
-  const claseInput = 'v2-focus w-full rounded-2xl px-4 py-3 text-[17px] outline-none';
-  const estilo = { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${error ? COLORS.naranja : COLORS.lineStrong}` };
-  const numerico = campo.tipo === 'monto' || campo.tipo === 'numero' || campo.tipo === 'porcentaje';
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[16px] font-bold" style={{ color: COLORS.ink }}>
-        {campo.etiqueta}{!obligatorio && <span className="font-normal" style={{ color: COLORS.inkFaint }}> (opcional)</span>}
-      </label>
-
-      {campo.tipo === 'opcion' && opciones.length > 6 ? (
-        <select id={id} value={valor} onChange={(e) => onCambiar(e.target.value)} className={claseInput} style={estilo}>
-          <option value="">Elegí una opción</option>
-          {opciones.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-        </select>
-      ) : campo.tipo === 'opcion' && opciones.length > 0 ? (
-        <OpcionesGrid
-          opciones={opciones}
-          valor={valor || null}
-          onElegir={(v) => onCambiar(v)}
-        />
-      ) : campo.tipo === 'fecha' ? (
-        <input id={id} type="date" max={hoyISO()} value={valor} onChange={(e) => onCambiar(e.target.value)} className={claseInput} style={estilo} />
-      ) : (
-        <div className="relative">
-          {campo.tipo === 'monto' && <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>$</span>}
-          <input
-            id={id}
-            value={valor}
-            list={sugerencias.length > 0 ? `${id}-lista` : undefined}
-            placeholder={campo.placeholder}
-            inputMode={numerico ? 'decimal' : 'text'}
-            onChange={(e) => onCambiar(campo.tipo === 'monto' ? formatThousands(e.target.value) : numerico ? soloNumeros(e.target.value) : e.target.value)}
-            className={`${claseInput} ${numerico ? 'font-mono tabular-nums' : ''} ${campo.tipo === 'monto' ? 'pl-8' : ''} ${campo.tipo === 'porcentaje' ? 'pr-10' : ''}`}
-            style={estilo}
-            aria-invalid={error ? true : undefined}
-          />
-          {campo.tipo === 'porcentaje' && <span className="absolute top-1/2 -translate-y-1/2 right-4" style={{ color: COLORS.inkSoft }}>%</span>}
-          {sugerencias.length > 0 && (
-            <datalist id={`${id}-lista`}>
-              {sugerencias.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-            </datalist>
-          )}
-        </div>
-      )}
-
-      <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>{campo.ayuda}</p>
-      {leido && <p className="text-[13px] font-semibold" style={{ color: COLORS.limaText }}>Leído de tu captura: revisalo.</p>}
-      {error && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.naranjaText }}>{error}</p>}
-    </div>
   );
 }

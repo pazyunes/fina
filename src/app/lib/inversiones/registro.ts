@@ -17,7 +17,8 @@ import type { LecturaCaptura } from '../../api/v2/capturas.js';
 import type { PosicionInversion, TipoPosicion } from '../../api/v2/tipos.js';
 import { ALIAS_PROVEEDOR, BROKERS, PROVEEDORES } from './catalogo.js';
 import { diaMes, fmtPesos, nombrePropio, pct } from './formato.js';
-import { avisoDeMonto, explicarTicker, limitesDe, listaDeCedears, precioCedear } from './limites.js';
+import { nombresDeCuentas } from './entidades.js';
+import { avisoDeMonto, limitesDe, listaDeCedears, MAX_COMISION, MAX_DIAS, MAX_TASA, MAX_TASA_EXTRA_UVA, MAX_UNIDADES, maxPesos, MAX_USD, precioCedear } from './limites.js';
 import { bancosOrdenados } from './motor.js';
 import type { Mercado } from './mercadoTipos.js';
 
@@ -32,8 +33,10 @@ export type CampoDef = {
   obligatorio: boolean;
   /** Si está, manda sobre `obligatorio`: el dato sólo se pide cuando se cumple (la tasa de un fondo sólo en los money market). */
   obligatorioSi?: (v: Valores) => boolean;
-  /** Dónde se encuentra este dato en la app, o qué significa si es una palabra técnica. */
+  /** Qué es este dato, en pocas palabras. */
   ayuda: string;
+  /** Con qué otro nombre puede aparecer en la app: “También lo encontrás como…”. */
+  tambien?: string;
   /** Una lista fija, o una que depende de lo ya elegido (por ejemplo, el fondo depende de dónde lo compró). */
   opciones?: Opcion[] | ((v: Valores, m: Mercado | null) => Opcion[]);
   placeholder?: string;
@@ -55,7 +58,6 @@ export type Valores = Record<string, string>;
 const SI_NO: Opcion[] = [{ id: 'si', label: 'Sí' }, { id: 'no', label: 'No' }];
 const opc = (xs: string[]): Opcion[] => xs.map((x) => ({ id: x, label: x }));
 
-const BILLETERAS = opc(['Mercado Pago', 'Ualá', 'Naranja X', 'Otra']);
 const BROKERS_OPC = opc([...BROKERS.map((b) => PROVEEDORES[b].nombre), 'Otro']);
 const PARA_FONDOS = opc([...BROKERS.map((b) => PROVEEDORES[b].nombre), 'Mercado Pago', 'Otro']);
 // Mientras no elija el tipo, se pide la tasa (es lo habitual); sólo en renta fija, variable o mixto no hay tasa para anotar.
@@ -91,9 +93,9 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'cuenta_remunerada',
     titulo: 'Cuenta remunerada',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué billetera?', tipo: 'opcion', obligatorio: true, ayuda: 'La app donde tenés la plata.', opciones: BILLETERAS },
-      { id: 'monto', etiqueta: '¿Cuánto tenés en la cuenta?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es el saldo de hoy en la sección donde se muestra lo que rinde. Cambia cada vez que cobrás o pagás algo, así que anotá el de hoy y actualizalo de vez en cuando.' },
-      { id: 'tna', etiqueta: 'Tasa que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. La ves en la sección de tu cuenta donde se muestra lo que rinde. Con ese número calculamos cuánto crece tu plata. Si solo ves la TEA (la tasa efectiva anual, parecida a la TNA), anotá ese número.', placeholder: 'Ej: 19' },
+      { id: 'proveedor', etiqueta: '¿En qué cuenta?', tipo: 'opcion', obligatorio: true, ayuda: 'La billetera o el banco donde tenés la plata.', opciones: (_v, m) => opc([...nombresDeCuentas(m), 'Otra']) },
+      { id: 'monto', etiqueta: '¿Cuánto tenés en la cuenta?', tipo: 'monto', obligatorio: true, ayuda: 'El saldo de hoy, en pesos. Cambia cuando cobrás o pagás: actualizalo de vez en cuando.' },
+      { id: 'tna', etiqueta: 'Tasa que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'Cuánto rinde en un año. Con eso calculamos cuánto crece tu plata.', tambien: '“TNA”, “rendimiento anual” o “tasa”. Si solo ves la TEA, anotá esa.', placeholder: 'Ej: 19' },
       inicio(),
     ],
   },
@@ -101,20 +103,20 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'fci',
     titulo: 'Fondo común de inversión',
     campos: [
-      { id: 'proveedor', etiqueta: '¿Dónde lo compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o broker (la plataforma donde comprás inversiones) desde donde invertiste.', opciones: PARA_FONDOS },
+      { id: 'proveedor', etiqueta: '¿Dónde lo compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o broker desde donde invertiste.', opciones: PARA_FONDOS },
       {
         id: 'fondo', etiqueta: 'Nombre del fondo', tipo: 'texto', obligatorio: true,
-        ayuda: 'Está arriba, en la pantalla del fondo. Hay cientos de fondos: escribilo tal cual aparece (si es uno que ya conocemos, te lo sugerimos).',
+        ayuda: 'Hay cientos de fondos: escribilo como aparece en tu app.', tambien: 'Está arriba, en la pantalla del fondo.',
         placeholder: 'Ej: Mercado Fondo',
         sugerencias: (v) => (FONDOS_DE[v.proveedor] ? [{ id: FONDOS_DE[v.proveedor], label: FONDOS_DE[v.proveedor] }] : []),
       },
-      { id: 'tipoFondo', etiqueta: '¿Qué tipo de fondo es?', tipo: 'opcion', obligatorio: true, ayuda: 'Money market: presta a muy corto plazo y casi no baja. Renta fija: invierte en bonos y puede bajar según el plazo. Renta variable: invierte en acciones y puede bajar bastante. Figura en la descripción del fondo.', opciones: TIPOS_DE_FONDO },
-      { id: 'clase', etiqueta: 'Clase', tipo: 'opcion', obligatorio: false, ayuda: 'Una letra (A, B, C…) que figura junto al nombre. Cambia las comisiones, no lo que rinde. Si no la ves, dejala vacía.', opciones: opc(['A', 'B', 'C', 'Otra']) },
-      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. El monto que compraste.' },
-      { id: 'tna', etiqueta: 'Rendimiento que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: true, obligatorioSi: ES_MONEY_MARKET, ayuda: 'La TNA (tasa nominal anual) es cuánto rinde en un año. La ves en la pantalla del fondo. Con ese número calculamos cuánto crece tu plata, y ayuda a que las alternativas sean más precisas para todos. En los fondos de renta fija o variable no se pide: su valor sube y baja, y no hay una tasa fija para anotar.', placeholder: 'Ej: 19' },
-      { id: 'cantidad', etiqueta: 'Cuotapartes que recibiste', tipo: 'numero', obligatorio: true, ayuda: 'Las cuotapartes son los pedacitos del fondo que te tocaron. Las ves en la pantalla donde se muestra lo que tenés invertido. Con esto calculamos cuánto vale hoy tu inversión.', placeholder: 'Ej: 41,17' },
-      { id: 'precio', etiqueta: 'Valor de cada cuotaparte al comprar', tipo: 'numero', obligatorio: true, ayuda: 'En pesos. Figura en el comprobante de la compra. Con esto calculamos cuánto ganaste.', placeholder: 'Ej: 2.428,729' },
-      { id: 'rescate', etiqueta: '¿En cuánto tiempo podés sacar tu plata?', tipo: 'opcion', obligatorio: false, ayuda: 'Figura en la pantalla del fondo como “plazo de rescate” (rescatar es pedir que te devuelvan la plata).', opciones: [{ id: 'mismo-dia', label: 'El mismo día' }, { id: '24hs', label: '24 hs' }, { id: '48hs', label: '48 hs' }, { id: 'otro', label: 'Otro' }] },
+      { id: 'tipoFondo', etiqueta: '¿Qué tipo de fondo es?', tipo: 'opcion', obligatorio: true, ayuda: 'Money market casi no baja; renta fija y variable pueden bajar.', tambien: 'Figura en la descripción del fondo.', opciones: TIPOS_DE_FONDO },
+      { id: 'clase', etiqueta: 'Clase', tipo: 'opcion', obligatorio: false, ayuda: 'Una letra (A, B, C…) junto al nombre. Cambia las comisiones, no lo que rinde.', opciones: opc(['A', 'B', 'C', 'Otra']) },
+      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos.' },
+      { id: 'tna', etiqueta: 'Rendimiento que te muestra la app (TNA)', tipo: 'porcentaje', obligatorio: true, obligatorioSi: ES_MONEY_MARKET, ayuda: 'Cuánto rinde en un año. En renta fija o variable no se pide: su valor sube y baja.', tambien: '“TNA”, “rendimiento anual” o “tasa”.', placeholder: 'Ej: 19' },
+      { id: 'cantidad', etiqueta: 'Cuotapartes que recibiste', tipo: 'numero', obligatorio: true, ayuda: 'Con esto calculamos cuánto vale hoy tu inversión.', tambien: '“Cuotapartes”, “participaciones” o “cantidad”, en lo que tenés invertido.', placeholder: 'Ej: 41,17' },
+      { id: 'precio', etiqueta: 'Valor de cada cuotaparte al comprar', tipo: 'numero', obligatorio: true, ayuda: 'En pesos. Con esto calculamos cuánto ganaste.', tambien: '“Valor de la cuotaparte” o “VCP”, en el comprobante.', placeholder: 'Ej: 2.428,729' },
+      { id: 'rescate', etiqueta: '¿En cuánto tiempo podés sacar tu plata?', tipo: 'opcion', obligatorio: false, ayuda: 'Cuánto tarda en volver a tu cuenta.', tambien: '“Plazo de rescate” en la pantalla del fondo.', opciones: [{ id: 'mismo-dia', label: 'El mismo día' }, { id: '24hs', label: '24 hs' }, { id: '48hs', label: '48 hs' }, { id: 'otro', label: 'Otro' }] },
       inicio('¿Cuándo lo compraste?'),
     ],
   },
@@ -123,12 +125,12 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     titulo: 'Plazo fijo',
     campos: [
       { id: 'proveedor', etiqueta: '¿En qué banco?', tipo: 'opcion', obligatorio: true, ayuda: 'El banco donde lo hiciste.', opciones: bancosDe, placeholder: 'Ej: Banco Nación' },
-      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es el capital que figura en el comprobante.' },
-      { id: 'tna', etiqueta: 'Tasa (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'En el comprobante figura como “TNA” o “tasa nominal anual”: cuánto rinde en un año.', placeholder: 'Ej: 20' },
-      { id: 'plazo', etiqueta: 'Plazo en días', tipo: 'numero', obligatorio: true, ayuda: 'Por cuántos días lo hiciste. Figura en el comprobante: 30, 60, 90…', placeholder: 'Ej: 30' },
+      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'El capital, en pesos.', tambien: '“Capital” o “monto invertido” en el comprobante.' },
+      { id: 'tna', etiqueta: 'Tasa (TNA)', tipo: 'porcentaje', obligatorio: true, ayuda: 'Cuánto rinde en un año.', tambien: '“TNA” o “tasa nominal anual” en el comprobante.', placeholder: 'Ej: 20' },
+      { id: 'plazo', etiqueta: 'Plazo en días', tipo: 'numero', obligatorio: true, ayuda: 'Por cuántos días lo hiciste: 30, 60, 90…', tambien: '“Plazo” o “días” en el comprobante.', placeholder: 'Ej: 30' },
       inicio('¿Cuándo lo hiciste?'),
-      { id: 'renueva', etiqueta: '¿Se renueva solo al vencer?', tipo: 'opcion', obligatorio: true, ayuda: 'Vencer es cuando termina el plazo. En el comprobante dice “renovación automática”. Lo usamos para avisarte qué pasa el día que vence.', opciones: SI_NO },
-      { id: 'precancelable', etiqueta: '¿Es precancelable?', tipo: 'opcion', obligatorio: true, ayuda: 'Precancelable quiere decir que lo podés retirar antes del vencimiento, cobrando menos interés.', opciones: SI_NO },
+      { id: 'renueva', etiqueta: '¿Se renueva solo al vencer?', tipo: 'opcion', obligatorio: true, ayuda: 'Lo usamos para avisarte qué pasa el día que vence.', tambien: '“Renovación automática” en el comprobante.', opciones: SI_NO },
+      { id: 'precancelable', etiqueta: '¿Es precancelable?', tipo: 'opcion', obligatorio: true, ayuda: 'Se puede retirar antes del vencimiento, cobrando menos interés.', opciones: SI_NO },
     ],
   },
   plazo_fijo_uva: {
@@ -136,21 +138,21 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     titulo: 'Plazo fijo UVA',
     campos: [
       { id: 'proveedor', etiqueta: '¿En qué banco?', tipo: 'opcion', obligatorio: true, ayuda: 'El banco donde lo hiciste.', opciones: bancosDe, placeholder: 'Ej: Banco Galicia' },
-      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. Es el capital que figura en el comprobante.' },
-      { id: 'plazo', etiqueta: 'Plazo en días', tipo: 'numero', obligatorio: true, ayuda: 'Por cuántos días lo hiciste. En los plazos fijos UVA (los que se actualizan con la inflación) el mínimo es 90.', placeholder: 'Ej: 90' },
-      { id: 'tna', etiqueta: 'Interés extra sobre la UVA', tipo: 'porcentaje', obligatorio: true, ayuda: 'Algunos bancos suman un interés chico además de la inflación (lo que suben los precios). Si no figura o no suma ninguno, poné 0. Con esto calculamos cuánto crece tu plata.', placeholder: 'Ej: 1' },
+      { id: 'monto', etiqueta: '¿Cuánto pusiste?', tipo: 'monto', obligatorio: true, ayuda: 'El capital, en pesos.', tambien: '“Capital” o “monto invertido” en el comprobante.' },
+      { id: 'plazo', etiqueta: 'Plazo en días', tipo: 'numero', obligatorio: true, ayuda: 'El mínimo es 90.', tambien: '“Plazo” o “días” en el comprobante.', placeholder: 'Ej: 90' },
+      { id: 'tna', etiqueta: 'Extra sobre la UVA', tipo: 'porcentaje', obligatorio: true, ayuda: 'El interés que suma el banco además de la inflación. Si no suma ninguno, poné 0.', tambien: '“UVA + 2”: el 2 es el extra. Puede figurar como “tasa” o “interés”.', placeholder: 'Ej: 1' },
       inicio('¿Cuándo lo hiciste?'),
-      { id: 'renueva', etiqueta: '¿Se renueva solo al vencer?', tipo: 'opcion', obligatorio: true, ayuda: 'Vencer es cuando termina el plazo. En el comprobante dice “renovación automática”. Lo usamos para avisarte qué pasa el día que vence.', opciones: SI_NO },
+      { id: 'renueva', etiqueta: '¿Se renueva solo al vencer?', tipo: 'opcion', obligatorio: true, ayuda: 'Lo usamos para avisarte qué pasa el día que vence.', tambien: '“Renovación automática” en el comprobante.', opciones: SI_NO },
     ],
   },
   letra: {
     tipo: 'letra',
     titulo: 'Letra del Tesoro',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o plataforma desde donde la compraste.', opciones: BROKERS_OPC },
-      { id: 'ticker', etiqueta: 'Nombre de la letra (ticker)', tipo: 'texto', obligatorio: true, ayuda: `${explicarTicker} En las letras, el nombre ya indica el vencimiento. Ej: S13N6.`, placeholder: 'Ej: S13N6' },
+      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app desde donde la compraste.', opciones: BROKERS_OPC },
+      { id: 'ticker', etiqueta: 'Nombre de la letra (ticker)', tipo: 'texto', obligatorio: true, ayuda: 'El código corto de la letra. Ya indica el vencimiento.', placeholder: 'Ej: S13N6' },
       { id: 'monto', etiqueta: '¿Cuánto pagaste en total?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos, con la comisión si la hubo.' },
-      { id: 'cantidad', etiqueta: 'Cantidad comprada', tipo: 'numero', obligatorio: true, ayuda: 'Figura en el comprobante o en lo que tenés invertido. Con esto calculamos cuánto cobrás al vencimiento.', placeholder: 'Ej: 1.000' },
+      { id: 'cantidad', etiqueta: 'Cantidad comprada', tipo: 'numero', obligatorio: true, ayuda: 'Con esto calculamos cuánto cobrás al vencimiento.', tambien: '“Cantidad” o “nominales” en el comprobante.', placeholder: 'Ej: 1.000' },
       { id: 'vencimiento', etiqueta: 'Fecha de vencimiento', tipo: 'fecha', obligatorio: true, ayuda: 'El día en que el Estado te devuelve la plata.' },
       inicio('¿Cuándo la compraste?'),
     ],
@@ -159,11 +161,11 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'bono_cer',
     titulo: 'Bono CER',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app o plataforma desde donde lo compraste.', opciones: BROKERS_OPC },
-      { id: 'ticker', etiqueta: 'Nombre del bono (ticker)', tipo: 'texto', obligatorio: true, ayuda: `${explicarTicker} Ej: TZXD6. El nombre suele indicar el vencimiento.`, placeholder: 'Ej: TZXD6', sugerencias: (_v, m) => (m?.bonosCer?.valor ?? []).map((b) => ({ id: b.ticker, label: `${b.ticker} · vence el ${diaMes(b.vencimiento)}` })) },
+      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app desde donde lo compraste.', opciones: BROKERS_OPC },
+      { id: 'ticker', etiqueta: 'Nombre del bono (ticker)', tipo: 'texto', obligatorio: true, ayuda: 'El código corto del bono. Suele indicar el vencimiento.', placeholder: 'Ej: TZXD6', sugerencias: (_v, m) => (m?.bonosCer?.valor ?? []).map((b) => ({ id: b.ticker, label: `${b.ticker} · vence el ${diaMes(b.vencimiento)}` })) },
       { id: 'monto', etiqueta: '¿Cuánto pagaste en total?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos, con la comisión si la hubo.' },
-      { id: 'cantidad', etiqueta: 'Cantidad comprada (nominales)', tipo: 'numero', obligatorio: false, ayuda: 'Cuántos nominales (la unidad en que se compran los bonos) compraste. Figura en el comprobante.', placeholder: 'Ej: 1.000' },
-      { id: 'vencimiento', etiqueta: 'Fecha de vencimiento', tipo: 'fecha', obligatorio: true, ayuda: 'El día en que el Estado te devuelve el capital ajustado. Si el bono lo conocemos, lo completamos solos.' },
+      { id: 'cantidad', etiqueta: 'Cantidad comprada', tipo: 'numero', obligatorio: false, ayuda: 'Cuántos nominales compraste.', tambien: '“Cantidad” o “nominales” en el comprobante.', placeholder: 'Ej: 1.000' },
+      { id: 'vencimiento', etiqueta: 'Fecha de vencimiento', tipo: 'fecha', obligatorio: true, ayuda: 'Si conocemos el bono, la completamos sola.' },
       inicio('¿Cuándo lo compraste?'),
     ],
   },
@@ -171,10 +173,10 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'dolar',
     titulo: 'Dólares',
     campos: [
-      { id: 'proveedor', etiqueta: '¿Dónde los compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'En qué broker, o sea la plataforma donde comprás inversiones.', opciones: BROKERS_OPC },
-      { id: 'cantidad', etiqueta: '¿Cuántos dólares compraste?', tipo: 'numero', obligatorio: true, ayuda: 'En dólares (US$). Es el saldo en dólares que recibiste.', placeholder: 'Ej: 100' },
-      { id: 'precio', etiqueta: '¿A cuánto compraste cada dólar?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos por cada dólar. Figura en el comprobante.' },
-      { id: 'tipo', etiqueta: 'Tipo de dólar', tipo: 'opcion', obligatorio: false, ayuda: 'El comprobante dice si fue MEP (la forma legal de comprar desde un broker), oficial u otro.', opciones: [{ id: 'mep', label: 'MEP' }, { id: 'oficial', label: 'Oficial' }, { id: 'otro', label: 'Otro' }] },
+      { id: 'proveedor', etiqueta: '¿Dónde los compraste?', tipo: 'opcion', obligatorio: true, ayuda: 'El broker donde compraste.', opciones: BROKERS_OPC },
+      { id: 'cantidad', etiqueta: '¿Cuántos dólares compraste?', tipo: 'numero', obligatorio: true, ayuda: 'En dólares (US$). Máximo US$ 1.000.000.', placeholder: 'Ej: 100' },
+      { id: 'precio', etiqueta: '¿A cuánto compraste cada dólar?', tipo: 'monto', obligatorio: true, ayuda: 'En pesos por cada dólar.', tambien: '“Precio” o “cotización” en el comprobante.' },
+      { id: 'tipo', etiqueta: 'Tipo de dólar', tipo: 'opcion', obligatorio: false, ayuda: 'MEP, oficial u otro.', opciones: [{ id: 'mep', label: 'MEP' }, { id: 'oficial', label: 'Oficial' }, { id: 'otro', label: 'Otro' }] },
       inicio('¿Cuándo los compraste?'),
     ],
   },
@@ -182,16 +184,16 @@ export const FORMULARIOS: Record<TipoPosicion, FormDef> = {
     tipo: 'cedear',
     titulo: 'CEDEAR',
     campos: [
-      { id: 'proveedor', etiqueta: '¿En qué broker (la plataforma donde comprás inversiones)?', tipo: 'opcion', obligatorio: true, ayuda: 'La app desde donde lo compraste.', opciones: BROKERS_OPC },
+      { id: 'proveedor', etiqueta: '¿En qué broker?', tipo: 'opcion', obligatorio: true, ayuda: 'La app desde donde lo compraste.', opciones: BROKERS_OPC },
       {
         id: 'ticker', etiqueta: '¿Cuál compraste? (ticker)', tipo: 'texto', obligatorio: true,
-        ayuda: `${explicarTicker} Escribilo o elegilo de la lista. También podés anotar una acción argentina (por ejemplo GGAL).`,
+        ayuda: 'El código corto, como SPY. También sirve una acción argentina (por ejemplo GGAL).',
         placeholder: 'Ej: SPY',
         sugerencias: (_v, m) => listaDeCedears(m).map((c) => ({ id: c.ticker, label: `${c.ticker}${c.nombre ? ` · ${c.nombre}` : ''}` })),
       },
-      { id: 'cantidad', etiqueta: '¿Cuántos compraste?', tipo: 'numero', obligatorio: true, ayuda: 'Se compran de a uno entero. Figura en el comprobante.', placeholder: 'Ej: 2' },
-      { id: 'precio', etiqueta: 'Precio de cada uno', tipo: 'monto', obligatorio: true, ayuda: 'En pesos. El precio por unidad al que se hizo la compra.' },
-      { id: 'comision', etiqueta: 'Comisión que te cobraron (%)', tipo: 'porcentaje', obligatorio: true, ayuda: 'Es un porcentaje de lo que operaste, no un monto en pesos. Es lo que cobra el broker (la plataforma) por comprar; figura en el comprobante o en sus tarifas. Si no cobraron, poné 0. Cuenta para saber cuánto ganaste de verdad.', placeholder: 'Ej: 0,6' },
+      { id: 'cantidad', etiqueta: '¿Cuántos compraste?', tipo: 'numero', obligatorio: true, ayuda: 'Se compran de a uno entero.', placeholder: 'Ej: 2' },
+      { id: 'precio', etiqueta: 'Precio de cada uno', tipo: 'monto', obligatorio: true, ayuda: 'En pesos, al que se hizo la compra.', tambien: '“Precio” o “precio promedio” en el comprobante.' },
+      { id: 'comision', etiqueta: 'Comisión que te cobraron (%)', tipo: 'porcentaje', obligatorio: true, ayuda: 'Un % de lo que operaste, no pesos. Si no cobraron, poné 0.', tambien: '“Comisión” o “arancel” en el comprobante o en las tarifas del broker.', placeholder: 'Ej: 0,6' },
       inicio('¿Cuándo lo compraste?'),
     ],
   },
@@ -289,8 +291,8 @@ export function procesarRegistro(
   if (tipo === 'cedear') {
     // La comisión es un % de lo operado: se pasa a pesos para saber el costo total.
     const comisionPct = num('comision') ?? 0;
-    if (comisionPct < 0 || comisionPct > 100) errores.comision = 'Revisá el porcentaje.';
-    else if (comisionPct > 5) avisos.push(`Una comisión de ${pct(comisionPct, 1)} es mucho más alta que la habitual en los brokers. Revisá que sea un porcentaje y no pesos.`);
+    if (comisionPct < 0 || comisionPct > MAX_COMISION) errores.comision = `Revisá el porcentaje: una comisión de más de ${MAX_COMISION}% no es habitual.`;
+    else if (comisionPct > 3) avisos.push(`Una comisión de ${pct(comisionPct, 1)} es más alta que la habitual en los brokers. Revisá que sea un porcentaje y no pesos.`);
     const comision = cantidad !== null && precio !== null ? Math.round(cantidad * precio * (comisionPct / 100)) : 0;
     if (cantidad !== null && precio !== null) monto = Math.round(cantidad * precio + comision);
     if (comisionPct) { detalle.comisionPct = comisionPct; detalle.comision = comision; }
@@ -300,11 +302,24 @@ export function procesarRegistro(
   if (cantidad !== null && cantidad <= 0) errores.cantidad = 'Tiene que ser mayor a cero.';
   if (precio !== null && precio <= 0) errores.precio = 'Tiene que ser mayor a cero.';
 
+  // Nada de números extremos: un error de tipeo (de más ceros) no tiene que ensuciar tus datos.
+  const tope = maxPesos(mercado);
+  const topeTexto = `US$ ${MAX_USD.toLocaleString('es-AR')} (unos ${fmtPesos(tope)})`;
+  if (tipo === 'dolar') {
+    if (cantidad !== null && cantidad > MAX_USD) errores.cantidad = `Es demasiado: el máximo es US$ ${MAX_USD.toLocaleString('es-AR')}.`;
+  } else if (monto !== null && monto > tope) {
+    errores[tipo === 'cedear' ? 'cantidad' : 'monto'] = `Es demasiado: el máximo es ${topeTexto}.`;
+  }
+  if (cantidad !== null && tipo !== 'dolar' && cantidad > MAX_UNIDADES) errores.cantidad = 'Es una cantidad demasiado grande: revisala.';
+  if (precio !== null && tipo !== 'fci' && precio > tope) errores.precio = 'Es un precio demasiado alto: revisalo.';
+
   if (tna !== null) {
-    if (tna < 0 || tna > 1000) errores.tna = 'Revisá el porcentaje.';
+    const maxTna = tipo === 'plazo_fijo_uva' ? MAX_TASA_EXTRA_UVA : MAX_TASA;
+    if (tna < 0 || tna > maxTna) errores.tna = tipo === 'plazo_fijo_uva' ? `Revisá el porcentaje: el extra sobre la UVA no pasa de ${MAX_TASA_EXTRA_UVA}%.` : `Revisá el porcentaje: una tasa anual de más de ${MAX_TASA}% no es verosímil.`;
     else tna = tna / 100;
   }
   if (plazo !== null && (plazo <= 0 || !Number.isInteger(plazo))) errores.plazo = 'Poné la cantidad de días, en número entero.';
+  else if (plazo !== null && plazo > MAX_DIAS) errores.plazo = `Revisá los días: el máximo es ${MAX_DIAS} (3 años).`;
 
   // ── reglas por tipo ──
   if (tipo === 'plazo_fijo' || tipo === 'plazo_fijo_uva') {
