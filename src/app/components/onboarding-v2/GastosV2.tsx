@@ -8,7 +8,7 @@ import { apartadoTotal } from '../../api/v2/apartado';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
-import { IconChat, IconChevron, IconEditar } from './FinaIcons';
+import { IconCalendario, IconChevron, IconEditar } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
 import { FilaIngreso, lunesAtras } from './IngresosVsGastos';
 import { ListaGastosFijos } from './GastosFijos';
@@ -58,10 +58,10 @@ export function GastosV2() {
   // Lo que trae un atajo de la pantalla de inicio del celular para precargar
   // el formulario (`?abrir=gasto&monto=8500`).
   const [gastoInicial, setGastoInicial] = useState<{ monto: string; descripcion: string } | null>(null);
-  // Popup al tocar "+ Agregar gasto": registrarlo Desde FINA (a mano) o Desde
-  // WhatsApp (mini explicación y abre el bot).
+  // Popup al tocar "+ Agregar gasto": ¿un gasto diario o un gasto fijo? Se
+  // asume que se carga acá; WhatsApp queda como recordatorio con su enlace.
   const [chooser, setChooser] = useState(false);
-  const [waStep, setWaStep] = useState(false);
+  const [modoGasto, setModoGasto] = useState<'diario' | 'fijo'>('diario');
 
   // Agregar ingreso.
   const [addingDisponible, setAddingDisponible] = useState(false);
@@ -267,6 +267,7 @@ export function GastosV2() {
     const monto = parseMoneyInput(datos.get('monto') ?? '');
     const descripcion = (datos.get('descripcion') ?? '').slice(0, 80);
     setGastoInicial(monto > 0 || descripcion ? { monto: monto > 0 ? formatThousands(String(monto)) : '', descripcion } : null);
+    setModoGasto('diario');
     setAddingGasto(true);
   });
   // Desde el aviso de vencimiento o la tarjeta de Home.
@@ -482,7 +483,7 @@ export function GastosV2() {
         <div className="flex gap-2.5">
             <button
               type="button"
-              onClick={() => { setChooser(true); setWaStep(false); }}
+              onClick={() => setChooser(true)}
               className="v2-focus flex-1 rounded-2xl py-4 text-[14px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
@@ -612,9 +613,10 @@ export function GastosV2() {
             pantalla: mezclado con el resto de Gastos no se distinguía dónde
             terminaba el formulario. */}
         {addingGasto && (
-          <Hoja titulo="Nuevo gasto" onCerrar={cerrarFormGasto}>
+          <Hoja titulo={modoGasto === 'fijo' ? 'Nuevo gasto fijo' : 'Nuevo gasto'} onCerrar={cerrarFormGasto}>
             <FormularioGasto
               categorias={categorias}
+              modo={modoGasto}
               inicial={gastoInicial ?? undefined}
               onListo={() => { formDesdeOrigen.current = false; setGastoInicial(null); setAddingGasto(false); }}
               onCancelar={cerrarFormGasto}
@@ -712,6 +714,11 @@ export function GastosV2() {
           </button>
         )}
       </section>
+
+      {/* Los gastos fijos, aparte: lo que pagás siempre, con su próximo
+          vencimiento y "Ya lo pagué". Igual que los ingresos, los primeros
+          cinco y Ver todos. */}
+      <ListaGastosFijos />
 
       {/* Tus ingresos: los 5 más recientes del período, igual que los gastos.
           La lista completa está en Todos tus ingresos. */}
@@ -843,9 +850,7 @@ export function GastosV2() {
         </Hoja>
       )}
 
-      <ListaGastosFijos />
-
-      {/* Popup: ¿Desde FINA o Desde WhatsApp? Scrim = velo de tinta translúcido. */}
+      {/* Popup: ¿gasto diario o gasto fijo? Scrim = velo de tinta translúcido. */}
       {chooser && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
@@ -853,65 +858,33 @@ export function GastosV2() {
           onClick={() => setChooser(false)}
         >
           <div className="w-full max-w-md rounded-2xl p-5 flex flex-col gap-3" style={{ background: COLORS.surface, boxShadow: '0 12px 40px -8px rgba(43,33,24,0.35)' }} onClick={(e) => e.stopPropagation()}>
-            {!waStep ? (
-              <>
-                <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>¿Cómo querés registrar el gasto?</p>
-                <button
-                  type="button"
-                  onClick={() => { setChooser(false); setAddingDisponible(false); setAddingGasto(true); }}
-                  className="v2-focus text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
-                  style={{ borderColor: COLORS.line }}
-                >
-                  <span className="shrink-0" style={{ color: COLORS.brand }}><IconEditar size={22} /></span>
-                  <span className="flex flex-col">
-                    <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde FINA</span>
-                    <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>Lo cargás a mano acá.</span>
-                  </span>
-                </button>
-                {/* Relleno lima: registrar hablando es la funcionalidad más
-                    fuerte de FINA. El texto va en tinta, sobre lima nunca va
-                    blanco (regla 2). */}
-                <button
-                  type="button"
-                  onClick={() => setWaStep(true)}
-                  className="v2-focus text-left rounded-2xl p-4 flex items-start gap-3 transition-transform active:scale-[0.99]"
-                  style={{ background: COLORS.lima }}
-                >
-                  <span className="shrink-0" style={{ color: COLORS.ink }}><IconChat size={22} /></span>
-                  <span className="flex flex-col">
-                    <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Desde WhatsApp</span>
-                    <span className="text-[13px]" style={{ color: COLORS.limaText }}>Le escribís a FINA y ella lo registra.</span>
-                  </span>
-                </button>
-                <button type="button" onClick={() => setChooser(false)} className="v2-focus text-[13px] font-semibold py-1 min-h-[44px]" style={{ color: COLORS.inkSoft }}>Cancelar</button>
-              </>
-            ) : (
-              <>
-                <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>Registrá tu gasto por WhatsApp</p>
-                <div className="flex flex-col gap-2.5 pl-3.5 border-l-2" style={{ borderColor: COLORS.lima }}>
-                  {[
-                    'Abrí el chat de FINA en WhatsApp.',
-                    'Escribile el gasto, por ejemplo: gasté 5.000 en el súper.',
-                    'FINA lo registra y aparece en Mis gastos.',
-                  ].map((t, i) => (
-                    <div key={t} className="flex gap-2.5 items-start">
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold" style={{ background: COLORS.lima, color: COLORS.ink }}>{i + 1}</span>
-                      <span className="flex-1 text-[13px]" style={{ color: COLORS.ink }}>{t}</span>
-                    </div>
-                  ))}
-                </div>
-                <LinkWhatsApp
-                  onClick={() => setChooser(false)}
-                  className="v2-focus w-full rounded-2xl py-3.5 text-center text-[15px] font-bold transition-transform active:scale-[0.99]"
-                  style={{ background: COLORS.lima, color: COLORS.ink }}
-                >
-                  Ir a WhatsApp
-                </LinkWhatsApp>
-                <button type="button" onClick={() => setWaStep(false)} className="v2-focus inline-flex items-center justify-center gap-1 text-[13px] font-semibold py-1 min-h-[44px]" style={{ color: COLORS.inkSoft }}>
-                  <IconChevron size={14} style={{ transform: 'rotate(180deg)' }} /> Volver
-                </button>
-              </>
-            )}
+            <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>¿Qué gasto querés registrar?</p>
+            {([
+              { modo: 'diario', titulo: 'Gasto diario', ejemplo: 'El súper, un café, un viaje.' },
+              { modo: 'fijo', titulo: 'Gasto fijo', ejemplo: 'El alquiler, el gimnasio, una suscripción.' },
+            ] as const).map((o) => (
+              <button
+                key={o.modo}
+                type="button"
+                onClick={() => { setChooser(false); setAddingDisponible(false); setModoGasto(o.modo); setAddingGasto(true); }}
+                className="v2-focus text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
+                style={{ borderColor: COLORS.line }}
+              >
+                <span className="shrink-0" style={{ color: COLORS.brand }}>{o.modo === 'fijo' ? <IconCalendario size={22} /> : <IconEditar size={22} />}</span>
+                <span className="flex flex-col">
+                  <span className="text-[15px] font-bold" style={{ color: COLORS.ink }}>{o.titulo}</span>
+                  <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{o.ejemplo}</span>
+                </span>
+              </button>
+            ))}
+            {/* WhatsApp sigue siendo lo más cómodo para anotar: se recuerda, sin
+                ser un paso más. El enlace abre el chat (y avisa si falta
+                verificar el teléfono). */}
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
+              Recordá que podés registrar gastos por{' '}
+              <LinkWhatsApp onClick={() => setChooser(false)} className="v2-focus font-semibold underline" style={{ color: COLORS.brand }}>WhatsApp</LinkWhatsApp>.
+            </p>
+            <button type="button" onClick={() => setChooser(false)} className="v2-focus text-[13px] font-semibold py-1 min-h-[44px]" style={{ color: COLORS.inkSoft }}>Cancelar</button>
           </div>
         </div>
       )}

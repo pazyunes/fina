@@ -14,6 +14,7 @@ import { ProgresoPasos } from "./components/onboarding-v2/ProgresoPasos";
 import { TodosLosGastos } from "./components/onboarding-v2/TodosLosGastos";
 import { TodosLosIngresos } from "./components/onboarding-v2/TodosLosIngresos";
 import { TodasLasSecciones } from "./components/onboarding-v2/TodasLasSecciones";
+import { TodosLosGastosFijos } from "./components/onboarding-v2/TodosLosGastosFijos";
 import { FiniPlayground } from "./components/onboarding-v2/FiniPlayground";
 import { TerminosPantalla } from "./components/onboarding-v2/TerminosPantalla";
 
@@ -89,6 +90,7 @@ export const router = createBrowserRouter([
       { path: "/onboarding-v2/gastos/todos", element: <TodosLosGastos /> },
       { path: "/onboarding-v2/gastos/ingresos", element: <TodosLosIngresos /> },
       { path: "/onboarding-v2/gastos/secciones", element: <TodasLasSecciones /> },
+      { path: "/onboarding-v2/gastos/fijos", element: <TodosLosGastosFijos /> },
       { path: "/onboarding-v2/objetivos", element: <ObjetivosV2 /> },
       { path: "/onboarding-v2/inversiones", element: <InversionesV2 /> },
       { path: "/onboarding-v2/perfil", element: <PerfilV2 /> },

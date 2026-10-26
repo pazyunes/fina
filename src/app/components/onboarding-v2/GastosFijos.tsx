@@ -5,7 +5,7 @@ import { IconBasura, IconCalendario, IconChevron } from './FinaIcons';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { diaArgentina } from '../../api/v2/pasos';
-import { VerTodos, recortar } from './VerTodos';
+import { LIMITE_LISTA, recortar } from './VerTodos';
 import { FRECUENCIAS, cuandoVence, diasHasta, siguienteVencimiento, type FrecuenciaFija } from '../../api/v2/fechasFijos';
 import type { GastoFijo } from '../../api/v2/tipos';
 
@@ -61,7 +61,11 @@ export function opcionFijoValida(o: OpcionFijo): boolean {
 }
 
 /** `marcado`: se tocó guardar con la fecha sin completar o fuera de rango (useFaltantes). */
-export function CamposGastoFijo({ valor, onChange, marcado = false }: { valor: OpcionFijo; onChange: (o: OpcionFijo) => void; marcado?: boolean }) {
+/**
+ * `siempre`: el formulario es de un gasto fijo desde el principio (se eligió
+ * "Gasto fijo" al agregar): no hay interruptor, los campos están a la vista.
+ */
+export function CamposGastoFijo({ valor, onChange, marcado = false, siempre = false }: { valor: OpcionFijo; onChange: (o: OpcionFijo) => void; marcado?: boolean; siempre?: boolean }) {
   const hoy = diaArgentina();
   const manana = sumarUnDia(hoy);
 
@@ -75,22 +79,24 @@ export function CamposGastoFijo({ valor, onChange, marcado = false }: { valor: O
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <p id="fijo-titulo" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>Es un gasto fijo</p>
+      {!siempre && (
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p id="fijo-titulo" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>Es un gasto fijo</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={valor.activo}
+            aria-labelledby="fijo-titulo"
+            onClick={() => onChange({ ...opcionFijoInicial(), activo: !valor.activo })}
+            className="v2-focus relative w-[52px] h-[32px] rounded-full shrink-0 transition-colors"
+            style={{ background: valor.activo ? COLORS.brand : COLORS.lineStrong }}
+          >
+            <span className="absolute top-[3px] w-[26px] h-[26px] rounded-full transition-all" style={{ left: valor.activo ? 23 : 3, background: COLORS.surface }} />
+          </button>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={valor.activo}
-          aria-labelledby="fijo-titulo"
-          onClick={() => onChange({ ...opcionFijoInicial(), activo: !valor.activo })}
-          className="v2-focus relative w-[52px] h-[32px] rounded-full shrink-0 transition-colors"
-          style={{ background: valor.activo ? COLORS.brand : COLORS.lineStrong }}
-        >
-          <span className="absolute top-[3px] w-[26px] h-[26px] rounded-full transition-all" style={{ left: valor.activo ? 23 : 3, background: COLORS.surface }} />
-        </button>
-      </div>
+      )}
 
       {valor.activo && (
         <div className="rounded-xl p-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }}>
@@ -164,15 +170,27 @@ function sumarUnDia(dia: string): string {
 
 // ── La lista, en Mis gastos ──────────────────────────────────────────────
 
-export function ListaGastosFijos() {
+/**
+ * En Gastos va como sección propia, igual que los ingresos: los primeros cinco
+ * y "Ver todos", que abre la lista completa en otra pantalla (`completa`).
+ */
+export function ListaGastosFijos({ completa = false }: { completa?: boolean }) {
   const { estado } = useAlmacen();
+  const navigate = useNavigate();
   const hoy = diaArgentina();
   const [borrando, setBorrando] = useState<string | null>(null);
   const [pagando, setPagando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [verTodos, setVerTodos] = useState(false);
 
-  if (estado.gastosFijos.length === 0) return null;
+  if (estado.gastosFijos.length === 0) {
+    if (completa) return <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos fijos.</p>;
+    return (
+      <section data-gastos-fijos className="flex flex-col gap-1 scroll-mt-6" aria-label="Gastos fijos">
+        <TituloSeccion>Gastos fijos</TituloSeccion>
+        <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos fijos.</p>
+      </section>
+    );
+  }
 
   const nombreSeccion = (id: string | null) => estado.secciones.find((s) => s.id === id)?.nombre;
 
@@ -185,10 +203,10 @@ export function ListaGastosFijos() {
   }
 
   return (
-    <section data-gastos-fijos className="flex flex-col gap-2 lg:col-span-3 scroll-mt-6">
-      <TituloSeccion>Gastos fijos</TituloSeccion>
+    <section data-gastos-fijos className="flex flex-col gap-1 scroll-mt-6" aria-label="Gastos fijos">
+      {!completa && <TituloSeccion>Gastos fijos</TituloSeccion>}
       <div className="flex flex-col">
-        {recortar(estado.gastosFijos, verTodos).map((g) => {
+        {recortar(estado.gastosFijos, completa).map((g) => {
           const n = diasHasta(hoy, g.proximoPago);
           const sePuedePagar = n <= DIAS_PARA_PAGAR;
           return (
@@ -245,7 +263,16 @@ export function ListaGastosFijos() {
           );
         })}
       </div>
-      <VerTodos total={estado.gastosFijos.length} abierta={verTodos} onToggle={() => setVerTodos((v) => !v)} />
+      {!completa && estado.gastosFijos.length > LIMITE_LISTA && (
+        <button
+          type="button"
+          onClick={() => navigate('/onboarding-v2/gastos/fijos')}
+          className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
+          style={{ color: COLORS.brand }}
+        >
+          Ver todos
+        </button>
+      )}
       {error && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{error}</p>}
     </section>
   );

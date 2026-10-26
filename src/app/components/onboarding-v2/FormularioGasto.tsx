@@ -88,10 +88,14 @@ export function Desplegable({ id, label, value, onChange, marcado = false, child
  * `onListo` recibe la sección en la que quedó el gasto.
  * `inicial`: para un gasto nuevo, el monto y la descripción que trae un atajo
  * de la pantalla de inicio del celular (`?abrir=gasto&monto=8500`).
+ * `modo`: lo que se eligió al tocar "Agregar gasto". 'diario' es un gasto
+ * común, sin la opción de fijo; 'fijo' arranca como gasto fijo, con sus
+ * campos a la vista. Sin `modo` (editar) queda el interruptor de siempre.
  */
-export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancelar }: {
+export function FormularioGasto({ gasto, inicial, modo, categorias, onListo, onCancelar }: {
   gasto?: Gasto;
   inicial?: { monto: string; descripcion: string };
+  modo?: 'diario' | 'fijo';
   categorias: Categoria[];
   onListo: (seccionId: string | null) => void;
   onCancelar: () => void;
@@ -118,7 +122,7 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
   const [pagos, setPagos] = useState<FilaPago[]>(() => (gasto?.pagos?.length
     ? gasto.pagos.map((p) => ({ medio: p.medio, otro: '', monto: formatMontoInicial(p.monto) }))
     : [filaPagoVacia(), filaPagoVacia()]));
-  const [fijo, setFijo] = useState<OpcionFijo>(opcionFijoInicial);
+  const [fijo, setFijo] = useState<OpcionFijo>(() => (modo === 'fijo' ? { ...opcionFijoInicial(), activo: true } : opcionFijoInicial()));
   // Errores de conversión (no se pudo traer el dólar). Los de guardado los
   // reporta el almacén.
   const [error, setError] = useState<string | null>(null);
@@ -234,7 +238,10 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
         onChange={(e) => setDesc(e.target.value)}
       />
       {/* Por defecto queda en hoy: sólo hace falta tocarlo para cargar un
-          gasto de otro día. Sin hora: con el día alcanza. */}
+          gasto de otro día. Sin hora: con el día alcanza. Un gasto fijo que
+          todavía no se pagó no tiene fecha de gasto: tiene la de vencimiento,
+          más abajo. */}
+      {!(fijo.activo && !fijo.yaPagado) && (
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`${idBase}-fecha`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha</label>
         <input
@@ -247,6 +254,7 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
           onChange={(e) => setFecha(e.target.value)}
         />
       </div>
+      )}
 
       {/* Sección y medio en desplegables: con todas las opciones como botones
           el formulario ocupaba tres pantallas en el celular. */}
@@ -470,7 +478,7 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
 
       {/* Un gasto que ya pasó no se puede volver "gasto fijo": esto es para
           crear uno nuevo, no para editar un movimiento. */}
-      {!editando && <CamposGastoFijo valor={fijo} onChange={setFijo} marcado={faltantes.marcado('fijo')} />}
+      {!editando && modo !== 'diario' && <CamposGastoFijo valor={fijo} onChange={setFijo} marcado={faltantes.marcado('fijo')} siempre={modo === 'fijo'} />}
 
       {error && <p role="alert" className="text-[13px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{error}</p>}
 
@@ -484,7 +492,7 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
           className="v2-focus flex-[2] rounded-xl py-2.5 min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
-          {editando ? 'Guardar cambios' : fijo.activo && !fijo.yaPagado ? 'Guardar gasto fijo' : 'Agregar gasto'}
+          {editando ? 'Guardar cambios' : fijo.activo ? 'Guardar gasto fijo' : 'Agregar gasto'}
         </button>
       </div>
     </div>
