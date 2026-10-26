@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { COLORS, FONTS, fmtMoney } from './shared';
 import { IconBasura, IconEditar } from './FinaIcons';
 import { EditorIngreso } from './EditorIngreso';
+import { VerTodos, recortar } from './VerTodos';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { diaArgentina } from '../../api/v2/pasos';
@@ -89,15 +90,21 @@ type Columna = { clave: string; etiqueta: string; aria: string; entro: number; s
 // · `explorar` (Home): cada mes se puede tocar para ver sus números, y se dice
 //   cuánto te quedó o por cuánto te pasaste. Es un gráfico para recorrer, no
 //   donde estás parada.
-//
 // Con `explorar` y `onElegirMes`, el mes lo maneja quien lo usa (Mis
-// visualizaciones, que tiene sus propias flechas): `mesElegido` es el que se
-// mira y tocar una columna lo avisa.
+// visualizaciones, que lo comparte entre sus tarjetas y lo muestra arriba):
+// `mesElegido` es el que se mira y tocar una columna lo avisa.
 export function IngresosVsGastos({ conLista = false, explorar = false, mesElegido, onElegirMes, semana }: {
   conLista?: boolean; explorar?: boolean; mesElegido?: string; onElegirMes?: (mes: string) => void; semana?: Semana;
 }) {
   const { estado } = useAlmacen();
-  const meses = ultimosMeses(6);
+  // De los últimos 6 meses, desde el primero que tiene algo cargado: los meses
+  // de antes de empezar a usar FINA no dicen nada y achicaban las columnas.
+  // El actual queda siempre, aunque esté vacío.
+  const seisMeses = ultimosMeses(6);
+  const conDatos = (mes: string) =>
+    estado.ingresos.some((i) => mesDe(i.ts) === mes) || estado.gastos.some((g) => mesDe(g.ts) === mes);
+  const primero = seisMeses.findIndex(conDatos);
+  const meses = seisMeses.slice(primero === -1 ? seisMeses.length - 1 : primero);
   const mesActual = meses[meses.length - 1];
   const [tocado, setTocado] = useState(mesActual);
   const controlado = explorar && !!onElegirMes;
@@ -105,6 +112,8 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
   const elegir = (mes: string) => (onElegirMes ? onElegirMes(mes) : setTocado(mes));
   const esEsteMes = elegido === mesActual;
   const [borrando, setBorrando] = useState<string | null>(null);
+  // La lista de ingresos (sólo en Gastos) muestra los primeros y "Ver todos".
+  const [verTodosIngresos, setVerTodosIngresos] = useState(false);
 
   const modoSemana = !!semana;
   const dias = semana
@@ -155,12 +164,14 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
     : estado.ingresos.filter((i) => mesDe(i.ts) === elegido);
   const tituloPeriodo = modoSemana ? semana.etiqueta : esEsteMes ? 'Este mes' : nombreMes(elegido, true);
   const esteTexto = modoSemana ? (semana.actual ? 'esta semana' : 'esa semana') : esEsteMes ? 'este mes' : 'ese mes';
-  const anchoColumna = modoSemana ? 'min-w-[34px]' : 'min-w-[44px]';
+  // Los meses no llevan ancho mínimo: con 6 columnas de 44px el gráfico medía
+  // más que la tarjeta en un celular de 360px y se salía de la pantalla.
+  const anchoColumna = modoSemana ? 'min-w-[34px]' : 'min-w-0';
 
   if (nadaRegistrado) {
     return (
-      <p className="text-[15px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
-        Cuando registres lo que te entra y lo que gastás, acá vas a ver cuánto entra y cuánto sale cada {modoSemana ? 'día' : 'mes'}{explorar ? ', y cuánto te queda' : ''}.
+      <p className="text-[13px] leading-snug pl-3.5 border-l-2 py-1" style={{ color: COLORS.inkSoft, borderColor: COLORS.brandSoft }}>
+        Anotá tus ingresos y gastos para ver cuánto entra y sale cada {modoSemana ? 'día' : 'mes'}.
       </p>
     );
   }
@@ -169,26 +180,34 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
     <div className="flex flex-col gap-3">
       {/* El período elegido, en números. */}
       <div className="flex flex-col gap-2">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: COLORS.inkSoft, fontFamily: FONTS.mono }}>
-          {tituloPeriodo}
-        </p>
+        {/* Controlado, el mes ya se dice arriba, en el selector. */}
+        {!controlado && (
+          <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
+            {tituloPeriodo}
+          </p>
+        )}
         <div className={`grid gap-2 ${explorar ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          <Cifra color={INGRESO} etiqueta="Entró" valor={actual.entro} />
-          <Cifra color={GASTO} etiqueta="Salió" valor={actual.salio} />
+          <Cifra color={INGRESO} etiqueta="Ingresos" valor={actual.entro} />
+          <Cifra color={GASTO} etiqueta="Gastos" valor={actual.salio} />
           {/* Sólo cuando hay ingresos cargados: sin ellos "te quedó" sería
               "menos lo que gastaste", que no es verdad. En tinta, nunca en
               alerta: pasarse no es un error (regla 3). */}
           {explorar && actual.entro > 0 && (
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? 'Te quedó' : 'Te pasaste por'}</span>
-              <span className="text-[17px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
+              {/* "Te quedó" y no "Disponible": el disponible de Gastos además
+                  resta lo apartado para tus objetivos, y el mismo nombre para
+                  dos números distintos confunde (textos.md §7). */}
+              <span className="text-[13px]" style={{ color: COLORS.inkSoft }}>{quedo >= 0 ? 'Te quedó' : 'Gastaste de más'}</span>
+              <span className="text-[14px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(Math.abs(quedo))}</span>
             </div>
           )}
         </div>
         {actual.entro === 0 && actual.salio > 0 && (
-          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            Registraste gastos {esteTexto}, pero no ingresos.{' '}
-            {explorar ? 'Si los cargás, se ve cuánto te queda.' : 'Si los cargás, se ve cuánto entró.'}
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
+            {/* Sin explorar no se muestra la diferencia, sólo las dos cifras:
+                ahí lo que falta ver es cuánto entró. */}
+            {esteTexto.charAt(0).toUpperCase() + esteTexto.slice(1)} no anotaste ingresos.{' '}
+            {explorar ? 'Anotalos para ver la diferencia.' : 'Anotalos para ver cuánto entró.'}
           </p>
         )}
       </div>
@@ -201,7 +220,7 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
           className="flex items-end gap-1"
           style={{ height: 124 }}
           role="group"
-          aria-label={modoSemana ? `Ingresos y gastos de cada día: ${semana.etiqueta}` : 'Ingresos y gastos de los últimos 6 meses'}
+          aria-label={modoSemana ? `Ingresos y gastos de cada día: ${semana.etiqueta}` : 'Ingresos y gastos por mes'}
         >
           {columnas.map((c) => {
             const barras = (
@@ -260,22 +279,22 @@ export function IngresosVsGastos({ conLista = false, explorar = false, mesElegid
 
       {/* Leyenda: el color no es lo único que dice qué es cada barra. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <Leyenda color={INGRESO} texto="Entró" />
-        <Leyenda color={GASTO} texto="Salió" />
-        <span className="text-[13px]" style={{ color: COLORS.inkFaint }}>Según lo que registraste</span>
+        <Leyenda color={INGRESO} texto="Ingresos" />
+        <Leyenda color={GASTO} texto="Gastos" />
       </div>
 
       {conLista && (
         <div className="flex flex-col pt-1">
-          <p className="text-[15px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
-            {modoSemana ? `Ingresos · ${semana.etiqueta}` : `Ingresos de ${esEsteMes ? 'este mes' : nombreMes(elegido, true)}`}
+          <p className="text-[14px] font-bold" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>
+            {modoSemana ? `Ingresos de ${semana.actual ? 'esta semana' : semana.etiqueta === 'Semana pasada' ? 'la semana pasada' : `la semana del ${semana.etiqueta}`}` : `Ingresos de ${esEsteMes ? 'este mes' : nombreMes(elegido, true)}`}
           </p>
           {ingresosLista.length === 0 && (
-            <p className="text-[14px] py-2" style={{ color: COLORS.inkSoft }}>No hay ingresos registrados.</p>
+            <p className="text-[13px] py-2" style={{ color: COLORS.inkSoft }}>No hay ingresos registrados.</p>
           )}
-          {ingresosLista.map((i) => (
+          {recortar(ingresosLista, verTodosIngresos).map((i) => (
             <FilaIngreso key={i.id} ingreso={i} abierto={borrando === i.id} onAbrir={() => setBorrando(borrando === i.id ? null : i.id)} onCerrar={() => setBorrando(null)} />
           ))}
+          <VerTodos total={ingresosLista.length} abierta={verTodosIngresos} onToggle={() => setVerTodosIngresos((v) => !v)} />
         </div>
       )}
     </div>
@@ -289,7 +308,7 @@ function Cifra({ color, etiqueta, valor }: { color: string; etiqueta: string; va
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} aria-hidden />
         {etiqueta}
       </span>
-      <span className="text-[17px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(valor)}</span>
+      <span className="text-[14px] font-bold font-mono tabular-nums truncate" style={{ color: COLORS.ink }}>{fmtMoney(valor)}</span>
     </div>
   );
 }
@@ -313,7 +332,8 @@ function Leyenda({ color, texto }: { color: string; texto: string }) {
   );
 }
 
-function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingreso; abierto: boolean; onAbrir: () => void; onCerrar: () => void }) {
+/** Un ingreso con editar y borrar. La usan este gráfico, Gastos y Todos tus ingresos. */
+export function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingreso; abierto: boolean; onAbrir: () => void; onCerrar: () => void }) {
   const fuente = i.fuente === 'otro' && i.fuenteOtra ? i.fuenteOtra : FUENTES_INGRESO.find((f) => f.id === i.fuente)?.label;
   const titulo = i.descripcion || fuente || 'Ingreso';
   const monto = i.moneda === 'USD' ? `US$${i.monto.toLocaleString('es-AR')}` : fmtMoney(i.monto);
@@ -324,12 +344,12 @@ function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingr
       <div className="flex items-center gap-2.5">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: INGRESO }} aria-hidden />
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] truncate" style={{ color: COLORS.ink }}>{titulo}</p>
+          <p className="text-[14px] truncate" style={{ color: COLORS.ink }}>{titulo}</p>
           <p className="text-[13px] truncate" style={{ color: COLORS.inkSoft }}>
-            {[i.medio, i.origen === 'whatsapp' ? 'por WhatsApp' : null, new Date(i.ts).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })].filter(Boolean).join(' · ')}
+            {[i.medio, i.origen === 'whatsapp' ? 'por WhatsApp' : null, new Date(i.ts).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })].filter(Boolean).join(', ')}
           </p>
         </div>
-        <span className="font-mono tabular-nums text-[15px] shrink-0" style={{ color: COLORS.ink }}>+{monto}</span>
+        <span className="font-mono tabular-nums text-[14px] shrink-0" style={{ color: COLORS.ink }}>+{monto}</span>
         <button
           type="button"
           onClick={() => { setEditando((v) => !v); onCerrar(); }}
@@ -354,14 +374,14 @@ function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingreso: Ingr
       {editando && <EditorIngreso ingreso={i} onCerrar={() => setEditando(false)} />}
       {abierto && (
         <div className="mt-2 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
+          <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
             ¿Borrar este ingreso de <span className="font-mono tabular-nums">{monto}</span>?
           </p>
           <div className="flex gap-2">
-            <button type="button" autoFocus onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+            <button type="button" autoFocus onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
               Cancelar
             </button>
-            <button type="button" onClick={() => { onCerrar(); acciones.borrarIngreso(i.id); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
+            <button type="button" onClick={() => { onCerrar(); acciones.borrarIngreso(i.id); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
               Sí, borrar
             </button>
           </div>

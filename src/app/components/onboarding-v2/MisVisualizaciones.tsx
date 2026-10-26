@@ -1,17 +1,11 @@
 import { useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { COLORS, Donut, FONTS, TituloSeccion, fmtMoney, vistaGastos } from './shared';
+import { colorDeSeccion } from './datosGasto';
 import { IngresosVsGastos, mesAtras } from './IngresosVsGastos';
 import { IconChevron } from './FinaIcons';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { diaArgentina } from '../../api/v2/pasos';
-
-// Los mismos colores y en el mismo orden que el donut de Gastos (CAT_COLORS en
-// GastosV2), para que una sección se reconozca en las dos pantallas.
-const CAT_COLORS = [COLORS.brand, COLORS.naranja, COLORS.star, COLORS.lima, COLORS.azul, COLORS.magenta];
-function colorDeSeccion(id: string, categorias: { id: string }[]): string {
-  return CAT_COLORS[Math.max(categorias.findIndex((c) => c.id === id), 0) % CAT_COLORS.length];
-}
 
 // "Mis visualizaciones" en Home: todos los gráficos a la vez, en una fila que se
 // desliza de costado. Antes había que elegir cuál ver con unos chips, y lo que

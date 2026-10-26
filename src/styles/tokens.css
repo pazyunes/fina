@@ -20,6 +20,13 @@
   /* Fideo magenta — extremidades de Fini */
   --fina-fideo: #C23FA8;
 
+  /* Cuatro más, sólo para las categorías de gastos (frontend.md §3.3): con
+     ellos son 8 colores que no se repiten. Validados con dataviz/validate. */
+  --fina-cian: #0E9FB8;
+  --fina-bordo: #8C2F5A;
+  --fina-aqua: #1BAF7A;
+  --fina-amarillo-dato: #EDA100;  /* el star es muy claro para una marca de datos */
+
   /* Neutros / superficies */
   --fina-tinta: #1F1B2E;   /* texto principal */
   --fina-gris: #6B647A;    /* subtítulos, labels */

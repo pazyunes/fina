@@ -11,6 +11,9 @@ import { InversionesV2 } from "./components/onboarding-v2/InversionesV2";
 import { PerfilV2 } from "./components/onboarding-v2/PerfilV2";
 import { GruposV2 } from "./components/onboarding-v2/GruposV2";
 import { ProgresoPasos } from "./components/onboarding-v2/ProgresoPasos";
+import { TodosLosGastos } from "./components/onboarding-v2/TodosLosGastos";
+import { TodosLosIngresos } from "./components/onboarding-v2/TodosLosIngresos";
+import { TodasLasSecciones } from "./components/onboarding-v2/TodasLasSecciones";
 import { FiniPlayground } from "./components/onboarding-v2/FiniPlayground";
 import { TerminosPantalla } from "./components/onboarding-v2/TerminosPantalla";
 
@@ -82,6 +85,10 @@ export const router = createBrowserRouter([
     children: [
       { path: "/onboarding-v2/home", element: <HomeV2 /> },
       { path: "/onboarding-v2/gastos", element: <GastosV2 /> },
+      // "Ver todos" de cada parte de Gastos: la lista completa.
+      { path: "/onboarding-v2/gastos/todos", element: <TodosLosGastos /> },
+      { path: "/onboarding-v2/gastos/ingresos", element: <TodosLosIngresos /> },
+      { path: "/onboarding-v2/gastos/secciones", element: <TodasLasSecciones /> },
       { path: "/onboarding-v2/objetivos", element: <ObjetivosV2 /> },
       { path: "/onboarding-v2/inversiones", element: <InversionesV2 /> },
       { path: "/onboarding-v2/perfil", element: <PerfilV2 /> },

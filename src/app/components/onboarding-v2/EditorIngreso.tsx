@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { COLORS, aInputFechaHora, deInputFechaHora, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
+import { BORDE_FALTA, COLORS, TextoFalta, formatMontoInicial, formatThousands, parseMoneyInput } from './shared';
+import { useFaltantes } from './useFaltantes';
+import { aInputFecha, deInputFecha } from './FormularioGasto';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { FUENTES_INGRESO, type FuenteIngreso, type Ingreso, type MonedaConvertible } from '../../api/v2/tipos';
@@ -22,12 +24,14 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
   const [medio, setMedio] = useState(ingreso.medio ?? '');
   const [medioOtro, setMedioOtro] = useState('');
   const [descripcion, setDescripcion] = useState(ingreso.descripcion);
-  const [fechaHora, setFechaHora] = useState(() => aInputFechaHora(ingreso.ts));
+  // Sólo el día, como en los gastos.
+  const [fecha, setFecha] = useState(() => aInputFecha(ingreso.ts));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const montoNum = parseMoneyInput(monto);
   const medioFinal = (medio === 'otro' ? medioOtro : medio).trim();
+  const faltantes = useFaltantes({ monto: montoNum <= 0 });
 
   async function guardar() {
     if (montoNum <= 0 || guardando) return;
@@ -37,7 +41,6 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
     // siempre recalcularía a la cotización de HOY un ingreso en dólares viejo
     // con sólo corregirle la descripción.
     const cambioMonto = montoNum !== ingreso.monto || moneda !== ingreso.moneda;
-    const ts = deInputFechaHora(fechaHora);
     const r = await acciones.editarIngreso(ingreso.id, {
       monto: cambioMonto ? montoNum : undefined,
       moneda: cambioMonto ? moneda : undefined,
@@ -45,8 +48,8 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
       fuenteOtra,
       descripcion,
       medio: medioFinal && medioFinal !== ingreso.medio ? medioFinal : undefined,
-      // La fecha del input no tiene segundos: si no se tocó, no se pisa la original.
-      ts: fechaHora === aInputFechaHora(ingreso.ts) ? undefined : ts,
+      // La fecha del input no tiene hora: si no se tocó, no se pisa la original.
+      ts: fecha === aInputFecha(ingreso.ts) ? undefined : deInputFecha(fecha, ingreso.ts),
     });
     setGuardando(false);
     if (r.error !== null) { setError(r.error); return; }
@@ -54,18 +57,20 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
   }
 
   return (
-    <div className="mt-2 rounded-xl px-3.5 py-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }} role="group" aria-label="Editar ingreso">
-      <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>Editar ingreso</p>
+    <div ref={faltantes.ref} className="mt-2 rounded-xl px-3.5 py-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }} role="group" aria-label="Editar ingreso">
+      <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Editar ingreso</p>
 
       <div className="flex gap-2">
         <div className="relative flex-1 min-w-0">
           <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{moneda === 'USD' ? 'US$' : '$'}</span>
           <input
             autoFocus
+            data-campo="monto"
             aria-label="Monto del ingreso"
+            aria-invalid={faltantes.marcado('monto') || undefined}
             inputMode="decimal"
-            className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[16px]"
-            style={INPUT_STYLE}
+            className="v2-focus w-full rounded-xl pl-10 pr-3 py-2.5 text-[14px]"
+            style={{ ...INPUT_STYLE, ...(faltantes.marcado('monto') ? { border: BORDE_FALTA } : {}) }}
             value={monto}
             onChange={(e) => setMonto(formatThousands(e.target.value))}
           />
@@ -77,7 +82,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
               type="button"
               onClick={() => setMoneda(m)}
               aria-pressed={moneda === m}
-              className="v2-focus px-2.5 text-[14px] font-bold"
+              className="v2-focus px-2.5 text-[13px] font-bold"
               style={moneda === m ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink }}
             >
               {m}
@@ -85,14 +90,15 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
           ))}
         </div>
       </div>
+      {faltantes.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`ing-fuente-${ingreso.id}`} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>¿De dónde vino?</label>
+        <label htmlFor={`ing-fuente-${ingreso.id}`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿De dónde vino?</label>
         <select
           id={`ing-fuente-${ingreso.id}`}
           value={fuente}
           onChange={(e) => setFuente(e.target.value as FuenteIngreso | '')}
-          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[14px]"
           style={{ ...INPUT_STYLE, color: fuente ? COLORS.ink : COLORS.inkFaint }}
         >
           <option value="" style={{ color: COLORS.ink }}>Sin especificar</option>
@@ -103,7 +109,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
             aria-label="De dónde vino la plata, cuál"
             maxLength={40}
             placeholder="Escribí de dónde (ej: Beca, Alquiler)"
-            className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+            className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[14px]"
             style={INPUT_STYLE}
             value={fuenteOtra}
             onChange={(e) => setFuenteOtra(e.target.value)}
@@ -112,12 +118,12 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`ing-medio-${ingreso.id}`} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>¿Dónde entró?</label>
+        <label htmlFor={`ing-medio-${ingreso.id}`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Dónde entró?</label>
         <select
           id={`ing-medio-${ingreso.id}`}
           value={medio}
           onChange={(e) => setMedio(e.target.value)}
-          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[14px]"
           style={{ ...INPUT_STYLE, color: medio ? COLORS.ink : COLORS.inkFaint }}
         >
           <option value="" style={{ color: COLORS.ink }}>Elegí un medio</option>
@@ -128,7 +134,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
           <input
             aria-label="En qué medio entró, cuál"
             placeholder="Ej: Ualá"
-            className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+            className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[14px]"
             style={INPUT_STYLE}
             value={medioOtro}
             onChange={(e) => setMedioOtro(e.target.value)}
@@ -139,36 +145,36 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
       <input
         aria-label="Descripción del ingreso"
         placeholder="Descripción (opcional)"
-        className="v2-focus rounded-xl px-3.5 py-2.5 text-[16px]"
+        className="v2-focus rounded-xl px-3.5 py-2.5 text-[14px]"
         style={INPUT_STYLE}
         value={descripcion}
         onChange={(e) => setDescripcion(e.target.value)}
       />
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`ing-fecha-${ingreso.id}`} className="text-[14px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha y hora</label>
+        <label htmlFor={`ing-fecha-${ingreso.id}`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha</label>
         <input
           id={`ing-fecha-${ingreso.id}`}
-          type="datetime-local"
-          className="v2-focus rounded-xl px-3.5 min-h-[48px] text-[16px]"
+          type="date"
+          className="v2-focus w-full min-w-0 rounded-xl px-3.5 min-h-[48px] text-[14px]"
           style={INPUT_STYLE}
-          value={fechaHora}
-          max={aInputFechaHora(Date.now())}
-          onChange={(e) => setFechaHora(e.target.value)}
+          value={fecha}
+          max={aInputFecha(Date.now())}
+          onChange={(e) => setFecha(e.target.value)}
         />
       </div>
 
-      {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
+      {error && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
 
       <div className="flex gap-2">
-        <button type="button" onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+        <button type="button" onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
           Cancelar
         </button>
         <button
           type="button"
-          onClick={() => void guardar()}
-          disabled={montoNum <= 0 || guardando}
-          className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[15px] font-bold v2-disabled"
+          onClick={() => faltantes.intentar(() => void guardar())}
+          disabled={guardando}
+          className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[13px] font-bold v2-disabled"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
           {guardando ? 'Guardando…' : 'Guardar cambios'}

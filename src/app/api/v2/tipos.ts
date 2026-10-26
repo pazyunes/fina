@@ -141,6 +141,14 @@ export type Objetivo = {
   /** Sólo cuando modoMonto === 'rango'. */
   montoMin: number | null;
   estado: 'active' | 'achieved' | 'cancelled';
+  /**
+   * 'ahorro' = un objetivo; 'gasto' = algo que ya se sabe que se va a pagar
+   * (migración 0043 de Mis planes). Mientras Mis planes no esté en producción
+   * no viene: todo objetivo es de ahorro.
+   */
+  clase?: 'ahorro' | 'gasto';
+  /** Sólo en los gastos: si se repite cada semana o cada mes. */
+  repite?: 'mensual' | 'semanal' | null;
   contribuciones: Contribucion[];
 };
 

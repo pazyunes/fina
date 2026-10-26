@@ -87,6 +87,12 @@ export const COLORS = {
   // emparentadas entre sí.
   azul: '#3D6FF5', azulSoft: '#E2EAFF',
   magenta: '#C23FA8', magentaSoft: '#F9E1F2',
+  // Cuatro más, sólo para las categorías de gastos (ver CAT_COLORS en
+  // datosGasto.ts): con ellos son 8 que no se repiten.
+  cian: '#0E9FB8',
+  bordo: '#8C2F5A',
+  aqua: '#1BAF7A',
+  amarilloDato: '#EDA100', // el star es muy claro para una marca de datos
 
   // ── Aliases de compatibilidad: keys viejas → paleta de la guía ──
   green: '#B0E150', greenSoft: '#EAF5D0',                  // éxito/valor → lima
@@ -958,6 +964,15 @@ export function OpcionesMulti({
       })}
     </div>
   );
+}
+
+// Un campo que falta completar (useFaltantes). El tono de error de la paleta
+// (naranja-texto, frontend.md §3.3: en FINA no hay rojo) en el borde, y una
+// línea corta abajo: el color solo no alcanza para saber qué pasa (WCAG 1.4.1).
+export const BORDE_FALTA = `1.5px solid ${COLORS.naranjaText}`;
+
+export function TextoFalta({ children }: { children: React.ReactNode }) {
+  return <p className="text-[13px] font-semibold" style={{ color: COLORS.naranjaText }}>{children}</p>;
 }
 
 // CTA principal. El deshabilitado llevaba relleno #F1EBDF (1.11 sobre papel) y
