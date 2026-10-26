@@ -63,10 +63,8 @@ export function GastosV2() {
   const [chooser, setChooser] = useState(false);
   const [waStep, setWaStep] = useState(false);
 
-  // Agregar plata: "Me entró" es un ingreso; "Ya la tenía" es plata que ya
-  // estaba en un medio y sólo suma al disponible, sin contar como ingreso.
+  // Agregar ingreso.
   const [addingDisponible, setAddingDisponible] = useState(false);
-  const [addDispEsIngreso, setAddDispEsIngreso] = useState(true);
   const [addDispVal, setAddDispVal] = useState('');
   const faltaIngreso = useFaltantes({ monto: parseMoneyInput(addDispVal) <= 0 }, addingDisponible);
   const [addDispMetodo, setAddDispMetodo] = useState<string | null>(null);
@@ -204,31 +202,17 @@ export function GastosV2() {
     .sort((a, b) => b.ts - a.ts)
     .slice(0, 5);
 
-  // ── Medios de pago en el período: lo que entró en cada uno (ingresos y plata
-  // que ya tenía), lo que salió y lo que queda. Misma cuenta que el disponible
-  // de arriba, sin arrastrar lo que sobró antes. Un gasto dividido resta a cada
-  // medio su parte. No es el dato principal: va abajo.
-  const SIN_MEDIO = 'Sin medio elegido';
-  const mediosVentana = (() => {
-    const mapa = new Map<string, { entro: number; salio: number }>();
-    const de = (nombre: string) => {
-      let v = mapa.get(nombre);
-      if (!v) { v = { entro: 0, salio: 0 }; mapa.set(nombre, v); }
-      return v;
-    };
-    const enVentana = (ts: number) => ts >= desdeVentana && ts < hastaVentana;
-    for (const i of db.ingresos) if (enVentana(i.ts)) de(i.medio || SIN_MEDIO).entro += i.montoArs;
-    for (const c of db.cargas) if (enVentana(c.ts)) de(c.medio).entro += c.montoArs;
+  // ── Con qué pagaste en el período: cada medio con lo que salió de él. Un
+  // gasto dividido suma a cada medio su parte. No es el dato principal: va abajo.
+  const porMedio = (() => {
+    const m = new Map<string, number>();
     for (const g of gastosVentana) {
-      if (g.pagos?.length) for (const p of g.pagos) de(p.medio).salio += p.monto;
-      else de(g.metodoPago || SIN_MEDIO).salio += g.montoArs;
+      if (g.pagos?.length) for (const p of g.pagos) m.set(p.medio, (m.get(p.medio) ?? 0) + p.monto);
+      else m.set(g.metodoPago || 'Sin medio elegido', (m.get(g.metodoPago || 'Sin medio elegido') ?? 0) + g.montoArs);
     }
-    return [...mapa.entries()]
-      .map(([nombre, v]) => ({ nombre, entro: v.entro, salio: v.salio, quedan: v.entro - v.salio }))
-      // Lo que entró o salió sin medio va al final.
-      .sort((a, b) => (a.nombre === SIN_MEDIO ? 1 : b.nombre === SIN_MEDIO ? -1 : b.quedan - a.quedan));
+    return [...m.entries()].map(([nombre, monto]) => ({ nombre, monto })).filter((x) => x.monto > 0).sort((a, b) => b.monto - a.monto);
   })();
-  const maxQuedan = Math.max(1, ...mediosVentana.map((m) => m.quedan));
+  const maxMedio = Math.max(1, ...porMedio.map((x) => x.monto));
 
   function cerrarMedios() {
     setEditandoMedios(false);
@@ -318,7 +302,6 @@ export function GastosV2() {
     setAddDispMetodoOtro('');
     setAddDispFuente('');
     setAddDispFuenteOtra('');
-    setAddDispEsIngreso(true);
     setAddingDisponible(false);
   }
 
@@ -328,8 +311,7 @@ export function GastosV2() {
     const metodo = (addDispMetodo === 'otro' ? addDispMetodoOtro.trim() : addDispMetodo) || '';
     // El medio usado sube al principio de la lista: al registrar un gasto se
     // ofrecen los más recientes primero.
-    if (addDispEsIngreso) void acciones.registrarIngreso({ monto: n, moneda: 'ARS', fuente: addDispFuente || null, fuenteOtra: addDispFuenteOtra, medio: metodo });
-    else acciones.sumarDisponible(metodo, n);
+    void acciones.registrarIngreso({ monto: n, moneda: 'ARS', fuente: addDispFuente || null, fuenteOtra: addDispFuenteOtra, medio: metodo });
     cerrarIngreso();
   }
 
@@ -512,28 +494,17 @@ export function GastosV2() {
               className="v2-focus flex-1 rounded-2xl py-4 text-[14px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
               style={{ background: COLORS.brandSoft, color: COLORS.brandDark }}
             >
-              + Agregar plata
+              + Agregar ingreso
             </button>
           </div>
 
         {addingDisponible && (
-          <Hoja titulo="Agregar plata" onCerrar={cerrarIngreso}>
+          <Hoja titulo="Nuevo ingreso" onCerrar={cerrarIngreso}>
           <div ref={faltaIngreso.ref} className="flex flex-col gap-2 pt-1">
-            <SegmentedTab
-              options={[{ id: 'ingreso' as const, label: 'Me entró' }, { id: 'tenia' as const, label: 'Ya la tenía' }]}
-              value={addDispEsIngreso ? 'ingreso' : 'tenia'}
-              onChange={(v) => setAddDispEsIngreso(v === 'ingreso')}
-              trackColor={COLORS.tint}
-            />
-            <p className="text-[12px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              {addDispEsIngreso
-                ? 'Cuenta como ingreso: se suma a lo que entró este mes.'
-                : 'Sólo suma a tu dinero disponible, sin contar como ingreso.'}
-            </p>
             <input
               autoFocus
               data-campo="monto"
-              aria-label={addDispEsIngreso ? 'Monto que te entró' : 'Monto que ya tenías'}
+              aria-label="Monto que te entró"
               aria-invalid={faltaIngreso.marcado('monto') || undefined}
               className="v2-focus w-full rounded-xl px-3 min-h-[44px] text-[14px] transition-colors"
               style={{ ...INPUT_STYLE, ...(faltaIngreso.marcado('monto') ? { border: BORDE_FALTA } : {}) }}
@@ -543,7 +514,6 @@ export function GastosV2() {
               onChange={(e) => setAddDispVal(formatThousands(e.target.value))}
             />
             {faltaIngreso.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
-            {addDispEsIngreso && (<>
             <select
               aria-label="De dónde vino la plata"
               value={addDispFuente}
@@ -589,10 +559,9 @@ export function GastosV2() {
                 )}
               </div>
             )}
-            </>)}
             {/* Se pregunta el medio acá para que después, al registrar un
                 gasto, se puedan ofrecer los que de verdad tenés. */}
-            <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{addDispEsIngreso ? '¿Dónde entró?' : '¿En qué la tenés?'}</p>
+            <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Dónde entró?</p>
             <div className="flex flex-wrap gap-1.5">
               {metodosOfrecidos.map((m) => (
                 <button
@@ -632,7 +601,7 @@ export function GastosV2() {
                 Cancelar
               </button>
               <button type="button" onClick={() => faltaIngreso.intentar(agregarDinero)} className="v2-focus flex-[2] rounded-xl min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>
-                {addDispEsIngreso ? 'Agregar ingreso' : 'Agregar'}
+                Agregar ingreso
               </button>
             </div>
           </div>
@@ -775,38 +744,27 @@ export function GastosV2() {
         )}
       </section>
 
-      {/* Medios de pago en el período: cuánto queda en cada uno, con lo que
-          entró y lo que salió. Una sola serie, así que un solo color; el monto
-          en tinta. Un medio en negativo queda con la barra vacía y se dice con
-          el número, sin alerta (regla 3). */}
-      {(mediosVentana.length > 0 || db.mediosPago.length > 0) && (
+      {/* Con qué pagaste en el período. Una sola serie (cuánto salió de cada
+          medio), así que un solo color; el monto en tinta. Abajo, "Editar
+          medios" para unir dos que son el mismo. */}
+      {(porMedio.length > 0 || db.mediosPago.length > 1) && (
         <section className="flex flex-col gap-2.5" aria-label="Medios de pago">
           <TituloSeccion>Medios de pago {referenciaPeriodo}</TituloSeccion>
-          {mediosVentana.length === 0 ? (
-            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              Cuando cargues plata o un gasto con un medio, acá ves cuánto te queda en cada uno.
-            </p>
-          ) : mediosVentana.map((m) => {
-            const texto = m.quedan < 0 ? `-${fmtMoney(-m.quedan)}` : fmtMoney(m.quedan);
-            return (
-              <div key={m.nombre} className="flex flex-col gap-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[13px] truncate" style={{ color: COLORS.ink }}>{m.nombre}</span>
-                  <span className="text-[13px] font-semibold shrink-0 font-mono tabular-nums" style={{ color: COLORS.ink }}>{texto}</span>
-                </div>
-                <div className="h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.line }} aria-hidden>
-                  <div className="h-full rounded-full" style={{ width: `${(Math.max(m.quedan, 0) / maxQuedan) * 100}%`, background: COLORS.limaViz }} />
-                </div>
-                <span className="text-[12px] font-mono tabular-nums" style={{ color: COLORS.inkSoft }}>
-                  Entró {fmtMoney(m.entro)}, salió {fmtMoney(m.salio)}
-                </span>
-              </div>
-            );
-          })}
-          {conApartado && mediosVentana.length > 0 && (
-            <p className="text-[12px] leading-snug" style={{ color: COLORS.inkSoft }}>Sin restar lo apartado para tus objetivos.</p>
+          {porMedio.length === 0 && (
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>No hay gastos {referenciaPeriodo}.</p>
           )}
-          {db.mediosPago.length > 0 && (
+          {porMedio.map((x) => (
+            <div key={x.nombre} className="flex flex-col gap-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[13px] truncate" style={{ color: COLORS.ink }}>{x.nombre}</span>
+                <Monto value={x.monto} className="text-[13px] font-semibold shrink-0" />
+              </div>
+              <div className="h-2.5 rounded-full overflow-hidden" style={{ background: COLORS.line }}>
+                <div className="h-full rounded-full" style={{ width: `${(x.monto / maxMedio) * 100}%`, background: COLORS.brand }} />
+              </div>
+            </div>
+          ))}
+          {db.mediosPago.length > 1 && (
             <button
               type="button"
               onClick={() => setEditandoMedios(true)}
@@ -823,9 +781,7 @@ export function GastosV2() {
       {editandoMedios && (
         <Hoja titulo="Tus medios de pago" onCerrar={cerrarMedios}>
           <p className="text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-            {db.mediosPago.length < 2
-              ? 'Cuando tengas dos medios que en realidad son el mismo (por ejemplo "MP" y "Mercado Pago") los vas a poder unir acá.'
-              : 'Si tenés el mismo medio con dos nombres (por ejemplo "MP" y "Mercado Pago"), unilos: se juntan los saldos y todos los gastos, ingresos y cargas pasan al que elijas.'}
+            Si tenés el mismo medio con dos nombres (por ejemplo "MP" y "Mercado Pago"), unilos: todo lo que registraste con uno pasa al que elijas.
           </p>
           <ul className="flex flex-col">
             {db.mediosPago.map((m) => {
