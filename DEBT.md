@@ -62,6 +62,7 @@ Todo lo de seguridad conocido está resuelto en la migración 0039 (ver hechos);
 | B5 | Funcionalidad | Editar un aporte en dólares sin cotización lo guardaba en pesos sin avisar, y nunca guardaba el id de la cotización. Ahora convierte igual que el alta y avisa si falta el dólar. | f2addc5 |
 | B6 | Limpieza | Inversiones hacía `fetch` del dólar desde `lib/exchangeRate.ts`. Ahora usa `api/v2/cotizacion.ts`. | f2addc5 |
 | B7 | Seguridad | La pantalla de prueba de Fini (`/onboarding-v2/fini`) era pública en producción. Ahora sólo existe en `npm run dev`. | f2addc5 |
+| B8 | Funcionalidad | El consejo del mes se armaba una vez y quedaba todo el mes, aunque después se cargaran gastos ("Octubre va sin un solo gasto cargado" el 26). Ahora el de la semana y el del mes se rehacen si se registró algo después o si pasó una semana, y la IA no escribe cuántos días van. | Consejo al día |
 | I3 | Diseño | Inicio, paso del día: sin bajada. Queda Tu paso de hoy, el título del paso y el botón. | Inicio: más limpio |
 | I4 | Diseño | Inicio: fueguito de racha de 16 a 28px y número de 20 a 26px. | Inicio: más limpio |
 | I5 | Diseño | Inicio: el gráfico de ingresos y gastos ya no se sale de la pantalla, arranca en el primer mes con datos y se llama Ingresos y gastos por mes. Te pasaste por pasó a Salió de más. | Inicio: más limpio |

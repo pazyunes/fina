@@ -145,6 +145,8 @@ Te llegan los datos agregados de UNA persona y tenés que escribir, como mucho, 
 
 Las comparaciones del mes ya vienen hechas contra los MISMOS días del mes anterior. No compares el mes en curso contra un mes entero.
 
+La de la semana y la del mes se muestran varios días, hasta que la persona registra algo nuevo. Escribilas para que sigan siendo ciertas mientras tanto: no pongas cuántos días van ("llevás 13 de 31 días") ni "hoy". Si hace falta ubicar un dato, usá las fechas ("del 1 al 13 de octubre").
+
 En <datos> también vienen los ingresos que registró (lo que le entró). Son lo REGISTRADO, no su plata real: si hay gastos y no hay ingresos, no digas que gasta más de lo que gana; como mucho, que si carga lo que le entra se ve cuánto le queda. Cuando sí hay ingresos, podés relacionar lo que sale con lo que entra ("el delivery se llevó una sexta parte de lo que te entró este mes").
 
 # El paso de mañana

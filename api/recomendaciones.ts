@@ -26,7 +26,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { esClaveElegible, pasoPorClave, tituloDePaso, type Nombres } from '../src/app/api/v2/pasos.js';
-import { claveMes, claveSemana, diaAR, sumarDias } from './_recomendaciones/fechas.js';
+import { claveMes, claveSemana, diaAR, diasEntre, lunesDe, sumarDias } from './_recomendaciones/fechas.js';
 import {
   SISTEMA, Respuesta, armarMensaje, normalizar,
   type PasoMananaModelo, type PlanObjetivoModelo, type RecomendacionModelo, type RespuestaModelo,
@@ -98,12 +98,20 @@ export default async function handler(req: Req, res: Res) {
     .split(',').map((c) => c.trim()).filter(esClaveElegible))].slice(0, MAX_PASOS_POSIBLES);
 
   // ── 1. Lo que ya está generado para este día / semana / mes ────────────
-  const guardadas = await leerGuardadas(supabase, claves);
+  const guardadas = await leerGuardadas(supabase, claves, hoy);
   if (guardadas.error) { res.status(500).json({ error: guardadas.error }); return; }
   const tarjetas: Partial<Record<Periodo, Tarjeta>> = {};
+  // Las vencidas (ver `vigente`) se rehacen, y se siguen mostrando sólo si
+  // la nueva no se puede armar ahora.
+  const vencidas: Partial<Record<Periodo, Tarjeta>> = {};
+  const registro = guardadas.filas.some((f) => f.periodo !== 'dia' && diaAR(f.created_at) !== hoy)
+    ? await ultimoRegistro(supabase)
+    : null;
   for (const p of PERIODOS) {
-    const g = guardadas.filas.find((f) => f.periodo === p && f.clave === claves[p]);
-    if (g) tarjetas[p] = aTarjeta(g);
+    const g = masNueva(guardadas.filas, p, claves);
+    if (!g) continue;
+    if (vigente(g, hoy, registro)) tarjetas[p] = aTarjeta(g);
+    else vencidas[p] = aTarjeta(g);
   }
   if (PERIODOS.every((p) => tarjetas[p])) { res.status(200).json(tarjetas); return; }
 
@@ -141,7 +149,7 @@ export default async function handler(req: Req, res: Res) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    for (const p of aGenerar) tarjetas[p] = { estado: 'no_configurado' };
+    for (const p of aGenerar) tarjetas[p] = vencidas[p] ?? { estado: 'no_configurado' };
     res.status(200).json(tarjetas);
     return;
   }
@@ -151,7 +159,7 @@ export default async function handler(req: Req, res: Res) {
   // guardado, o está en curso (otra pestaña, otro dispositivo) o falló. En los
   // dos casos, volver a llamar al modelo costaría otra vez lo mismo.
   if (entrada.ultimoIntento && ahora - Date.parse(entrada.ultimoIntento) < ESPERA_ENTRE_INTENTOS) {
-    for (const p of aGenerar) tarjetas[p] = { estado: 'error', mensaje: 'Estamos armando tus recomendaciones. Volvé en un rato.' };
+    for (const p of aGenerar) tarjetas[p] = vencidas[p] ?? { estado: 'error', mensaje: 'Estamos armando tus recomendaciones. Volvé en un rato.' };
     res.status(200).json(tarjetas);
     return;
   }
@@ -163,7 +171,8 @@ export default async function handler(req: Req, res: Res) {
   // ── 5. Generar ─────────────────────────────────────────────────────────
   // El paso de mañana va con la del día, y los planes de los objetivos con la
   // de la semana: así salen en la misma llamada, sin costo aparte, y con la
-  // frecuencia que tiene sentido para cada uno.
+  // frecuencia que tiene sentido para cada uno. Cuando la de la semana se rehace
+  // no se piden: los de esa semana ya están guardados y no se pisan.
   const objetivosEnCurso = entrada.objetivos.filter((o) => o.status === 'active');
   const pedido: Pedido = {
     periodos: aGenerar,
@@ -172,7 +181,7 @@ export default async function handler(req: Req, res: Res) {
     seguimiento: armarSeguimiento(entrada),
     pasosPosibles: aGenerar.includes('dia') && pasosPosibles.length > 0 ? pasosPosibles : null,
     pasosRecientes: armarPasosRecientes(entrada, titulosPasos),
-    planesObjetivos: aGenerar.includes('semana') && objetivosEnCurso.length > 0,
+    planesObjetivos: aGenerar.includes('semana') && !vencidas.semana && objetivosEnCurso.length > 0,
   };
   let generada: RespuestaModelo;
   try {
@@ -180,7 +189,7 @@ export default async function handler(req: Req, res: Res) {
   } catch (e) {
     const mensaje = describirError(e);
     console.error('[recomendaciones] generar:', mensaje);
-    for (const p of aGenerar) tarjetas[p] = { estado: 'error', mensaje: 'No pudimos armar tus recomendaciones ahora. Probá más tarde.' };
+    for (const p of aGenerar) tarjetas[p] = vencidas[p] ?? { estado: 'error', mensaje: 'No pudimos armar tus recomendaciones ahora. Probá más tarde.' };
     res.status(200).json(tarjetas);
     return;
   }
@@ -193,9 +202,11 @@ export default async function handler(req: Req, res: Res) {
   const filas: Record<string, unknown>[] = aGenerar.map((p) => {
     const r = generada[p];
     // Se guardan también los períodos sin recomendación (contenido null): si
-    // no, la próxima vez que se abre Home se volvería a llamar al modelo.
+    // no, la próxima vez que se abre Home se volvería a llamar al modelo. La
+    // que reemplaza a una vencida lleva el día en la clave ('2026-10:2026-10-26'):
+    // la vieja no se pisa, y la unicidad de la clave sigue frenando a una por día.
     return {
-      user_id: uid, periodo: p, clave: claves[p], contenido: r,
+      user_id: uid, periodo: p, clave: vencidas[p] ? `${claves[p]}:${hoy}` : claves[p], contenido: r,
       foco_tipo: r?.foco.tipo ?? null, foco_ref: r?.foco.sobre ?? null, modelo: MODELO,
     };
   });
@@ -231,9 +242,9 @@ export default async function handler(req: Req, res: Res) {
 
   // Se relee: así se devuelven los ids, y si otro dispositivo ganó la carrera
   // se muestra la suya y no la que se descartó.
-  const releidas = await leerGuardadas(supabase, claves);
+  const releidas = await leerGuardadas(supabase, claves, hoy);
   for (const p of aGenerar) {
-    const g = releidas.filas.find((f) => f.periodo === p && f.clave === claves[p]);
+    const g = masNueva(releidas.filas, p, claves);
     tarjetas[p] = g ? aTarjeta(g) : { estado: 'sin_recomendacion' };
   }
 
@@ -354,22 +365,56 @@ function describirError(e: unknown): string {
 // ── Supabase ─────────────────────────────────────────────────────────────
 
 type Cliente = SupabaseClient;
-type Guardada = { id: string; periodo: Periodo; clave: string; contenido: RecomendacionModelo | null; util: boolean | null };
+type Guardada = { id: string; periodo: Periodo; clave: string; contenido: RecomendacionModelo | null; util: boolean | null; created_at: string };
 
 // Una fila guardada con contenido null es "para este período no había nada útil
-// que decir": se muestra así y NO se vuelve a generar.
+// que decir": se muestra así y NO se vuelve a generar mientras siga vigente.
 const aTarjeta = (g: Guardada): Tarjeta => (g.contenido
   ? { estado: 'lista', id: g.id, contenido: g.contenido, util: g.util }
   : { estado: 'sin_recomendacion' });
 
-async function leerGuardadas(supabase: Cliente, claves: Record<Periodo, string>): Promise<{ filas: Guardada[]; error: string | null }> {
+/** Las armadas desde que empezó la semana o el mes en curso, la más nueva primero. */
+async function leerGuardadas(supabase: Cliente, claves: Record<Periodo, string>, hoy: string): Promise<{ filas: Guardada[]; error: string | null }> {
+  const lunes = lunesDe(hoy);
+  const primero = `${claves.mes}-01`;
   const { data, error } = await supabase
     .from('recommendations')
-    .select('id, periodo, clave, contenido, util')
+    .select('id, periodo, clave, contenido, util, created_at')
     .in('periodo', PERIODOS)
-    .in('clave', Object.values(claves));
+    .gte('created_at', `${lunes < primero ? lunes : primero}T00:00:00-03:00`)
+    .order('created_at', { ascending: false });
   if (error) return { filas: [], error: error.message };
   return { filas: (data ?? []) as Guardada[], error: null };
+}
+
+/** La que vale para el período: la de su clave, o la que la rehízo después ('2026-10:2026-10-26'). */
+function masNueva(filas: Guardada[], p: Periodo, claves: Record<Periodo, string>): Guardada | undefined {
+  return filas.find((f) => f.periodo === p && (f.clave === claves[p] || (p !== 'dia' && f.clave.startsWith(`${claves[p]}:`))));
+}
+
+// Una recomendación habla de los datos del día en que se armó. La del día dura
+// eso, pero la de la semana y la del mes se muestran varios días: si en el medio
+// se registró algo, o pasó una semana, pueden quedar diciendo algo que ya no es
+// cierto ("Octubre va sin un solo gasto cargado" con gastos ya cargados). Esas
+// se rehacen, como mucho una vez por día.
+const DIAS_VIGENCIA = 7;
+
+function vigente(g: Guardada, hoy: string, registro: number | null): boolean {
+  const dia = diaAR(g.created_at);
+  if (g.periodo === 'dia' || dia === hoy) return true;
+  if (diasEntre(dia, hoy) >= DIAS_VIGENCIA) return false;
+  return registro === null || registro <= Date.parse(g.created_at);
+}
+
+/** Cuándo registró algo por última vez: un gasto, un ingreso o un aporte a un objetivo. */
+async function ultimoRegistro(supabase: Cliente): Promise<number | null> {
+  const [movimiento, aporte] = await Promise.all([
+    supabase.from('transactions').select('created_at').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('goal_contributions').select('created_at').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const fechas = [movimiento.data, aporte.data]
+    .map((f) => (f ? Date.parse((f as { created_at: string }).created_at) : 0));
+  return Math.max(...fechas) || null;
 }
 
 type Extra = { ultimoIntento: string | null; fijos: { id: string; description: string }[] };
@@ -381,8 +426,10 @@ async function leerEntrada(supabase: Cliente, uid: string, ahora: number): Promi
   const hace21 = sumarDias(hoy, -21);
 
   const [gastos, ingresos, secciones, medios, objetivos, perfil, inversor, aportes, racha, memoria, historial, pasos, pasosIA, hechas, dolar, fijos] = await Promise.all([
+    // Lo más nuevo primero: Supabase corta en 1000 filas, y si sobra algo tiene
+    // que ser lo más viejo, no los gastos de este mes.
     supabase.from('transactions').select('amount_ars, occurred_at, created_at, section_id, expense_type, payment_method, source')
-      .eq('type', 'expense').gte('occurred_at', hace90).order('occurred_at', { ascending: true }),
+      .eq('type', 'expense').gte('occurred_at', hace90).order('occurred_at', { ascending: false }),
     // `*`: sin la migración 0033 no existe income_source.
     supabase.from('transactions').select('*').eq('type', 'income').gte('occurred_at', hace90),
     supabase.from('expense_sections').select('id, name, cap_amount, cap_period').eq('archived', false),
