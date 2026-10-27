@@ -12,6 +12,7 @@ import { IconCalendario, IconChevron, IconEditar } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
 import { FilaIngreso, lunesAtras } from './IngresosVsGastos';
 import { ListaGastosFijos } from './GastosFijos';
+import { ListaRecurrentes } from './GastosRecurrentes';
 import { FUENTES_INGRESO, type FuenteIngreso } from '../../api/v2/tipos';
 import { FilaGasto } from './FilaGasto';
 import { FilaSeccion } from './FilaSeccion';
@@ -714,6 +715,10 @@ export function GastosV2() {
           </button>
         )}
       </section>
+
+      {/* Los gastos recurrentes: lo que se gasta seguido, para registrarlo con
+          un toque. Sólo aparece si hay alguno. */}
+      <ListaRecurrentes categorias={categorias} />
 
       {/* Los gastos fijos, aparte: lo que pagás siempre, con su próximo
           vencimiento y "Ya lo pagué". Igual que los ingresos, los primeros

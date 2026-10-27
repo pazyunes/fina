@@ -5,6 +5,9 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
 import { CamposGastoFijo, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
+import { CamposRecurrente, opcionRecurrenteInicial, type OpcionRecurrente } from './GastosRecurrentes';
+import { crearRecurrente } from '../../api/v2/recurrentes';
+import { diaArgentina } from '../../api/v2/pasos';
 import { TIPOS, TIPO_INFO, gastosDeLaBase, recientes, type Categoria, type Gasto, type Moneda, type TipoGasto } from './datosGasto';
 
 // El formulario de un gasto: el mismo para cargar uno nuevo (en Gastos, debajo
@@ -123,6 +126,9 @@ export function FormularioGasto({ gasto, inicial, modo, categorias, onListo, onC
     ? gasto.pagos.map((p) => ({ medio: p.medio, otro: '', monto: formatMontoInicial(p.monto) }))
     : [filaPagoVacia(), filaPagoVacia()]));
   const [fijo, setFijo] = useState<OpcionFijo>(() => (modo === 'fijo' ? { ...opcionFijoInicial(), activo: true } : opcionFijoInicial()));
+  // Un gasto diario que se repite (el colectivo, el café): queda para
+  // registrarlo con un toque. Sólo al cargar uno nuevo.
+  const [recurrente, setRecurrente] = useState<OpcionRecurrente>(opcionRecurrenteInicial);
   // Errores de conversión (no se pudo traer el dólar). Los de guardado los
   // reporta el almacén.
   const [error, setError] = useState<string | null>(null);
@@ -142,6 +148,9 @@ export function FormularioGasto({ gasto, inicial, modo, categorias, onListo, onC
   // marca y la vista va al primero (useFaltantes).
   const faltantes = useFaltantes({
     monto: parseMoneyInput(monto) <= 0,
+    // Sólo un gasto fijo pide nombre: es como se reconoce en la lista y en el
+    // aviso ("Alquiler"). Un gasto diario se reconoce por su categoría.
+    nombre: modo === 'fijo' && !desc.trim(),
     categoria: !catId && !nuevaCat.trim(),
     pagos: !pagosValidos,
     fijo: !editando && !opcionFijoValida(fijo),
@@ -161,10 +170,13 @@ export function FormularioGasto({ gasto, inicial, modo, categorias, onListo, onC
     const medio = (metodo === 'otro' ? metodoOtro.trim() : metodo) || null;
     const pagosFinal = dividido ? pagos.map((f) => ({ medio: medioDeFila(f), monto: parseMoneyInput(f.monto) })) : undefined;
     setError(null);
+    // Sin descripción, el gasto se llama como su categoría: es lo que se ve en
+    // la lista. La que ya tenía (al editar, o la de WhatsApp) se conserva.
+    const nombreSeccion = categorias.find((c) => c.id === seccionId)?.nombre ?? nuevaCat.trim();
     const datos = {
       monto: n,
       moneda,
-      descripcion: desc.trim() || TIPO_INFO[tipo].label,
+      descripcion: desc.trim() || nombreSeccion || TIPO_INFO[tipo].label,
       seccionId,
       tipo,
       metodoPago: medio,
@@ -184,8 +196,21 @@ export function FormularioGasto({ gasto, inicial, modo, categorias, onListo, onC
     // Un gasto fijo que todavía no se pagó no se registra como gasto: sólo
     // queda anotado para avisar. Si ya se pagó, se registra y queda el próximo.
     if (!fijo.activo || fijo.yaPagado) {
-      const r = await acciones.registrarGasto({ ...datos, tipoOtro, pagos: pagosFinal, confirmacion: fijo.activo ? 'Gasto registrado y guardado como fijo.' : undefined });
+      const confirmacion = fijo.activo ? 'Gasto registrado y guardado como fijo.' : recurrente.activo ? 'Gasto registrado y guardado como recurrente.' : undefined;
+      const r = await acciones.registrarGasto({ ...datos, tipoOtro, pagos: pagosFinal, confirmacion });
       if (r.error !== null) { setError(r.error); return; }
+      if (recurrente.activo && !fijo.activo) {
+        const dia = new Date(datos.ts);
+        const esDeHoy = fecha === aInputFecha(Date.now());
+        crearRecurrente({
+          seccionId, monto: n, moneda, tipo, metodoPago: dividido ? null : medio,
+          frecuencia: recurrente.frecuencia, hora: recurrente.hora,
+          dia: recurrente.frecuencia === 'semanal' ? dia.getDay() : recurrente.frecuencia === 'mensual' ? dia.getDate() : null,
+          // Si el gasto es de hoy, hoy ya está registrado: no vuelve a aparecer.
+          ultimoDia: esDeHoy ? diaArgentina() : null,
+          ultimoGastoId: esDeHoy ? r.gasto?.id ?? null : null,
+        });
+      }
     }
     if (fijo.activo) {
       const diaAncla = fijo.frecuencia === 'mensual' || fijo.frecuencia === 'anual' ? Number(fijo.proximo.slice(8, 10)) : null;
@@ -229,14 +254,23 @@ export function FormularioGasto({ gasto, inicial, modo, categorias, onListo, onC
         </div>
       </div>
       {faltantes.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
-      <input
-        aria-label="Descripción del gasto"
-        className="v2-focus rounded-xl px-3.5 py-2.5 text-[14px] transition-colors"
-        style={INPUT_STYLE}
-        placeholder="Descripción (ej: PedidosYa)"
-        value={desc}
-        onChange={(e) => setDesc(e.target.value)}
-      />
+      {/* Sin descripción (decisión oct 2026): el gasto se reconoce por su
+          categoría. Un gasto fijo sí lleva nombre ("Alquiler"). */}
+      {modo === 'fijo' && (
+        <>
+          <input
+            data-campo="nombre"
+            aria-label="Nombre del gasto fijo"
+            aria-invalid={faltantes.marcado('nombre') || undefined}
+            className="v2-focus rounded-xl px-3.5 py-2.5 text-[14px] transition-colors"
+            style={{ ...INPUT_STYLE, ...(faltantes.marcado('nombre') ? { border: BORDE_FALTA } : {}) }}
+            placeholder="Nombre (ej: Alquiler)"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+          />
+          {faltantes.marcado('nombre') && <TextoFalta>Falta el nombre.</TextoFalta>}
+        </>
+      )}
       {/* Por defecto queda en hoy: sólo hace falta tocarlo para cargar un
           gasto de otro día. Sin hora: con el día alcanza. Un gasto fijo que
           todavía no se pagó no tiene fecha de gasto: tiene la de vencimiento,
@@ -479,6 +513,7 @@ export function FormularioGasto({ gasto, inicial, modo, categorias, onListo, onC
       {/* Un gasto que ya pasó no se puede volver "gasto fijo": esto es para
           crear uno nuevo, no para editar un movimiento. */}
       {!editando && modo !== 'diario' && <CamposGastoFijo valor={fijo} onChange={setFijo} marcado={faltantes.marcado('fijo')} siempre={modo === 'fijo'} />}
+      {!editando && modo === 'diario' && <CamposRecurrente valor={recurrente} onChange={setRecurrente} fecha={new Date(deInputFecha(fecha))} />}
 
       {error && <p role="alert" className="text-[13px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{error}</p>}
 
@@ -492,7 +527,7 @@ export function FormularioGasto({ gasto, inicial, modo, categorias, onListo, onC
           className="v2-focus flex-[2] rounded-xl py-2.5 min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
-          {editando ? 'Guardar cambios' : fijo.activo ? 'Guardar gasto fijo' : 'Agregar gasto'}
+          {editando ? 'Guardar cambios' : fijo.activo ? 'Guardar gasto fijo' : recurrente.activo ? 'Guardar gasto recurrente' : 'Agregar gasto'}
         </button>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { diaArgentina } from '../../api/v2/pasos';
 import { COLORS } from './shared';
 import { LinkWhatsApp } from './LinkWhatsApp';
+import { RecurrentesDeHoy } from './GastosRecurrentes';
 
 // Registrar lo del día: el recordatorio fijo de arriba de Inicio. Es lo que
 // sostiene la racha (cuenta cada día con un gasto anotado) y todo lo demás.
@@ -73,6 +74,9 @@ export function RecordatorioGastos() {
           </button>
         </div>
       )}
+      {/* Los gastos recurrentes que hoy ya pasaron su horario: un toque y
+          quedan registrados. */}
+      <RecurrentesDeHoy />
     </section>
   );
 }
