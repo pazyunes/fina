@@ -53,7 +53,7 @@ export function ImportarGastos({ onCerrar }: { onCerrar: () => void }) {
     setLeyendo(false);
     if (s.tipo === 'error') { setError(MENSAJES[s.motivo]); return; }
     const l = s.lectura;
-    if (l.estado === 'no_configurado') { setError('Por ahora no podemos leer capturas ni PDF. Probá con un Excel, un CSV o pegá las notas.'); return; }
+    if (l.estado === 'no_configurado') { setError('Por ahora no podemos leer con IA. Probá con un Excel que tenga títulos como fecha, descripción y monto, o pegá las notas.'); return; }
     if (l.estado === 'no_se_pudo') { setError(MENSAJES.falla); return; }
     if (l.estado === 'vacio') { setError('No encontramos gastos ahí. Probá con otro archivo o pegá las notas.'); return; }
     setOmitidos(l.omitidos);
@@ -92,6 +92,7 @@ export function ImportarGastos({ onCerrar }: { onCerrar: () => void }) {
       moneda: f.gasto.moneda,
       seccionId: f.categoria && !f.categoria.startsWith('nueva:') ? f.categoria : null,
       seccionNueva: f.categoria.startsWith('nueva:') ? f.categoria.slice(6) : null,
+      tipo: f.gasto.tipo ?? null,
     })));
     setImportando(false);
     if (r.error) { setError(r.error); return; }
@@ -116,7 +117,7 @@ export function ImportarGastos({ onCerrar }: { onCerrar: () => void }) {
             className="v2-focus w-full rounded-2xl py-3 min-h-[48px] text-[14px] font-bold select-none transition-all duration-100 active:scale-[0.98]"
             style={{ background: COLORS.brand, color: COLORS.surface }}
           >
-            {leyendo ? 'Leyendo…' : 'Subir un archivo'}
+            {leyendo ? 'Leyendo tus gastos…' : 'Subir un archivo'}
           </button>
           <p className="text-[13px] -mt-1" style={{ color: COLORS.inkSoft }}>Excel, CSV, PDF o una captura.</p>
 

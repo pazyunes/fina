@@ -429,6 +429,8 @@ export type ItemParaImportar = {
   moneda: MonedaConvertible;
   /** Una categoría que ya existe. */
   seccionId: string | null;
+  /** El tipo de gasto, si el archivo lo decía. Sin él, queda como "otro". */
+  tipo?: TipoGasto | null;
   /** O el nombre de una que hay que crear (varios gastos con el mismo nombre comparten la nueva). */
   seccionNueva?: string | null;
 };
@@ -467,8 +469,8 @@ export async function importarGastos(items: ItemParaImportar[]): Promise<{ impor
     const seccionId = i.seccionNueva ? idDeNueva(i.seccionNueva) : i.seccionId;
     const id = nuevoId();
     const descripcion = i.descripcion.trim().slice(0, 80) || 'Gasto';
-    gastos.push({ id, monto: i.monto, moneda: i.moneda, montoArs, descripcion, seccionId, tipo: 'otro', metodoPago: null, grupoId: null, ts: Number.isFinite(ts) ? ts : Date.now(), origen: 'manual' });
-    filas.push({ id, ts: gastos[gastos.length - 1].ts, monto: i.monto, moneda: i.moneda, montoArs, cotizacionId: i.moneda === 'USD' ? (cotizacion?.id ?? null) : null, descripcion, seccionId });
+    gastos.push({ id, monto: i.monto, moneda: i.moneda, montoArs, descripcion, seccionId, tipo: i.tipo ?? 'otro', metodoPago: null, grupoId: null, ts: Number.isFinite(ts) ? ts : Date.now(), origen: 'manual' });
+    filas.push({ id, ts: gastos[gastos.length - 1].ts, monto: i.monto, moneda: i.moneda, montoArs, cotizacionId: i.moneda === 'USD' ? (cotizacion?.id ?? null) : null, descripcion, seccionId, tipo: i.tipo ?? 'otro' });
   }
 
   parchearEstado({ gastos: [...gastos, ...leerEstado().gastos].sort((a, b) => b.ts - a.ts) });

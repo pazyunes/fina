@@ -405,7 +405,7 @@ export async function registrarGasto(g: {
 /** Un gasto de antes, listo para guardar: sin medio de pago, así que no mueve ningún saldo. */
 export type GastoParaImportar = {
   id: string; ts: number; monto: number; moneda: MonedaConvertible; montoArs: number; cotizacionId: string | null;
-  descripcion: string; seccionId: string | null;
+  descripcion: string; seccionId: string | null; tipo: TipoGasto;
 };
 
 /** Guarda muchos gastos de una vez, de a 100. Si un tramo falla, corta y dice cuál. */
@@ -424,7 +424,8 @@ export async function importarGastos(gastos: GastoParaImportar[]): Promise<Resul
       exchange_rate_id: g.cotizacionId,
       description: g.descripcion,
       section_id: g.seccionId,
-      expense_type: 'otro',
+      expense_type: tipoParaLaBase(g.tipo).tipo,
+      ...(tipoParaLaBase(g.tipo).otro ? { expense_type_other: tipoParaLaBase(g.tipo).otro } : {}),
       payment_method: null,
       group_id: null,
       source: 'manual',

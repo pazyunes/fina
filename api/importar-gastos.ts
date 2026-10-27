@@ -11,8 +11,9 @@
 //     propias quedan afuera. Lo que no se ve claro no se inventa.
 //   · Hace falta sesión (cada llamada cuesta) y hay un tope por hora.
 //
-// Un Excel, un CSV o unas notas ordenadas se leen en el dispositivo y nunca
-// llegan acá. La clave de Anthropic vive sólo en el servidor.
+// Un Excel, un CSV o unas notas llegan acá como texto, en tramos cortos (cada
+// llamada tiene que terminar antes del límite de la función). La clave de
+// Anthropic vive sólo en el servidor.
 
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
@@ -29,8 +30,8 @@ const PDF = 'application/pdf';
 /** ~5 MB de base64: Vercel corta los cuerpos de más de 4,5 MB. */
 const MAX_BASE64 = 5_000_000;
 const MAX_TEXTO = 45_000;
-const MAX_GASTOS = 200;
-const MAX_POR_HORA = 15;
+const MAX_GASTOS = 80;
+const MAX_POR_HORA = 60;
 
 const Lectura = z.object({
   gastos: z.array(z.object({
@@ -39,6 +40,7 @@ const Lectura = z.object({
     monto: z.number().describe('Monto positivo, sin símbolos ni separadores.'),
     moneda: z.enum(['ARS', 'USD']).describe('USD sólo si el monto está en dólares.'),
     categoria: z.string().nullable().describe('La categoría, sólo si el documento la trae escrita. Nunca la inventes.'),
+    tipo: z.enum(['necesario', 'urgente', 'impulsivo', 'desorganizado', 'excepcion']).nullable().describe('El tipo de gasto, sólo si el documento lo dice con esas palabras o equivalentes claros (necesario, urgente, gusto o impulsivo, desorganizado, excepción o poco frecuente). null si no lo dice.'),
   })).describe(`Hasta ${MAX_GASTOS} gastos, en el orden en que aparecen.`),
   omitidos: z.number().describe('Cuántas filas o líneas dejaste afuera por no ser un gasto con monto claro.'),
 });
@@ -47,7 +49,8 @@ const SISTEMA = `Leés registros de gastos personales que una persona de Argenti
 
 Reglas:
 - Sólo gastos: plata que salió. Dejá afuera ingresos, sueldos, saldos, totales, subtotales y transferencias entre cuentas propias.
-- Nunca inventes ni completes un monto, una fecha o una categoría. Si un dato no se ve claro, devolvé null (la fecha y la categoría) o dejá ese gasto afuera (el monto).
+- Nunca inventes ni completes un monto, una fecha, una categoría o un tipo. Si un dato no se ve claro, devolvé null (fecha, categoría y tipo) o dejá ese gasto afuera (el monto).
+- Puede venir una planilla pasada a texto, con las celdas separadas por " | ", una fila por línea, la primera con los títulos. El orden y los títulos de las columnas cambian de una persona a otra: fijate qué es cada columna. Si los meses o las categorías van en columnas, devolvé un gasto por cada monto. Si sólo se sabe el mes, usá el día 1 de ese mes.
 - Los montos van como número positivo, sin símbolo ni separadores. En Argentina el punto separa miles y la coma los decimales.
 - Las fechas, día primero (12/10 es el 12 de octubre), como YYYY-MM-DD. Si no trae año, asumí el año en curso salvo que quede en el futuro.
 - NO transcribas datos personales: nombre de la persona, DNI, CUIT, CBU, CVU, alias, número de cuenta o de tarjeta. Ni dentro de la descripción.
@@ -120,7 +123,7 @@ export default async function handler(req: Req, res: Res) {
     const client = new Anthropic({ apiKey });
     const mensaje = await client.beta.messages.parse({
       model: MODELO,
-      max_tokens: 12_000,
+      max_tokens: 8_000,
       output_config: { effort: 'low', format: betaZodOutputFormat(Lectura) },
       system: [{ type: 'text', text: `${SISTEMA}\n\nHoy es ${hoyArgentina()}.`, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: [...contenido, { type: 'text', text: 'Devolvé los gastos que se ven.' }] }],
@@ -136,6 +139,7 @@ export default async function handler(req: Req, res: Res) {
         monto: g.monto,
         moneda: g.moneda,
         categoria: g.categoria?.trim().slice(0, 40) || null,
+        tipo: g.tipo,
       }))
       .slice(0, MAX_GASTOS);
     if (gastos.length === 0) { res.status(200).json({ estado: 'vacio' }); return; }

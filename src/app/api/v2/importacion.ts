@@ -1,8 +1,8 @@
 import { falla, ok, supabase, type Resultado } from './cliente';
 import { diaArgentina } from './pasos';
 import { achicar, pdfABase64 } from './capturas';
-import { leerArchivo, leerNotas, type Entrada, type LecturaLocal } from '../../lib/importacion/leer';
-import type { LecturaImportacion } from '../../lib/importacion/tipos';
+import { leerArchivo, leerNotas, partirEnTramos, type Entrada, type LecturaLocal } from '../../lib/importacion/leer';
+import { MAX_IMPORTADOS, type LecturaImportacion } from '../../lib/importacion/tipos';
 
 // Traer gastos de antes (un Excel, un CSV, unas notas, una captura o un PDF).
 //
@@ -51,13 +51,42 @@ async function leerEnElServidor(entrada: Entrada): Promise<Resultado<LecturaImpo
   }
 }
 
+/** Cuántas líneas de una planilla o de unas notas se mandan por vez: cada llamada tiene que terminar rápido. */
+/** Cuántos tramos se leen a la vez. */
+const A_LA_VEZ = 3;
+
+async function leerTextoEnTramos(entrada: { texto: string; conTitulos?: boolean }): Promise<LecturaImportacion | 'falla'> {
+  const tramos = partirEnTramos(entrada.texto, entrada.conTitulos === true);
+  const lecturas: (LecturaImportacion | 'falla')[] = new Array(tramos.length).fill('falla');
+  let siguiente = 0;
+  await Promise.all(Array.from({ length: Math.min(A_LA_VEZ, tramos.length) }, async () => {
+    while (siguiente < tramos.length) {
+      const i = siguiente++;
+      const r = await leerEnElServidor({ tipo: 'texto', texto: tramos[i] });
+      lecturas[i] = r.error === null ? r.data : 'falla';
+    }
+  }));
+
+  if (lecturas.some((l) => l !== 'falla' && l.estado === 'no_configurado')) return { estado: 'no_configurado' };
+  const gastos = lecturas.flatMap((l) => (l !== 'falla' && l.estado === 'ok' ? l.gastos : []));
+  if (gastos.length > 0) {
+    // Los tramos que no se pudieron leer se cuentan como omitidos, no como si no existieran.
+    const omitidos = lecturas.reduce((s, l, i) => s + (l === 'falla' ? tramos[i].split('\n').length : l.estado === 'ok' ? l.omitidos : 0), 0);
+    return { estado: 'ok', gastos: gastos.slice(0, MAX_IMPORTADOS), omitidos };
+  }
+  return lecturas.every((l) => l !== 'falla' && l.estado === 'vacio') ? { estado: 'vacio' } : 'falla';
+}
+
 async function resolver(local: LecturaLocal): Promise<SalidaLectura> {
   if (local.via === 'error') return { tipo: 'error', motivo: local.motivo };
-  if (local.via === 'local') {
-    return { tipo: 'ok', lectura: local.gastos.length > 0 ? { estado: 'ok', gastos: local.gastos, omitidos: local.omitidos } : { estado: 'vacio' } };
-  }
-  const r = await leerEnElServidor(local.entrada);
-  return r.error === null ? { tipo: 'ok', lectura: r.data } : { tipo: 'error', motivo: 'falla' };
+  const { entrada, respaldo } = local;
+  const r: LecturaImportacion | 'falla' = entrada.tipo === 'texto'
+    ? await leerTextoEnTramos(entrada)
+    : await leerEnElServidor(entrada).then((x) => (x.error === null ? x.data : 'falla'));
+  if (r !== 'falla' && r.estado === 'ok') return { tipo: 'ok', lectura: r };
+  // Si la IA no está o no pudo, lo que se entendió en el dispositivo sirve igual.
+  if (respaldo && respaldo.gastos.length > 0) return { tipo: 'ok', lectura: { estado: 'ok', gastos: respaldo.gastos, omitidos: respaldo.omitidos } };
+  return r === 'falla' ? { tipo: 'error', motivo: 'falla' } : { tipo: 'ok', lectura: r };
 }
 
 /** Lee un archivo con gastos. */

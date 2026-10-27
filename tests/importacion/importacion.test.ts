@@ -3,7 +3,7 @@ import { deflateRawSync } from 'node:zlib';
 import { describe, it } from 'node:test';
 import { leerCsv } from '../../src/app/lib/importacion/csv';
 import { fechaDeSerialExcel, parsearFecha } from '../../src/app/lib/importacion/fechas';
-import { leerArchivo, leerNotas } from '../../src/app/lib/importacion/leer';
+import { leerArchivo, leerNotas, partirEnTramos } from '../../src/app/lib/importacion/leer';
 import { parsearMonto, parsearNumero } from '../../src/app/lib/importacion/montos';
 import { gastosDeNotas } from '../../src/app/lib/importacion/notas';
 import { categoriaQueCoincide, esRepetido } from '../../src/app/lib/importacion/repetidos';
@@ -108,11 +108,14 @@ describe('notas', () => {
     const r = gastosDeNotas('Spotify US$ 11', HOY);
     assert.deepEqual([r.gastos[0].monto, r.gastos[0].moneda], [11, 'USD']);
   });
-  it('un texto sin montos se manda a leer al servidor', () => {
+  it('las notas van a leer a la IA; si no se entienden acá, no hay respaldo', () => {
     const r = leerNotas('este mes gasté bastante en comida y salidas', HOY);
-    assert.equal(r.via, 'servidor');
+    assert.ok(r.via === 'servidor' && r.respaldo === null);
   });
-  it('unas notas ordenadas se leen en el dispositivo', () => assert.equal(leerNotas('12/10 super 31000', HOY).via, 'local'));
+  it('lo que se entiende acá queda de respaldo por si la IA no anda', () => {
+    const r = leerNotas('12/10 super 31000', HOY);
+    assert.ok(r.via === 'servidor' && r.respaldo?.gastos.length === 1);
+  });
 });
 
 // ── Un xlsx mínimo, armado a mano (zip con las partes imprescindibles). ──
@@ -171,10 +174,12 @@ describe('xlsx', () => {
   it('un archivo xlsx se lee de punta a punta', async () => {
     const buf = zip(PARTES, true);
     const r = await leerArchivo({ name: 'gastos.xlsx', type: '', size: buf.byteLength, text: async () => '', arrayBuffer: async () => buf }, HOY);
-    assert.equal(r.via, 'local');
-    if (r.via === 'local') {
-      assert.equal(r.gastos.length, 2);
-      assert.equal(r.gastos[0].fecha, '2025-10-12');
+    assert.equal(r.via, 'servidor');
+    if (r.via === 'servidor') {
+      assert.equal(r.entrada.tipo, 'texto');
+      assert.ok(r.entrada.tipo === 'texto' && r.entrada.conTitulos === true && r.entrada.texto.startsWith('Fecha | Detalle | Monto\n2025-10-12 | Súper | 31000.5'));
+      assert.equal(r.respaldo?.gastos.length, 2);
+      assert.equal(r.respaldo?.gastos[0].fecha, '2025-10-12');
     }
   });
   it('lo que no es un xlsx tira error en vez de devolver basura', async () => {
@@ -192,6 +197,22 @@ describe('xlsx', () => {
     assert.equal(a.via === 'servidor' && a.entrada.tipo, 'imagen');
     assert.equal(b.via === 'servidor' && b.entrada.tipo, 'pdf');
   });
+});
+
+describe('tramos para la IA', () => {
+  it('una planilla se parte en tramos y cada uno lleva los títulos', () => {
+    const texto = ['Fecha | Monto', ...Array.from({ length: 100 }, (_, i) => `2026-10-01 | ${i + 1}`)].join('\n');
+    const t = partirEnTramos(texto, true);
+    assert.equal(t.length, 3);
+    assert.ok(t.every((x) => x.startsWith('Fecha | Monto\n')));
+    assert.equal(t.join('\n').split('\n').filter((l) => l.startsWith('2026')).length, 100);
+  });
+  it('unas notas se parten sin repetir la primera línea', () => {
+    const t = partirEnTramos(Array.from({ length: 50 }, (_, i) => `gasto ${i}`).join('\n'), false);
+    assert.equal(t.length, 2);
+    assert.equal(t.join('\n').split('\n').length, 50);
+  });
+  it('un texto corto es un solo tramo', () => assert.equal(partirEnTramos('a 100\nb 200', false).length, 1));
 });
 
 describe('repetidos y categorías', () => {

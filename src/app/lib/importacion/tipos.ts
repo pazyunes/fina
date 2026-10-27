@@ -9,6 +9,8 @@ export type GastoImportado = {
   moneda: 'ARS' | 'USD';
   /** El nombre de la categoría que traía el archivo, si lo traía. */
   categoria: string | null;
+  /** El tipo de gasto, sólo si el archivo lo decía. */
+  tipo?: 'necesario' | 'urgente' | 'impulsivo' | 'desorganizado' | 'excepcion' | null;
 };
 
 export type LecturaImportacion =
