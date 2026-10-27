@@ -17,6 +17,7 @@ import { FilaGasto } from './FilaGasto';
 import { FilaSeccion } from './FilaSeccion';
 import { FormularioGasto, INPUT_STYLE, METODOS_SUGERIDOS } from './FormularioGasto';
 import { Hoja } from './Hoja';
+import { ImportarGastos } from './ImportarGastos';
 import { TIPOS, TIPO_INFO, colorDeSeccion, gastosDeLaBase, recientes, seccionesDeLaBase, type Periodo, type TipoGasto } from './datosGasto';
 
 // REDISEÑO v2. Mis Gastos. Lo principal es el anillo del período: arriba se
@@ -59,6 +60,9 @@ export function GastosV2() {
   // WhatsApp (mini explicación y abre el bot).
   const [chooser, setChooser] = useState(false);
   const [waStep, setWaStep] = useState(false);
+
+  // Importar gastos anteriores, en una hoja aparte.
+  const [importando, setImportando] = useState(false);
 
   // Agregar ingreso.
   const [addingDisponible, setAddingDisponible] = useState(false);
@@ -478,6 +482,17 @@ export function GastosV2() {
               + Agregar ingreso
             </button>
           </div>
+          {/* Gastos de antes (una planilla, notas, una captura o un PDF): se
+              revisan antes de guardarlos y no mueven saldos. */}
+          <button
+            type="button"
+            onClick={() => setImportando(true)}
+            className="v2-focus self-center min-h-[44px] text-[13px] font-semibold"
+            style={{ color: COLORS.brand }}
+          >
+            Importar gastos anteriores
+          </button>
+          {importando && <ImportarGastos onCerrar={() => setImportando(false)} />}
 
         {addingDisponible && (
           <Hoja titulo="Nuevo ingreso" onCerrar={cerrarIngreso}>

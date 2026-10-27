@@ -486,6 +486,61 @@ export async function registrarGasto(g: {
   return { gasto, error: null };
 }
 
+/** Un gasto de un archivo o unas notas, ya revisado por la persona. */
+export type ItemParaImportar = {
+  /** 'YYYY-MM-DD' (día de Argentina); null = sin fecha, se anota con la de hoy. */
+  fecha: string | null;
+  descripcion: string;
+  monto: number;
+  moneda: MonedaConvertible;
+  /** Una categoría que ya existe. */
+  seccionId: string | null;
+  /** O el nombre de una que hay que crear (varios gastos con el mismo nombre comparten la nueva). */
+  seccionNueva?: string | null;
+};
+
+/**
+ * Importar gastos anteriores (de una planilla, unas notas, una captura o un
+ * PDF). Van sin medio de pago, así que no mueven ningún saldo, y no suman
+ * actividad en el grupo: son gastos de antes, no registros de hoy.
+ */
+export async function importarGastos(items: ItemParaImportar[]): Promise<{ importados: number; error: string | null }> {
+  if (items.length === 0) return { importados: 0, error: null };
+  let cotizacion: { id: string | null; valor: number } | null = null;
+  if (items.some((i) => i.moneda === 'USD')) {
+    const cot = await cotizacionDolar();
+    if (!cot) return { importados: 0, error: 'No pudimos traer la cotización del dólar. Probá de nuevo en un momento.' };
+    cotizacion = { id: cot.id, valor: cot.valor };
+  }
+
+  // Las categorías nuevas se crean una sola vez, aunque las pidan varios gastos.
+  const nuevas = new Map<string, string>();
+  const idDeNueva = (nombre: string): string => {
+    const clave = nombre.trim().toLowerCase();
+    const existente = leerEstado().secciones.find((s) => s.nombre.trim().toLowerCase() === clave) ?? null;
+    if (existente) return existente.id;
+    let id = nuevas.get(clave);
+    if (!id) { id = crearSeccion(nombre).id; nuevas.set(clave, id); }
+    return id;
+  };
+
+  const gastos: Gasto[] = [];
+  const filas: api.GastoParaImportar[] = [];
+  for (const i of items) {
+    const ts = i.fecha ? Date.parse(`${i.fecha}T12:00:00-03:00`) : Date.now();
+    const montoArs = i.moneda === 'USD' && cotizacion ? Math.round(i.monto * cotizacion.valor) : i.monto;
+    const seccionId = i.seccionNueva ? idDeNueva(i.seccionNueva) : i.seccionId;
+    const id = nuevoId();
+    const descripcion = i.descripcion.trim().slice(0, 80) || 'Gasto';
+    gastos.push({ id, monto: i.monto, moneda: i.moneda, montoArs, descripcion, seccionId, tipo: 'otro', metodoPago: null, grupoId: null, ts: Number.isFinite(ts) ? ts : Date.now(), origen: 'manual' });
+    filas.push({ id, ts: gastos[gastos.length - 1].ts, monto: i.monto, moneda: i.moneda, montoArs, cotizacionId: i.moneda === 'USD' ? (cotizacion?.id ?? null) : null, descripcion, seccionId });
+  }
+
+  parchearEstado({ gastos: [...gastos, ...leerEstado().gastos].sort((a, b) => b.ts - a.ts) });
+  push(() => api.importarGastos(filas), `${gastos.length === 1 ? '1 gasto importado' : `${gastos.length} gastos importados`} con éxito.`);
+  return { importados: gastos.length, error: null };
+}
+
 // Igual que borrar + registrar de nuevo, pero en un solo movimiento: se
 // devuelve el efecto en el medio de pago viejo y se aplica el nuevo, y sólo
 // se recalcula la cotización si de verdad cambió el monto o la moneda (así

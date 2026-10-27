@@ -255,6 +255,21 @@ export type Racha = {
 
 export const RACHA_VACIA: Racha = { dias: 0, hoyCumplido: false, comodinDisponible: true, detalle: [] };
 
+/**
+ * Los tipos de inversión que se pueden registrar con sus datos específicos
+ * (migración 0039 de main). Acá sólo lo usa `capturas.ts`, que llegó con
+ * importar gastos: el resto de Inversiones guiadas todavía no está en esta rama.
+ */
+export type TipoPosicion =
+  | 'cuenta_remunerada'
+  | 'fci'
+  | 'plazo_fijo'
+  | 'plazo_fijo_uva'
+  | 'letra'
+  | 'bono_cer'
+  | 'dolar'
+  | 'cedear';
+
 /** Todo lo que la app necesita de una usuaria, en una sola carga. */
 export type EstadoV2 = {
   perfil: Perfil;

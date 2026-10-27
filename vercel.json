@@ -22,6 +22,9 @@
     },
     "api/notificaciones.ts": {
       "maxDuration": 60
+    },
+    "api/importar-gastos.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

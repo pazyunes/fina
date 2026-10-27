@@ -13,6 +13,7 @@ import { RecordatorioGastos } from './RecordatorioGastos';
 import { PlanesDeHoy } from './PlanesDeHoy';
 import { ProximoPasoInicio } from './ProximoPasoInicio';
 import { ObjetivosEnInicio } from './ObjetivosEnInicio';
+import { ReservaEnInicio } from './ReservaEnInicio';
 
 
 // Inicio tiene tres cosas fijas (decisión oct 2026): arriba el recordatorio de
@@ -204,9 +205,10 @@ export function HomeV2() {
 
       <MisVisualizaciones />
 
-      {/* Se fueron Tu plata guardada y Mis competencias (DEBT I8 e I9). La
-          reserva sólo vivía acá y en el navegador (loadV2Reserva): deja de verse
-          hasta decidir si vuelve, y dónde. */}
+      {/* La reserva queda en Inicio, en el mismo lugar que antes, como una
+          fila que abre una hoja para sumar (igual que en main). Mis
+          competencias se fue: el grupo sigue a mano desde Perfil. */}
+      <ReservaEnInicio />
       {/* Sólo mientras falte asociar el WhatsApp: con el teléfono verificado
           el perfil ya no tiene nada pendiente que valga una fila en Inicio.
           Lleva directo a la verificación. */}

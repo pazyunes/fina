@@ -855,6 +855,39 @@ export async function borrarGasto(id: string): Promise<Resultado<null>> {
   return borrarMovimiento(id, -1, 'borrarGasto');
 }
 
+/** Un gasto de antes, listo para guardar: sin medio de pago, así que no mueve ningún saldo. */
+export type GastoParaImportar = {
+  id: string; ts: number; monto: number; moneda: MonedaConvertible; montoArs: number; cotizacionId: string | null;
+  descripcion: string; seccionId: string | null;
+};
+
+/** Guarda muchos gastos de una vez, de a 100. Si un tramo falla, corta y dice cuál. */
+export async function importarGastos(gastos: GastoParaImportar[]): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<null>('sin sesión', 'importarGastos');
+  for (let i = 0; i < gastos.length; i += 100) {
+    const tramo = gastos.slice(i, i + 100).map((g) => ({
+      id: g.id,
+      user_id: uid,
+      occurred_at: new Date(g.ts).toISOString(),
+      type: 'expense',
+      amount_ars: g.montoArs,
+      currency: g.moneda,
+      original_amount: g.moneda === 'USD' ? g.monto : null,
+      exchange_rate_id: g.cotizacionId,
+      description: g.descripcion,
+      section_id: g.seccionId,
+      expense_type: 'otro',
+      payment_method: null,
+      group_id: null,
+      source: 'manual',
+    }));
+    const r = await correr<null>('importarGastos', () => supabase.from('transactions').insert(tramo).then(({ error }) => ({ data: null, error })));
+    if (r.error !== null) return r;
+  }
+  return ok(null);
+}
+
 // ── Objetivos ────────────────────────────────────────────────────────────
 type FilaObjetivo = {
   id: string; title: string; description: string | null; amount_ars: number | null;
