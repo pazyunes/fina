@@ -166,34 +166,6 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
         </div>
       )}
 
-      {visible && !renombrando && (
-        <div className="flex flex-col pl-6">
-          {delaSeccion.length === 0
-            ? <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no hay gastos en esta categoría.</p>
-            : delaSeccion.slice(0, 3).map((g) => (
-              <FilaGasto
-                key={g.id}
-                gasto={g}
-                categorias={categorias}
-                abierto={gastoAbierto?.id === g.id ? gastoAbierto.que : null}
-                onAbrir={(que) => setGastoAbierto(que ? { id: g.id, que } : null)}
-              />
-            ))}
-          <div className="flex items-center justify-between gap-3">
-            {delaSeccion.length > 3 ? (
-              <button
-                type="button"
-                onClick={() => navigate(`/onboarding-v2/gastos/categoria/${cat.id}`)}
-                className="v2-focus min-h-[44px] text-[13px] font-semibold underline"
-                style={{ color: COLORS.brand }}
-              >
-                Ver más
-              </button>
-            ) : <span />}
-          </div>
-        </div>
-      )}
-
       {abierta && (
         <div ref={faltaTope.ref} className="flex flex-col gap-2 pt-1">
           <div className="relative">
@@ -231,6 +203,34 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
             >
               Guardar
             </button>
+          </div>
+        </div>
+      )}
+
+      {visible && !renombrando && (
+        <div className="flex flex-col pl-6">
+          {delaSeccion.length === 0
+            ? <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no hay gastos en esta categoría.</p>
+            : delaSeccion.slice(0, 3).map((g) => (
+              <FilaGasto
+                key={g.id}
+                gasto={g}
+                categorias={categorias}
+                abierto={gastoAbierto?.id === g.id ? gastoAbierto.que : null}
+                onAbrir={(que) => setGastoAbierto(que ? { id: g.id, que } : null)}
+              />
+            ))}
+          <div className="flex items-center justify-between gap-3">
+            {delaSeccion.length > 3 ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/onboarding-v2/gastos/categoria/${cat.id}`)}
+                className="v2-focus min-h-[44px] text-[13px] font-semibold underline"
+                style={{ color: COLORS.brand }}
+              >
+                Ver más
+              </button>
+            ) : <span />}
           </div>
         </div>
       )}
