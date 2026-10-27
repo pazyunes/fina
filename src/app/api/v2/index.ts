@@ -1,7 +1,7 @@
 import { correr, falla, idUsuaria, ok, slugify, supabase, type Resultado } from './cliente';
 import { cotizacionDolar } from './cotizacion';
 import {
-  ESTADO_VACIO, PERFIL_VACIO,
+  ESTADO_VACIO, PERFIL_VACIO, tipoDesdeLaBase, tipoParaLaBase,
   type AporteInversion, type Contribucion, type EstadoV2, type FuenteIngreso, type Gasto, type GastoFijo, type Grupo, type Ingreso,
   type Carga, type MedioPago, type MiembroGrupo, type Moneda, type MonedaConvertible,
   type Objetivo, type PagoMixto, type Perfil,
@@ -326,9 +326,8 @@ function aGasto(f: FilaGasto): Gasto {
     montoArs: Number(f.amount_ars),
     descripcion: f.description ?? '',
     seccionId: f.section_id,
-    tipo: (f.expense_type ?? 'otro') as TipoGasto,
+    ...tipoDesdeLaBase(f.expense_type, f.expense_type_other),
     metodoPago: f.payment_method,
-    ...(f.expense_type_other ? { tipoOtro: f.expense_type_other } : {}),
     pagos: f.payment_methods?.length ? f.payment_methods : undefined,
     grupoId: f.group_id,
     ts: new Date(f.occurred_at).getTime(),
@@ -373,11 +372,11 @@ export async function registrarGasto(g: {
       exchange_rate_id: g.cotizacionId ?? null,
       description: g.descripcion,
       section_id: g.seccionId,
-      expense_type: g.tipo,
+      expense_type: tipoParaLaBase(g.tipo).tipo,
       // Las columnas de las migraciones 0035/0036 sólo se mandan cuando hay
       // algo para guardar en ellas: así un gasto común no depende de que
       // estén aplicadas.
-      ...(g.tipo === 'otro' && g.tipoOtro ? { expense_type_other: g.tipoOtro } : {}),
+      ...(() => { const otro = tipoParaLaBase(g.tipo).otro ?? (g.tipo === 'otro' ? g.tipoOtro : undefined); return otro ? { expense_type_other: otro } : {}; })(),
       payment_method: dividido ? null : g.metodoPago,
       ...(dividido ? { payment_methods: g.pagos } : {}),
       group_id: g.grupoId ?? null,
@@ -403,6 +402,39 @@ export async function registrarGasto(g: {
   return ok(aGasto(r.data[0]));
 }
 
+/** Un gasto de antes, listo para guardar: sin medio de pago, así que no mueve ningún saldo. */
+export type GastoParaImportar = {
+  id: string; ts: number; monto: number; moneda: MonedaConvertible; montoArs: number; cotizacionId: string | null;
+  descripcion: string; seccionId: string | null;
+};
+
+/** Guarda muchos gastos de una vez, de a 100. Si un tramo falla, corta y dice cuál. */
+export async function importarGastos(gastos: GastoParaImportar[]): Promise<Resultado<null>> {
+  const uid = await idUsuaria();
+  if (!uid) return falla<null>('sin sesión', 'importarGastos');
+  for (let i = 0; i < gastos.length; i += 100) {
+    const tramo = gastos.slice(i, i + 100).map((g) => ({
+      id: g.id,
+      user_id: uid,
+      occurred_at: new Date(g.ts).toISOString(),
+      type: 'expense',
+      amount_ars: g.montoArs,
+      currency: g.moneda,
+      original_amount: g.moneda === 'USD' ? g.monto : null,
+      exchange_rate_id: g.cotizacionId,
+      description: g.descripcion,
+      section_id: g.seccionId,
+      expense_type: 'otro',
+      payment_method: null,
+      group_id: null,
+      source: 'manual',
+    }));
+    const r = await correr<null>('importarGastos', () => supabase.from('transactions').insert(tramo).then(({ error }) => ({ data: null, error })));
+    if (r.error !== null) return r;
+  }
+  return ok(null);
+}
+
 export async function editarGasto(id: string, g: {
   monto?: number; moneda?: MonedaConvertible; montoArs?: number; cotizacionId?: string | null;
   descripcion?: string; seccionId?: string | null; tipo?: TipoGasto;
@@ -422,8 +454,11 @@ export async function editarGasto(id: string, g: {
   if (g.cotizacionId !== undefined) fila.exchange_rate_id = g.cotizacionId;
   if (g.descripcion !== undefined) fila.description = g.descripcion;
   if (g.seccionId !== undefined) fila.section_id = g.seccionId;
-  if (g.tipo !== undefined) fila.expense_type = g.tipo;
+  if (g.tipo !== undefined) fila.expense_type = tipoParaLaBase(g.tipo).tipo;
   if (g.tipoOtro !== undefined) fila.expense_type_other = g.tipoOtro;
+  // Un tipo nuevo se guarda como "otro" con su nombre, pise lo que pise `tipoOtro`.
+  const nombreDelTipo = g.tipo !== undefined ? tipoParaLaBase(g.tipo).otro : undefined;
+  if (nombreDelTipo) fila.expense_type_other = nombreDelTipo;
   if (g.metodoPago !== undefined) fila.payment_method = g.metodoPago;
   if (g.pagos !== undefined) fila.payment_methods = g.pagos?.length ? g.pagos : null;
   if (g.ts !== undefined) fila.occurred_at = new Date(g.ts).toISOString();
@@ -488,7 +523,7 @@ export async function crearGastoFijo(g: GastoFijo): Promise<Resultado<null>> {
   return correr<null>('crearGastoFijo', () =>
     supabase.from('recurring_expenses').insert({
       id: g.id, user_id: uid, description: g.descripcion, amount: g.monto, currency: g.moneda,
-      section_id: g.seccionId, expense_type: g.tipo, payment_method: g.metodoPago,
+      section_id: g.seccionId, expense_type: tipoParaLaBase(g.tipo).tipo, payment_method: g.metodoPago,
       frequency: g.frecuencia, next_due: g.proximoPago, anchor_day: g.diaAncla,
     }).then(({ error }) => ({ data: null, error })),
   );

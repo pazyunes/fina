@@ -13,7 +13,37 @@ export function esConvertible(m: Moneda): m is MonedaConvertible {
   return m === 'ARS' || m === 'USD';
 }
 export type Periodo = 'semana' | 'mes';
-export type TipoGasto = 'necesario' | 'urgente' | 'impulsivo' | 'otro';
+export type TipoGasto = 'necesario' | 'urgente' | 'impulsivo' | 'desorganizado' | 'excepcion' | 'otro';
+
+/**
+ * Los tipos que la base todavía no tiene como tales (el check de `expense_type`
+ * sólo acepta los cuatro de siempre): se guardan como "otro" con este texto en
+ * `expense_type_other`. Así no hace falta migración y el bot de WhatsApp los
+ * lee como un "otro" con nombre.
+ */
+export const TIPOS_GUARDADOS_COMO_OTRO: Partial<Record<TipoGasto, string>> = {
+  desorganizado: 'Desorganizado/a',
+  excepcion: 'Excepción',
+};
+
+/** Lo que va a las columnas `expense_type` y `expense_type_other`. */
+export function tipoParaLaBase(tipo: TipoGasto): { tipo: 'necesario' | 'urgente' | 'impulsivo' | 'otro'; otro?: string } {
+  const texto = TIPOS_GUARDADOS_COMO_OTRO[tipo];
+  if (texto) return { tipo: 'otro', otro: texto };
+  return { tipo: tipo === 'desorganizado' || tipo === 'excepcion' ? 'otro' : tipo };
+}
+
+/** Al revés: lo guardado como "otro" con el texto de uno de los tipos nuevos vuelve a ser ese tipo. */
+export function tipoDesdeLaBase(tipo: string | null, otro: string | null | undefined): { tipo: TipoGasto; tipoOtro?: string } {
+  const base = (tipo ?? 'otro');
+  if (base === 'otro') {
+    const texto = otro?.trim().toLowerCase();
+    const nuevo = (Object.keys(TIPOS_GUARDADOS_COMO_OTRO) as TipoGasto[]).find((t) => TIPOS_GUARDADOS_COMO_OTRO[t]?.toLowerCase() === texto);
+    if (nuevo) return { tipo: nuevo };
+    return otro ? { tipo: 'otro', tipoOtro: otro } : { tipo: 'otro' };
+  }
+  return { tipo: base as TipoGasto };
+}
 export type KindAporte = 'paid' | 'saved';
 
 export type Seccion = {

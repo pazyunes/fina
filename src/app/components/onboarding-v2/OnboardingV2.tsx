@@ -24,6 +24,7 @@ import { traducirErrorAuth } from '../../lib/erroresAuth';
 import { crearObjetivo, crearSeccion, guardarPerfil, guardarPerfilInversor } from '../../api/v2';
 import { esperarCola } from '../../api/v2/almacen';
 import { InvitacionAvisos } from './InvitacionAvisos';
+import { useFaltantes } from './useFaltantes';
 
 // Onboarding v2 — el flujo de entrada real.
 //
@@ -100,7 +101,7 @@ const FINI_DICE: Record<StepKey, { dice: string; estado: FiniState } | null> = {
   comoConocio: { dice: 'Última, prometido. Nos ayuda a saber dónde contarle a más gente.', estado: 'idle' },
   // Los términos se aceptan en la misma pantalla en que se crea la cuenta, así
   // que el mensaje de privacidad va acá.
-  login: { dice: 'Tus datos son privados: solo se usan para darte recomendaciones a vos. Nunca los compartimos ni los vendemos.', estado: 'idle' },
+  login: null,
 };
 
 const CTA_LABELS: Record<StepKey, string> = {
@@ -254,7 +255,7 @@ const PREVIEW_INFO: Record<ObjetivoId, { titulo: string; desc: string; bg: strin
 // crudo, §3.3). El foco visible lo da .v2-focus (--focus-ring, §11), así no hace
 // falta el `focus:border-...` con hex. El borde de error usa naranja (atención
 // accionable real, §3.3), nunca un rojo de alerta.
-const inputClass = 'v2-focus rounded-2xl px-4 py-3 text-[18px] outline-none transition-colors';
+const inputClass = 'v2-focus rounded-2xl px-4 py-2.5 min-h-[46px] text-[15px] outline-none transition-colors';
 function inputStyle(err = false): React.CSSProperties {
   return { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${err ? COLORS.naranja : COLORS.line}` };
 }
@@ -314,10 +315,10 @@ function passwordValida(v: string) { return v.length >= 8 && /[A-Z]/.test(v) && 
 
 function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</label>
+    <div className="flex flex-col gap-1">
+      <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</label>
       {children}
-      {error && <p className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
+      {error && <p className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
     </div>
   );
 }
@@ -442,6 +443,8 @@ export function OnboardingV2() {
   const telefonoOk = telefonoValidoAr(telefono);
   const emailOk = emailValido(email);
   const passwordOk = passwordValida(password);
+  // Al tocar "Crear mi cuenta" con algo sin completar, la vista va al primer campo que falta.
+  const faltanLogin = useFaltantes({ email: !emailOk, password: !passwordOk, telefono: !telefonoOk, terminos: !aceptoTerminos }, currentKey === 'login');
 
   function stepValid(key: StepKey): boolean {
     if (key === 'nombre') return nombre.trim().length > 0;
@@ -655,7 +658,7 @@ export function OnboardingV2() {
       if (finished) { marcarFiniAterriza(); navigate('/onboarding-v2/home'); return; }
       if (pasoLogin === 'confirmar') { navigate('/onboarding-v2/entrar'); return; }
       setIntentoLogin(true);
-      if (!stepValid('login')) return;
+      if (!stepValid('login')) { faltanLogin.intentar(() => undefined); return; }
       void crearCuenta();
       return;
     }
@@ -764,7 +767,7 @@ export function OnboardingV2() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: reduce ? 0 : 0.18 }}
               aria-live="polite"
-              className={`flex flex-col gap-5 w-full ${finiDice && !finished ? 'pb-8' : 'my-auto pb-[12vh]'}`}
+              className={`flex flex-col gap-5 w-full ${finiDice && !finished ? 'pb-8' : currentKey === 'login' && !finished ? 'my-auto pb-2' : 'my-auto pb-[12vh]'}`}
             >
               {currentKey === 'intro' && (
                 <>
@@ -789,7 +792,7 @@ export function OnboardingV2() {
                       </li>
                     ))}
                   </ul>
-                  <p className="text-[18px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
+                  <p className="text-[16px]" style={{ color: COLORS.inkSoft }}>Todo esto, a tu ritmo — no hace falta que sepas nada todavía.</p>
                 </>
               )}
 
@@ -839,7 +842,7 @@ export function OnboardingV2() {
                   <Titulo>¿Qué es lo que más querés lograr con tu plata?</Titulo>
                   <OpcionesLista opciones={OBJETIVOS} valor={meta} onElegir={setMeta} />
                   {meta && (
-                    <div className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[15px] font-semibold" style={{ color: COLORS.ink, background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
+                    <div className="self-center max-w-[82%] text-center rounded-2xl px-4 py-3 text-[14px] font-semibold" style={{ color: COLORS.ink, background: COLORS.surface, border: `1px solid ${COLORS.line}` }}>
                       {objetivoBubble}
                     </div>
                   )}
@@ -897,13 +900,13 @@ export function OnboardingV2() {
                       <div className="flex items-center gap-3">
                         <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}><IconChat size={24} /></span>
                         <div className="flex flex-col">
-                          <p className="text-[18px] font-bold" style={{ color: COLORS.ink }}>
+                          <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>
                             {tedioso === 'si' ? 'Tranqui — para eso está tu FINA en WhatsApp' : 'Igual te va a encantar tu FINA en WhatsApp'}
                           </p>
                           <p className="text-[14px]" style={{ color: COLORS.limaText }}>Sin planillas, sin abrir la app.</p>
                         </div>
                       </div>
-                      <p className="text-[15px] leading-relaxed" style={{ color: COLORS.ink }}>
+                      <p className="text-[14px] leading-relaxed" style={{ color: COLORS.ink }}>
                         Le escribís tu gasto como se lo contarías a una amiga —{' '}
                         <span className="font-semibold">“gasté 5.000 en el súper”</span>{' '}
                         — y FINA lo registra sola, al toque. También te responde dudas y te avisa cómo venís.
@@ -955,7 +958,7 @@ export function OnboardingV2() {
                   <Titulo>¿Cuál es ese objetivo?</Titulo>
                   <input autoFocus aria-label="Nombre de tu objetivo" className={inputClass} style={inputStyle()} placeholder="Ej: Viaje a Bariloche" value={objNombre} onChange={(e) => setObjNombre(e.target.value)} />
                   <div className="flex items-center justify-between">
-                    <p className="text-[16px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
+                    <p className="text-[15px] font-bold" style={{ color: COLORS.ink }}>¿Cuánto necesitás?</p>
                     <div className="flex rounded-full p-0.5" style={{ background: COLORS.tint }}>
                       {(['ARS', 'USD'] as const).map((m) => (
                         <button key={m} type="button" aria-pressed={objMoneda === m} onClick={() => setObjMoneda(m)} className="v2-focus rounded-full px-3 py-1 text-[14px] font-bold transition-colors" style={objMoneda === m ? { background: COLORS.brand, color: COLORS.surface } : { color: COLORS.inkSoft }}>{m}</button>
@@ -966,7 +969,7 @@ export function OnboardingV2() {
                     <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{objMoneda === 'USD' ? 'US$' : '$'}</span>
                     <input aria-label="Monto total del objetivo" className={`${inputClass} pl-11`} style={inputStyle()} placeholder="Monto total" inputMode="decimal" value={objMonto} onChange={(e) => setObjMonto(formatThousands(e.target.value))} />
                   </div>
-                  <p className="text-[16px] font-bold mt-1" style={{ color: COLORS.ink }}>¿Para cuándo? <span className="font-normal text-[15px]" style={{ color: COLORS.inkSoft }}>(opcional)</span></p>
+                  <p className="text-[15px] font-bold mt-1" style={{ color: COLORS.ink }}>¿Para cuándo? <span className="font-normal text-[14px]" style={{ color: COLORS.inkSoft }}>(opcional)</span></p>
                   <input type="date" aria-label="Fecha del objetivo (opcional)" className={inputClass} style={inputStyle()} value={objFecha} onChange={(e) => setObjFecha(e.target.value)} />
                 </>
               )}
@@ -995,14 +998,14 @@ export function OnboardingV2() {
                     <TituloSeccion>Y además</TituloSeccion>
                     {previewsOrdenados.slice(1).map((p) => (
                       <div key={p.titulo} className="flex items-baseline gap-2">
-                        <span className="font-bold text-[15px] shrink-0" style={{ color: COLORS.ink }}>{p.titulo}:</span>
-                        <span className="text-[15px]" style={{ color: COLORS.inkSoft }}>{p.desc}</span>
+                        <span className="font-bold text-[14px] shrink-0" style={{ color: COLORS.ink }}>{p.titulo}:</span>
+                        <span className="text-[14px]" style={{ color: COLORS.inkSoft }}>{p.desc}</span>
                       </div>
                     ))}
                     <div className="rounded-2xl p-4 flex items-center gap-3.5 mt-1" style={{ background: COLORS.lima }}>
                       <span className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}><IconChat size={24} /></span>
                       <div>
-                        <p className="font-bold text-[16px]" style={{ color: COLORS.ink }}>Tu bot de WhatsApp</p>
+                        <p className="font-bold text-[15px]" style={{ color: COLORS.ink }}>Tu bot de WhatsApp</p>
                         <p className="text-[14px]" style={{ color: COLORS.limaText }}>Es el botón redondo del medio, abajo de todo — contale un gasto hablando y listo, sin abrir la app.</p>
                       </div>
                     </div>
@@ -1023,20 +1026,21 @@ export function OnboardingV2() {
               )}
 
               {currentKey === 'login' && !finished && pasoLogin === 'datos' && (
-                <>
+                <div ref={faltanLogin.ref} className="flex flex-col gap-3">
                   <Titulo>Guardá tu progreso</Titulo>
                   <Campo label="Mail" error={intentoLogin && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Campo obligatorio') : undefined}>
-                    <input className={inputClass} style={inputStyle(intentoLogin && !emailOk)} placeholder="vos@mail.com" value={email} onChange={(e) => { setEmail(e.target.value); setCuentaExistente(null); }} autoComplete="email" />
+                    <input data-campo="email" className={inputClass} style={inputStyle(intentoLogin && !emailOk)} placeholder="vos@mail.com" value={email} onChange={(e) => { setEmail(e.target.value); setCuentaExistente(null); }} autoComplete="email" />
                   </Campo>
                   <SugerenciaMail email={email} onUsar={(c) => { setEmail(c); setCuentaExistente(null); }} />
-                  <Campo label="Contraseña" error={intentoLogin && !passwordOk ? 'Mínimo 8 caracteres, con una mayúscula, un número y un carácter especial' : undefined}>
-                    <InputContrasena className={inputClass} style={inputStyle(intentoLogin && !passwordOk)} placeholder="Elegí una contraseña segura" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+                  <Campo label="Contraseña" error={intentoLogin && !passwordOk ? 'Mínimo 8 caracteres, con mayúscula, número y símbolo' : undefined}>
+                    <InputContrasena data-campo="password" className={inputClass} style={inputStyle(intentoLogin && !passwordOk)} placeholder="Elegí una contraseña segura" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
                   </Campo>
                   <Campo label="Teléfono" error={intentoLogin && !telefonoOk ? problemaTelefonoAr(telefono) ?? undefined : undefined}>
                     <div className="flex gap-2">
-                      <span className={`flex items-center gap-1.5 px-3 rounded-2xl text-[18px] font-semibold shrink-0 ${inputClass}`} style={inputStyle(false)}>+54</span>
+                      <span className={`flex items-center gap-1.5 px-3 rounded-2xl text-[15px] font-semibold shrink-0 ${inputClass}`} style={inputStyle(false)}>+54</span>
                       <input
-                        className={`flex-1 ${inputClass}`}
+                        data-campo="telefono"
+                        className={`flex-1 min-w-0 ${inputClass}`}
                         style={inputStyle(intentoLogin && !telefonoOk)}
                         placeholder="11 1234-5678"
                         inputMode="numeric"
@@ -1046,20 +1050,20 @@ export function OnboardingV2() {
                       />
                     </div>
                   </Campo>
-                  <p className="text-[14px]" style={{ color: COLORS.inkFaint }}>
-                    Te lo pedimos para que puedas registrar gastos por WhatsApp. Todavía no lo verificamos con un SMS.
+                  <p className="text-[13px] leading-snug" style={{ color: COLORS.inkFaint }}>
+                    El teléfono sirve para registrar gastos por WhatsApp. Tus datos son privados y nunca se comparten.
                   </p>
                   {/* Los términos se aceptan acá, en la misma pantalla en que
                       se crea la cuenta: es el momento en que el consentimiento
-                      tiene sentido, y un paso aparte antes era una pantalla más
-                      que no pedía nada propio. Sin aceptar no se crea la cuenta. */}
-                  <div className="flex flex-col gap-1.5">
+                      tiene sentido. Sin aceptar no se crea la cuenta. */}
+                  <div className="flex flex-col gap-1">
                     <div
-                      className="flex items-center gap-3 rounded-2xl p-4"
+                      className="flex items-center gap-3 rounded-2xl px-3 py-2"
                       style={{ background: COLORS.surface, border: `1px solid ${intentoLogin && !aceptoTerminos ? COLORS.naranja : COLORS.line}` }}
                     >
                       <button
                         type="button"
+                        data-campo="terminos"
                         role="checkbox"
                         aria-checked={aceptoTerminos}
                         aria-label="Acepto los términos y condiciones y la política de privacidad"
@@ -1076,7 +1080,7 @@ export function OnboardingV2() {
                       {/* Tocar el texto también marca la casilla, salvo que se
                           toque uno de los links para leerlos. */}
                       <span
-                        className="text-[15px] font-medium leading-snug cursor-pointer"
+                        className="text-[13px] font-medium leading-snug cursor-pointer"
                         style={{ color: COLORS.ink }}
                         onClick={(e) => { if (!(e.target as HTMLElement).closest('a')) setAceptoTerminos((v) => !v); }}
                       >
@@ -1084,12 +1088,12 @@ export function OnboardingV2() {
                       </span>
                     </div>
                     {intentoLogin && !aceptoTerminos && (
-                      <p className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>Para crear tu cuenta tenés que aceptarlos.</p>
+                      <p className="text-[13px] font-semibold" style={{ color: COLORS.coralDark }}>Para crear tu cuenta tenés que aceptarlos.</p>
                     )}
                   </div>
                   {cuentaExistente && (
-                    <div role="alert" className="rounded-2xl px-4 py-3.5 flex flex-col gap-2.5" style={{ background: COLORS.brandSoft }}>
-                      <p className="text-[16px] leading-snug" style={{ color: COLORS.ink }}>
+                    <div role="alert" className="rounded-2xl px-4 py-3 flex flex-col gap-2" style={{ background: COLORS.brandSoft }}>
+                      <p className="text-[14px] leading-snug" style={{ color: COLORS.ink }}>
                         {cuentaExistente === 'email'
                           ? <>Ya tenés una cuenta con <strong>{email.trim()}</strong>. Entrá con tu contraseña y seguís donde lo dejaste.</>
                           : <>Este teléfono ya está en una cuenta de FINA. Si es tuya, entrá con el mail con el que la creaste.</>}
@@ -1097,7 +1101,7 @@ export function OnboardingV2() {
                       <button
                         type="button"
                         onClick={() => navigate('/onboarding-v2/entrar', { state: cuentaExistente === 'email' ? { email: email.trim() } : undefined })}
-                        className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[15px] font-bold"
+                        className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[14px] font-bold"
                         style={{ background: COLORS.brand, color: COLORS.surface }}
                       >
                         Iniciar sesión
@@ -1105,9 +1109,9 @@ export function OnboardingV2() {
                     </div>
                   )}
                   {errorAuth && (
-                    <p role="alert" className="text-[15px] font-semibold" style={{ color: COLORS.coralDark }}>{errorAuth}</p>
+                    <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{errorAuth}</p>
                   )}
-                </>
+                </div>
               )}
 
               {currentKey === 'login' && !finished && pasoLogin === 'confirmar' && (
@@ -1126,7 +1130,7 @@ export function OnboardingV2() {
                 <div className="flex flex-col items-center gap-3 text-center">
                   <div className="py-2"><Fini state="logro" size={150} /></div>
                   <Titulo className="text-center">¡Llegaste a FINA, {nombre.trim().split(' ')[0]}!</Titulo>
-                  <p className="text-[16px]" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
+                  <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Ya está — a partir de ahora, te acompañamos en esto.</p>
                   <InvitacionAvisos momento="onboarding" />
                 </div>
               )}
@@ -1150,7 +1154,7 @@ export function OnboardingV2() {
               <button
                 type="button"
                 onClick={() => navigate('/onboarding-v2/entrar')}
-                className="v2-focus w-full rounded-2xl py-4 text-[18px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
+                className="v2-focus w-full rounded-2xl py-3 min-h-[48px] text-[16px] font-bold select-none transition-all duration-100 ease-out active:scale-[0.98]"
                 style={{ background: COLORS.surface, color: COLORS.brand, border: `1.5px solid ${COLORS.brand}` }}
               >
                 Ya tengo cuenta

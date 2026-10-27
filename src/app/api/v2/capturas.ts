@@ -34,7 +34,7 @@ const LADO_MAX = 1400;
 const MAX_PDF_BYTES = 3_200_000;
 
 /** Achica la imagen y la pasa a JPEG: una captura de teléfono pesa varios MB y no hace falta tanto para leer texto. */
-async function achicar(archivo: File): Promise<{ base64: string; tipoMime: 'image/jpeg' }> {
+export async function achicar(archivo: File): Promise<{ base64: string; tipoMime: 'image/jpeg' }> {
   const bmp = await createImageBitmap(archivo);
   const escala = Math.min(1, LADO_MAX / Math.max(bmp.width, bmp.height));
   const lienzo = document.createElement('canvas');
@@ -53,7 +53,7 @@ function esResultado(x: unknown): x is ResultadoCaptura {
 }
 
 /** Un PDF a base64, sin tocarlo. */
-async function pdfABase64(archivo: File): Promise<{ base64: string; tipoMime: 'application/pdf' }> {
+export async function pdfABase64(archivo: File): Promise<{ base64: string; tipoMime: 'application/pdf' }> {
   if (archivo.size > MAX_PDF_BYTES) throw new Error('El PDF pesa demasiado: probá con una captura o con uno de menos de 3 MB');
   const bytes = new Uint8Array(await archivo.arrayBuffer());
   let binario = '';

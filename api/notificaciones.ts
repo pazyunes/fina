@@ -4,10 +4,13 @@
 //   · ?turno=manana — 10 hs de Argentina:
 //       – un gasto fijo que vence hoy o mañana;
 //       – si no, "día de separar", el día del mes en que cobra (si lo cargó);
+//       – si no, el 1.º de cada mes, el cierre del mes que terminó;
 //       – si no, los lunes, el resumen de la semana anterior.
 //   · ?turno=tarde, 19 hs de Argentina, si hoy no hay gastos anotados:
 //       – con racha de 2 días o más: el de la racha, que pide contarle a FINA
 //         lo de hoy (anotar un gasto salva el día);
+//       – si no, un gasto que suele anotar ese día de la semana y todavía no
+//         anotó hoy ("¿Hoy gastaste en café?");
 //       – si no: el recordatorio de anotar lo de hoy.
 //
 // Desde la migración 0044 no hay paso del día: la racha cuenta los días con
@@ -27,6 +30,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { diaAR, diaDeSemana, diasDelMes, lunesDe, sumarDias } from './_recomendaciones/fechas.js';
 import { configurarPush, enviarAviso, type Aviso, type Suscripcion } from './_notificaciones/enviar.js';
 import { avisoDeInversionQueVence, type InversionQueVence } from './_notificaciones/inversiones.js';
+import { detectarHabitos, habitosDeHoy, SEMANAS_QUE_SE_MIRAN } from '../src/app/lib/habitos.js';
 
 type Req = { headers: Record<string, string | string[] | undefined>; query?: Record<string, string | string[] | undefined> };
 type Res = { status(code: number): Res; json(body: unknown): void; setHeader(nombre: string, valor: string): void };
@@ -121,6 +125,10 @@ async function avisoDeLaManana(supabase: SupabaseClient, uid: string, hoy: strin
       const aviso = await armarSeparar(supabase, uid);
       if (aviso) return { tipo: 'separar', aviso };
     }
+  }
+  if (pref.resumen !== false && hoy.slice(8, 10) === '01') {
+    const aviso = await armarCierreDeMes(supabase, uid, hoy);
+    if (aviso) return { tipo: 'resumen', aviso };
   }
   if (pref.resumen !== false && diaDeSemana(hoy) === 0) {
     const aviso = await armarResumenSemanal(supabase, uid, hoy);
@@ -221,6 +229,30 @@ async function armarSeparar(supabase: SupabaseClient, uid: string): Promise<Avis
   };
 }
 
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+/** El 1.º del mes: si anotó gastos en el mes que terminó, un aviso que abre su cierre. */
+async function armarCierreDeMes(supabase: SupabaseClient, uid: string, hoy: string): Promise<Aviso | null> {
+  const anio = Number(hoy.slice(0, 4));
+  const mes = Number(hoy.slice(5, 7));
+  const anterior = mes === 1 ? { a: anio - 1, m: 12 } : { a: anio, m: mes - 1 };
+  const desde = `${anterior.a}-${String(anterior.m).padStart(2, '0')}-01`;
+  const { count, error } = await supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', uid).eq('type', 'expense')
+    .gte('occurred_at', `${desde}T00:00:00-03:00`)
+    .lt('occurred_at', `${hoy}T00:00:00-03:00`);
+  if (error || !count) return null;
+  const nombre = MESES[anterior.m - 1];
+  return {
+    title: `Cómo cerró ${nombre}`,
+    body: `Mirá cómo te fue y armá ${MESES[mes - 1]}.`,
+    url: '/onboarding-v2/home?abrir=cierre',
+    tag: 'fina-cierre',
+  };
+}
+
 async function armarResumenSemanal(supabase: SupabaseClient, uid: string, hoy: string): Promise<Aviso | null> {
   // La semana anterior entera, de lunes a domingo, y la de antes para comparar.
   const lunes = sumarDias(lunesDe(hoy), -7);
@@ -308,7 +340,12 @@ async function avisoDeLaTarde(supabase: SupabaseClient, uid: string, hoy: string
   }
   // La preferencia 'paso' quedó como la del recordatorio de anotar lo del
   // día (sin migración nueva): el paso diario ya no existe (migración 0044).
-  if (pref.paso === false || !sinGastoHoy) return null;
+  if (pref.paso === false) return null;
+
+  // Un gasto de los que suele anotar este día de la semana y todavía no anotó.
+  const habito = await armarHabito(supabase, uid, hoy);
+  if (habito) return { tipo: 'registro', aviso: habito };
+  if (!sinGastoHoy) return null;
   return {
     tipo: 'registro',
     aviso: {
@@ -317,5 +354,34 @@ async function avisoDeLaTarde(supabase: SupabaseClient, uid: string, hoy: string
       url: '/onboarding-v2/home',
       tag: 'fina-registro',
     },
+  };
+}
+
+
+/** Un gasto que la persona suele anotar este día de la semana y hoy todavía no anotó. */
+async function armarHabito(supabase: SupabaseClient, uid: string, hoy: string): Promise<Aviso | null> {
+  const desde = sumarDias(hoy, -(SEMANAS_QUE_SE_MIRAN * 7 + 1));
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('description, amount_ars, occurred_at, section_id')
+    .eq('user_id', uid).eq('type', 'expense')
+    .gte('occurred_at', `${desde}T00:00:00-03:00`)
+    .limit(1000);
+  if (error || !data) return null;
+  const gastos = (data as { description: string | null; amount_ars: number; occurred_at: string; section_id: string | null }[])
+    .filter((g) => g.description && !/\{\{.*\}\}/.test(g.description))
+    .map((g) => ({ descripcion: g.description as string, monto: Number(g.amount_ars), fecha: diaAR(g.occurred_at), seccionId: g.section_id }));
+
+  const habito = habitosDeHoy(detectarHabitos(gastos, hoy), gastos, hoy)[0];
+  if (!habito) return null;
+
+  const datos = new URLSearchParams({ abrir: 'gasto', descripcion: habito.descripcion });
+  if (habito.montoTipico > 0) datos.set('monto', String(habito.montoTipico));
+  if (habito.seccionId) datos.set('seccion', habito.seccionId);
+  return {
+    title: `¿Hoy gastaste en ${habito.descripcion}?`.slice(0, 80),
+    body: 'Si fue así, anotalo en un toque y queda registrado.',
+    url: `/onboarding-v2/gastos?${datos.toString()}`,
+    tag: 'fina-habito',
   };
 }

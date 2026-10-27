@@ -13,6 +13,8 @@ import { RecordatorioGastos } from './RecordatorioGastos';
 import { ProximoPasoInicio } from './ProximoPasoInicio';
 import { ObjetivosEnInicio } from './ObjetivosEnInicio';
 import { ReservaEnInicio } from './ReservaEnInicio';
+import { InvertirEnInicio } from './InvertirEnInicio';
+import { CierreEnInicio } from './CierreEnInicio';
 
 
 // Inicio tiene tres cosas fijas (decisión oct 2026): arriba el recordatorio de
@@ -125,7 +127,7 @@ export function HomeV2() {
           {/* Saludo y nombre en una sola línea. "Tu FINA" era el fallback sin
               nombre y terminaba siendo lo que veías: genérico donde tendría
               que estar lo personal. */}
-          <Titulo className="!text-[19px] lg:!text-[22px]">
+          <Titulo className="!text-[17px] lg:!text-[18px]">
             {saludoDelDia()}{nombre ? `, ${nombre}` : ''}
           </Titulo>
         </div>
@@ -140,7 +142,7 @@ export function HomeV2() {
             className="v2-focus flex flex-col items-center shrink-0 min-h-[44px] px-1 rounded-xl"
             style={{ color: COLORS.brand }}
           >
-            <span data-racha-numero className="flex items-center gap-1.5 text-[21px] font-bold leading-none"><IconFuego size={28} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
+            <span data-racha-numero className="flex items-center gap-1.5 text-[17px] font-bold leading-none"><IconFuego size={28} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
             <span className="text-[13px] font-semibold mt-0.5" style={{ color: COLORS.inkSoft }}>{racha.dias === 1 ? 'día' : 'días'}</span>
           </button>
         ) : (
@@ -154,6 +156,9 @@ export function HomeV2() {
       {/* 1. Registrar lo del día: un recordatorio fijo arriba. Es lo que
           sostiene la racha y todo lo demás. */}
       <RecordatorioGastos />
+
+      {/* Los últimos días del mes y los primeros del siguiente: cómo cerró el mes. */}
+      <CierreEnInicio />
 
       {/* Detalle de la racha: qué sumó cada día. Un número que no se puede
           abrir es un puntaje; abriéndolo es un dato. */}
@@ -191,6 +196,9 @@ export function HomeV2() {
 
       {/* Tus objetivos: el más relevante, cuánto avanzó y qué hacer (DEBT I7). */}
       <ObjetivosEnInicio />
+
+      {/* A quien todavía no invierte, cada tanto, una fila que lleva a Inversiones. */}
+      <InvertirEnInicio />
 
       {/* Se fue "Tus secciones" (Gastos / Objetivos / Inversiones en tres
           fichas): repetía el menú de abajo, que ya lleva a las mismas tres

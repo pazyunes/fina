@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { diaArgentina } from '../../api/v2/pasos';
 import { COLORS } from './shared';
 import { LinkWhatsApp } from './LinkWhatsApp';
+import { detectarHabitos, habitosDeHoy } from '../../lib/habitos';
+import { descartarHabitoHoy, habitoDescartadoHoy } from '../../lib/habitosLocal';
 
 // Registrar lo del día: el recordatorio fijo de arriba de Inicio. Es lo que
 // sostiene la racha (cuenta cada día con un gasto anotado) y todo lo demás.
@@ -14,6 +16,18 @@ export function RecordatorioGastos() {
   const navigate = useNavigate();
   const { estado, listo, recargar } = useAlmacen();
   const fueAWhatsApp = useRef(false);
+  const [descartados, setDescartados] = useState(0);
+
+  // Un gasto que suele anotar ese día de la semana y todavía no anotó hoy. Se
+  // ofrece desde el mediodía: a la mañana todavía no tuvo tiempo de gastarlo.
+  const hoy = diaArgentina();
+  const habito = useMemo(() => {
+    if (new Date().getHours() < 12) return null;
+    const gastos = estado.gastos.map((g) => ({ descripcion: g.descripcion, monto: g.montoArs, fecha: diaArgentina(g.ts), seccionId: g.seccionId }));
+    return habitosDeHoy(detectarHabitos(gastos, hoy), gastos, hoy).find((h) => !habitoDescartadoHoy(h.clave, hoy)) ?? null;
+    // `descartados` fuerza el cálculo de nuevo cuando se dice "Hoy no".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estado.gastos, hoy, descartados]);
 
   // Al volver de WhatsApp se traen los datos: el bot escribe del otro lado, y
   // si no, la fila seguiría preguntando justo después de haberlo contado.
@@ -28,10 +42,16 @@ export function RecordatorioGastos() {
   }, [recargar]);
 
   if (!listo) return null;
-  const hoy = diaArgentina();
   const hayGastoHoy = estado.gastos.some((g) => diaArgentina(g.ts) === hoy);
   const primero = estado.gastos.length === 0;
   const irAGastos = () => navigate('/onboarding-v2/gastos', { state: { abrir: 'gasto', from: '/onboarding-v2/home' } });
+  const anotarHabito = () => {
+    if (!habito) return;
+    const datos = new URLSearchParams({ abrir: 'gasto', descripcion: habito.descripcion });
+    if (habito.montoTipico > 0) datos.set('monto', String(habito.montoTipico));
+    if (habito.seccionId) datos.set('seccion', habito.seccionId);
+    navigate(`/onboarding-v2/gastos?${datos.toString()}`, { state: { from: '/onboarding-v2/home' } });
+  };
 
   return (
     <section
@@ -42,10 +62,31 @@ export function RecordatorioGastos() {
       // queremos que use.
       style={{ background: COLORS.brandFaint }}
     >
-      <p className="flex-1 min-w-[140px] text-[13px] font-semibold" style={{ color: hayGastoHoy ? COLORS.limaText : COLORS.ink }}>
-        {hayGastoHoy ? 'Hoy ya anotaste un gasto' : primero ? 'Anotá tu primer gasto' : 'Recordá anotar tus gastos de hoy'}
+      <p className="flex-1 min-w-[140px] text-[13px] font-semibold" style={{ color: habito ? COLORS.ink : hayGastoHoy ? COLORS.limaText : COLORS.ink }}>
+        {habito
+          ? `¿Hoy gastaste en ${habito.descripcion}?`
+          : hayGastoHoy ? 'Hoy ya anotaste un gasto' : primero ? 'Anotá tu primer gasto' : 'Recordá anotar tus gastos de hoy'}
       </p>
-      {hayGastoHoy ? (
+      {habito ? (
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={anotarHabito}
+            className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[13px] font-semibold"
+            style={{ background: COLORS.brand, color: COLORS.surface }}
+          >
+            Anotarlo
+          </button>
+          <button
+            type="button"
+            onClick={() => { descartarHabitoHoy(habito.clave, hoy); setDescartados((n) => n + 1); }}
+            className="v2-focus min-h-[44px] px-3 rounded-full text-[13px] font-semibold"
+            style={{ color: COLORS.brand }}
+          >
+            Hoy no
+          </button>
+        </div>
+      ) : hayGastoHoy ? (
         <button
           type="button"
           onClick={irAGastos}

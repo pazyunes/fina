@@ -107,7 +107,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
         <p className="text-[17px] font-semibold tabular-nums" style={{ color: COLORS.ink, fontFamily: FONTS.mono }}>
           {telefono}
         </p>
-        <p className="text-[15px]" style={{ color: COLORS.limaText }}>
+        <p className="text-[14px]" style={{ color: COLORS.limaText }}>
           Verificado — ya podés registrar gastos hablándole a FINA por WhatsApp.
         </p>
       </div>
@@ -122,7 +122,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
       {!sinTitulo && (
         <>
           <TituloSeccion>Verificá tu teléfono</TituloSeccion>
-          <p className="text-[16px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
             Es para que puedas registrar gastos hablándole a FINA por WhatsApp. Le mandás
             un código desde tu teléfono y listo — no te vamos a mandar ningún SMS.
           </p>
@@ -163,7 +163,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
             Abrir WhatsApp y enviar <IconChevron size={17} />
           </a>
 
-          <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft }}>
+          <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft }}>
             {esperando
               ? 'Esperando tu mensaje… Cuando lo envíes, esta pantalla se actualiza sola.'
               : 'Mandale el mensaje y volvé acá.'}
@@ -172,7 +172,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
           <button
             type="button"
             onClick={() => void pedir()}
-            className="v2-focus self-start text-[15px] font-semibold underline rounded-full py-2"
+            className="v2-focus self-start text-[14px] font-semibold underline rounded-full py-2"
             style={{ color: COLORS.brand }}
           >
             Pedir otro código
@@ -181,7 +181,7 @@ export function VerificarTelefono({ sinTitulo = false, pedirYa = false }: { sinT
       )}
 
       {error && (
-        <p role="alert" className="text-[15px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>
+        <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>
       )}
     </div>
   );

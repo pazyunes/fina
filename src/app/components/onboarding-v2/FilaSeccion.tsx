@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { BORDE_FALTA, COLORS, Monto, SegmentedTab, TextoFalta, formatThousands, parseMoneyInput } from './shared';
 import { useFaltantes } from './useFaltantes';
 import * as acciones from '../../api/v2/acciones';
-import { IconBasura, IconEditar } from './FinaIcons';
+import { IconBasura, IconChevron, IconEditar } from './FinaIcons';
+import { FilaGasto } from './FilaGasto';
+import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { INPUT_STYLE } from './FormularioGasto';
-import type { Categoria, Periodo, Tope } from './datosGasto';
+import { gastosDeLaBase, seccionesDeLaBase, type Categoria, type Periodo, type Tope } from './datosGasto';
 
 // Una sección como renglón: su color, el nombre, lo gastado y el tope. La usan
-// Gastos (las 5 donde más se gastó) y Tus secciones (todas). Tocar la fila o
-// el botón del tope hacen lo mismo, abrir el campo del tope, así que no hay
-// flecha aparte; al guardar, se vuelve a cerrar.
+// Gastos (las 5 donde más se gastó) y Tus secciones (todas). Tocar la fila
+// despliega sus 3 gastos más recientes, con "Ver más" para ir a la pantalla con
+// todos los de esa categoría, y ahí mismo "Agregar tope" (o "Editar tope") abre
+// el campo del tope; al guardar, se vuelve a cerrar.
 //
 // `conEdicion` suma renombrar y borrar, que sólo están en Tus secciones: en
 // Gastos se ponen topes, no se reorganizan secciones.
@@ -31,6 +35,16 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
   const [renombrando, setRenombrando] = useState(false);
   const [nombre, setNombre] = useState(cat.nombre);
   const [borrando, setBorrando] = useState(false);
+  const navigate = useNavigate();
+  const { estado: db } = useAlmacen();
+  const [desplegada, setDesplegada] = useState(false);
+  const [gastoAbierto, setGastoAbierto] = useState<{ id: string; que: 'editar' | 'borrar' } | null>(null);
+  const { categorias, delaSeccion } = useMemo(() => ({
+    categorias: seccionesDeLaBase(db).categorias,
+    delaSeccion: gastosDeLaBase(db).filter((g) => g.categoriaId === cat.id).sort((a, b) => b.ts - a.ts),
+  }), [db, cat.id]);
+  // Con el campo del tope abierto (por ejemplo, venido de Inicio) la fila se ve desplegada.
+  const visible = desplegada || abierta;
   const faltaTope = useFaltantes({ monto: parseMoneyInput(monto) <= 0 }, abierta);
   const faltaNombre = useFaltantes({ nombre: !nombre.trim() }, renombrando);
 
@@ -80,8 +94,8 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
         <div className="flex items-center gap-2">
           <button
             type="button"
-            aria-expanded={abierta}
-            onClick={() => onAbrir(!abierta)}
+            aria-expanded={visible}
+            onClick={() => { if (visible) { setDesplegada(false); setGastoAbierto(null); onAbrir(false); } else setDesplegada(true); }}
             className="v2-focus flex-1 min-w-0 flex items-center gap-3 text-left rounded-xl min-h-[44px]"
           >
             <span className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} aria-hidden />
@@ -92,15 +106,15 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
                 <Monto value={gastado} className="text-[13px]" /> {referencia}
               </span>
             </span>
-            <span className="shrink-0 text-[13px] font-semibold" style={{ color: COLORS.brand }}>
-              {tope ? 'Editar tope' : 'Agregar tope'}
+            <span className="shrink-0" style={{ color: COLORS.inkFaint }} aria-hidden>
+              <IconChevron size={16} style={{ transform: visible ? 'rotate(-90deg)' : 'rotate(90deg)' }} />
             </span>
           </button>
           {conEdicion && (
             <>
               <button
                 type="button"
-                onClick={() => { setNombre(cat.nombre); setRenombrando(true); setBorrando(false); onAbrir(false); }}
+                onClick={() => { setNombre(cat.nombre); setRenombrando(true); setBorrando(false); setDesplegada(false); onAbrir(false); }}
                 aria-label={`Renombrar ${cat.nombre}`}
                 className="v2-focus w-11 h-11 rounded-full flex items-center justify-center shrink-0"
                 style={{ color: COLORS.inkFaint }}
@@ -109,7 +123,7 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
               </button>
               <button
                 type="button"
-                onClick={() => { setBorrando((v) => !v); onAbrir(false); }}
+                onClick={() => { setBorrando((v) => !v); setDesplegada(false); onAbrir(false); }}
                 aria-label={`Borrar la categoría ${cat.nombre}`}
                 aria-expanded={borrando}
                 className="v2-focus w-11 h-11 -mr-2 rounded-full flex items-center justify-center shrink-0"
@@ -132,6 +146,44 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
           <span className="flex items-center gap-1 text-[13px]" style={{ color: COLORS.inkSoft }}>
             Tope: <Monto value={tope.monto} className="text-[13px]" />/{tope.periodo === 'semana' ? 'sem' : 'mes'}
           </span>
+        </div>
+      )}
+
+      {visible && !renombrando && (
+        <div className="flex flex-col pl-6">
+          {delaSeccion.length === 0
+            ? <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no hay gastos en esta categoría.</p>
+            : delaSeccion.slice(0, 3).map((g) => (
+              <FilaGasto
+                key={g.id}
+                gasto={g}
+                categorias={categorias}
+                abierto={gastoAbierto?.id === g.id ? gastoAbierto.que : null}
+                onAbrir={(que) => setGastoAbierto(que ? { id: g.id, que } : null)}
+              />
+            ))}
+          <div className="flex items-center justify-between gap-3">
+            {delaSeccion.length > 3 ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/onboarding-v2/gastos/categoria/${cat.id}`)}
+                className="v2-focus min-h-[44px] text-[13px] font-semibold underline"
+                style={{ color: COLORS.brand }}
+              >
+                Ver más
+              </button>
+            ) : <span />}
+            {!abierta && (
+              <button
+                type="button"
+                onClick={() => onAbrir(true)}
+                className="v2-focus min-h-[44px] text-[13px] font-semibold"
+                style={{ color: COLORS.brand }}
+              >
+                {tope ? 'Editar tope' : 'Agregar tope'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 

@@ -24,15 +24,15 @@ import { IconChevron, IconOjo, IconOjoTachado } from './FinaIcons';
 // La regla vive en lib/email.ts; se reexporta porque otras pantallas la toman de acá.
 export { emailValido };
 
-export const inputClass = 'v2-focus rounded-2xl px-4 py-3 text-[18px] outline-none transition-colors w-full';
+export const inputClass = 'v2-focus rounded-2xl px-4 py-2.5 min-h-[46px] text-[15px] outline-none transition-colors w-full';
 export function inputStyle(err = false): React.CSSProperties {
   return { background: COLORS.surface, color: COLORS.ink, border: `1px solid ${err ? COLORS.naranja : COLORS.line}` };
 }
 
 export function Campo({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</label>
+    <div className="flex flex-col gap-1">
+      <label className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</label>
       {children}
       {error && <p className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
     </div>
@@ -71,7 +71,7 @@ export function SugerenciaMail({ email, onUsar }: { email: string; onUsar: (corr
     <button
       type="button"
       onClick={() => onUsar(sugerido)}
-      className="v2-focus self-start text-left text-[15px] rounded-lg py-1"
+      className="v2-focus self-start text-left text-[14px] rounded-lg py-1"
       style={{ color: COLORS.inkSoft }}
     >
       ¿Quisiste decir <strong style={{ color: COLORS.brand }}>{sugerido}</strong>?
@@ -82,13 +82,13 @@ export function SugerenciaMail({ email, onUsar }: { email: string; onUsar: (corr
 function AvisoSinCuenta({ email, onCrear }: { email: string; onCrear: () => void }) {
   return (
     <div role="alert" className="rounded-2xl px-4 py-3.5 flex flex-col gap-2.5" style={{ background: COLORS.brandSoft }}>
-      <p className="text-[16px] leading-snug" style={{ color: COLORS.ink }}>
+      <p className="text-[15px] leading-snug" style={{ color: COLORS.ink }}>
         No tenés una cuenta con <strong>{email.trim()}</strong>. Fijate que esté bien escrito, o creá una: son un par de preguntas.
       </p>
       <button
         type="button"
         onClick={onCrear}
-        className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[15px] font-bold"
+        className="v2-focus self-start min-h-[44px] px-4 rounded-full text-[14px] font-bold"
         style={{ background: COLORS.brand, color: COLORS.surface }}
       >
         Crear mi cuenta
@@ -185,13 +185,13 @@ export function EntrarV2() {
         </header>
 
         <div className="flex-1 min-h-0 flex flex-col px-6 pt-2 pb-4 overflow-y-auto v2-sin-barra w-full lg:max-w-xl lg:mx-auto">
-          <div className="flex flex-col gap-5 my-auto w-full pb-[10vh]">
+          <div className="flex flex-col gap-3 my-auto w-full pb-2">
             {mailEnviado ? (
               <>
                 <FiniPresenta
                   dice="Fijate en tu correo — si no aparece, mirá en spam."
                   state="registro"
-                  size={132}
+                  size={100}
                 />
                 <Titulo>Te mandamos el mail</Titulo>
                 <Apoyo>
@@ -203,7 +203,7 @@ export function EntrarV2() {
                 <FiniPresenta
                   dice="Tranqui, le pasa a cualquiera."
                   state="idle"
-                  size={124}
+                  size={80}
                 />
                 <Titulo>Recuperá tu contraseña</Titulo>
                 <Apoyo>Escribí tu mail y te mandamos un link para poner una nueva.</Apoyo>
@@ -220,17 +220,16 @@ export function EntrarV2() {
                 </Campo>
                 <SugerenciaMail email={email} onUsar={(c) => { setEmail(c); setSinCuenta(false); }} />
                 {sinCuenta && <AvisoSinCuenta email={email} onCrear={() => navigate('/onboarding-v2', { state: { email: email.trim() } })} />}
-                {error && <p role="alert" className="text-[15px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
+                {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
               </>
             ) : (
               <>
                 <FiniPresenta
                   dice="¡Qué bueno tenerte de vuelta!"
                   state="saludo"
-                  size={124}
+                  size={80}
                 />
                 <Titulo>Volvé a entrar</Titulo>
-                <Apoyo>Con tu mail y tu contraseña, todo tuyo vuelve como lo dejaste.</Apoyo>
 
                 <Campo label="Mail" error={intento && !emailOk ? (email.trim() ? 'Ese mail no parece válido' : 'Campo obligatorio') : undefined}>
                   <input
@@ -256,12 +255,12 @@ export function EntrarV2() {
                 </Campo>
 
                 {sinCuenta && <AvisoSinCuenta email={email} onCrear={() => navigate('/onboarding-v2', { state: { email: email.trim() } })} />}
-                {error && <p role="alert" className="text-[15px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
+                {error && <p role="alert" className="text-[14px] font-semibold" style={{ color: COLORS.coralDark }}>{error}</p>}
 
                 <button
                   type="button"
                   onClick={() => { setModo('recuperar'); setError(null); setIntento(false); setSinCuenta(false); }}
-                  className="v2-focus self-start text-[16px] font-semibold underline rounded-full py-2"
+                  className="v2-focus self-start text-[14px] font-semibold underline rounded-full py-2"
                   style={{ color: COLORS.brand }}
                 >
                   ¿Olvidaste tu contraseña?
