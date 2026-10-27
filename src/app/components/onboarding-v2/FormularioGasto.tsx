@@ -86,10 +86,12 @@ export function Desplegable({ id, label, value, onChange, marcado = false, child
 }
 
 /**
- * `gasto`: si viene, se edita ese gasto; si no, se carga uno nuevo (y se ofrece
- * la opción de gasto fijo o recurrente, que no aplica a un movimiento que ya
- * pasó). `repeticion`: arranca con esa opción prendida (desde "Anotar un gasto
- * fijo" o "Anotar un gasto recurrente").
+ * `gasto`: si viene, se edita ese gasto; si no, se carga uno nuevo.
+ * `repeticion`: lo que se eligió al agregar. 'fijo' es un gasto fijo, con sus
+ * campos a la vista y sin interruptor ("Gasto fijo" o "Anotar un gasto fijo").
+ * Sin ella es un gasto diario, que ofrece marcarlo como recurrente;
+ * 'recurrente' arranca con eso prendido ("Anotar un gasto recurrente"). Al
+ * editar no hay ninguna de las dos: no aplican a un movimiento que ya pasó.
  * `onListo` recibe la sección en la que quedó el gasto.
  */
 export function FormularioGasto({ gasto, repeticion, categorias, onListo, onCancelar }: {
@@ -122,9 +124,8 @@ export function FormularioGasto({ gasto, repeticion, categorias, onListo, onCanc
     ? gasto.pagos.map((p) => ({ medio: p.medio, otro: '', monto: formatMontoInicial(p.monto) }))
     : [filaPagoVacia(), filaPagoVacia()]));
   const [fijo, setFijo] = useState<OpcionFijo>(() => ({ ...opcionFijoInicial(), activo: repeticion === 'fijo' }));
-  // Un gasto que se repite seguido (el colectivo, el café): queda para
-  // registrarlo con un toque. Fijo y recurrente no van juntos: prender uno
-  // apaga el otro.
+  // Un gasto diario que se repite seguido (el colectivo, el café): queda para
+  // registrarlo con un toque.
   const [recurrente, setRecurrente] = useState<OpcionRecurrente>(() => ({ ...opcionRecurrenteInicial(), activo: repeticion === 'recurrente' }));
   // Errores de conversión (no se pudo traer el dólar). Los de guardado los
   // reporta el almacén.
@@ -264,19 +265,23 @@ export function FormularioGasto({ gasto, repeticion, categorias, onListo, onCanc
         onChange={(e) => setDesc(e.target.value)}
       />
       {/* Por defecto queda en hoy: sólo hace falta tocarlo para cargar un
-          gasto de otro día. Sin hora: con el día alcanza. */}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${idBase}-fecha`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha</label>
-        <input
-          id={`${idBase}-fecha`}
-          type="date"
-          className="v2-focus w-full min-w-0 rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
-          style={INPUT_STYLE}
-          value={fecha}
-          max={aInputFecha(Date.now())}
-          onChange={(e) => setFecha(e.target.value)}
-        />
-      </div>
+          gasto de otro día. Sin hora: con el día alcanza. Un gasto fijo que
+          todavía no se pagó no tiene fecha de gasto: tiene la de vencimiento,
+          más abajo. */}
+      {!(esFijo && !fijo.yaPagado) && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={`${idBase}-fecha`} className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>Fecha</label>
+          <input
+            id={`${idBase}-fecha`}
+            type="date"
+            className="v2-focus w-full min-w-0 rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
+            style={INPUT_STYLE}
+            value={fecha}
+            max={aInputFecha(Date.now())}
+            onChange={(e) => setFecha(e.target.value)}
+          />
+        </div>
+      )}
 
       {/* Sección y medio en desplegables: con todas las opciones como botones
           el formulario ocupaba tres pantallas en el celular. */}
@@ -502,19 +507,9 @@ export function FormularioGasto({ gasto, repeticion, categorias, onListo, onCanc
 
       {/* Un gasto que ya pasó no se puede volver "gasto fijo" ni "recurrente":
           esto es para crear uno nuevo, no para editar un movimiento. */}
-      {!editando && (
-        <CamposGastoFijo
-          valor={fijo}
-          onChange={(o) => { setFijo(o); if (o.activo) setRecurrente((r) => ({ ...r, activo: false })); }}
-          marcado={faltantes.marcado('fijo')}
-        />
-      )}
-      {!editando && (
-        <CamposRecurrente
-          valor={recurrente}
-          onChange={(o) => { setRecurrente(o); if (o.activo) setFijo(opcionFijoInicial()); }}
-          fecha={new Date(deInputFecha(fecha))}
-        />
+      {esFijo && <CamposGastoFijo valor={fijo} onChange={setFijo} marcado={faltantes.marcado('fijo')} siempre />}
+      {!editando && !esFijo && (
+        <CamposRecurrente valor={recurrente} onChange={setRecurrente} fecha={new Date(deInputFecha(fecha))} />
       )}
 
       {error && <p role="alert" className="text-[13px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{error}</p>}
@@ -529,7 +524,7 @@ export function FormularioGasto({ gasto, repeticion, categorias, onListo, onCanc
           className="v2-focus flex-[2] rounded-xl py-2.5 min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
-          {editando ? 'Guardar cambios' : fijo.activo && !fijo.yaPagado ? 'Guardar gasto fijo' : recurrente.activo ? 'Guardar gasto recurrente' : 'Agregar gasto'}
+          {editando ? 'Guardar cambios' : esFijo ? 'Guardar gasto fijo' : recurrente.activo ? 'Guardar gasto recurrente' : 'Agregar gasto'}
         </button>
       </div>
     </div>

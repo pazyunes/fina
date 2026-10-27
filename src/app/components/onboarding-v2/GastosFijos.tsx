@@ -64,8 +64,12 @@ export function opcionFijoValida(o: OpcionFijo): boolean {
   return o.yaPagado ? n > 0 : n >= 0;
 }
 
-/** `marcado`: se tocó guardar con la fecha sin completar o fuera de rango (useFaltantes). */
-export function CamposGastoFijo({ valor, onChange, marcado = false }: { valor: OpcionFijo; onChange: (o: OpcionFijo) => void; marcado?: boolean }) {
+/**
+ * `marcado`: se tocó guardar con la fecha sin completar o fuera de rango (useFaltantes).
+ * `siempre`: el formulario es de un gasto fijo desde el principio (se eligió
+ * "Gasto fijo" al agregar): no hay interruptor, los campos están a la vista.
+ */
+export function CamposGastoFijo({ valor, onChange, marcado = false, siempre = false }: { valor: OpcionFijo; onChange: (o: OpcionFijo) => void; marcado?: boolean; siempre?: boolean }) {
   const hoy = diaArgentina();
   const manana = sumarUnDia(hoy);
 
@@ -79,22 +83,24 @@ export function CamposGastoFijo({ valor, onChange, marcado = false }: { valor: O
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <p id="fijo-titulo" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>Es un gasto fijo</p>
+      {!siempre && (
+        <div className="flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p id="fijo-titulo" className="text-[14px] font-bold" style={{ color: COLORS.ink }}>Es un gasto fijo</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={valor.activo}
+            aria-labelledby="fijo-titulo"
+            onClick={() => onChange({ ...opcionFijoInicial(), activo: !valor.activo })}
+            className="v2-focus relative w-[52px] h-[32px] rounded-full shrink-0 transition-colors"
+            style={{ background: valor.activo ? COLORS.brand : COLORS.lineStrong }}
+          >
+            <span className="absolute top-[3px] w-[26px] h-[26px] rounded-full transition-all" style={{ left: valor.activo ? 23 : 3, background: COLORS.surface }} />
+          </button>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={valor.activo}
-          aria-labelledby="fijo-titulo"
-          onClick={() => onChange({ ...opcionFijoInicial(), activo: !valor.activo })}
-          className="v2-focus relative w-[52px] h-[32px] rounded-full shrink-0 transition-colors"
-          style={{ background: valor.activo ? COLORS.brand : COLORS.lineStrong }}
-        >
-          <span className="absolute top-[3px] w-[26px] h-[26px] rounded-full transition-all" style={{ left: valor.activo ? 23 : 3, background: COLORS.surface }} />
-        </button>
-      </div>
+      )}
 
       {/* Primero cada cuánto se paga: la pregunta de si ya se pagó habla de
           ese período ("este mes", "esta semana"). */}
