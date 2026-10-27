@@ -45,6 +45,7 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
   }), [db, cat.id]);
   // Con el campo del tope abierto (por ejemplo, venido de Inicio) la fila se ve desplegada.
   const visible = desplegada || abierta;
+  const alternar = () => { if (visible) { setDesplegada(false); setGastoAbierto(null); onAbrir(false); } else setDesplegada(true); };
   const faltaTope = useFaltantes({ monto: parseMoneyInput(monto) <= 0 }, abierta);
   const faltaNombre = useFaltantes({ nombre: !nombre.trim() }, renombrando);
 
@@ -95,7 +96,7 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
           <button
             type="button"
             aria-expanded={visible}
-            onClick={() => { if (visible) { setDesplegada(false); setGastoAbierto(null); onAbrir(false); } else setDesplegada(true); }}
+            onClick={alternar}
             className="v2-focus flex-1 min-w-0 flex items-center gap-3 text-left rounded-xl min-h-[44px]"
           >
             <span className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} aria-hidden />
@@ -106,9 +107,25 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
                 <Monto value={gastado} className="text-[13px]" /> {referencia}
               </span>
             </span>
-            <span className="shrink-0" style={{ color: COLORS.inkFaint }} aria-hidden>
-              <IconChevron size={16} style={{ transform: visible ? 'rotate(-90deg)' : 'rotate(90deg)' }} />
-            </span>
+          </button>
+          {/* El tope, al costado: se pone sin tener que abrir la categoría. */}
+          <button
+            type="button"
+            onClick={() => { setDesplegada(true); onAbrir(!abierta); }}
+            className="v2-focus shrink-0 min-h-[44px] text-[13px] font-semibold"
+            style={{ color: COLORS.brand }}
+          >
+            {tope ? 'Editar tope' : 'Agregar tope'}
+          </button>
+          <button
+            type="button"
+            onClick={alternar}
+            aria-label={visible ? `Ocultar los gastos de ${cat.nombre}` : `Ver los gastos de ${cat.nombre}`}
+            aria-expanded={visible}
+            className="v2-focus w-9 h-11 -mr-2 flex items-center justify-center shrink-0"
+            style={{ color: COLORS.inkFaint }}
+          >
+            <IconChevron size={16} style={{ transform: visible ? 'rotate(-90deg)' : 'rotate(90deg)' }} />
           </button>
           {conEdicion && (
             <>
@@ -173,16 +190,6 @@ export function FilaSeccion({ cat, color, gastado, referencia, tope, cantGastos,
                 Ver más
               </button>
             ) : <span />}
-            {!abierta && (
-              <button
-                type="button"
-                onClick={() => onAbrir(true)}
-                className="v2-focus min-h-[44px] text-[13px] font-semibold"
-                style={{ color: COLORS.brand }}
-              >
-                {tope ? 'Editar tope' : 'Agregar tope'}
-              </button>
-            )}
           </div>
         </div>
       )}
