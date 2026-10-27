@@ -200,6 +200,26 @@
     line-height: 1.5;
   }
 
+  /* Fecha y hora: el celular (sobre todo el iPhone) les da un ancho mínimo
+     propio y centra el texto, así que se salían de su recuadro y, de a dos,
+     se pisaban. Ocupan el ancho que les da cada pantalla, con el texto a la
+     izquierda como el resto de los campos. */
+  input[type="date"],
+  input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+  }
+  input[type="date"]::-webkit-date-and-time-value,
+  input[type="time"]::-webkit-date-and-time-value {
+    text-align: left;
+    min-height: 1.5em;
+  }
+
   /* Sin barra de scroll propia. Antes había una regla que la pintaba rosa y
      la dejaba SIEMPRE visible: se sacó por pedido de diseño. Ahora cada
      sistema muestra la suya (en el celular se oculta sola), y las pantallas
