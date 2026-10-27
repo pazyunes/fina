@@ -4,11 +4,13 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { diaArgentina } from '../../api/v2/pasos';
 import { COLORS } from './shared';
 import { LinkWhatsApp } from './LinkWhatsApp';
+import { RecurrentesDeHoy } from './GastosRecurrentes';
 
 // Registrar lo del día: el recordatorio fijo de arriba de Inicio. Es lo que
 // sostiene la racha (cuenta cada día con un gasto anotado) y todo lo demás.
-// Se queda siempre en su lugar y cambia de texto: el primer gasto, lo de hoy,
-// o ya anotado (con la opción de anotar otro). Así no se mueve todo Inicio
+// Se queda siempre igual, también después de anotar un gasto: el primero del
+// día no suele ser el último. Sólo cambia el texto (el primer gasto, lo de hoy,
+// o cuántos van hoy), y siempre recuerda anotar. Así no se mueve todo Inicio
 // cuando se anota algo.
 export function RecordatorioGastos() {
   const navigate = useNavigate();
@@ -29,9 +31,14 @@ export function RecordatorioGastos() {
 
   if (!listo) return null;
   const hoy = diaArgentina();
-  const hayGastoHoy = estado.gastos.some((g) => diaArgentina(g.ts) === hoy);
+  const deHoy = estado.gastos.filter((g) => diaArgentina(g.ts) === hoy).length;
   const primero = estado.gastos.length === 0;
   const irAGastos = () => navigate('/onboarding-v2/gastos', { state: { abrir: 'gasto', from: '/onboarding-v2/home' } });
+  const texto = primero
+    ? 'Anotá tu primer gasto'
+    : deHoy > 0
+      ? `Hoy anotaste ${deHoy} ${deHoy === 1 ? 'gasto' : 'gastos'}. Recordá anotar los que vengan.`
+      : 'Recordá anotar tus gastos de hoy';
 
   return (
     <section
@@ -42,37 +49,29 @@ export function RecordatorioGastos() {
       // queremos que use.
       style={{ background: COLORS.brandFaint }}
     >
-      <p className="flex-1 min-w-[140px] text-[13px] font-semibold" style={{ color: hayGastoHoy ? COLORS.limaText : COLORS.ink }}>
-        {hayGastoHoy ? 'Hoy ya anotaste un gasto' : primero ? 'Anotá tu primer gasto' : 'Recordá anotar tus gastos de hoy'}
+      <p className="flex-1 min-w-[140px] text-[13px] font-semibold" style={{ color: COLORS.ink }}>
+        {texto}
       </p>
-      {hayGastoHoy ? (
+      <div className="flex items-center gap-1">
+        <LinkWhatsApp
+          onClick={() => { fueAWhatsApp.current = true; }}
+          className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[13px] font-semibold"
+          style={{ background: COLORS.limaSoft, color: COLORS.limaText }}
+        >
+          Por WhatsApp
+        </LinkWhatsApp>
         <button
           type="button"
           onClick={irAGastos}
           className="v2-focus min-h-[44px] px-3 rounded-full text-[13px] font-semibold"
           style={{ color: COLORS.brand }}
         >
-          Anotar otro
+          En la app
         </button>
-      ) : (
-        <div className="flex items-center gap-1">
-          <LinkWhatsApp
-            onClick={() => { fueAWhatsApp.current = true; }}
-            className="v2-focus inline-flex items-center min-h-[44px] px-4 rounded-full text-[13px] font-semibold"
-            style={{ background: COLORS.limaSoft, color: COLORS.limaText }}
-          >
-            Por WhatsApp
-          </LinkWhatsApp>
-          <button
-            type="button"
-            onClick={irAGastos}
-            className="v2-focus min-h-[44px] px-3 rounded-full text-[13px] font-semibold"
-            style={{ color: COLORS.brand }}
-          >
-            En la app
-          </button>
-        </div>
-      )}
+      </div>
+      {/* Los gastos recurrentes que hoy ya pasaron su horario: un toque y
+          quedan registrados. */}
+      <RecurrentesDeHoy />
     </section>
   );
 }

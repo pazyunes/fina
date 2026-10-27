@@ -12,21 +12,25 @@ import { IconChat, IconChevron, IconEditar } from './FinaIcons';
 import { LinkWhatsApp } from './LinkWhatsApp';
 import { FilaIngreso, lunesAtras } from './IngresosVsGastos';
 import { ListaGastosFijos } from './GastosFijos';
+import { ListaRecurrentes } from './GastosRecurrentes';
 import { FUENTES_INGRESO, type FuenteIngreso } from '../../api/v2/tipos';
 import { FilaGasto } from './FilaGasto';
 import { FilaSeccion } from './FilaSeccion';
 import { FormularioGasto, INPUT_STYLE, METODOS_SUGERIDOS } from './FormularioGasto';
 import { Hoja } from './Hoja';
 import { ImportarGastos } from './ImportarGastos';
-import { TIPOS, TIPO_INFO, colorDeSeccion, gastosDeLaBase, recientes, seccionesDeLaBase, type Periodo, type TipoGasto } from './datosGasto';
+import { TIPOS, TIPO_INFO, colorDeSeccion, gastosDeLaBase, recientes, seccionesDeLaBase, ultimoGasto, type Periodo, type TipoGasto } from './datosGasto';
 
 // REDISEÑO v2. Mis Gastos. Lo principal es el anillo del período: arriba se
 // elige si se mira por mes o por semana, y se pasa al período anterior con las
 // flechas o deslizando de costado. Debajo, las dos acciones (agregar gasto,
-// agregar ingreso), cuánto fue de cada tipo, tus secciones (las 5 donde más se
-// gastó, con su tope) y tus gastos (los 5 más recientes). Las listas completas
-// viven en Tus secciones y en Todos tus gastos. Lo que entra contra lo que sale
-// ya está en Inicio y no se repite acá.
+// agregar ingreso) y, en este orden (pedido de diseño, oct 2026): los últimos
+// gastos, tus categorías (las 5 con gastos más recientes, con su tope), los
+// gastos recurrentes y los gastos fijos. Después, cuánto fue de cada tipo, los
+// últimos ingresos y los medios de pago. Todo va de lo más reciente a lo más
+// viejo, no de lo que más se llevó a lo que menos. Las listas completas viven
+// en Tus categorías y en Todos tus gastos. Lo que entra contra lo que sale ya
+// está en Inicio y no se repite acá.
 //
 // Alineado a la guía (src/styles/frontend.md): todo el color sale de COLORS;
 // los gastos se muestran NEUTRALES (montos en tinta, nunca color de alerta);
@@ -49,13 +53,16 @@ export function GastosV2() {
   // un gasto en dólares, el valor ya está y no espera a la red.
   useEffect(() => { precargarCotizacion(); }, []);
 
-  // La sección con el tope abierto (una a la vez; arrancan cerradas).
+  // La sección con la hoja del tope abierta (una a la vez).
   const [openCatId, setOpenCatId] = useState<string | null>(null);
-  // Lo desplegado en Tus gastos (editar o borrar), de a un gasto por vez.
+  // La hoja abierta en Tus gastos (editar o borrar), de a un gasto por vez.
   const [gastoAbierto, setGastoAbierto] = useState<{ id: string; que: 'editar' | 'borrar' } | null>(null);
   const [ingresoBorrando, setIngresoBorrando] = useState<string | null>(null);
 
   const [addingGasto, setAddingGasto] = useState(false);
+  // "Anotar un gasto fijo" o "Anotar un gasto recurrente" abren el mismo
+  // formulario con esa opción ya prendida.
+  const [repeticionNueva, setRepeticionNueva] = useState<'fijo' | 'recurrente' | undefined>(undefined);
   // Popup al tocar "+ Agregar gasto": registrarlo Desde FINA (a mano) o Desde
   // WhatsApp (mini explicación y abre el bot).
   const [chooser, setChooser] = useState(false);
@@ -147,6 +154,12 @@ export function GastosV2() {
   const teQueda = periodoCerrado ? 'Te quedó' : 'Disponible';
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => colorDeSeccion(catId, categorias);
+  // Cuándo fue el último gasto de cada sección: en el período, y si no hubo,
+  // en todo el historial. Ordena el anillo y Tus categorías.
+  const ultimoEnVentana = ultimoGasto(gastosVentana, (g) => [g.categoriaId || '__sin']);
+  const ultimoEnTodo = ultimoGasto(gastos, (g) => [g.categoriaId || '__sin']);
+  const masReciente = (a: string, b: string) =>
+    (ultimoEnVentana.get(b) ?? 0) - (ultimoEnVentana.get(a) ?? 0) || (ultimoEnTodo.get(b) ?? 0) - (ultimoEnTodo.get(a) ?? 0);
 
   // ── Anillo: de lo que entró, cuánto se fue en cada sección y cuánto te
   // queda. Sin nada registrado como entrada, muestra sólo cómo se reparten los
@@ -155,7 +168,7 @@ export function GastosV2() {
   const porSeccion = [
     ...categorias.map((c) => ({ id: c.id, nombre: c.nombre, color: colorDe(c.id), monto: gastadoEn(c.id) })),
     { id: '__sin', nombre: 'Sin categoría', color: COLORS.lineStrong, monto: gastosVentana.filter((g) => !g.categoriaId).reduce((s, g) => s + g.montoArs, 0) },
-  ].filter((s) => s.monto > 0).sort((a, b) => b.monto - a.monto);
+  ].filter((s) => s.monto > 0).sort((a, b) => masReciente(a.id, b.id));
   // Lo apartado entra al anillo como su propia porción (lila): ni gastado ni
   // libre.
   const conApartado = conIngreso && apartadoAhora > 0;
@@ -169,23 +182,28 @@ export function GastosV2() {
 
   // ── Por tipo. El "otro" se abre por lo que la persona escribió (Salud,
   // Mascota): cada texto es su propia fila. Los "otro" sin texto van juntos.
-  type FilaTipo = { clave: string; tipo: TipoGasto; label: string; monto: number };
+  // Primero el tipo del gasto más reciente.
+  type FilaTipo = { clave: string; tipo: TipoGasto; label: string; monto: number; ultimo: number };
   const porTipo: FilaTipo[] = TIPOS.flatMap((t): FilaTipo[] => {
     const deEsteTipo = gastosVentana.filter((g) => g.tipo === t);
-    if (t !== 'otro') return [{ clave: t, tipo: t, label: TIPO_INFO[t].label, monto: deEsteTipo.reduce((s, g) => s + g.montoArs, 0) }];
-    const grupos = new Map<string, { label: string; monto: number }>();
+    if (t !== 'otro') {
+      return [{ clave: t, tipo: t, label: TIPO_INFO[t].label, monto: deEsteTipo.reduce((s, g) => s + g.montoArs, 0), ultimo: Math.max(0, ...deEsteTipo.map((g) => g.ts)) }];
+    }
+    const grupos = new Map<string, { label: string; monto: number; ultimo: number }>();
     for (const g of deEsteTipo) {
       const label = g.tipoOtro?.trim() || TIPO_INFO.otro.label;
       const k = label.toLowerCase();
-      grupos.set(k, { label: grupos.get(k)?.label ?? label, monto: (grupos.get(k)?.monto ?? 0) + g.montoArs });
+      const antes = grupos.get(k);
+      grupos.set(k, { label: antes?.label ?? label, monto: (antes?.monto ?? 0) + g.montoArs, ultimo: Math.max(antes?.ultimo ?? 0, g.ts) });
     }
-    return [...grupos.entries()].map(([k, v]) => ({ clave: `otro:${k}`, tipo: t, label: v.label, monto: v.monto }));
-  }).filter((t) => t.monto > 0);
+    return [...grupos.entries()].map(([k, v]) => ({ clave: `otro:${k}`, tipo: t, label: v.label, monto: v.monto, ultimo: v.ultimo }));
+  }).filter((t) => t.monto > 0).sort((a, b) => b.ultimo - a.ultimo);
 
-  // ── Tus secciones: las 5 donde más se gastó en el período. Si hay menos de
-  // 5 con gastos, se completan con las otras, así se les puede poner tope. La
-  // que se abrió desde Inicio para ponerle tope se muestra aunque no entre.
-  const seccionesOrdenadas = [...categorias].sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id));
+  // ── Tus secciones: las 5 con gastos más recientes en el período. Si hay
+  // menos de 5 con gastos, se completan con las otras, así se les puede poner
+  // tope. La que se abrió desde Inicio para ponerle tope se muestra aunque no
+  // entre.
+  const seccionesOrdenadas = [...categorias].sort((a, b) => masReciente(a.id, b.id));
   const seccionesVisibles = seccionesOrdenadas.slice(0, 5);
   const abiertaFuera = openCatId ? seccionesOrdenadas.slice(5).find((c) => c.id === openCatId) : undefined;
   if (abiertaFuera) seccionesVisibles.push(abiertaFuera);
@@ -200,13 +218,16 @@ export function GastosV2() {
 
   // ── Con qué pagaste en el período: cada medio con lo que salió de él. Un
   // gasto dividido suma a cada medio su parte. No es el dato principal: va abajo.
+  // Primero el medio que se usó más recién.
   const porMedio = (() => {
     const m = new Map<string, number>();
     for (const g of gastosVentana) {
       if (g.pagos?.length) for (const p of g.pagos) m.set(p.medio, (m.get(p.medio) ?? 0) + p.monto);
       else m.set(g.metodoPago || 'Sin medio elegido', (m.get(g.metodoPago || 'Sin medio elegido') ?? 0) + g.montoArs);
     }
-    return [...m.entries()].map(([nombre, monto]) => ({ nombre, monto })).filter((x) => x.monto > 0).sort((a, b) => b.monto - a.monto);
+    const ultimo = ultimoGasto(gastosVentana, (g) => (g.pagos?.length ? g.pagos.map((p) => p.medio) : [g.metodoPago || 'Sin medio elegido']));
+    return [...m.entries()].map(([nombre, monto]) => ({ nombre, monto })).filter((x) => x.monto > 0)
+      .sort((a, b) => (ultimo.get(b.nombre) ?? 0) - (ultimo.get(a.nombre) ?? 0));
   })();
   const maxMedio = Math.max(1, ...porMedio.map((x) => x.monto));
 
@@ -253,10 +274,19 @@ export function GastosV2() {
   useAlLlegar('gasto', () => {
     formDesdeOrigen.current = true;
     setChooser(false);
+    setRepeticionNueva(undefined);
     setAddingGasto(true);
   });
-  // Desde el aviso de vencimiento o la tarjeta de Home.
+  function abrirFormulario(repeticion?: 'fijo' | 'recurrente') {
+    setChooser(false);
+    setAddingDisponible(false);
+    setRepeticionNueva(repeticion);
+    setAddingGasto(true);
+  }
+  // Desde el aviso de vencimiento o la tarjeta de Home. Sin gastos fijos
+  // todavía (el paso "Anotá un gasto fijo"), abre el formulario para anotar uno.
   useAlLlegar('fijos', () => {
+    if (db.gastosFijos.length === 0) { abrirFormulario('fijo'); return; }
     llevarA(() => pantallaRef.current?.querySelector<HTMLElement>('[data-gastos-fijos]'));
   });
   useAlLlegar('tope', ({ ref }) => {
@@ -372,8 +402,8 @@ export function GastosV2() {
 
           {/* Abajo del anillo van sólo las referencias: el monto ya está en el
               centro. Primero lo disponible y el total gastado, después las 3
-              secciones que más se llevaron y lo apartado. El resto de las secciones está en Tus
-              secciones, más abajo. */}
+              secciones con gastos más recientes y lo apartado. El resto de las
+              secciones está en Tus categorías, más abajo. */}
           {(porSeccion.length > 0 || conIngreso) && (
             <ul className="px-2 flex flex-col gap-1.5">
               {conIngreso && (
@@ -445,7 +475,7 @@ export function GastosV2() {
               className="v2-focus self-center min-h-[44px] text-[13px] font-semibold"
               style={{ color: COLORS.brand }}
             >
-              Agregá tus ingresos para ver tu disponible
+              Agregá tus ingresos para ver lo que te queda disponible
             </button>
           )}
           {!conIngreso && totalGastado === 0 && (
@@ -608,8 +638,9 @@ export function GastosV2() {
             pantalla: mezclado con el resto de Gastos no se distinguía dónde
             terminaba el formulario. */}
         {addingGasto && (
-          <Hoja titulo="Nuevo gasto" onCerrar={cerrarFormGasto}>
+          <Hoja titulo={repeticionNueva === 'fijo' ? 'Nuevo gasto fijo' : repeticionNueva === 'recurrente' ? 'Nuevo gasto recurrente' : 'Nuevo gasto'} onCerrar={cerrarFormGasto}>
             <FormularioGasto
+              repeticion={repeticionNueva}
               categorias={categorias}
               onListo={() => { formDesdeOrigen.current = false; setAddingGasto(false); }}
               onCancelar={cerrarFormGasto}
@@ -618,22 +649,39 @@ export function GastosV2() {
         )}
       </div>
 
-      {/* Por tipo: sólo la pregunta y cuánto fue de cada uno en el período. */}
-      {porTipo.length > 0 && (
-        <section className="flex flex-col gap-1" aria-label="Por tipo de gasto">
-          <TituloSeccion>Por tipo de gasto</TituloSeccion>
-          <ul className="flex flex-col">
-            {porTipo.map((t) => (
-              <li key={t.clave} className="flex items-center gap-2.5 py-2 border-b last:border-b-0 text-[13px]" style={{ borderColor: COLORS.line }}>
-                <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{t.label}</span>
-                <Monto value={t.monto} className="text-[13px] font-semibold" />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* Tus gastos: los 5 más recientes, cada uno con su sección. Editar abre
+          el formulario en una hoja aparte. La lista completa, con buscador y
+          filtros, está en Todos tus gastos. */}
+      <section className="flex flex-col gap-1" aria-label="Últimos gastos">
+        <TituloSeccion>Últimos gastos</TituloSeccion>
+        {gastos.length === 0 && <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
+        {gastos.length > 0 && ultimosGastos.length === 0 && (
+          <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>No hay gastos {referenciaPeriodo}.</p>
+        )}
+        <div className="flex flex-col">
+          {ultimosGastos.map((g) => (
+            <FilaGasto
+              key={g.id}
+              gasto={g}
+              categorias={categorias}
+              abierto={gastoAbierto?.id === g.id ? gastoAbierto.que : null}
+              onAbrir={(que) => setGastoAbierto(que ? { id: g.id, que } : null)}
+            />
+          ))}
+        </div>
+        {gastos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => navigate('/onboarding-v2/gastos/todos')}
+            className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
+            style={{ color: COLORS.brand }}
+          >
+            Ver todos
+          </button>
+        )}
+      </section>
 
-      {/* Tus secciones: las 5 donde más se gastó, con su total y su tope.
+      {/* Tus secciones: las 5 con gastos más recientes, con su total y su tope.
           Renombrar y borrar están en Tus secciones, la pantalla completa. */}
       <section data-tus-categorias tabIndex={-1} className="flex flex-col gap-1 scroll-mt-4" aria-label="Tus categorías">
         <TituloSeccion>Tus categorías</TituloSeccion>
@@ -676,37 +724,28 @@ export function GastosV2() {
         )}
       </section>
 
-      {/* Tus gastos: los 5 más recientes, cada uno con su sección. Editar abre
-          el formulario en el mismo renglón. La lista completa, con buscador y
-          filtros, está en Todos tus gastos. */}
-      <section className="flex flex-col gap-1" aria-label="Últimos gastos">
-        <TituloSeccion>Últimos gastos</TituloSeccion>
-        {gastos.length === 0 && <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no registraste gastos.</p>}
-        {gastos.length > 0 && ultimosGastos.length === 0 && (
-          <p className="py-2 text-[13px]" style={{ color: COLORS.inkSoft }}>No hay gastos {referenciaPeriodo}.</p>
-        )}
-        <div className="flex flex-col">
-          {ultimosGastos.map((g) => (
-            <FilaGasto
-              key={g.id}
-              gasto={g}
-              categorias={categorias}
-              abierto={gastoAbierto?.id === g.id ? gastoAbierto.que : null}
-              onAbrir={(que) => setGastoAbierto(que ? { id: g.id, que } : null)}
-            />
-          ))}
-        </div>
-        {gastos.length > 0 && (
-          <button
-            type="button"
-            onClick={() => navigate('/onboarding-v2/gastos/todos')}
-            className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline"
-            style={{ color: COLORS.brand }}
-          >
-            Ver todos
-          </button>
-        )}
-      </section>
+      {/* Los gastos recurrentes: lo que se gasta seguido, para registrarlo con
+          un toque. */}
+      <ListaRecurrentes categorias={categorias} onAgregar={() => abrirFormulario('recurrente')} />
+
+      {/* Los gastos fijos: lo que pagás siempre, con su próximo vencimiento y
+          "Ya lo pagué". */}
+      <ListaGastosFijos onAgregar={() => abrirFormulario('fijo')} />
+
+      {/* Por tipo: sólo la pregunta y cuánto fue de cada uno en el período. */}
+      {porTipo.length > 0 && (
+        <section className="flex flex-col gap-1" aria-label="Por tipo de gasto">
+          <TituloSeccion>Por tipo de gasto</TituloSeccion>
+          <ul className="flex flex-col">
+            {porTipo.map((t) => (
+              <li key={t.clave} className="flex items-center gap-2.5 py-2 border-b last:border-b-0 text-[13px]" style={{ borderColor: COLORS.line }}>
+                <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>{t.label}</span>
+                <Monto value={t.monto} className="text-[13px] font-semibold" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Tus ingresos: los 5 más recientes del período, igual que los gastos.
           La lista completa está en Todos tus ingresos. */}
@@ -758,8 +797,6 @@ export function GastosV2() {
         </section>
       )}
 
-      <ListaGastosFijos />
-
       {/* Popup: ¿Desde FINA o Desde WhatsApp? Scrim = velo de tinta translúcido. */}
       {chooser && (
         <div
@@ -773,7 +810,7 @@ export function GastosV2() {
                 <p className="text-[17px] font-bold" style={{ color: COLORS.ink }}>¿Cómo querés registrar el gasto?</p>
                 <button
                   type="button"
-                  onClick={() => { setChooser(false); setAddingDisponible(false); setAddingGasto(true); }}
+                  onClick={() => abrirFormulario()}
                   className="v2-focus text-left rounded-2xl p-4 flex items-start gap-3 border transition-transform active:scale-[0.99]"
                   style={{ borderColor: COLORS.line }}
                 >

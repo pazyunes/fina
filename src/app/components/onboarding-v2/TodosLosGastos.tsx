@@ -9,7 +9,7 @@ import { gastosDeLaBase, seccionesDeLaBase } from './datosGasto';
 // Todos tus gastos, de todos los períodos. Se llega desde "Ver todos" en
 // Gastos, que muestra sólo los últimos 5: la lista completa, con buscador,
 // filtro por sección y por fechas, vive acá para que Gastos no repita el mismo
-// listado. Editar abre el formulario en el mismo renglón.
+// listado. Editar abre el formulario en una hoja aparte.
 
 const OPCION: React.CSSProperties = { color: COLORS.ink };
 
@@ -50,7 +50,7 @@ export function TodosLosGastos() {
   const [orden, setOrden] = useState<'recientes' | 'monto'>('recientes');
   const [filtroDesde, setFiltroDesde] = useState('');
   const [filtroHasta, setFiltroHasta] = useState('');
-  // Lo desplegado en la lista (editar o borrar), de a un gasto por vez.
+  // La hoja abierta (editar o borrar), de a un gasto por vez.
   const [abierto, setAbierto] = useState<{ id: string; que: 'editar' | 'borrar' } | null>(null);
 
   const hayBusqueda = !!busqueda.trim();

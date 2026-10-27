@@ -67,8 +67,11 @@ están decididas.
 12. **Los botones abren pantallas, no despliegan hacia abajo.** Un botón que lleva a hacer
    algo (cargar un gasto o un ingreso, crear un objetivo) abre una pantalla nueva o una hoja
    aparte encima de la pantalla (`onboarding-v2/Hoja.tsx`), no un formulario que se
-   despliega debajo mezclado con el resto. Lo que sí se despliega en el lugar es texto para
-   leer ("Cómo hacerlo", por qué te toca un paso). Detalle en `src/styles/frontend.md` §3.5.
+   despliega debajo mezclado con el resto. Lo mismo para todo lo que se edita (un gasto, un
+   ingreso, un tope, una categoría, un objetivo, el nombre, el PIN) y para confirmar un
+   borrado: la hoja sube desde abajo y la pantalla de atrás no se mueve. Lo que sí se
+   despliega en el lugar es texto para leer ("Cómo hacerlo", por qué te toca un paso).
+   Detalle en `src/styles/frontend.md` §3.5.
 13. **Textos: claridad antes que cantidad.** Antes de escribir o cambiar cualquier texto de la
    app (títulos, botones, descripciones, consejos, avisos, lo que escribe la IA), leé
    `src/styles/textos.md` completo. Primero se decide si hace falta texto; si hace falta, lo

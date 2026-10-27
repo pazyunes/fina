@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { BORDE_FALTA, COLORS, SegmentedTab, TextoFalta, TituloSeccion, fmtMoney } from './shared';
 import { IconBasura, IconCalendario, IconChevron } from './FinaIcons';
+import { Hoja } from './Hoja';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { diaArgentina } from '../../api/v2/pasos';
@@ -25,6 +26,9 @@ const MONTO = (g: { monto: number; moneda: 'ARS' | 'USD' }) =>
 // Corto, para que entre en el renglón junto a la fecha.
 const FRECUENCIA_CORTA: Record<FrecuenciaFija, string> = { mensual: 'Mensual', semanal: 'Semanal', quincenal: 'Quincenal', anual: 'Anual' };
 const etiquetaFrecuencia = (f: FrecuenciaFija) => FRECUENCIA_CORTA[f];
+
+// El período que cubre un pago, para preguntar si ya se pagó el de ahora.
+const PERIODO_ACTUAL: Record<FrecuenciaFija, string> = { mensual: 'este mes', semanal: 'esta semana', quincenal: 'esta quincena', anual: 'este año' };
 
 /** Desde cuántos días antes se ofrece "Ya lo pagué". */
 const DIAS_PARA_PAGAR = 7;
@@ -92,18 +96,10 @@ export function CamposGastoFijo({ valor, onChange, marcado = false }: { valor: O
         </button>
       </div>
 
+      {/* Primero cada cuánto se paga: la pregunta de si ya se pagó habla de
+          ese período ("este mes", "esta semana"). */}
       {valor.activo && (
         <div className="rounded-xl p-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }}>
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Ya lo pagaste?</p>
-            <SegmentedTab
-              options={[{ id: 'si' as const, label: 'Sí, ya lo pagué' }, { id: 'no' as const, label: 'Todavía no' }]}
-              value={valor.yaPagado ? 'si' : 'no'}
-              onChange={(v) => cambiar({ yaPagado: v === 'si', fechaElegida: false })}
-              trackColor={COLORS.surface}
-            />
-          </div>
-
           <div className="flex flex-col gap-1.5">
             <label htmlFor="fijo-frecuencia" className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Cada cuánto se paga?</label>
             <div className="relative">
@@ -120,6 +116,16 @@ export function CamposGastoFijo({ valor, onChange, marcado = false }: { valor: O
                 <IconChevron size={16} style={{ transform: 'rotate(90deg)' }} />
               </span>
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[13px] font-bold" style={{ color: COLORS.inkSoft }}>¿Ya lo pagaste {PERIODO_ACTUAL[valor.frecuencia]}?</p>
+            <SegmentedTab
+              options={[{ id: 'si' as const, label: 'Sí, ya lo pagué' }, { id: 'no' as const, label: 'Todavía no' }]}
+              value={valor.yaPagado ? 'si' : 'no'}
+              onChange={(v) => cambiar({ yaPagado: v === 'si', fechaElegida: false })}
+              trackColor={COLORS.surface}
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -164,15 +170,15 @@ function sumarUnDia(dia: string): string {
 
 // ── La lista, en Mis gastos ──────────────────────────────────────────────
 
-export function ListaGastosFijos() {
+// Se muestra también sin gastos fijos: así se sabe dónde van a aparecer, y el
+// paso "Anotá un gasto fijo" de Inicio tiene a dónde llegar.
+export function ListaGastosFijos({ onAgregar }: { onAgregar: () => void }) {
   const { estado } = useAlmacen();
   const hoy = diaArgentina();
-  const [borrando, setBorrando] = useState<string | null>(null);
+  const [borrando, setBorrando] = useState<GastoFijo | null>(null);
   const [pagando, setPagando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [verTodos, setVerTodos] = useState(false);
-
-  if (estado.gastosFijos.length === 0) return null;
 
   const nombreSeccion = (id: string | null) => estado.secciones.find((s) => s.id === id)?.nombre;
 
@@ -187,6 +193,14 @@ export function ListaGastosFijos() {
   return (
     <section data-gastos-fijos className="flex flex-col gap-2 lg:col-span-3 scroll-mt-6">
       <TituloSeccion>Gastos fijos</TituloSeccion>
+      {estado.gastosFijos.length === 0 && (
+        <>
+          <p className="text-[13px]" style={{ color: COLORS.inkSoft }}>Todavía no anotaste gastos fijos.</p>
+          <button type="button" onClick={onAgregar} className="v2-focus self-start min-h-[44px] text-[13px] font-semibold underline" style={{ color: COLORS.brand }}>
+            Anotar un gasto fijo
+          </button>
+        </>
+      )}
       <div className="flex flex-col">
         {recortar(estado.gastosFijos, verTodos).map((g) => {
           const n = diasHasta(hoy, g.proximoPago);
@@ -204,17 +218,17 @@ export function ListaGastosFijos() {
                 <span className="font-mono tabular-nums text-[14px] shrink-0" style={{ color: COLORS.ink }}>{MONTO(g)}</span>
                 <button
                   type="button"
-                  onClick={() => setBorrando(borrando === g.id ? null : g.id)}
+                  onClick={() => setBorrando(g)}
                   aria-label={`Borrar gasto fijo ${g.descripcion}`}
-                  aria-expanded={borrando === g.id}
+                  aria-haspopup="dialog"
                   className="v2-focus w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center shrink-0"
-                  style={{ color: borrando === g.id ? COLORS.ink : COLORS.inkFaint }}
+                  style={{ color: COLORS.inkFaint }}
                 >
                   <IconBasura size={18} />
                 </button>
               </div>
 
-              {sePuedePagar && borrando !== g.id && (
+              {sePuedePagar && (
                 <button
                   type="button"
                   onClick={() => void pagar(g.id)}
@@ -225,28 +239,30 @@ export function ListaGastosFijos() {
                   {pagando === g.id ? 'Registrando…' : 'Ya lo pagué'}
                 </button>
               )}
-
-              {borrando === g.id && (
-                <div className="mt-2 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
-                  <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
-                    ¿Borrar este gasto fijo? Dejamos de avisarte. Los pagos que ya registraste quedan en tus gastos.
-                  </p>
-                  <div className="flex gap-2">
-                    <button type="button" autoFocus onClick={() => setBorrando(null)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
-                      Cancelar
-                    </button>
-                    <button type="button" onClick={() => { setBorrando(null); acciones.borrarGastoFijo(g.id); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
-                      Sí, borrar
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           );
         })}
       </div>
       <VerTodos total={estado.gastosFijos.length} abierta={verTodos} onToggle={() => setVerTodos((v) => !v)} />
       {error && <p role="alert" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>{error}</p>}
+
+      {borrando && (
+        <Hoja titulo="¿Borrar este gasto fijo?" onCerrar={() => setBorrando(null)}>
+          <div className="pt-1 flex flex-col gap-3">
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
+              {borrando.descripcion}, <span className="font-mono tabular-nums">{MONTO(borrando)}</span>. Dejamos de avisarte. Los pagos que ya registraste quedan en tus gastos.
+            </p>
+            <div className="flex gap-2">
+              <button type="button" autoFocus onClick={() => setBorrando(null)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+                Cancelar
+              </button>
+              <button type="button" onClick={() => { acciones.borrarGastoFijo(borrando.id); setBorrando(null); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
+                Sí, borrar
+              </button>
+            </div>
+          </div>
+        </Hoja>
+      )}
     </section>
   );
 }

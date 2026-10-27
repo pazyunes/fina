@@ -6,8 +6,8 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { FUENTES_INGRESO, type FuenteIngreso, type Ingreso, type MonedaConvertible } from '../../api/v2/tipos';
 
-// Editar un ingreso, abierto debajo de su renglón (el lapicito, igual que en los
-// gastos). Se puede cambiar el monto y la moneda, de dónde vino (con "otro"
+// Editar un ingreso, en una hoja aparte (el lapicito, igual que en los gastos;
+// CLAUDE.md regla 12). Se puede cambiar el monto y la moneda, de dónde vino (con "otro"
 // escribible), en qué medio entró, la descripción y cuándo fue. Cambiar el monto
 // o el medio mueve el saldo de los medios: lo resuelve `acciones.editarIngreso`.
 
@@ -57,9 +57,7 @@ export function EditorIngreso({ ingreso, onCerrar }: { ingreso: Ingreso; onCerra
   }
 
   return (
-    <div ref={faltantes.ref} className="mt-2 rounded-xl px-3.5 py-3.5 flex flex-col gap-3" style={{ background: COLORS.tint }} role="group" aria-label="Editar ingreso">
-      <p className="text-[13px] font-bold" style={{ color: COLORS.ink }}>Editar ingreso</p>
-
+    <div ref={faltantes.ref} className="py-2 flex flex-col gap-3">
       <div className="flex gap-2">
         <div className="relative flex-1 min-w-0">
           <span className="absolute top-1/2 -translate-y-1/2 left-4" style={{ color: COLORS.inkSoft }}>{moneda === 'USD' ? 'US$' : '$'}</span>

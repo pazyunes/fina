@@ -228,8 +228,11 @@ Reglas duras:
   nueva o una hoja aparte, `onboarding-v2/Hoja.tsx`: en el celular sube desde abajo con un
   velo detrás, y se cierra con la X, con Esc o tocando el velo. Un formulario desplegado
   en el medio de la pantalla se mezcla con lo que hay alrededor y no se sabe dónde
-  termina. En el lugar sólo se despliega texto de lectura: una explicación, los pasos de
-  "Cómo hacerlo".
+  termina. **Editar es igual** (decisión oct 2026): el lapicito de un gasto o de un
+  ingreso, el tope o el nombre de una categoría, un objetivo, tu nombre o tu PIN abren su
+  hoja, y también la confirmación de borrar algo. La hoja arranca con lo guardado; si se
+  cierra sin guardar, lo escrito se descarta. En el lugar sólo se despliega texto de
+  lectura: una explicación, los pasos de "Cómo hacerlo".
 - **El botón de guardar no se apaga por un campo vacío.** Un botón gris no dice qué
   falta. Se toca, y si falta algo, `useFaltantes` (`onboarding-v2/useFaltantes.ts`)
   marca cada campo que falta con `BORDE_FALTA` y una línea corta con `TextoFalta`

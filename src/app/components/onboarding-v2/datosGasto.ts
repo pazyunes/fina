@@ -66,8 +66,8 @@ export function seccionesDeLaBase(db: EstadoV2): { categorias: Categoria[]; tope
 // gastado) y el gris (Sin categoría). El orden no es estético: validado con
 // dataviz/validate sobre blanco, dos colores seguidos en esta lista se
 // distinguen también con daltonismo (ΔE 9,1), y los que quedan a un lugar,
-// también (14,6). OJO: el anillo de Gastos ordena las secciones por lo gastado,
-// no por este orden, así que ahí cualquier par puede quedar pegado; los más
+// también (14,6). OJO: el anillo de Gastos ordena las secciones por su gasto
+// más reciente, no por este orden, así que ahí cualquier par puede quedar pegado; los más
 // parecidos son magenta con cian y amarillo con naranja. Los nombres en las
 // referencias son la segunda señal. Conserva el color de las secciones 1, 2, 5
 // y 6 de la paleta anterior.
@@ -82,6 +82,20 @@ const CAT_COLORS = [COLORS.brand, COLORS.naranja, COLORS.cian, COLORS.bordo, COL
 export function colorDeSeccion(id: string, categorias: Categoria[]): string {
   const i = categorias.findIndex((c) => c.id === id);
   return i < 0 || i >= CAT_COLORS.length ? COLORS.lineStrong : CAT_COLORS[i];
+}
+
+/**
+ * El momento del último gasto de cada clave (una sección, un medio, un tipo).
+ * Las listas de Gastos van de lo más reciente a lo más viejo, no de lo que más
+ * se llevó a lo que menos (decisión oct 2026). Un gasto puede dar varias claves
+ * (uno pagado con dos medios).
+ */
+export function ultimoGasto(gastos: Gasto[], claves: (g: Gasto) => string[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const g of gastos) {
+    for (const k of claves(g)) if (g.ts > (m.get(k) ?? -Infinity)) m.set(k, g.ts);
+  }
+  return m;
 }
 
 /** Inicio del mes en curso: las listas de secciones muestran lo gastado este mes. */

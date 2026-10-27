@@ -2,20 +2,21 @@ import { COLORS, fechaDisplay } from './shared';
 import * as acciones from '../../api/v2/acciones';
 import { IconBasura, IconEditar } from './FinaIcons';
 import { FormularioGasto } from './FormularioGasto';
+import { Hoja } from './Hoja';
 import { colorDeSeccion, fmtGasto, fmtPagos, type Categoria, type Gasto } from './datosGasto';
 
 // La fila de un gasto, con editar y borrar. La usan Gastos (los últimos 5) y
-// Todos tus gastos (la lista completa). Editar abre el formulario debajo del
-// mismo renglón: la persona tocó ese gasto y lo sigue viendo mientras lo
-// cambia, en vez de que la pantalla salte al formulario de arriba.
+// Todos tus gastos (la lista completa). Editar y borrar se abren en una hoja
+// aparte, encima de la pantalla (CLAUDE.md regla 12): desplegados debajo del
+// renglón empujaban el resto de la lista y no se sabía dónde terminaban.
 
-// Borrar pide confirmación en el mismo renglón: no se puede deshacer, y el
-// tachito está al lado del monto, donde un toque de más es fácil.
+// Borrar pide confirmación: no se puede deshacer, y el tachito está al lado
+// del monto, donde un toque de más es fácil.
 function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () => void }) {
   return (
-    <div className="mt-2 mb-1 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
+    <div className="pt-1 flex flex-col gap-3">
       <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
-        ¿Borrar "{gasto.descripcion}" de <span className="font-mono tabular-nums">{fmtGasto(gasto)}</span>?
+        {gasto.descripcion}, <span className="font-mono tabular-nums">{fmtGasto(gasto)}</span>.
         {gasto.pagos?.length ? ` La plata vuelve a ${fmtPagos(gasto.pagos)}.` : gasto.metodoPago ? ` La plata vuelve a ${gasto.metodoPago}.` : ''}
       </p>
       <div className="flex gap-2">
@@ -45,8 +46,8 @@ function ConfirmarBorrado({ gasto, onCancelar }: { gasto: Gasto; onCancelar: () 
  * Un gasto como renglón: el punto y el nombre de su sección (no el tipo: la
  * sección es lo que dice en qué se fue), la fecha y el monto. Todos se pueden
  * editar y borrar, también los que llegaron por WhatsApp. `abierto` dice qué
- * tiene desplegado: nada, el formulario de edición o la confirmación de borrar.
- * Uno a la vez en toda la lista: lo controla la pantalla.
+ * hoja tiene abierta: ninguna, la de editar o la de borrar. Una a la vez en
+ * toda la lista: lo controla la pantalla.
  */
 export function FilaGasto({ gasto, categorias, abierto, onAbrir }: {
   gasto: Gasto;
@@ -68,29 +69,35 @@ export function FilaGasto({ gasto, categorias, abierto, onAbrir }: {
         <span className="font-mono tabular-nums text-[14px] shrink-0" style={{ color: COLORS.ink }}>{fmtGasto(gasto)}</span>
         <button
           type="button"
-          onClick={() => onAbrir(abierto === 'editar' ? null : 'editar')}
+          onClick={() => onAbrir('editar')}
           aria-label={`Editar ${gasto.descripcion}`}
-          aria-expanded={abierto === 'editar'}
+          aria-haspopup="dialog"
           className="v2-focus w-11 h-11 -my-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
-          style={{ color: abierto === 'editar' ? COLORS.brand : COLORS.inkFaint }}
+          style={{ color: COLORS.inkFaint }}
         >
           <IconEditar size={18} />
         </button>
         <button
           type="button"
-          onClick={() => onAbrir(abierto === 'borrar' ? null : 'borrar')}
+          onClick={() => onAbrir('borrar')}
           aria-label={`Borrar ${gasto.descripcion}`}
-          aria-expanded={abierto === 'borrar'}
+          aria-haspopup="dialog"
           className="v2-focus w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
-          style={{ color: abierto === 'borrar' ? COLORS.ink : COLORS.inkFaint }}
+          style={{ color: COLORS.inkFaint }}
         >
           <IconBasura size={18} />
         </button>
       </div>
       {abierto === 'editar' && (
-        <FormularioGasto gasto={gasto} categorias={categorias} onListo={() => onAbrir(null)} onCancelar={() => onAbrir(null)} />
+        <Hoja titulo="Editar gasto" onCerrar={() => onAbrir(null)}>
+          <FormularioGasto gasto={gasto} categorias={categorias} onListo={() => onAbrir(null)} onCancelar={() => onAbrir(null)} />
+        </Hoja>
       )}
-      {abierto === 'borrar' && <ConfirmarBorrado gasto={gasto} onCancelar={() => onAbrir(null)} />}
+      {abierto === 'borrar' && (
+        <Hoja titulo="¿Borrar este gasto?" onCerrar={() => onAbrir(null)}>
+          <ConfirmarBorrado gasto={gasto} onCancelar={() => onAbrir(null)} />
+        </Hoja>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { COLORS, FONTS, fmtMoney } from './shared';
 import { IconBasura, IconEditar } from './FinaIcons';
 import { EditorIngreso } from './EditorIngreso';
+import { Hoja } from './Hoja';
 import { VerTodos, recortar } from './VerTodos';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
@@ -334,7 +335,7 @@ export function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingres
   const fuente = i.fuente === 'otro' && i.fuenteOtra ? i.fuenteOtra : FUENTES_INGRESO.find((f) => f.id === i.fuente)?.label;
   const titulo = i.descripcion || fuente || 'Ingreso';
   const monto = i.moneda === 'USD' ? `US$${i.monto.toLocaleString('es-AR')}` : fmtMoney(i.monto);
-  // El lapicito abre el editor debajo del renglón, igual que en los gastos.
+  // El lapicito abre el editor en una hoja aparte, igual que en los gastos.
   const [editando, setEditando] = useState(false);
   return (
     <div className="py-2.5 border-b last:border-b-0" style={{ borderColor: COLORS.line }}>
@@ -349,11 +350,11 @@ export function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingres
         <span className="font-mono tabular-nums text-[14px] shrink-0" style={{ color: COLORS.ink }}>+{monto}</span>
         <button
           type="button"
-          onClick={() => { setEditando((v) => !v); onCerrar(); }}
+          onClick={() => { setEditando(true); onCerrar(); }}
           aria-label={`Editar ingreso ${titulo}`}
-          aria-expanded={editando}
+          aria-haspopup="dialog"
           className="v2-focus w-11 h-11 -my-2 rounded-full flex items-center justify-center shrink-0 transition-all duration-100 active:scale-90"
-          style={{ color: editando ? COLORS.ink : COLORS.inkFaint }}
+          style={{ color: COLORS.inkFaint }}
         >
           <IconEditar size={18} />
         </button>
@@ -361,28 +362,34 @@ export function FilaIngreso({ ingreso: i, abierto, onAbrir, onCerrar }: { ingres
           type="button"
           onClick={() => { setEditando(false); onAbrir(); }}
           aria-label={`Borrar ingreso ${titulo}`}
-          aria-expanded={abierto}
+          aria-haspopup="dialog"
           className="v2-focus w-11 h-11 -my-2 -mr-2 rounded-full flex items-center justify-center shrink-0"
-          style={{ color: abierto ? COLORS.ink : COLORS.inkFaint }}
+          style={{ color: COLORS.inkFaint }}
         >
           <IconBasura size={18} />
         </button>
       </div>
-      {editando && <EditorIngreso ingreso={i} onCerrar={() => setEditando(false)} />}
+      {editando && (
+        <Hoja titulo="Editar ingreso" onCerrar={() => setEditando(false)}>
+          <EditorIngreso ingreso={i} onCerrar={() => setEditando(false)} />
+        </Hoja>
+      )}
       {abierto && (
-        <div className="mt-2 rounded-xl px-3.5 py-3 flex flex-col gap-2.5" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar borrado">
-          <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
-            ¿Borrar este ingreso de <span className="font-mono tabular-nums">{monto}</span>?
-          </p>
-          <div className="flex gap-2">
-            <button type="button" autoFocus onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
-              Cancelar
-            </button>
-            <button type="button" onClick={() => { onCerrar(); acciones.borrarIngreso(i.id); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
-              Sí, borrar
-            </button>
+        <Hoja titulo="¿Borrar este ingreso?" onCerrar={onCerrar}>
+          <div className="pt-1 flex flex-col gap-3">
+            <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
+              {titulo}, <span className="font-mono tabular-nums">+{monto}</span>.
+            </p>
+            <div className="flex gap-2">
+              <button type="button" autoFocus onClick={onCerrar} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+                Cancelar
+              </button>
+              <button type="button" onClick={() => { onCerrar(); acciones.borrarIngreso(i.id); }} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
+                Sí, borrar
+              </button>
+            </div>
           </div>
-        </div>
+        </Hoja>
       )}
     </div>
   );

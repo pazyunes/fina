@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { BotonVolver, COLORS, Titulo, useVolver } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { FilaSeccion } from './FilaSeccion';
-import { colorDeSeccion, gastosDeLaBase, inicioDelMes, seccionesDeLaBase } from './datosGasto';
+import { colorDeSeccion, gastosDeLaBase, inicioDelMes, seccionesDeLaBase, ultimoGasto } from './datosGasto';
 
-// Tus secciones, todas. Se llega desde "Ver todas" en Gastos, que
-// muestra sólo las 5 donde más se gastó. Acá están también las que este mes
-// no tienen gastos, y es el único lugar donde se renombran y se borran.
+// Tus secciones, todas. Se llega desde "Ver todas" en Gastos, que muestra sólo
+// las 5 con gastos más recientes. Acá están también las que este mes no tienen
+// gastos, y es el único lugar donde se renombran y se borran. Van de la del
+// gasto más reciente a la del más viejo, igual que en Gastos.
 
 export function TodasLasSecciones() {
   const volver = useVolver('/onboarding-v2/gastos');
@@ -18,7 +19,8 @@ export function TodasLasSecciones() {
   // Lo gastado este mes: el mismo número que muestra Gastos por mes.
   const desde = inicioDelMes();
   const gastadoEn = (id: string) => gastos.filter((g) => g.categoriaId === id && g.ts >= desde).reduce((t, g) => t + g.montoArs, 0);
-  const ordenadas = [...categorias].sort((a, b) => gastadoEn(b.id) - gastadoEn(a.id));
+  const ultimo = ultimoGasto(gastos, (g) => [g.categoriaId]);
+  const ordenadas = [...categorias].sort((a, b) => (ultimo.get(b.id) ?? 0) - (ultimo.get(a.id) ?? 0));
 
   return (
     <div className="px-[22px] pt-4 flex flex-col gap-3 pb-4 lg:max-w-2xl lg:mx-auto lg:pt-6">

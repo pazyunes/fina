@@ -521,8 +521,10 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
   const [montoTotalEdit, setMontoTotalEdit] = useState('');
   const [montoMinEdit, setMontoMinEdit] = useState('');
 
-  // Editar un objetivo existente (nombre/descripción/moneda/tipo/monto).
-  const [editando, setEditando] = useState(false);
+  // Editar un objetivo existente (nombre/descripción/moneda/tipo/monto), en
+  // una hoja aparte (CLAUDE.md regla 12). Desde la lista se edita sin entrar
+  // al detalle.
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [editNombre, setEditNombre] = useState('');
   const [editDescripcion, setEditDescripcion] = useState('');
   const [editTipo, setEditTipo] = useState<TipoObjetivo>('individual');
@@ -549,6 +551,7 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
   }
 
   const abierto = objetivos.find((o) => o.id === openId) || null;
+  const editado = objetivos.find((o) => o.id === editandoId) || null;
 
   // Lo que falta completar en cada formulario de esta pantalla: al tocar
   // guardar se marca y la vista va ahí (useFaltantes).
@@ -557,7 +560,7 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
     fecha: !horizonte && !horizonteFecha,
     grupo: tipo === 'grupal' && !grupo && !invitarNombre.trim(),
   }, creating);
-  const faltaEditar = useFaltantes({ nombre: !editNombre.trim() }, editando);
+  const faltaEditar = useFaltantes({ nombre: !editNombre.trim() }, editado !== null);
   const faltaMonto = useFaltantes({ monto: montoModoEdit !== 'desconocido' && parseMoneyInput(montoTotalEdit) <= 0 }, !!abierto);
   const faltaRegistro = useFaltantes({ monto: parseMoneyInput(regMonto) <= 0 }, sumando);
   const faltaPago = useFaltantes({ monto: parseMoneyInput(montoPago) <= 0 }, pagandoId !== null);
@@ -670,14 +673,13 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
     setEditMontoModo(obj.montoModo ?? 'exacto');
     setEditMontoTotal(obj.montoTotal > 0 ? formatMontoInicial(obj.montoTotal) : '');
     setEditMontoMin(obj.montoMin ? formatMontoInicial(obj.montoMin) : '');
-    setOpenId(obj.id);
-    setEditando(true);
+    setEditandoId(obj.id);
   }
   function guardarEdicion() {
-    if (!abierto || !editNombre.trim()) return;
+    if (!editado || !editNombre.trim()) return;
     const horizonteFinal = editHorizonteFecha ? new Date(editHorizonteFecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) : editHorizonte;
     const monto = buildMonto(editMontoModo, editMontoTotal, editMontoMin);
-    acciones.editarObjetivo(abierto.id, {
+    acciones.editarObjetivo(editado.id, {
       nombre: editNombre.trim(),
       descripcion: editDescripcion.trim(),
       tipo: editTipo,
@@ -687,7 +689,7 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
       montoTotal: monto.montoTotal > 0 ? monto.montoTotal : null,
       montoMin: monto.montoMin ?? null,
     });
-    setEditando(false);
+    setEditandoId(null);
   }
 
   async function agregarRegistro() {
@@ -801,6 +803,47 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
     </div>
   );
 
+  // Hoja para editar un objetivo o un gasto planificado. Se muestra tanto en
+  // la lista como en el detalle.
+  const hojaEditar = editado && (
+    <Hoja titulo={editado.clase === 'gasto' ? 'Editar gasto planificado' : 'Editar objetivo de ahorro'} onCerrar={() => setEditandoId(null)}>
+      <div ref={faltaEditar.ref} className="flex flex-col gap-2.5 pt-1">
+        <input
+          data-campo="nombre"
+          aria-label="Nombre"
+          aria-invalid={faltaEditar.marcado('nombre') || undefined}
+          className={inputClass}
+          style={faltaEditar.marcado('nombre') ? { border: BORDE_FALTA } : undefined}
+          placeholder="Nombre"
+          value={editNombre}
+          onChange={(e) => setEditNombre(e.target.value)}
+        />
+        {faltaEditar.marcado('nombre') && <TextoFalta>Falta el nombre.</TextoFalta>}
+        <input className={inputClass} aria-label="Descripción" placeholder="Descripción (opcional)" value={editDescripcion} onChange={(e) => setEditDescripcion(e.target.value)} />
+        <SegmentedTab
+          options={[{ id: 'individual' as TipoObjetivo, label: 'Individual' }, { id: 'grupal' as TipoObjetivo, label: 'En conjunto' }]}
+          value={editTipo} onChange={setEditTipo} trackColor={COLORS.gold}
+        />
+        <div className="flex items-center justify-between">
+          <p className="text-[13px] font-semibold" style={{ color: COLORS.ink }}>Moneda</p>
+          <MonedaDropdown value={editMoneda} onChange={setEditMoneda} />
+        </div>
+        <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Cuánto necesitás?</p>
+        <MontoPicker
+          modo={editMontoModo} setModo={setEditMontoModo}
+          montoTxt={editMontoTotal} setMontoTxt={setEditMontoTotal}
+          minTxt={editMontoMin} setMinTxt={setEditMontoMin}
+        />
+        <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Para cuándo?</p>
+        <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} esGasto={editado.clase === 'gasto'} />
+        <div className="flex gap-2 mt-1">
+          <button type="button" onClick={() => setEditandoId(null)} className="v2-focus flex-1 rounded-xl py-2.5 text-[13px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
+          <button type="button" onClick={() => faltaEditar.intentar(guardarEdicion)} className="v2-focus flex-[2] rounded-xl py-2.5 text-[13px] font-bold transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
+        </div>
+      </div>
+    </Hoja>
+  );
+
   // Valores animados del objetivo abierto (números que cuentan + dona que
   // se llena). Los hooks van SIEMPRE acá arriba, antes de cualquier return.
   const animAcum = useCountUp(abierto ? saved(abierto) : 0);
@@ -839,6 +882,7 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
       <div className="px-[22px] pt-4 flex flex-col gap-4 pb-4 lg:max-w-2xl lg:mx-auto">
         {V2_STYLES}
         {confirmarBorrarModal}
+        {hojaEditar}
         <div className="flex items-center justify-between">
           <button type="button" className="v2-focus inline-flex items-center gap-1 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }} onClick={() => (volverAlOrigen ? volverAlOrigen() : setOpenId(null))}>
             <IconChevron size={15} style={{ transform: 'rotate(180deg)' }} /> Volver
@@ -852,42 +896,6 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
           </div>
         </div>
 
-        {editando ? (
-          <div ref={faltaEditar.ref} className="flex flex-col gap-2.5 pt-1">
-            <TituloSeccion>Editar objetivo</TituloSeccion>
-            <input
-              data-campo="nombre"
-              aria-invalid={faltaEditar.marcado('nombre') || undefined}
-              className={inputClass}
-              style={faltaEditar.marcado('nombre') ? { border: BORDE_FALTA } : undefined}
-              placeholder="Nombre"
-              value={editNombre}
-              onChange={(e) => setEditNombre(e.target.value)}
-            />
-            {faltaEditar.marcado('nombre') && <TextoFalta>Falta el nombre.</TextoFalta>}
-            <input className={inputClass} placeholder="Descripción (opcional)" value={editDescripcion} onChange={(e) => setEditDescripcion(e.target.value)} />
-            <SegmentedTab
-              options={[{ id: 'individual' as TipoObjetivo, label: 'Individual' }, { id: 'grupal' as TipoObjetivo, label: 'En conjunto' }]}
-              value={editTipo} onChange={setEditTipo} trackColor={COLORS.gold}
-            />
-            <div className="flex items-center justify-between">
-              <p className="text-[13px] font-semibold" style={{ color: COLORS.ink }}>Moneda</p>
-              <MonedaDropdown value={editMoneda} onChange={setEditMoneda} />
-            </div>
-            <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Cuánto necesitás?</p>
-            <MontoPicker
-              modo={editMontoModo} setModo={setEditMontoModo}
-              montoTxt={editMontoTotal} setMontoTxt={setEditMontoTotal}
-              minTxt={editMontoMin} setMinTxt={setEditMontoMin}
-            />
-            <p className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>¿Para cuándo?</p>
-            <HorizontePicker valor={editHorizonte} setValor={setEditHorizonte} fecha={editHorizonteFecha} setFecha={setEditHorizonteFecha} esGasto={abierto.clase === 'gasto'} />
-            <div className="flex gap-2 mt-1">
-              <button type="button" onClick={() => setEditando(false)} className="v2-focus flex-1 rounded-xl py-2.5 text-[13px] font-semibold border" style={{ color: COLORS.ink, borderColor: COLORS.line }}>Cancelar</button>
-              <button type="button" onClick={() => faltaEditar.intentar(guardarEdicion)} className="v2-focus flex-[2] rounded-xl py-2.5 text-[13px] font-bold transition-all duration-100 active:scale-95" style={{ background: COLORS.brand, color: COLORS.surface }}>Guardar cambios</button>
-            </div>
-          </div>
-        ) : (
         <div className="relative py-2 flex gap-4 items-center">
           <Celebracion show={celebrar} big={celebrarBig} />
           {estado === 'definido' && (
@@ -958,7 +966,6 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
             )}
           </div>
         </div>
-        )}
 
         {estado !== 'definido' && (
           <div ref={faltaMonto.ref} className="flex flex-col gap-2.5 pt-1">
@@ -992,7 +999,7 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
         {/* Próximo paso: junto con el progreso, lo principal del detalle (G1).
             Un dato, su salida y UNA acción. El color del borde dice el tono:
             naranja de relleno si hay algo para hacer, nunca rojo. */}
-        {!editando && estado === 'definido' && !done && (
+        {estado === 'definido' && !done && (
           <section
             className="flex flex-col gap-2 pl-3.5 border-l-[3px]"
             style={{ borderColor: mensaje ? colorDeTono(mensaje.tono) : COLORS.brandSoft }}
@@ -1013,7 +1020,7 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
           </section>
         )}
 
-        {!editando && formas.length > 0 && <FormasDeLlegar formas={formas} />}
+        {formas.length > 0 && <FormasDeLlegar formas={formas} />}
 
         {!done && planes.get(abierto.id) && (
           <PlanDelObjetivo plan={planes.get(abierto.id)!} moneda={abierto.moneda} onMarcar={marcarPlan} />
@@ -1461,6 +1468,7 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
         {V2_STYLES}
         {modalCrear}
         {confirmarBorrarModal}
+        {hojaEditar}
         {hojaPago}
         <header className="flex flex-col gap-1">
           <BotonVolver onClick={volverAPlanes} />
@@ -1493,6 +1501,7 @@ export function ObjetivosV2({ lista }: { lista?: 'ahorro' | 'gasto' } = {}) {
       {V2_STYLES}
       {modalCrear}
       {confirmarBorrarModal}
+      {hojaEditar}
       {hojaPago}
 
       {/* En el encabezado, sólo el título (pedido de diseño, oct 2026). Cuánto

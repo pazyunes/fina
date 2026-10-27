@@ -5,12 +5,15 @@ import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
 import { IconChevron, IconClose } from './FinaIcons';
 import { CamposGastoFijo, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
+import { CamposRecurrente, opcionRecurrenteInicial, type OpcionRecurrente } from './GastosRecurrentes';
+import { crearRecurrente } from '../../api/v2/recurrentes';
+import { diaArgentina } from '../../api/v2/pasos';
 import { TIPOS, TIPO_INFO, gastosDeLaBase, recientes, type Categoria, type Gasto, type Moneda, type TipoGasto } from './datosGasto';
 
-// El formulario de un gasto: el mismo para cargar uno nuevo (en Gastos, debajo
-// de "Agregar gasto") y para editar uno (abierto en su propio renglón, en
-// Gastos y en Todos tus gastos). Editar en el lugar evita que la pantalla salte
-// a otra parte justo cuando la persona tocó un gasto puntual.
+// El formulario de un gasto: el mismo para cargar uno nuevo y para editar uno
+// (en Gastos y en Todos tus gastos). Los dos se abren en una hoja aparte,
+// encima de la pantalla (CLAUDE.md regla 12): abierto debajo del renglón se
+// mezclaba con la lista y no se sabía dónde terminaba.
 
 // Secciones sugeridas. Es la misma lista que ofrecía el onboarding: las que la
 // persona marcó allá ya entran como suyas, y el resto queda acá para no
@@ -84,11 +87,14 @@ export function Desplegable({ id, label, value, onChange, marcado = false, child
 
 /**
  * `gasto`: si viene, se edita ese gasto; si no, se carga uno nuevo (y se ofrece
- * la opción de gasto fijo, que no aplica a un movimiento que ya pasó).
+ * la opción de gasto fijo o recurrente, que no aplica a un movimiento que ya
+ * pasó). `repeticion`: arranca con esa opción prendida (desde "Anotar un gasto
+ * fijo" o "Anotar un gasto recurrente").
  * `onListo` recibe la sección en la que quedó el gasto.
  */
-export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
+export function FormularioGasto({ gasto, repeticion, categorias, onListo, onCancelar }: {
   gasto?: Gasto;
+  repeticion?: 'fijo' | 'recurrente';
   categorias: Categoria[];
   onListo: (seccionId: string | null) => void;
   onCancelar: () => void;
@@ -115,7 +121,11 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
   const [pagos, setPagos] = useState<FilaPago[]>(() => (gasto?.pagos?.length
     ? gasto.pagos.map((p) => ({ medio: p.medio, otro: '', monto: formatMontoInicial(p.monto) }))
     : [filaPagoVacia(), filaPagoVacia()]));
-  const [fijo, setFijo] = useState<OpcionFijo>(opcionFijoInicial);
+  const [fijo, setFijo] = useState<OpcionFijo>(() => ({ ...opcionFijoInicial(), activo: repeticion === 'fijo' }));
+  // Un gasto que se repite seguido (el colectivo, el café): queda para
+  // registrarlo con un toque. Fijo y recurrente no van juntos: prender uno
+  // apaga el otro.
+  const [recurrente, setRecurrente] = useState<OpcionRecurrente>(() => ({ ...opcionRecurrenteInicial(), activo: repeticion === 'recurrente' }));
   // Errores de conversión (no se pudo traer el dólar). Los de guardado los
   // reporta el almacén.
   const [error, setError] = useState<string | null>(null);
@@ -140,6 +150,9 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
     fijo: !editando && !opcionFijoValida(fijo),
   });
 
+  // Un gasto fijo no pregunta qué tipo de gasto es: se toma como necesario.
+  const esFijo = !editando && fijo.activo;
+
   function seccionElegida(): string | null {
     if (!nuevaCat.trim()) return catId;
     const ya = categorias.find((c) => slug(c.nombre) === slug(nuevaCat.trim()));
@@ -154,12 +167,16 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
     const medio = (metodo === 'otro' ? metodoOtro.trim() : metodo) || null;
     const pagosFinal = dividido ? pagos.map((f) => ({ medio: medioDeFila(f), monto: parseMoneyInput(f.monto) })) : undefined;
     setError(null);
+    const tipoFinal: TipoGasto = esFijo ? 'necesario' : tipo;
+    // Un gasto fijo sin nombre se llama como su categoría: es como se reconoce
+    // en la lista y en el aviso, y "Necesario" no dice qué es.
+    const nombreSeccion = categorias.find((c) => c.id === seccionId)?.nombre ?? nuevaCat.trim();
     const datos = {
       monto: n,
       moneda,
-      descripcion: desc.trim() || TIPO_INFO[tipo].label,
+      descripcion: desc.trim() || (esFijo ? nombreSeccion : '') || TIPO_INFO[tipoFinal].label,
       seccionId,
-      tipo,
+      tipo: tipoFinal,
       metodoPago: medio,
       ts: deInputFecha(fecha, gasto?.ts),
     };
@@ -176,13 +193,29 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
     // gasto que acaba de tipear sería peor que la espera.
     // Un gasto fijo que todavía no se pagó no se registra como gasto: sólo
     // queda anotado para avisar. Si ya se pagó, se registra y queda el próximo.
+    // El cartel de "Gasto fijo guardado" lo da el gasto fijo, cuando la base lo
+    // confirma: si lo diera el gasto, diría "guardado como fijo" aunque el fijo
+    // no se hubiera guardado.
     if (!fijo.activo || fijo.yaPagado) {
-      const r = await acciones.registrarGasto({ ...datos, tipoOtro, pagos: pagosFinal, confirmacion: fijo.activo ? 'Gasto registrado y guardado como fijo.' : undefined });
+      const r = await acciones.registrarGasto({ ...datos, tipoOtro, pagos: pagosFinal, confirmacion: recurrente.activo ? 'Gasto registrado y guardado como recurrente.' : undefined });
       if (r.error !== null) { setError(r.error); return; }
+      if (recurrente.activo && !fijo.activo) {
+        const dia = new Date(datos.ts);
+        const esDeHoy = fecha === aInputFecha(Date.now());
+        crearRecurrente({
+          descripcion: desc.trim() || undefined,
+          seccionId, monto: n, moneda, tipo: tipoFinal, metodoPago: dividido ? null : medio,
+          frecuencia: recurrente.frecuencia, hora: recurrente.hora,
+          dia: recurrente.frecuencia === 'semanal' ? dia.getDay() : recurrente.frecuencia === 'mensual' ? dia.getDate() : null,
+          // Si el gasto es de hoy, hoy ya está registrado: no vuelve a aparecer.
+          ultimoDia: esDeHoy ? diaArgentina() : null,
+          ultimoGastoId: esDeHoy ? r.gasto?.id ?? null : null,
+        });
+      }
     }
     if (fijo.activo) {
       const diaAncla = fijo.frecuencia === 'mensual' || fijo.frecuencia === 'anual' ? Number(fijo.proximo.slice(8, 10)) : null;
-      acciones.crearGastoFijo({ ...datos, frecuencia: fijo.frecuencia, proximoPago: fijo.proximo, diaAncla }, !fijo.yaPagado);
+      acciones.crearGastoFijo({ ...datos, frecuencia: fijo.frecuencia, proximoPago: fijo.proximo, diaAncla });
     }
     onListo(seccionId);
   }
@@ -406,68 +439,83 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
         </div>
       )}
 
-      <fieldset className="flex flex-col gap-1.5">
-        <legend className="text-[13px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</legend>
-        <div className="grid grid-cols-4 gap-1.5">
-          {TIPOS.map((t) => {
-            const sel = tipo === t;
-            return (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={sel}
-                onClick={() => setTipo(t)}
-                className="v2-focus rounded-xl px-1 min-h-[44px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                // Sin color propio por tipo: los colores son de las secciones.
-                style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-              >
-                {TIPO_INFO[t].label}
-              </button>
-            );
-          })}
-        </div>
-        {/* "Otro" se puede escribir: queda con el nombre que le pongas y se
-            ofrece de nuevo la próxima vez, como las secciones. */}
-        {tipo === 'otro' && (
-          <div className="flex flex-col gap-2 mt-1.5">
-            <input
-              autoFocus
-              aria-label="Qué tipo de gasto fue"
-              maxLength={40}
-              className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
-              style={INPUT_STYLE}
-              placeholder="Escribí cuál (ej: Salud, Mascota)"
-              value={tipoOtro}
-              onChange={(e) => setTipoOtro(e.target.value)}
-            />
-            {tiposOtroRecientes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Los que escribiste antes">
-                {tiposOtroRecientes.map((t) => {
-                  const sel = tipoOtro.trim().toLowerCase() === t.toLowerCase();
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      aria-pressed={sel}
-                      onClick={() => setTipoOtro(t)}
-                      className="v2-focus rounded-lg px-2.5 py-1 text-[13px] font-semibold transition-all duration-100 active:scale-95"
-                      style={sel
-                        ? { background: COLORS.brandSoft, color: COLORS.brandDark }
-                        : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
-                    >
-                      {t}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+      {!esFijo && (
+        <fieldset className="flex flex-col gap-1.5">
+          <legend className="text-[13px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</legend>
+          <div className="grid grid-cols-4 gap-1.5">
+            {TIPOS.map((t) => {
+              const sel = tipo === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={sel}
+                  onClick={() => setTipo(t)}
+                  className="v2-focus rounded-xl px-1 min-h-[44px] text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                  // Sin color propio por tipo: los colores son de las secciones.
+                  style={sel ? { background: COLORS.brand, color: COLORS.surface } : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                >
+                  {TIPO_INFO[t].label}
+                </button>
+              );
+            })}
           </div>
-        )}
-      </fieldset>
+          {/* "Otro" se puede escribir: queda con el nombre que le pongas y se
+              ofrece de nuevo la próxima vez, como las secciones. */}
+          {tipo === 'otro' && (
+            <div className="flex flex-col gap-2 mt-1.5">
+              <input
+                autoFocus
+                aria-label="Qué tipo de gasto fue"
+                maxLength={40}
+                className="v2-focus w-full rounded-xl px-3.5 min-h-[48px] text-[14px] transition-colors"
+                style={INPUT_STYLE}
+                placeholder="Escribí cuál (ej: Salud, Mascota)"
+                value={tipoOtro}
+                onChange={(e) => setTipoOtro(e.target.value)}
+              />
+              {tiposOtroRecientes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Los que escribiste antes">
+                  {tiposOtroRecientes.map((t) => {
+                    const sel = tipoOtro.trim().toLowerCase() === t.toLowerCase();
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={sel}
+                        onClick={() => setTipoOtro(t)}
+                        className="v2-focus rounded-lg px-2.5 py-1 text-[13px] font-semibold transition-all duration-100 active:scale-95"
+                        style={sel
+                          ? { background: COLORS.brandSoft, color: COLORS.brandDark }
+                          : { background: COLORS.surface, color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </fieldset>
+      )}
 
-      {/* Un gasto que ya pasó no se puede volver "gasto fijo": esto es para
-          crear uno nuevo, no para editar un movimiento. */}
-      {!editando && <CamposGastoFijo valor={fijo} onChange={setFijo} marcado={faltantes.marcado('fijo')} />}
+      {/* Un gasto que ya pasó no se puede volver "gasto fijo" ni "recurrente":
+          esto es para crear uno nuevo, no para editar un movimiento. */}
+      {!editando && (
+        <CamposGastoFijo
+          valor={fijo}
+          onChange={(o) => { setFijo(o); if (o.activo) setRecurrente((r) => ({ ...r, activo: false })); }}
+          marcado={faltantes.marcado('fijo')}
+        />
+      )}
+      {!editando && (
+        <CamposRecurrente
+          valor={recurrente}
+          onChange={(o) => { setRecurrente(o); if (o.activo) setFijo(opcionFijoInicial()); }}
+          fecha={new Date(deInputFecha(fecha))}
+        />
+      )}
 
       {error && <p role="alert" className="text-[13px] font-semibold mt-1" style={{ color: COLORS.coralDark }}>{error}</p>}
 
@@ -481,7 +529,7 @@ export function FormularioGasto({ gasto, categorias, onListo, onCancelar }: {
           className="v2-focus flex-[2] rounded-xl py-2.5 min-h-[44px] text-[13px] font-bold transition-all duration-100 active:scale-95"
           style={{ background: COLORS.brand, color: COLORS.surface }}
         >
-          {editando ? 'Guardar cambios' : fijo.activo && !fijo.yaPagado ? 'Guardar gasto fijo' : 'Agregar gasto'}
+          {editando ? 'Guardar cambios' : fijo.activo && !fijo.yaPagado ? 'Guardar gasto fijo' : recurrente.activo ? 'Guardar gasto recurrente' : 'Agregar gasto'}
         </button>
       </div>
     </div>

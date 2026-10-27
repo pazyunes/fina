@@ -12,6 +12,7 @@ import { cerrarSesion } from '../../api/v2/cuenta';
 import { llevarA, useAlLlegar } from './alLlegar';
 import { PRIVACIDAD_URL, TERMINOS_URL } from '../../lib/legales';
 import { IconEditar } from './FinaIcons';
+import { Hoja } from './Hoja';
 import { useFaltantes } from './useFaltantes';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 
@@ -181,6 +182,37 @@ export function PerfilV2() {
     setEditandoNombre(false);
   }
 
+  const tieneNombre = !!nombreGuardado.trim();
+  // El campo del nombre: en el lugar la primera vez, en una hoja para cambiarlo.
+  const formNombre = (
+    <div ref={faltaNombre.ref} className="flex flex-col gap-2">
+      <label htmlFor="perfil-nombre" className={tieneNombre ? 'sr-only' : 'text-[13px] font-semibold'} style={{ color: COLORS.inkSoft }}>Tu nombre</label>
+      <div className="flex gap-2">
+        <input
+          id="perfil-nombre"
+          data-campo="nombre"
+          autoFocus={tieneNombre}
+          aria-invalid={faltaNombre.marcado('nombre') || undefined}
+          className="v2-focus flex-1 min-w-0 rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
+          style={{ background: COLORS.surface, border: faltaNombre.marcado('nombre') ? BORDE_FALTA : `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
+          placeholder="Tu nombre"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') guardarNombre(); }}
+        />
+        <button
+          type="button"
+          onClick={guardarNombre}
+          className="v2-focus rounded-2xl px-5 font-bold transition-all duration-100 active:scale-95 shrink-0 inline-flex items-center justify-center"
+          style={{ background: COLORS.brand, color: COLORS.surface }}
+        >
+          Guardar
+        </button>
+      </div>
+      {faltaNombre.marcado('nombre') && <TextoFalta>Falta tu nombre.</TextoFalta>}
+    </div>
+  );
+
   return (
     // DIRECCIÓN C — sin banda editorial y sin tarjeta por ítem. La banda
     // full-bleed violeta era el recurso de la dirección B; acá el título ya
@@ -229,42 +261,10 @@ export function PerfilV2() {
         )}
       </div>
 
-      {editandoNombre ? (
-        <div ref={faltaNombre.ref} className="flex flex-col gap-2">
-          <label htmlFor="perfil-nombre" className="text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>Tu nombre</label>
-          <div className="flex gap-2">
-            <input
-              id="perfil-nombre"
-              data-campo="nombre"
-              autoFocus={!!nombreGuardado}
-              aria-invalid={faltaNombre.marcado('nombre') || undefined}
-              className="v2-focus flex-1 min-w-0 rounded-2xl px-4 py-3 text-[15px] outline-none transition-colors"
-              style={{ background: COLORS.surface, border: faltaNombre.marcado('nombre') ? BORDE_FALTA : `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink }}
-              placeholder="Tu nombre"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') guardarNombre();
-                if (e.key === 'Escape' && nombreGuardado) cancelarNombre();
-              }}
-            />
-            <button
-              type="button"
-              onClick={guardarNombre}
-              className="v2-focus rounded-2xl px-5 font-bold transition-all duration-100 active:scale-95 shrink-0 inline-flex items-center justify-center"
-              style={{ background: COLORS.brand, color: COLORS.surface }}
-            >
-              Guardar
-            </button>
-          </div>
-          {faltaNombre.marcado('nombre') && <TextoFalta>Falta tu nombre.</TextoFalta>}
-          {nombreGuardado && (
-            <button type="button" onClick={cancelarNombre} className="v2-focus self-start min-h-[44px] px-1 text-[13px] font-semibold" style={{ color: COLORS.inkSoft }}>
-              Cancelar
-            </button>
-          )}
-        </div>
-      ) : (
+      {/* Sin nombre guardado se completa acá mismo: es la primera vez, no hay
+          nada que editar. Con nombre, "Editar" lo abre en una hoja aparte
+          (CLAUDE.md regla 12). */}
+      {!tieneNombre ? formNombre : (
         <div className="flex items-center justify-center gap-2">
           <p className="text-[22px] font-bold leading-tight tracking-[-0.01em] truncate" style={{ color: COLORS.ink, fontFamily: FONTS.display }}>{nombreGuardado}</p>
           {guardado && (
@@ -276,12 +276,18 @@ export function PerfilV2() {
             type="button"
             onClick={() => setEditandoNombre(true)}
             aria-label="Editar tu nombre"
+            aria-haspopup="dialog"
             className="v2-focus inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-full text-[13px] font-semibold shrink-0"
             style={{ color: COLORS.brand }}
           >
             <IconEditar size={16} /> Editar
           </button>
         </div>
+      )}
+      {tieneNombre && editandoNombre && (
+        <Hoja titulo="Editar tu nombre" onCerrar={cancelarNombre}>
+          <div className="pt-1">{formNombre}</div>
+        </Hoja>
       )}
 
       {/* "Completo" incluye el WhatsApp: sin el teléfono verificado FINA no
@@ -381,11 +387,12 @@ export function PerfilV2() {
           que ya tenga cuenta lo puede activar cuando quiera. */}
       <section className="flex flex-col gap-3">
         <TituloSeccion>Pedir PIN al abrir FINA</TituloSeccion>
-        {!tienePin && !configurandoPin && (
+        {!tienePin && (
           <>
             <button
               type="button"
               onClick={abrirConfigPin}
+              aria-haspopup="dialog"
               className="v2-focus self-start min-h-[48px] px-5 rounded-full text-[14px] font-bold"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
@@ -394,8 +401,10 @@ export function PerfilV2() {
           </>
         )}
 
+        {/* Activar o cambiar el PIN, en una hoja aparte (CLAUDE.md regla 12). */}
         {configurandoPin && (
-          <div className="flex flex-col gap-2.5">
+          <Hoja titulo={tienePin ? 'Cambiar PIN' : 'Activar PIN'} onCerrar={() => setConfigurandoPin(false)}>
+          <div className="pt-1 flex flex-col gap-2.5">
             <input
               autoFocus
               type="password"
@@ -432,9 +441,10 @@ export function PerfilV2() {
               </button>
             </div>
           </div>
+          </Hoja>
         )}
 
-        {tienePin && !configurandoPin && (
+        {tienePin && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2.5 min-h-[44px]">
               <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.limaSoft, color: COLORS.limaText }}>
@@ -476,24 +486,25 @@ export function PerfilV2() {
               )
             )}
 
-            {!confirmarQuitarPin ? (
-              <button type="button" onClick={() => setConfirmarQuitarPin(true)} className="v2-focus self-start text-[13px] font-semibold underline mt-1" style={{ color: COLORS.inkSoft }}>
-                Desactivar PIN
-              </button>
-            ) : (
-              <div className="rounded-2xl px-4 py-3.5 flex flex-col gap-3 mt-1" style={{ background: COLORS.tint }} role="group" aria-label="Confirmar que se desactiva el PIN">
-                <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
-                  ¿Desactivar el PIN{tieneBio ? ' y Face ID / Touch ID' : ''}? FINA va a abrir en este celular sin pedir PIN.
-                </p>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setConfirmarQuitarPin(false)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
-                    Cancelar
-                  </button>
-                  <button type="button" onClick={quitarPin} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
-                    Desactivar
-                  </button>
+            <button type="button" onClick={() => setConfirmarQuitarPin(true)} aria-haspopup="dialog" className="v2-focus self-start text-[13px] font-semibold underline mt-1" style={{ color: COLORS.inkSoft }}>
+              Desactivar PIN
+            </button>
+            {confirmarQuitarPin && (
+              <Hoja titulo={tieneBio ? '¿Desactivar el PIN y Face ID / Touch ID?' : '¿Desactivar el PIN?'} onCerrar={() => setConfirmarQuitarPin(false)}>
+                <div className="pt-1 flex flex-col gap-3">
+                  <p className="text-[13px] leading-snug" style={{ color: COLORS.ink }}>
+                    FINA va a abrir en este celular sin pedir PIN.
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" autoFocus onClick={() => setConfirmarQuitarPin(false)} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}`, background: COLORS.surface }}>
+                      Cancelar
+                    </button>
+                    <button type="button" onClick={quitarPin} className="v2-focus flex-1 rounded-xl min-h-[44px] text-[13px] font-bold" style={{ background: COLORS.ink, color: COLORS.paper }}>
+                      Desactivar
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </Hoja>
             )}
           </div>
         )}
