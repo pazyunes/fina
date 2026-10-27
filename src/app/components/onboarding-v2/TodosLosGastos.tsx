@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router';
 import { BotonVolver, COLORS, SegmentedTab, Titulo, useVolver } from './shared';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import { IconCalendario, IconLupa } from './FinaIcons';
@@ -8,8 +7,7 @@ import { Desplegable, INPUT_STYLE } from './FormularioGasto';
 import { gastosDeLaBase, seccionesDeLaBase } from './datosGasto';
 
 // Todos tus gastos, de todos los períodos. Se llega desde "Ver todos" en
-// Gastos, que muestra sólo los últimos 5, y desde "Ver más" de una categoría
-// (con la categoría ya elegida, y su nombre de título): la lista completa, con buscador,
+// Gastos, que muestra sólo los últimos 5: la lista completa, con buscador,
 // filtro por sección y por fechas, vive acá para que Gastos no repita el mismo
 // listado. Editar abre el formulario en el mismo renglón.
 
@@ -48,9 +46,7 @@ export function TodosLosGastos() {
 
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-  // De una categoría ("Ver más") se llega con esa categoría ya elegida.
-  const { id: categoriaDeLaRuta } = useParams();
-  const [seccion, setSeccion] = useState(categoriaDeLaRuta ?? '');
+  const [seccion, setSeccion] = useState('');
   const [orden, setOrden] = useState<'recientes' | 'monto'>('recientes');
   const [filtroDesde, setFiltroDesde] = useState('');
   const [filtroHasta, setFiltroHasta] = useState('');
@@ -78,7 +74,7 @@ export function TodosLosGastos() {
       <header className="flex flex-col gap-1">
         <BotonVolver onClick={volver} />
         <div className="flex items-center justify-between gap-2">
-          <Titulo>{categoriaDeLaRuta ? (categorias.find((c) => c.id === categoriaDeLaRuta)?.nombre ?? 'Categoría') : 'Todos tus gastos'}</Titulo>
+          <Titulo>Todos tus gastos</Titulo>
           <button
             type="button"
             onClick={() => setBusquedaAbierta((v) => !v)}

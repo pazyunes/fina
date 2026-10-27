@@ -46,7 +46,7 @@ export function ReservaEnInicio() {
           <div className="flex flex-col gap-3">
             <input
               autoFocus
-              className="v2-focus w-full rounded-xl px-3 py-2 min-h-[44px] text-[15px] outline-none"
+              className="v2-focus w-full rounded-xl px-3 py-2 min-h-[44px] text-[16px] outline-none"
               style={{ border: `1.5px solid ${COLORS.lineStrong}`, color: COLORS.ink, background: COLORS.surface }}
               placeholder="¿Cuánto querés reservar?"
               inputMode="decimal"
@@ -59,7 +59,7 @@ export function ReservaEnInicio() {
               type="button"
               onClick={guardar}
               disabled={!parseMoneyInput(valor)}
-              className="v2-focus w-full rounded-2xl min-h-[48px] text-[15px] font-bold transition-all duration-100 active:scale-[0.99] disabled:opacity-50"
+              className="v2-focus w-full rounded-2xl min-h-[48px] text-[16px] font-bold transition-all duration-100 active:scale-[0.99] disabled:opacity-50"
               style={{ background: COLORS.brand, color: COLORS.surface }}
             >
               Guardar

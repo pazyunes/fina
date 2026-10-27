@@ -1,10 +1,10 @@
 import { COLORS, fmtMoney } from './shared';
-import type { EstadoV2, PagoMixto, TipoGasto } from '../../api/v2/tipos';
+import type { EstadoV2, PagoMixto } from '../../api/v2/tipos';
 
 // Tipos y cálculos de los gastos que comparten Gastos, Todos tus gastos, Tus
 // secciones, el formulario de gasto y la torta de Inicio. Sin JSX: es lógica.
 
-export type { TipoGasto } from '../../api/v2/tipos';
+export type TipoGasto = 'urgente' | 'impulsivo' | 'necesario' | 'otro';
 export type Moneda = 'ARS' | 'USD';
 export type Periodo = 'semana' | 'mes';
 export type Tope = { monto: number; periodo: Periodo };
@@ -20,11 +20,9 @@ export const TIPO_INFO: Record<TipoGasto, { label: string; color: string }> = {
   // "impulsivo" juzga el gasto y la app no moraliza el consumo (regla 3).
   impulsivo: { label: 'Gusto', color: COLORS.gold },
   necesario: { label: 'Necesario', color: COLORS.green },
-  desorganizado: { label: 'Desorganizado/a', color: COLORS.lineStrong },
-  excepcion: { label: 'Excepción', color: COLORS.lineStrong },
   otro: { label: 'Otro', color: COLORS.sky },
 };
-export const TIPOS: TipoGasto[] = ['necesario', 'urgente', 'impulsivo', 'desorganizado', 'excepcion', 'otro'];
+export const TIPOS: TipoGasto[] = ['necesario', 'urgente', 'impulsivo', 'otro'];
 
 /**
  * Los gastos del almacén como los muestra la app. Si un gasto llegó sin

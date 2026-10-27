@@ -202,7 +202,7 @@ export function MisVisualizaciones() {
     .sort((a, b) => b.valor - a.valor);
 
   // ── Por tipo ───────────────────────────────────────────────────────────
-  const etiquetasTipo: Record<string, string> = { necesario: 'Necesario', urgente: 'Urgente', impulsivo: 'Gusto', desorganizado: 'Desorganizado/a', excepcion: 'Excepción', otro: 'Otro' };
+  const etiquetasTipo: Record<string, string> = { necesario: 'Necesario', urgente: 'Urgente', impulsivo: 'Gusto', otro: 'Otro' };
   const porTipo = Object.keys(etiquetasTipo)
     .map((t) => ({ label: etiquetasTipo[t], valor: gastos.filter((x) => x.tipo === t).reduce((a, x) => a + x.montoArs, 0) }))
     .filter((f) => f.valor > 0)

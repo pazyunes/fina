@@ -76,7 +76,7 @@ export function Confirmaciones() {
             <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: COLORS.ink, color: COLORS.lima }}>
               <CheckIcon />
             </span>
-            <span className="text-[14px] font-semibold leading-snug">{c.mensaje}</span>
+            <span className="text-[15px] font-semibold leading-snug">{c.mensaje}</span>
           </motion.button>
         ))}
       </AnimatePresence>

@@ -22,7 +22,7 @@ import type { AccionPaso } from '../../api/v2/pasos';
  * `ref`: el id de la sección o del objetivo del que habla el paso ("Ponele un
  * tope a X").
  */
-export function useAlLlegar(accion: AccionPaso | 'fijos' | 'cierre', hacer: (datos: URLSearchParams, estado: Record<string, unknown>) => void) {
+export function useAlLlegar(accion: AccionPaso | 'fijos', hacer: (datos: URLSearchParams, estado: Record<string, unknown>) => void) {
   const location = useLocation();
   const navigate = useNavigate();
   useEffect(() => {
@@ -32,7 +32,7 @@ export function useAlLlegar(accion: AccionPaso | 'fijos' | 'cierre', hacer: (dat
     const { abrir: _abrir, ...resto } = estado ?? {};
     const datos = new URLSearchParams(query);
     // Se limpian de la dirección: recargar no tiene que volver a abrir nada.
-    for (const clave of ['abrir', 'monto', 'descripcion', 'seccion', 'fijo']) query.delete(clave);
+    for (const clave of ['abrir', 'monto', 'descripcion']) query.delete(clave);
     const busqueda = query.toString();
     navigate(`${location.pathname}${busqueda ? `?${busqueda}` : ''}`, { replace: true, state: Object.keys(resto).length ? resto : null });
     hacer(datos, resto);

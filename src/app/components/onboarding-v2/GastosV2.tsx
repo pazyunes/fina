@@ -15,10 +15,6 @@ import { ListaGastosFijos } from './GastosFijos';
 import { FUENTES_INGRESO, type FuenteIngreso } from '../../api/v2/tipos';
 import { FilaGasto } from './FilaGasto';
 import { FilaSeccion } from './FilaSeccion';
-import { ImportarGastos } from './ImportarGastos';
-import { PreguntaHabito } from './PreguntaHabito';
-import type { SugerenciaHabito } from '../../lib/habitos';
-import { FRECUENCIAS, type FrecuenciaFija } from '../../api/v2/fechasFijos';
 import { FormularioGasto, INPUT_STYLE, METODOS_SUGERIDOS } from './FormularioGasto';
 import { Hoja } from './Hoja';
 import { TIPOS, TIPO_INFO, colorDeSeccion, gastosDeLaBase, recientes, seccionesDeLaBase, type Periodo, type TipoGasto } from './datosGasto';
@@ -59,12 +55,9 @@ export function GastosV2() {
   const [ingresoBorrando, setIngresoBorrando] = useState<string | null>(null);
 
   const [addingGasto, setAddingGasto] = useState(false);
-  const [importando, setImportando] = useState(false);
-  // Después de anotar el mismo gasto 2 o 3 veces el mismo día de la semana: ¿te lo recordamos?
-  const [habitoNuevo, setHabitoNuevo] = useState<SugerenciaHabito | null>(null);
   // Lo que trae un atajo de la pantalla de inicio del celular para precargar
   // el formulario (`?abrir=gasto&monto=8500`).
-  const [gastoInicial, setGastoInicial] = useState<{ monto: string; descripcion: string; seccionId?: string; fijo?: FrecuenciaFija } | null>(null);
+  const [gastoInicial, setGastoInicial] = useState<{ monto: string; descripcion: string } | null>(null);
   // Popup al tocar "+ Agregar gasto": registrarlo Desde FINA (a mano) o Desde
   // WhatsApp (mini explicación y abre el bot).
   const [chooser, setChooser] = useState(false);
@@ -273,9 +266,7 @@ export function GastosV2() {
     // Desde un atajo de la pantalla de inicio puede venir el monto ya cargado.
     const monto = parseMoneyInput(datos.get('monto') ?? '');
     const descripcion = (datos.get('descripcion') ?? '').slice(0, 80);
-    const seccionId = datos.get('seccion') ?? undefined;
-    const fijo = FRECUENCIAS.find((f) => f.id === datos.get('fijo'))?.id;
-    setGastoInicial(monto > 0 || descripcion ? { monto: monto > 0 ? formatThousands(String(monto)) : '', descripcion, ...(seccionId ? { seccionId } : {}), ...(fijo ? { fijo } : {}) } : null);
+    setGastoInicial(monto > 0 || descripcion ? { monto: monto > 0 ? formatThousands(String(monto)) : '', descripcion } : null);
     setAddingGasto(true);
   });
   // Desde el aviso de vencimiento o la tarjeta de Home.
@@ -506,14 +497,6 @@ export function GastosV2() {
               + Agregar ingreso
             </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setImportando(true)}
-            className="v2-focus self-center min-h-[44px] text-[13px] font-semibold"
-            style={{ color: COLORS.brand }}
-          >
-            Importar gastos anteriores
-          </button>
 
         {addingDisponible && (
           <Hoja titulo="Nuevo ingreso" onCerrar={cerrarIngreso}>
@@ -628,15 +611,12 @@ export function GastosV2() {
         {/* Registrar un gasto se abre aparte, en una hoja encima de la
             pantalla: mezclado con el resto de Gastos no se distinguía dónde
             terminaba el formulario. */}
-        {importando && <ImportarGastos onCerrar={() => setImportando(false)} />}
-        {habitoNuevo && <PreguntaHabito habito={habitoNuevo} onCerrar={() => setHabitoNuevo(null)} />}
-
         {addingGasto && (
           <Hoja titulo="Nuevo gasto" onCerrar={cerrarFormGasto}>
             <FormularioGasto
               categorias={categorias}
               inicial={gastoInicial ?? undefined}
-              onListo={(_seccionId, habito) => { formDesdeOrigen.current = false; setGastoInicial(null); setAddingGasto(false); if (habito) setHabitoNuevo(habito); }}
+              onListo={() => { formDesdeOrigen.current = false; setGastoInicial(null); setAddingGasto(false); }}
               onCancelar={cerrarFormGasto}
             />
           </Hoja>

@@ -3,12 +3,7 @@ import { BORDE_FALTA, COLORS, TextoFalta, fmtMoney, formatMontoInicial, formatTh
 import { useFaltantes } from './useFaltantes';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
 import * as acciones from '../../api/v2/acciones';
-import { leerEstado } from '../../api/v2/almacen';
-import { diaArgentina } from '../../api/v2/pasos';
-import { sugerenciaDeHabito, type SugerenciaHabito } from '../../lib/habitos';
-import { habitoYaPreguntado } from '../../lib/habitosLocal';
 import { IconChevron, IconClose } from './FinaIcons';
-import type { FrecuenciaFija } from '../../api/v2/fechasFijos';
 import { CamposGastoFijo, opcionFijoInicial, opcionFijoValida, type OpcionFijo } from './GastosFijos';
 import { TIPOS, TIPO_INFO, gastosDeLaBase, recientes, type Categoria, type Gasto, type Moneda, type TipoGasto } from './datosGasto';
 
@@ -96,11 +91,9 @@ export function Desplegable({ id, label, value, onChange, marcado = false, child
  */
 export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancelar }: {
   gasto?: Gasto;
-  /** `fijo`: se abre como un gasto que se viene (un gasto fijo que todavía no se pagó), con esta frecuencia. */
-  inicial?: { monto: string; descripcion: string; seccionId?: string; fijo?: FrecuenciaFija };
+  inicial?: { monto: string; descripcion: string };
   categorias: Categoria[];
-  /** `habito`: si este gasto ya lo anotó 2 o 3 veces el mismo día de la semana, para preguntarle si quiere que se lo recordemos. */
-  onListo: (seccionId: string | null, habito?: SugerenciaHabito) => void;
+  onListo: (seccionId: string | null) => void;
   onCancelar: () => void;
 }) {
   const { estado: db } = useAlmacen();
@@ -112,7 +105,7 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
   const [desc, setDesc] = useState(gasto?.descripcion ?? inicial?.descripcion ?? '');
   // Sin sección elegida de entrada: con la primera ya marcada, era fácil
   // registrar un gasto en la sección equivocada sin darse cuenta.
-  const [catId, setCatId] = useState<string | null>(gasto?.categoriaId || (inicial?.seccionId && categorias.some((c) => c.id === inicial.seccionId) ? inicial.seccionId : null));
+  const [catId, setCatId] = useState<string | null>(gasto?.categoriaId || null);
   const [nuevaCat, setNuevaCat] = useState('');
   const [creandoCat, setCreandoCat] = useState(false);
   const [tipo, setTipo] = useState<TipoGasto>(gasto?.tipo ?? 'necesario');
@@ -125,9 +118,7 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
   const [pagos, setPagos] = useState<FilaPago[]>(() => (gasto?.pagos?.length
     ? gasto.pagos.map((p) => ({ medio: p.medio, otro: '', monto: formatMontoInicial(p.monto) }))
     : [filaPagoVacia(), filaPagoVacia()]));
-  const [fijo, setFijo] = useState<OpcionFijo>(() => (inicial?.fijo
-    ? { ...opcionFijoInicial(), activo: true, yaPagado: false, frecuencia: inicial.fijo, proximo: '', fechaElegida: false }
-    : opcionFijoInicial()));
+  const [fijo, setFijo] = useState<OpcionFijo>(opcionFijoInicial);
   // Errores de conversión (no se pudo traer el dólar). Los de guardado los
   // reporta el almacén.
   const [error, setError] = useState<string | null>(null);
@@ -188,23 +179,15 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
     // gasto que acaba de tipear sería peor que la espera.
     // Un gasto fijo que todavía no se pagó no se registra como gasto: sólo
     // queda anotado para avisar. Si ya se pagó, se registra y queda el próximo.
-    let habito: SugerenciaHabito | undefined;
     if (!fijo.activo || fijo.yaPagado) {
       const r = await acciones.registrarGasto({ ...datos, tipoOtro, pagos: pagosFinal, confirmacion: fijo.activo ? 'Gasto registrado y guardado como fijo.' : undefined });
       if (r.error !== null) { setError(r.error); return; }
-      // Ya está en el almacén: se mira si con éste son 2 o 3 veces el mismo día de la semana.
-      if (!fijo.activo) {
-        habito = sugerenciaDeHabito(
-          leerEstado().gastos.map((g) => ({ descripcion: g.descripcion, monto: g.montoArs, fecha: diaArgentina(g.ts), seccionId: g.seccionId })),
-          datos.descripcion, diaArgentina(datos.ts), habitoYaPreguntado,
-        ) ?? undefined;
-      }
     }
     if (fijo.activo) {
       const diaAncla = fijo.frecuencia === 'mensual' || fijo.frecuencia === 'anual' ? Number(fijo.proximo.slice(8, 10)) : null;
       acciones.crearGastoFijo({ ...datos, frecuencia: fijo.frecuencia, proximoPago: fijo.proximo, diaAncla }, !fijo.yaPagado);
     }
-    onListo(seccionId, habito);
+    onListo(seccionId);
   }
 
   const idBase = gasto ? `g-${gasto.id}` : 'ng';
@@ -428,7 +411,7 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
 
       <fieldset className="flex flex-col gap-1.5">
         <legend className="text-[13px] font-bold mb-1.5" style={{ color: COLORS.inkSoft }}>¿Qué tipo de gasto fue?</legend>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           {TIPOS.map((t) => {
             const sel = tipo === t;
             return (

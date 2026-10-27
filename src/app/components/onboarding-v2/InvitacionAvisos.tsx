@@ -97,7 +97,7 @@ export function InvitacionAvisos({ momento, gastosRegistrados = 0 }: { momento: 
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <p className="text-[17px] font-bold leading-snug" style={{ color: COLORS.ink }}>{titulo}</p>
-            <p className="text-[14px] leading-snug mt-0.5" style={{ color: COLORS.ink }}>{texto}</p>
+            <p className="text-[15px] leading-snug mt-0.5" style={{ color: COLORS.ink }}>{texto}</p>
           </div>
           {momento === 'home' && (
             <button type="button" onClick={ahoraNo} aria-label="Cerrar" className="v2-focus w-11 h-11 -mt-2 -mr-2 rounded-full flex items-center justify-center shrink-0" style={{ color: COLORS.inkSoft }}>
@@ -110,12 +110,12 @@ export function InvitacionAvisos({ momento, gastosRegistrados = 0 }: { momento: 
             type="button"
             onClick={() => (iphone ? setTutorial(true) : void activar())}
             disabled={trabajando}
-            className="v2-focus min-h-[44px] px-5 rounded-full text-[14px] font-bold v2-disabled transition-transform active:scale-95"
+            className="v2-focus min-h-[44px] px-5 rounded-full text-[15px] font-bold v2-disabled transition-transform active:scale-95"
             style={{ background: COLORS.brand, color: COLORS.surface }}
           >
             {iphone ? 'Ver cómo' : trabajando ? 'Activando…' : 'Activar avisos'}
           </button>
-          <button type="button" onClick={ahoraNo} className="v2-focus min-h-[44px] px-3 text-[14px] font-semibold" style={{ color: COLORS.inkSoft }}>
+          <button type="button" onClick={ahoraNo} className="v2-focus min-h-[44px] px-3 text-[15px] font-semibold" style={{ color: COLORS.inkSoft }}>
             Ahora no
           </button>
         </div>
@@ -241,7 +241,7 @@ export function TutorialAgregarAInicio({ onCerrar }: { onCerrar: () => void }) {
               <button
                 type="button"
                 onClick={verEnMiniatura}
-                className="v2-focus min-h-[48px] rounded-xl text-[15px] font-bold transition-transform active:scale-[0.98]"
+                className="v2-focus min-h-[48px] rounded-xl text-[16px] font-bold transition-transform active:scale-[0.98]"
                 style={{ background: COLORS.brand, color: COLORS.surface }}
               >
                 {enMiniatura ? 'Ya está en miniatura' : 'Verlo en miniatura mientras lo hacés'}
@@ -264,12 +264,12 @@ export function TutorialAgregarAInicio({ onCerrar }: { onCerrar: () => void }) {
           {PASOS_IPHONE.map((p, i) => (
             <li key={i} className="flex gap-2.5 items-start">
               <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[14px] font-bold" style={{ background: COLORS.brandSoft, color: COLORS.ink }}>{i + 1}</span>
-              <span className="flex-1 text-[15px] leading-snug pt-0.5" style={{ color: COLORS.ink }}>{p.texto}</span>
+              <span className="flex-1 text-[16px] leading-snug pt-0.5" style={{ color: COLORS.ink }}>{p.texto}</span>
             </li>
           ))}
         </ol>
 
-        <button type="button" onClick={onCerrar} className="v2-focus min-h-[48px] rounded-xl text-[15px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
+        <button type="button" onClick={onCerrar} className="v2-focus min-h-[48px] rounded-xl text-[16px] font-semibold" style={{ color: COLORS.ink, border: `1.5px solid ${COLORS.lineStrong}` }}>
           Listo
         </button>
       </div>

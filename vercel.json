@@ -26,9 +26,6 @@
     "api/leer-captura.ts": {
       "maxDuration": 30
     },
-    "api/importar-gastos.ts": {
-      "maxDuration": 60
-    },
     "api/noticias.ts": {
       "maxDuration": 30
     },

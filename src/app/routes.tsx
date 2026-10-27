@@ -87,7 +87,6 @@ export const router = createBrowserRouter([
       { path: "/onboarding-v2/gastos", element: <GastosV2 /> },
       // "Ver todos" de cada parte de Gastos: la lista completa.
       { path: "/onboarding-v2/gastos/todos", element: <TodosLosGastos /> },
-      { path: "/onboarding-v2/gastos/categoria/:id", element: <TodosLosGastos /> },
       { path: "/onboarding-v2/gastos/ingresos", element: <TodosLosIngresos /> },
       { path: "/onboarding-v2/gastos/secciones", element: <TodasLasSecciones /> },
       { path: "/onboarding-v2/objetivos", element: <ObjetivosV2 /> },

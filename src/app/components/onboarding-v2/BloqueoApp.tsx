@@ -62,7 +62,7 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
     <div className="min-h-full grid place-items-center px-6 py-16">
       <div className="flex flex-col items-center gap-3.5 w-full max-w-xs">
         <Fini state="idle" size={110} />
-        <p className="text-[17px] font-bold text-center" style={{ color: COLORS.ink }}>Ingresá tu PIN</p>
+        <p className="text-[19px] font-bold text-center" style={{ color: COLORS.ink }}>Ingresá tu PIN</p>
         <input
           ref={inputRef}
           type="password"
@@ -91,7 +91,7 @@ export function BloqueoApp({ onDesbloqueado }: { onDesbloqueado: () => void }) {
             type="button"
             onClick={() => void probarBiometria()}
             disabled={probandoBio}
-            className="v2-focus text-[14px] font-semibold underline"
+            className="v2-focus text-[15px] font-semibold underline"
             style={{ color: COLORS.brand }}
           >
             {probandoBio ? 'Esperando…' : 'Usar Face ID / Touch ID'}
