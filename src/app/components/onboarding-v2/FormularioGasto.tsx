@@ -207,11 +207,12 @@ export function FormularioGasto({ gasto, repeticion, categorias, onListo, onCanc
         crearRecurrente({
           descripcion: desc.trim() || undefined,
           seccionId, monto: n, moneda, tipo: tipoFinal, metodoPago: dividido ? null : medio,
-          frecuencia: recurrente.frecuencia, hora: recurrente.hora,
-          dia: recurrente.frecuencia === 'semanal' ? dia.getDay() : recurrente.frecuencia === 'mensual' ? dia.getDate() : null,
-          // Si el gasto es de hoy, hoy ya está registrado: no vuelve a aparecer.
-          ultimoDia: esDeHoy ? diaArgentina() : null,
-          ultimoGastoId: esDeHoy ? r.gasto?.id ?? null : null,
+          frecuencia: recurrente.frecuencia,
+          horas: [...recurrente.horas].sort(),
+          dias: recurrente.frecuencia === 'semanal' ? (recurrente.dias.length ? recurrente.dias : [dia.getDay()]) : [],
+          dia: recurrente.frecuencia === 'mensual' ? dia.getDate() : null,
+          // Si el gasto es de hoy, cuenta como una de las veces de hoy.
+          registros: esDeHoy ? { dia: diaArgentina(), gastoIds: [r.gasto?.id ?? ''] } : null,
         });
       }
     }
