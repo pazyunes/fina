@@ -38,7 +38,7 @@ export function FiniDice({
         className="relative flex-1 min-w-0 rounded-[18px] rounded-bl-sm px-3.5 py-2.5"
         style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
       >
-        <p className="text-[15px] leading-snug" style={{ color: COLORS.inkSoft, fontFamily: FONTS.body }}>
+        <p className="text-[14px] leading-snug" style={{ color: COLORS.inkSoft, fontFamily: FONTS.body }}>
           {dice}
         </p>
       </div>
@@ -64,7 +64,7 @@ export function FiniPresenta({
         className="relative rounded-[18px] rounded-br-sm px-4 py-2.5 max-w-[300px]"
         style={{ background: COLORS.surface, border: `1.5px solid ${COLORS.line}` }}
       >
-        <p className="text-[15px] leading-snug text-center" style={{ color: COLORS.inkSoft, fontFamily: FONTS.body }}>
+        <p className="text-[14px] leading-snug text-center" style={{ color: COLORS.inkSoft, fontFamily: FONTS.body }}>
           {dice}
         </p>
       </div>

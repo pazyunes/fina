@@ -125,7 +125,7 @@ export function HomeV2() {
           {/* Saludo y nombre en una sola línea. "Tu FINA" era el fallback sin
               nombre y terminaba siendo lo que veías: genérico donde tendría
               que estar lo personal. */}
-          <Titulo className="!text-[19px] lg:!text-[22px]">
+          <Titulo className="!text-[17px] lg:!text-[18px]">
             {saludoDelDia()}{nombre ? `, ${nombre}` : ''}
           </Titulo>
         </div>
@@ -140,7 +140,7 @@ export function HomeV2() {
             className="v2-focus flex flex-col items-center shrink-0 min-h-[44px] px-1 rounded-xl"
             style={{ color: COLORS.brand }}
           >
-            <span data-racha-numero className="flex items-center gap-1.5 text-[21px] font-bold leading-none"><IconFuego size={28} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
+            <span data-racha-numero className="flex items-center gap-1.5 text-[17px] font-bold leading-none"><IconFuego size={28} /> <span className="font-mono tabular-nums">{racha.dias}</span></span>
             <span className="text-[13px] font-semibold mt-0.5" style={{ color: COLORS.inkSoft }}>{racha.dias === 1 ? 'día' : 'días'}</span>
           </button>
         ) : (

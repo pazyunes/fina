@@ -157,10 +157,14 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
     const medio = (metodo === 'otro' ? metodoOtro.trim() : metodo) || null;
     const pagosFinal = dividido ? pagos.map((f) => ({ medio: medioDeFila(f), monto: parseMoneyInput(f.monto) })) : undefined;
     setError(null);
+    // Sin descripción (un gasto nuevo no la pide, decisión oct 2026), el gasto
+    // se llama como su categoría: es lo que se ve en la lista. La que ya tenía
+    // (al editar, o la de WhatsApp) se conserva.
+    const nombreSeccion = categorias.find((c) => c.id === seccionId)?.nombre ?? nuevaCat.trim();
     const datos = {
       monto: n,
       moneda,
-      descripcion: desc.trim() || TIPO_INFO[tipo].label,
+      descripcion: desc.trim() || nombreSeccion || TIPO_INFO[tipo].label,
       seccionId,
       tipo,
       metodoPago: medio,
@@ -225,14 +229,20 @@ export function FormularioGasto({ gasto, inicial, categorias, onListo, onCancela
         </div>
       </div>
       {faltantes.marcado('monto') && <TextoFalta>Falta el monto.</TextoFalta>}
-      <input
-        aria-label="Descripción del gasto"
-        className="v2-focus rounded-xl px-3.5 py-2.5 text-[14px] transition-colors"
-        style={INPUT_STYLE}
-        placeholder="Descripción (ej: PedidosYa)"
-        value={desc}
-        onChange={(e) => setDesc(e.target.value)}
-      />
+      {/* Un gasto nuevo no pide descripción: se reconoce por su categoría.
+          Al editar sigue el campo, para corregir la que ya tiene. Un gasto
+          fijo sí lleva nombre ("Alquiler"): es como se reconoce en la lista y
+          en el aviso de vencimiento. */}
+      {(editando || fijo.activo) && (
+        <input
+          aria-label={fijo.activo ? 'Nombre del gasto fijo' : 'Descripción del gasto'}
+          className="v2-focus rounded-xl px-3.5 py-2.5 text-[14px] transition-colors"
+          style={INPUT_STYLE}
+          placeholder={fijo.activo ? 'Nombre (ej: Alquiler)' : 'Descripción (ej: PedidosYa)'}
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+        />
+      )}
       {/* Por defecto queda en hoy: sólo hace falta tocarlo para cargar un
           gasto de otro día. Sin hora: con el día alcanza. */}
       <div className="flex flex-col gap-1.5">

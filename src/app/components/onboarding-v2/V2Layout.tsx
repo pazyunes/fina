@@ -107,7 +107,7 @@ function Cargando() {
     <div className="min-h-full grid place-items-center px-6 py-16">
       <div className="flex flex-col items-center gap-3">
         <Fini state="pensando" size={120} />
-        <p className="text-[16px]" style={{ color: COLORS.inkSoft }}>Trayendo tus datos…</p>
+        <p className="text-[15px]" style={{ color: COLORS.inkSoft }}>Trayendo tus datos…</p>
       </div>
     </div>
   );
