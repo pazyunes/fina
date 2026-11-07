@@ -69,10 +69,40 @@ export function guardarPerfil(parche: Partial<Perfil>, confirmacion?: string) {
 }
 
 // ── Secciones ────────────────────────────────────────────────────────────
+// Crear una sección que YA EXISTÍA (misma persona, mismo nombre, aunque esté
+// archivada porque se vació) no inserta una fila nueva: se reusa la que estaba,
+// con SU id, no con el que generó el teléfono. Hasta que la app vuelva a
+// cargar, acá se traduce el id de más a mano por el real en todo lo que se
+// manda después. Sin esto, el gasto apunta a una sección que no existe y la
+// base lo rechaza: "transactions_section_id_fkey".
+const idsDeSeccion = new Map<string, string>();
+function seccionReal(id: string | null | undefined): string | null {
+  if (!id) return id ?? null;
+  return idsDeSeccion.get(id) ?? id;
+}
+
+function adoptarIdDeSeccion(local: string, real: string) {
+  idsDeSeccion.set(local, real);
+  const est = leerEstado();
+  // Si la sección real ya estaba en pantalla, la de más a mano sobra.
+  const yaEstaba = est.secciones.some((s) => s.id === real);
+  parchearEstado({
+    secciones: yaEstaba
+      ? est.secciones.filter((s) => s.id !== local)
+      : est.secciones.map((s) => (s.id === local ? { ...s, id: real } : s)),
+    gastos: est.gastos.map((g) => (g.seccionId === local ? { ...g, seccionId: real } : g)),
+    gastosFijos: est.gastosFijos.map((f) => (f.seccionId === local ? { ...f, seccionId: real } : f)),
+  });
+}
+
 export function crearSeccion(nombre: string): Seccion {
   const seccion: Seccion = { id: nuevoId(), nombre: nombre.trim(), slug: '', tope: null };
   parchearEstado({ secciones: [...leerEstado().secciones, seccion] });
-  push(() => api.crearSeccion(seccion.nombre, seccion.id));
+  push(async () => {
+    const r = await api.crearSeccion(seccion.nombre, seccion.id);
+    if (r.error === null && r.data.id !== seccion.id) adoptarIdDeSeccion(seccion.id, r.data.id);
+    return r;
+  });
   return seccion;
 }
 
@@ -80,14 +110,14 @@ export function renombrarSeccion(id: string, nombre: string) {
   parchearEstado({
     secciones: leerEstado().secciones.map((s) => (s.id === id ? { ...s, nombre } : s)),
   });
-  push(() => api.renombrarSeccion(id, nombre), 'Sección renombrada con éxito.');
+  push(() => api.renombrarSeccion(seccionReal(id)!, nombre), 'Sección renombrada con éxito.');
 }
 
 export function guardarTope(id: string, tope: { monto: number; periodo: Periodo } | null) {
   parchearEstado({
     secciones: leerEstado().secciones.map((s) => (s.id === id ? { ...s, tope } : s)),
   });
-  push(() => api.guardarTope(id, tope), tope ? 'Tope guardado con éxito.' : 'Tope eliminado con éxito.');
+  push(() => api.guardarTope(seccionReal(id)!, tope), tope ? 'Tope guardado con éxito.' : 'Tope eliminado con éxito.');
 }
 
 export function borrarSeccion(id: string) {
@@ -99,7 +129,7 @@ export function borrarSeccion(id: string) {
     // (`on delete set null`).
     gastos: est.gastos.map((g) => (g.seccionId === id ? { ...g, seccionId: null } : g)),
   });
-  push(() => api.borrarSeccion(id), 'Sección borrada con éxito.');
+  push(() => api.borrarSeccion(seccionReal(id)!), 'Sección borrada con éxito.');
 }
 
 // Una sección que VOS vaciaste (le quedaba un solo gasto y lo borraste, o lo
@@ -173,7 +203,7 @@ export function crearGastoFijo(g: Omit<GastoFijo, 'id'>, avisar = true): GastoFi
   const fijo: GastoFijo = { ...g, id: nuevoId() };
   const est = leerEstado();
   parchearEstado({ gastosFijos: [...est.gastosFijos, fijo].sort((a, b) => a.proximoPago.localeCompare(b.proximoPago)) });
-  push(() => api.crearGastoFijo(fijo), avisar ? 'Gasto fijo guardado con éxito.' : undefined, () => parchearEstado({ gastosFijos: leerEstado().gastosFijos.filter((x) => x.id !== fijo.id) }));
+  push(() => api.crearGastoFijo({ ...fijo, seccionId: seccionReal(fijo.seccionId) }), avisar ? 'Gasto fijo guardado con éxito.' : undefined, () => parchearEstado({ gastosFijos: leerEstado().gastosFijos.filter((x) => x.id !== fijo.id) }));
   return fijo;
 }
 
@@ -409,7 +439,7 @@ export async function registrarGasto(g: {
   parchearEstado({ gastos: [gasto, ...est.gastos], mediosPago });
   const { confirmacion, ...datos } = g;
   push(() => api.registrarGasto({
-    ...datos, tipoOtro, id: gasto.id, montoArs, cotizacionId: conv.cotizacionId,
+    ...datos, seccionId: seccionReal(datos.seccionId), tipoOtro, id: gasto.id, montoArs, cotizacionId: conv.cotizacionId,
   }), confirmacion ?? 'Gasto registrado con éxito.');
 
   // Registrar es la actividad con la que se compite en el grupo: se puntúa
@@ -520,7 +550,7 @@ export async function editarGasto(id: string, cambios: {
     montoArs: cambioMontoOMoneda ? montoArs : undefined,
     cotizacionId: cambioMontoOMoneda ? cotizacionId : undefined,
     descripcion: cambios.descripcion,
-    seccionId: cambios.seccionId,
+    seccionId: cambios.seccionId === undefined ? undefined : seccionReal(cambios.seccionId),
     tipo: cambios.tipo,
     // Sólo se toca la columna nueva si hay algo que guardar o algo viejo que
     // borrar: un edit común no depende de que la migración 0036 esté aplicada.
