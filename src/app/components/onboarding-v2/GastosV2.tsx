@@ -4,7 +4,6 @@ import { llevarA, useAlLlegar, useVolverAlOrigen } from './alLlegar';
 import { BORDE_FALTA, COLORS, Donut, EstadoConfianza, FONTS, Monto, SegmentedTab, TextoFalta, Titulo, TituloSeccion, fmtMoney, formatThousands, parseMoneyInput } from './shared';
 import { useFaltantes } from './useFaltantes';
 import { useAlmacen } from '../../api/v2/AlmacenProvider';
-import { apartadoTotal } from '../../api/v2/apartado';
 import * as acciones from '../../api/v2/acciones';
 import { precargarCotizacion } from '../../api/v2/cotizacion';
 import { Fini } from './Fini';
@@ -139,15 +138,12 @@ export function GastosV2() {
     + db.cargas.filter((c) => c.ts >= desdeVentana && c.ts < hastaVentana).reduce((t, c) => t + c.montoArs, 0);
   // Un período que ya terminó se cuenta en pasado: "te quedó", no "te queda".
   const periodoCerrado = offsetVentana > 0;
-  // Lo apartado (para lo que ya sabe que va a gastar y para sus objetivos de
-  // ahorro, migración 0043) ya tiene destino: en el período actual deja de
-  // contar como libre para gastar. En un período pasado no se resta: lo
-  // apartado es de hoy, no de entonces.
-  const apartado = apartadoTotal(db);
-  const apartadoAhora = !periodoCerrado ? apartado.total : 0;
+  // Lo apartado para objetivos no se resta: sigue siendo plata de la persona,
+  // y casi siempre se separó con lo que entró en meses anteriores, así que
+  // restarlo de lo que entró este mes lo descontaba de nuevo cada mes.
   // En cero y no en negativo: gastar más de lo que se cargó suele ser que
   // falta cargar ingresos, y se dice aparte, sin alerta (regla 3).
-  const disponibleVentana = Math.max(plataDelPeriodo - totalGastado - apartadoAhora, 0);
+  const disponibleVentana = Math.max(plataDelPeriodo - totalGastado, 0);
   const teQueda = periodoCerrado ? 'Te quedó' : 'Disponible';
   const gastadoEn = (catId: string) => gastosVentana.filter((g) => g.categoriaId === catId).reduce((s, g) => s + g.montoArs, 0);
   const colorDe = (catId: string) => colorDeSeccion(catId, categorias);
@@ -160,16 +156,12 @@ export function GastosV2() {
     ...categorias.map((c) => ({ id: c.id, nombre: c.nombre, color: colorDe(c.id), monto: gastadoEn(c.id) })),
     { id: '__sin', nombre: 'Sin categoría', color: COLORS.lineStrong, monto: gastosVentana.filter((g) => !g.categoriaId).reduce((s, g) => s + g.montoArs, 0) },
   ].filter((s) => s.monto > 0).sort((a, b) => b.monto - a.monto);
-  // Lo apartado entra al anillo como su propia porción (lila): ni gastado ni
-  // libre.
-  const conApartado = conIngreso && apartadoAhora > 0;
-  const baseAnillo = conIngreso ? Math.max(plataDelPeriodo, totalGastado + apartadoAhora) : totalGastado;
+  const baseAnillo = conIngreso ? Math.max(plataDelPeriodo, totalGastado) : totalGastado;
   const segmentosAnillo = [
     ...porSeccion.map((s) => ({ color: s.color, pct: baseAnillo > 0 ? (s.monto / baseAnillo) * 100 : 0 })),
-    ...(conApartado ? [{ color: COLORS.lila, pct: (apartadoAhora / baseAnillo) * 100 }] : []),
     ...(conIngreso && disponibleVentana > 0 ? [{ color: COLORS.lima, pct: (disponibleVentana / baseAnillo) * 100 }] : []),
   ];
-  const gastasteDeMas = conIngreso && totalGastado + apartadoAhora > plataDelPeriodo ? totalGastado + apartadoAhora - plataDelPeriodo : 0;
+  const gastasteDeMas = conIngreso && totalGastado > plataDelPeriodo ? totalGastado - plataDelPeriodo : 0;
 
   // ── Por tipo. El "otro" se abre por lo que la persona escribió (Salud,
   // Mascota): cada texto es su propia fila. Los "otro" sin texto van juntos.
@@ -387,7 +379,7 @@ export function GastosV2() {
 
           {/* Abajo del anillo van sólo las referencias: el monto ya está en el
               centro. Primero lo disponible y el total gastado, después las 3
-              secciones que más se llevaron y lo apartado. El resto de las secciones está en Tus
+              secciones que más se llevaron. El resto de las secciones está en Tus
               secciones, más abajo. */}
           {(porSeccion.length > 0 || conIngreso) && (
             <ul className="px-2 flex flex-col gap-1.5">
@@ -433,24 +425,12 @@ export function GastosV2() {
                   </button>
                 </li>
               )}
-              {conApartado && (
-                <li>
-                  {/* Lo apartado lleva a Objetivos, donde está para qué es. */}
-                  <button type="button" onClick={() => navigate('/onboarding-v2/objetivos')} className="v2-focus w-full flex items-center gap-2.5 text-[13px] text-left rounded-lg">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ background: COLORS.lila }} aria-hidden />
-                    <span className="flex-1 min-w-0 truncate" style={{ color: COLORS.ink }}>Apartado para tus objetivos</span>
-                    <Monto value={apartadoAhora} className="text-[13px] font-semibold" />
-                  </button>
-                </li>
-              )}
             </ul>
           )}
 
           {gastasteDeMas > 0 && (
             <p className="px-2 text-[13px] leading-snug" style={{ color: COLORS.inkSoft }}>
-              {apartadoAhora > 0
-                ? <>Gastos y apartado superan en <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> lo que registraste</>
-                : <>Tus gastos superan en <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> lo que registraste</>}
+              Tus gastos superan en <span className="font-mono tabular-nums">{fmtMoney(gastasteDeMas)}</span> lo que registraste
             </p>
           )}
           {!conIngreso && totalGastado > 0 && (
